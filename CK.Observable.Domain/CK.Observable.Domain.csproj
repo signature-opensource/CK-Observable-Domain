@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  
+  <Import Project="..\Common\Shared.props" />
+  
+  <PropertyGroup>
+    <TargetFrameworks>net461</TargetFrameworks>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <Compile Remove="Collections\**" />
+    <EmbeddedResource Remove="Collections\**" />
+    <None Remove="Collections\**" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="10.1.1" />
+    <PackageReference Include="Fody" Version="3.1.4">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="PropertyChanged.Fody" Version="2.5.9">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+</Project>
