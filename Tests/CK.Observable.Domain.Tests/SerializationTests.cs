@@ -47,9 +47,8 @@ namespace CK.Observable.Domain.Tests
             var g1 = domain.AllObjects.OfType<Garage>().Single();
             var g2 = d2.AllObjects.OfType<Garage>().Single();
             g2.CompanyName.Should().Be( g1.CompanyName );
-            GetOId( g2 ).Should().Be( GetOId( g1 ) );
+            g2.GetOId().Should().Be( g1.GetOId() );
         }
-
 
 
         [Test]
@@ -115,12 +114,6 @@ namespace CK.Observable.Domain.Tests
             }
         }
 
-        static FieldInfo _oIdField = typeof( ObservableObject ).GetField( "_id", BindingFlags.Instance | BindingFlags.NonPublic );
-
-        static int GetOId( ObservableObject o )
-        {
-            return (int)_oIdField.GetValue( o );
-        }
 
     }
 }

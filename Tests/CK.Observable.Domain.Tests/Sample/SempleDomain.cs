@@ -10,9 +10,9 @@ namespace CK.Observable.Domain.Tests.Sample
 {
     public static class SempleDomain
     {
-        public static ObservableDomain CreateSample()
+        public static ObservableDomain CreateSample( IObservableTransactionManager tm = null )
         {
-            var d = new ObservableDomain( TestHelper.Monitor );
+            var d = new ObservableDomain( tm, TestHelper.Monitor );
             d.Modify( () =>
             {
                 var g1 = new Garage() { CompanyName = "Boite" };
@@ -34,6 +34,15 @@ namespace CK.Observable.Domain.Tests.Sample
             } );
             CheckSampleGarage1( d );
             return d;
+        }
+
+        public static IReadOnlyList<IObservableEvent> TransactedSetPaulMincLastName( ObservableDomain d, string newLastName, bool throwException = false )
+        {
+            return d.Modify( () =>
+            {
+                d.AllObjects.OfType<Person>().Single( x => x.FirstName == "Paul" ).LastName = newLastName;
+                if( throwException ) throw new Exception( $"After Paul minc renaled to {newLastName}." );
+            } );
         }
 
         public static void CheckSampleGarage1( ObservableDomain d )

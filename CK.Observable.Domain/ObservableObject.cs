@@ -50,7 +50,7 @@ namespace CK.Observable
             remove { _handler -= value; }
         }
 
-        protected IActivityMonitor DomainMonitor => Domain.DomainMonitor;
+        protected IActivityMonitor DomainMonitor => Domain.Monitor;
 
         public bool IsDisposed => _id < 0;
 
@@ -82,17 +82,6 @@ namespace CK.Observable
             }
         }
 
-        internal void Resurect( int id )
-        {
-            _id = id;
-        }
-
-        internal void RestoreInitialValue( string name, object initialValue )
-        {
-            var p = GetType().GetProperty( name );
-            p = p.DeclaringType.GetProperty( name );
-            p.SetValue( this, initialValue );
-        }
     }
 
 }

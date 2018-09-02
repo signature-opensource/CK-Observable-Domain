@@ -39,15 +39,18 @@ namespace CK.Observable
         [ThreadStatic]
         internal static ObservableDomain CurrentThreadDomain;
 
-        readonly List<ObservableObject> _objects;
         readonly Dictionary<string,PropInfo> _properties;
         readonly ChangeTracker _changeTracker;
         readonly IDisposable _reentrancyHandler;
         readonly AllCollection _exposedObjects;
         Stack<int> _freeList;
 
-        int _objectCount;
+        ObservableObject[] _objects;
+        int _objectsListCount;
+
+        int _actualObjectCount;
         Transaction _currentTran;
+        int _transactionSerialNumber;
         int _reentrancyFlag;
         bool _deserializing;
 
@@ -55,12 +58,13 @@ namespace CK.Observable
         class AllCollection : IReadOnlyCollection<ObservableObject>
         {
             readonly ObservableDomain _d;
+
             public AllCollection( ObservableDomain d )
             {
                 _d = d;
             }
 
-            public int Count => _d._objectCount;
+            public int Count => _d._actualObjectCount;
 
             public IEnumerator<ObservableObject> GetEnumerator() => _d._objects.Where( o => o != null ).GetEnumerator();
 
@@ -133,47 +137,27 @@ namespace CK.Observable
                     p = p.Prev;
                 }
                 var result = _changeEvents.ToArray();
+                Reset();
+                return result;
+            }
+
+            public void Reset()
+            {
                 _changeEvents.Clear();
                 _newObjects.Clear();
                 _propChanged.Clear();
                 _firstPropChanged = _lastPropChanged = null;
-                return result;
             }
 
+            internal bool IsNewObject( ObservableObject o ) => _newObjects.Contains( o );
 
-            internal void Rollback( List<ObservableObject> objects, ref int objectCount )
-            {
-                foreach( var n in _newObjects )
-                {
-                    objects[n.OId] = null;
-                    --objectCount;
-                }
-                foreach( var e in _changeEvents )
-                {
-                    if( e is DisposedObjectEvent d )
-                    {
-                        d.Object.Resurect( d.ObjectId );
-                        objects[d.ObjectId] = d.Object;
-                        ++objectCount;
-                    }
-                }
-                PropChanged p = _firstPropChanged;
-                while( p != null )
-                {
-                    p.Object.RestoreInitialValue( p.Info.Name, p.InitialValue );
-                    p = p.Next;
-                }
-            }
-
-            public bool IsNewObject( ObservableObject o ) => _newObjects.Contains( o );
-
-            public void OnNewObject( ObservableObject o, int objectId )
+            internal void OnNewObject( ObservableObject o, int objectId )
             {
                 _changeEvents.Add( new NewObjectEvent( o, objectId ) );
                 _newObjects.Add( o );
             }
 
-            public void OnDisposeObject( ObservableObject o )
+            internal void OnDisposeObject( ObservableObject o )
             {
                 if( IsNewObject( o ) )
                 {
@@ -186,7 +170,7 @@ namespace CK.Observable
                 }
             }
 
-            public void OnNewProperty( PropInfo info )
+            internal void OnNewProperty( PropInfo info )
             {
                 _changeEvents.Add( new NewPropertyEvent( info.PropertyId, info.Name ) );
             }
@@ -250,21 +234,22 @@ namespace CK.Observable
         {
             readonly ObservableDomain _previous;
             readonly ObservableDomain _domain;
-            readonly Stack<int> _initialFreeList;
 
             public Transaction( ObservableDomain d )
             {
                 _domain = d;
                 _previous = CurrentThreadDomain;
                 CurrentThreadDomain = d;
-                _initialFreeList = new Stack<int>( d._freeList );
             }
 
             public IReadOnlyList<IObservableEvent> Commit()
             {
                 CurrentThreadDomain = _previous;
                 _domain._currentTran = null;
-                return _domain._changeTracker.Commit();
+                var events = _domain._changeTracker.Commit();
+                ++_domain._transactionSerialNumber;
+                _domain.TransactionManager?.OnTransactionCommit( _domain, events );
+                return events;
             }
 
             public void Dispose()
@@ -272,17 +257,15 @@ namespace CK.Observable
                 if( _domain._currentTran != null )
                 {
                     CurrentThreadDomain = null;
-                    _domain._deserializing = true;
-                    try
+                    _domain._currentTran = null;
+                    _domain._changeTracker.Reset();
+                    // Edge case: very first transaction. We simply reset the
+                    // domain.
+                    if( _domain._transactionSerialNumber == 0 )
                     {
-                        _domain._changeTracker.Rollback( _domain._objects, ref _domain._objectCount );
-                        _domain._freeList = _initialFreeList;
-                        _domain._currentTran = null;
+                        _domain.Reset();
                     }
-                    finally
-                    {
-                        _domain._deserializing = false;
-                    }
+                    else _domain.TransactionManager?.OnTransactionFailure( _domain );
                 }
             }
         }
@@ -301,16 +284,41 @@ namespace CK.Observable
             }
         }
 
-        public ObservableDomain( IActivityMonitor domainMonitor = null )
+        public ObservableDomain()
+            : this( null, null )
+        {
+        }
+
+        public ObservableDomain( IActivityMonitor monitor )
+            : this( null, monitor )
+        {
+        }
+
+        public ObservableDomain( IObservableTransactionManager tm )
+            : this( tm, null )
+        {
+        }
+
+        public ObservableDomain( IObservableTransactionManager tm, IActivityMonitor monitor )
         {
             DomainNumber = Interlocked.Increment( ref _domainNumber );
-            DomainMonitor = domainMonitor ?? new ActivityMonitor( $"Observable Domain n°{DomainNumber}." );
-            _objects = new List<ObservableObject>();
+            Monitor = monitor ?? new ActivityMonitor( $"Observable Domain n°{DomainNumber}." );
+            TransactionManager = tm;
+            _objects = new ObservableObject[512];
             _freeList = new Stack<int>();
             _properties = new Dictionary<string, PropInfo>();
             _changeTracker = new ChangeTracker();
             _reentrancyHandler = new ReetrancyHandler( this );
             _exposedObjects = new AllCollection( this );
+        }
+
+        void Reset()
+        {
+            _freeList.Clear();
+            _properties.Clear();
+            Array.Clear( _objects, 0, _objectsListCount );
+            _objectsListCount = 0;
+            _actualObjectCount = 0;
         }
 
         /// <summary>
@@ -321,6 +329,12 @@ namespace CK.Observable
         public IReadOnlyCollection<ObservableObject> AllObjects => _exposedObjects;
 
         /// <summary>
+        /// Gets the current transaction number.
+        /// Incremented each time a transaction successfuly ended.
+        /// </summary>
+        public int TransactionSerialNumber => _transactionSerialNumber;
+
+        /// <summary>
         /// Unique incrmental number for each domain in the AppDomain.
         /// </summary>
         public int DomainNumber { get; }
@@ -328,23 +342,12 @@ namespace CK.Observable
         /// <summary>
         /// Gets the monitor that is bound to this domain.
         /// </summary>
-        public IActivityMonitor DomainMonitor { get; }
-
-        internal bool IsDeserializing => _deserializing;
+        public IActivityMonitor Monitor { get; }
 
         /// <summary>
-        /// Gets the active domain on the current thread (the last one for which a <see cref="BeginTransaction"/>
-        /// has been done an not yet disposed) or throws an <see cref="InvalidOperationException"/> if there is none.
+        /// Gets the associated transaction manager.
         /// </summary>
-        /// <returns>The current domain.</returns>
-        internal static ObservableDomain GetCurrentActiveDomain()
-        {
-            if( CurrentThreadDomain == null )
-            {
-                throw new InvalidOperationException( "ObservableObject can be created only inside a ObservableDomain transaction." );
-            }
-            return CurrentThreadDomain;
-        }
+        public IObservableTransactionManager TransactionManager { get; }
 
         /// <summary>
         /// Starts a new transaction that must be <see cref="IObservableTransaction.Commit"/>, otherwise
@@ -360,12 +363,26 @@ namespace CK.Observable
             return _currentTran;
         }
 
+        /// <summary>
+        /// Enables modifications to be done inside a transaction and a try/catch block.
+        /// On success, the event list is returned (that may be empty) and on error returns null.
+        /// </summary>
+        /// <param name="actions">Any action that alters the objects of this domain.</param>
+        /// <returns>Null on error, a possibly empty list of events on success.</returns>
         public IReadOnlyList<IObservableEvent> Modify( Action actions )
         {
             using( var t = BeginTransaction() )
             {
-                actions();
-                return t.Commit();
+                try
+                {
+                    actions();
+                    return t.Commit();
+                }
+                catch( Exception ex )
+                {
+                    Monitor.Error( ex );
+                    return null;
+                }
             }
         }
 
@@ -374,8 +391,8 @@ namespace CK.Observable
             using( CheckReentrancyOnly() )
             using( var w = new Serializer( s, leaveOpen, encoding ) )
             {
-                w.WriteSmallInt32( 0 );
-                w.Write( _objectCount );
+                w.WriteSmallInt32( 0 ); // Version
+                w.Write( _actualObjectCount );
                 w.WriteSmallInt32( _freeList.Count );
                 foreach( var i in _freeList ) w.WriteSmallInt32( i );
                 w.WriteSmallInt32( _properties.Count );
@@ -385,14 +402,14 @@ namespace CK.Observable
                     Debug.Assert( kv.Key == kv.Value.Name );
                     w.WriteSmallInt32( kv.Value.PropertyId );
                 }
-                Debug.Assert( _objects.Count == _objectCount + _freeList.Count );
+                Debug.Assert( _objectsListCount == _actualObjectCount + _freeList.Count );
                 foreach( var o in _objects ) w.WriteObject( o );
             }
         }
 
         public void Load( Stream s, bool leaveOpen = false, Encoding encoding = null )
         {
-            using( DomainMonitor.OpenInfo( $"Loading Domain n°{DomainNumber}." ) )
+            using( Monitor.OpenInfo( $"Loading Domain n°{DomainNumber}." ) )
             using( CheckReentrancyOnly() )
             using( var d = new Deserializer( this, s, leaveOpen, encoding ) )
             {
@@ -407,7 +424,7 @@ namespace CK.Observable
             {
                 var r = d.Reader;
                 int version = r.ReadSmallInt32();
-                _objectCount = r.ReadInt32();
+                _actualObjectCount = r.ReadInt32();
 
                 _freeList.Clear();
                 int count = r.ReadSmallInt32();
@@ -425,26 +442,43 @@ namespace CK.Observable
                     _properties.Add( key, new PropInfo( propertyId, key ) );
                 }
 
-                count = _objectCount + _freeList.Count;
-                ObservableObject[] newObjs = new ObservableObject[count];
+                Array.Clear( _objects, 0, _objectsListCount );
+                _objectsListCount = count = _actualObjectCount + _freeList.Count;
+                while( _objectsListCount > _objects.Length )
+                {
+                    Array.Resize( ref _objects, _objects.Length * 2 );
+                }
                 while( --count >= 0 )
                 {
-                    r.ReadObject<ObservableObject>( x => newObjs[x.OId] = x );
+                    r.ReadObject<ObservableObject>( x => _objects[x.OId] = x );
                 }
                 r.ExecuteDeferredActions();
-
-                _objects.Clear();
-                _objects.AddRangeArray( newObjs );
             }
             catch( Exception ex )
             {
-                DomainMonitor.Fatal( $"While loading Domain n°{DomainNumber}", ex );
+                Monitor.Fatal( $"While loading Domain n°{DomainNumber}", ex );
             }
             finally
             {
                 _deserializing = false;
             }
         }
+
+        /// <summary>
+        /// Gets the active domain on the current thread (the last one for which a <see cref="BeginTransaction"/>
+        /// has been done an not yet disposed) or throws an <see cref="InvalidOperationException"/> if there is none.
+        /// </summary>
+        /// <returns>The current domain.</returns>
+        internal static ObservableDomain GetCurrentActiveDomain()
+        {
+            if( CurrentThreadDomain == null )
+            {
+                throw new InvalidOperationException( "ObservableObject can be created only inside a ObservableDomain transaction." );
+            }
+            return CurrentThreadDomain;
+        }
+
+        internal bool IsDeserializing => _deserializing;
 
         internal int Register( ObservableObject o )
         {
@@ -455,15 +489,18 @@ namespace CK.Observable
                 if( _freeList.Count > 0 )
                 {
                     idx = _freeList.Pop();
-                    _objects[idx] = o;
                 }
                 else
                 {
-                    idx = _objects.Count;
-                    _objects.Add( o );
+                    idx = _objectsListCount++;
+                    if( idx == _objects.Length )
+                    {
+                        Array.Resize( ref _objects, idx * 2 );
+                    }
                 }
+                _objects[idx] = o;
                 _changeTracker.OnNewObject( o, idx );
-                ++_objectCount;
+                ++_actualObjectCount;
                 return idx;
             }
         }
@@ -476,7 +513,7 @@ namespace CK.Observable
                 _changeTracker.OnDisposeObject( o );
                 _objects[o.OId] = null;
                 _freeList.Push( o.OId );
-                --_objectCount;
+                --_actualObjectCount;
             }
         }
 
