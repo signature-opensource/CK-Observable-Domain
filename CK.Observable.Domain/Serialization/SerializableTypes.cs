@@ -105,7 +105,7 @@ namespace CK.Observable
             /// Null if the type has been previously written by an external driver.
             /// </param>
             /// <returns>The new instance.</returns>
-            public object ReadInstance( Deserializer r, ObjectStreamReader.TypeBasedInfo readInfo )
+            public object ReadInstance( Deserializer r, ObjectStreamReader.TypeReadInfo readInfo )
             {
                 r.PushCtorContext( readInfo );
                 var o = _ctor.Invoke( new object[] { r } );

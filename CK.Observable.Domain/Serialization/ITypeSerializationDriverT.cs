@@ -24,7 +24,7 @@ namespace CK.Observable
         /// Null if the type has been previously written by an external driver.
         /// </param>
         /// <returns>The new instance.</returns>
-        new T ReadInstance( Deserializer r, ObjectStreamReader.TypeBasedInfo readInfo );
+        new T ReadInstance( Deserializer r, ObjectStreamReader.TypeReadInfo readInfo );
 
         /// <summary>
         /// Exports an instance. <see cref="IsExportable"/> must be true otherwise a <see cref="NotSupportedException"/>

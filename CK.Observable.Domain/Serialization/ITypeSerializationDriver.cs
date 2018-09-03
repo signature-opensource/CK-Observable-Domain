@@ -39,7 +39,7 @@ namespace CK.Observable
         /// Null if the type has been previously written by an external driver.
         /// </param>
         /// <returns>The new instance.</returns>
-        object ReadInstance( Deserializer r, ObjectStreamReader.TypeBasedInfo readInfo );
+        object ReadInstance( Deserializer r, ObjectStreamReader.TypeReadInfo readInfo );
 
     }
 }

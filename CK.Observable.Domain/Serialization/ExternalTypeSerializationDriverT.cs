@@ -22,12 +22,12 @@ namespace CK.Observable
         /// </summary>
         public TypeSerializationKind SerializationKind => TypeSerializationKind.External;
 
-        object ITypeSerializationDriver.ReadInstance( Deserializer r, ObjectStreamReader.TypeBasedInfo readInfo )
+        object ITypeSerializationDriver.ReadInstance( Deserializer r, ObjectStreamReader.TypeReadInfo readInfo )
         {
             return ReadInstance( r.Reader, readInfo );
         }
 
-        T ITypeSerializationDriver<T>.ReadInstance( Deserializer r, ObjectStreamReader.TypeBasedInfo readInfo )
+        T ITypeSerializationDriver<T>.ReadInstance( Deserializer r, ObjectStreamReader.TypeReadInfo readInfo )
         {
             return ReadInstance( r.Reader, readInfo );
         }
@@ -42,7 +42,7 @@ namespace CK.Observable
         /// Null if the type has been previously written by an external driver.
         /// </param>
         /// <returns>The new instance.</returns>
-        public abstract T ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeBasedInfo readInfo );
+        public abstract T ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo );
 
         void ITypeSerializationDriver.WriteData( Serializer w, object o )
         {

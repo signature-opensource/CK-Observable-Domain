@@ -127,22 +127,6 @@ namespace CK.Observable
             driver.WriteData( this, o );
         }
 
-        public void WriteType( Type t )
-        {
-            var driver = SerializableTypes.FindDriver( t, TypeSerializationKind.None );
-            if( driver != null )
-            {
-                if( driver is SerializableTypes.TypeInfo typeBased )
-                {
-                    DoWriteSerializableType( typeBased );
-                }
-                else
-                {
-                    if( DoWriteSimpleType( t ) ) WriteSmallInt32( -1 );
-                }
-            }
-        }
-
         internal void DoWriteSerializableType( SerializableTypes.TypeInfo tInfo )
         {
             Debug.Assert( tInfo != null );

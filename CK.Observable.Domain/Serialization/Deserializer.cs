@@ -16,10 +16,10 @@ namespace CK.Observable
 
         class State
         {
-            public readonly ObjectStreamReader.TypeBasedInfo ReadInfo;
+            public readonly ObjectStreamReader.TypeReadInfo ReadInfo;
             public int CurrentIndex;
 
-            public State( ObjectStreamReader.TypeBasedInfo readInfo )
+            public State( ObjectStreamReader.TypeReadInfo readInfo )
             {
                 CurrentIndex = -1;
                 ReadInfo = readInfo;
@@ -45,7 +45,7 @@ namespace CK.Observable
             return _reader;
         }
 
-        internal void PushCtorContext( ObjectStreamReader.TypeBasedInfo readInfo )
+        internal void PushCtorContext( ObjectStreamReader.TypeReadInfo readInfo )
         {
             _stack.Push( readInfo != null ? new State( readInfo ) : null );
         }

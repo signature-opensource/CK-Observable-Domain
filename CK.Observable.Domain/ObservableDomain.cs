@@ -54,7 +54,6 @@ namespace CK.Observable
         int _reentrancyFlag;
         bool _deserializing;
 
-
         class AllCollection : IReadOnlyCollection<ObservableObject>
         {
             readonly ObservableDomain _d;

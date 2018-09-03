@@ -10,7 +10,7 @@ namespace CK.Observable
     {
         public class DBool : ExternalTypeSerializationDriver<Boolean>
         {
-            public override bool ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeBasedInfo readInfo )
+            public override bool ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo )
             {
                 return r.ReadBoolean();
             }
@@ -27,7 +27,7 @@ namespace CK.Observable
 
         public class DChar : ExternalTypeSerializationDriver<Char>
         {
-            public override char ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeBasedInfo readInfo )
+            public override char ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo )
             {
                 return r.ReadChar();
             }
@@ -43,7 +43,7 @@ namespace CK.Observable
 
         public class DDouble : ExternalTypeSerializationDriver<Double>
         {
-            public override double ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeBasedInfo readInfo )
+            public override double ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo )
             {
                 return r.ReadDouble();
             }
@@ -61,7 +61,7 @@ namespace CK.Observable
 
         public class DSingle : ExternalTypeSerializationDriver<Single>
         {
-            public override float ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeBasedInfo readInfo )
+            public override float ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo )
             {
                 return r.ReadSingle();
             }
@@ -77,7 +77,7 @@ namespace CK.Observable
 
         public class DDecimal : ExternalTypeSerializationDriver<Decimal>
         {
-            public override decimal ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeBasedInfo readInfo )
+            public override decimal ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo )
             {
                 return r.ReadDecimal();
             }
@@ -93,7 +93,7 @@ namespace CK.Observable
 
         public class DSByte : ExternalTypeSerializationDriver<SByte>
         {
-            public override sbyte ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeBasedInfo readInfo )
+            public override sbyte ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo )
             {
                 return r.ReadSByte();
             }
@@ -109,7 +109,7 @@ namespace CK.Observable
 
         public class DByte : ExternalTypeSerializationDriver<Byte>
         {
-            public override byte ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeBasedInfo readInfo )
+            public override byte ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo )
             {
                 return r.ReadByte();
             }
@@ -125,7 +125,7 @@ namespace CK.Observable
 
         public class DInt16 : ExternalTypeSerializationDriver<Int16>
         {
-            public override short ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeBasedInfo readInfo )
+            public override short ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo )
             {
                 return r.ReadInt16();
             }
@@ -141,7 +141,7 @@ namespace CK.Observable
 
         public class DUInt16 : ExternalTypeSerializationDriver<UInt16>
         {
-            public override ushort ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeBasedInfo readInfo )
+            public override ushort ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo )
             {
                 return r.ReadUInt16();
             }
@@ -157,7 +157,7 @@ namespace CK.Observable
 
         public class DInt32 : ExternalTypeSerializationDriver<Int32>
         {
-            public override int ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeBasedInfo readInfo )
+            public override int ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo )
             {
                 return r.ReadInt32();
             }
@@ -173,7 +173,7 @@ namespace CK.Observable
 
         public class DUInt32 : ExternalTypeSerializationDriver<UInt32>
         {
-            public override uint ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeBasedInfo readInfo )
+            public override uint ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo )
             {
                 return r.ReadUInt32();
             }
@@ -190,7 +190,7 @@ namespace CK.Observable
 
         public class DInt64 : ExternalTypeSerializationDriver<Int64>
         {
-            public override long ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeBasedInfo readInfo )
+            public override long ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo )
             {
                 return r.ReadInt64();
             }
@@ -206,7 +206,7 @@ namespace CK.Observable
 
         public class DUInt64 : ExternalTypeSerializationDriver<UInt64>
         {
-            public override ulong ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeBasedInfo readInfo )
+            public override ulong ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo )
             {
                 return r.ReadUInt64();
             }
@@ -222,7 +222,7 @@ namespace CK.Observable
 
         public class DString : ExternalTypeSerializationDriver<String>
         {
-            public override string ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeBasedInfo readInfo )
+            public override string ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo )
             {
                 return r.ReadNullableString();
             }
@@ -238,7 +238,7 @@ namespace CK.Observable
 
         public class DGuid : ExternalTypeSerializationDriver<Guid>
         {
-            public override Guid ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeBasedInfo readInfo )
+            public override Guid ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo )
             {
                 return new Guid( r.ReadBytes( 16 ) );
             }
@@ -254,7 +254,7 @@ namespace CK.Observable
 
         public class DDateTime : ExternalTypeSerializationDriver<DateTime>
         {
-            public override DateTime ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeBasedInfo readInfo )
+            public override DateTime ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo )
             {
                 return DateTime.FromBinary( r.ReadInt64() );
             }
@@ -270,7 +270,7 @@ namespace CK.Observable
 
         public class DTimeSpan : ExternalTypeSerializationDriver<TimeSpan>
         {
-            public override TimeSpan ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeBasedInfo readInfo )
+            public override TimeSpan ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo )
             {
                 return TimeSpan.FromTicks( r.ReadInt64() );
             }
@@ -286,7 +286,7 @@ namespace CK.Observable
 
         public class DDateTimeOffset : ExternalTypeSerializationDriver<DateTimeOffset>
         {
-            public override DateTimeOffset ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeBasedInfo readInfo )
+            public override DateTimeOffset ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo )
             {
                 return new DateTimeOffset( r.ReadInt64(), TimeSpan.FromTicks( r.ReadInt64() ) );
             }

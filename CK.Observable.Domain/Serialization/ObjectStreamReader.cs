@@ -12,8 +12,8 @@ namespace CK.Observable
     public class ObjectStreamReader : CKBinaryReader
     {
         readonly Deserializer _deserializer;
-        readonly List<Type> _typesIdx;
-        readonly Dictionary<Type, TypeBasedInfo> _typeBasedInfos;
+        readonly List<string> _typesIdx;
+        readonly Dictionary<string, TypeReadInfo> _typeInfos;
         readonly List<object> _objects;
         readonly List<Deferred> _deferredSimple;
         readonly List<Action> _deferredComplex;
@@ -30,39 +30,92 @@ namespace CK.Observable
             }
         }
 
-        public class TypeBasedInfo
+        public class TypeReadInfo
         {
-            public readonly Type Type;
-            public readonly int Version;
-            TypeBasedInfo _baseType;
-            TypeBasedInfo[] _typePath;
+            /// <summary>
+            /// Gets the assembly qualified name of the type.
+            /// </summary>
+            public string AssemblyQualifiedName { get; }
 
-            public TypeBasedInfo BaseType => _baseType;
+            /// <summary>
+            /// Written version for <see cref="TypeSerializationKind.TypeBased"/>.
+            /// It is -1 if this type was not serializable when the stream
+            /// has been written or instances have been written by external
+            /// serializers.
+            /// </summary>
+            public readonly int Version;
+
+            /// <summary>
+            /// Gets the base type infromation.
+            /// Not null only for <see cref="TypeSerializationKind.TypeBased"/> and if the
+            /// type was a specialized class.
+            /// </summary>
+            public TypeReadInfo BaseType => _baseType;
 
             /// <summary>
             /// Gets the types from the base types (excluding Object) up to this one.
+            /// Not null only for <see cref="TypeSerializationKind.TypeBased"/>.
+            /// When not null, the list ends with this <see cref="TypeReadInfo"/> itself.
             /// </summary>
-            public IReadOnlyList<TypeBasedInfo> TypePath => _typePath;
+            public IReadOnlyList<TypeReadInfo> TypePath => _typePath;
 
-            internal TypeBasedInfo( Type t, int version )
+            /// <summary>
+            /// Gets the Type if it can be resolved locally.
+            /// </summary>
+            public Type LocalType
             {
-                Type = t;
+                get
+                {
+                    if( !_localTypeLookupDone )
+                    {
+                        _localTypeLookupDone = true;
+                        _localType = SimpleTypeFinder.WeakResolver( AssemblyQualifiedName, false );
+                    }
+                    return _localType;
+                }
+            }
+
+            internal ITypeSerializationDriver EnsureSerializationDriver()
+            {
+                if( _driver == null )
+                {
+                    var t = LocalType;
+                    if( t == null ) throw new InvalidDataException( $"Unable to load Type {AssemblyQualifiedName}. Current Serialization version makes read type mandatory. This should be corrected in a next version." );
+                    _driver = SerializableTypes.FindDriver( t, TypeSerializationKind.Serializable );
+                    if( _driver == null )
+                    {
+                        throw new InvalidDataException( $"Read type {t.Name} is no more serializable." );
+                    }
+                }
+                return _driver;
+            }
+
+            TypeReadInfo _baseType;
+            TypeReadInfo[] _typePath;
+            Type _localType;
+            ITypeSerializationDriver _driver;
+            bool _localTypeLookupDone;
+
+            internal TypeReadInfo( string t, int version )
+            {
+                AssemblyQualifiedName = t;
                 Version = version;
             }
 
-            internal void SetBaseType( TypeBasedInfo b )
+            internal void SetBaseType( TypeReadInfo b )
             {
                 _baseType = b;
             }
 
-            internal TypeBasedInfo[] EnsureTypePath()
+            internal TypeReadInfo[] EnsureTypePath()
             {
+                Debug.Assert( Version >= 0, "Must be called only for TypeBased serialization." );
                 if( _typePath == null )
                 {
                     if( _baseType != null )
                     {
                         var basePath = _baseType.EnsureTypePath();
-                        var p = new TypeBasedInfo[basePath.Length + 1];
+                        var p = new TypeReadInfo[basePath.Length + 1];
                         Array.Copy( basePath, p, basePath.Length );
                         p[basePath.Length] = this;
                         _typePath = p;
@@ -77,8 +130,8 @@ namespace CK.Observable
             : base( stream, encoding ?? Encoding.UTF8, leaveOpen )
         {
             _deserializer = d;
-            _typesIdx = new List<Type>();
-            _typeBasedInfos = new Dictionary<Type, TypeBasedInfo>();
+            _typesIdx = new List<string>();
+            _typeInfos = new Dictionary<string, TypeReadInfo>();
             _objects = new List<object>();
             _deferredSimple = new List<Deferred>();
             _deferredComplex = new List<Action>();
@@ -100,7 +153,7 @@ namespace CK.Observable
         /// Get the type based information as it has been written.
         /// If the object has been written by an external driver, this is null.
         /// </summary>
-        public TypeBasedInfo CurrentReadInfo { get; internal set; }
+        public TypeReadInfo CurrentReadInfo { get; internal set; }
 
         public void ReadObject<T>( Action<T> assign )
         {
@@ -166,66 +219,60 @@ namespace CK.Observable
             if( b == SerializationMarker.EmptyObject ) result = new object();
             else
             {
-                Type t = ReadType();
-                var driver = SerializableTypes.FindDriver( t, TypeSerializationKind.Serializable );
-                if( driver == null )
-                {
-                    throw new InvalidDataException( $"Read type {t.Name} is no more serializable." );
-                }
-                // Gets the TypeBase informations if this obect was written by an external driver,
-                // this is null.
-                _typeBasedInfos.TryGetValue( t, out var readInfo );
-                result = driver.ReadInstance( _deserializer, readInfo );
+                var info = ReadTypeInfo();
+                result = info.EnsureSerializationDriver().ReadInstance( _deserializer, info );
             }
             Debug.Assert( result.GetType().IsClass == !(result is ValueType) );
             if( idx >= 0 ) _objects[idx] = result;           
             return result;
         }
 
-        public Type ReadType()
+        public TypeReadInfo ReadTypeInfo()
         {
-            Type t = DoReadSimpleType( out bool newType );
+            TypeReadInfo leaf;
+            string sT = DoReadOneTypeName( out bool newType );
             if( newType )
             {
                 int version = ReadSmallInt32();
+                leaf = new TypeReadInfo( sT, version );
+                var current = leaf;
+                _typeInfos.Add( sT, leaf );
                 if( version >= 0 )
                 {
-                    var leaf = new TypeBasedInfo( t, version );
-                    _typeBasedInfos.Add( t, leaf );
-                    var current = leaf;
-                    Type parent = DoReadSimpleType( out newType );
+                    string parent = DoReadOneTypeName( out newType );
                     while( parent != null )
                     {
                         if( newType )
                         {
-                            var pInfo = new TypeBasedInfo( parent, ReadSmallInt32() );
+                            var pInfo = new TypeReadInfo( parent, ReadSmallInt32() );
                             current.SetBaseType( pInfo );
-                            _typeBasedInfos.Add( parent, pInfo );
+                            _typeInfos.Add( parent, pInfo );
                             current = pInfo;
-                            parent = DoReadSimpleType( out newType );
+                            parent = DoReadOneTypeName( out newType );
                         }
                         else
                         {
-                            current.SetBaseType( _typeBasedInfos[parent] );
+                            current.SetBaseType( _typeInfos[parent] );
                             break;
                         }
                     }
                     leaf.EnsureTypePath();
                 }
             }
-            return t;
+            else leaf = _typeInfos[sT];
+            return leaf;
         }
         
-        Type DoReadSimpleType( out bool newType )
+        string DoReadOneTypeName( out bool newType )
         {
             newType = false;
             switch( ReadByte() )
             {
                 case 0: return null;
-                case 1: return typeof( object );
+                case 1: return String.Empty;
                 case 2:
                     {
-                        var t = SimpleTypeFinder.WeakResolver( ReadString(), true );
+                        var t = ReadString();
                         _typesIdx.Add( t );
                         newType = true;
                         return t;
