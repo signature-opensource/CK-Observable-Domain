@@ -19,6 +19,10 @@ namespace CK.Observable
             {
                 w.Write( o );
             }
+
+            public override bool IsExportable => true;
+
+            public override void Export( int num, bool o, ObjectExporter exporter ) => exporter.Target.EmitBool( o );
         }
 
         public class DChar : ExternalTypeSerializationDriver<Char>
@@ -32,6 +36,9 @@ namespace CK.Observable
             {
                 w.Write( o );
             }
+            public override bool IsExportable => true;
+
+            public override void Export( int num, char o, ObjectExporter exporter ) => exporter.Target.EmitChar( o );
         }
 
         public class DDouble : ExternalTypeSerializationDriver<Double>
@@ -45,6 +52,11 @@ namespace CK.Observable
             {
                 w.Write( o );
             }
+
+            public override bool IsExportable => true;
+
+            public override void Export( int num, double o, ObjectExporter exporter ) => exporter.Target.EmitDouble( o );
+
         }
 
         public class DSingle : ExternalTypeSerializationDriver<Single>
@@ -58,6 +70,9 @@ namespace CK.Observable
             {
                 w.Write( o );
             }
+            public override bool IsExportable => true;
+
+            public override void Export( int num, float o, ObjectExporter exporter ) => exporter.Target.EmitDouble( o );
         }
 
         public class DDecimal : ExternalTypeSerializationDriver<Decimal>
@@ -71,6 +86,9 @@ namespace CK.Observable
             {
                 w.Write( o );
             }
+            public override bool IsExportable => true;
+
+            public override void Export( int num, decimal o, ObjectExporter exporter ) => exporter.Target.EmitSByte( o );
         }
 
         public class DSByte : ExternalTypeSerializationDriver<SByte>
@@ -84,6 +102,9 @@ namespace CK.Observable
             {
                 w.Write( o );
             }
+            public override bool IsExportable => true;
+
+            public override void Export( int num, sbyte o, ObjectExporter exporter ) => exporter.Target.EmitSByte( o );
         }
 
         public class DByte : ExternalTypeSerializationDriver<Byte>
@@ -97,6 +118,9 @@ namespace CK.Observable
             {
                 w.Write( o );
             }
+            public override bool IsExportable => true;
+
+            public override void Export( int num, byte o, ObjectExporter exporter ) => exporter.Target.EmitByte( o );
         }
 
         public class DInt16 : ExternalTypeSerializationDriver<Int16>
@@ -110,6 +134,9 @@ namespace CK.Observable
             {
                 w.Write( o );
             }
+            public override bool IsExportable => true;
+
+            public override void Export( int num, short o, ObjectExporter exporter ) => exporter.Target.EmitInt16( o );
         }
 
         public class DUInt16 : ExternalTypeSerializationDriver<UInt16>
@@ -123,6 +150,9 @@ namespace CK.Observable
             {
                 w.Write( o );
             }
+            public override bool IsExportable => true;
+
+            public override void Export( int num, ushort o, ObjectExporter exporter ) => exporter.Target.EmitUInt16( o );
         }
 
         public class DInt32 : ExternalTypeSerializationDriver<Int32>
@@ -136,6 +166,9 @@ namespace CK.Observable
             {
                 w.Write( o );
             }
+            public override bool IsExportable => true;
+
+            public override void Export( int num, int o, ObjectExporter exporter ) => exporter.Target.EmitInt32( o );
         }
 
         public class DUInt32 : ExternalTypeSerializationDriver<UInt32>
@@ -149,6 +182,10 @@ namespace CK.Observable
             {
                 w.Write( o );
             }
+
+            public override bool IsExportable => true;
+
+            public override void Export( int num, uint o, ObjectExporter exporter ) => exporter.Target.EmitUInt32( o );
         }
 
         public class DInt64 : ExternalTypeSerializationDriver<Int64>
@@ -162,6 +199,9 @@ namespace CK.Observable
             {
                 w.Write( o );
             }
+            public override bool IsExportable => true;
+
+            public override void Export( int num, long o, ObjectExporter exporter ) => exporter.Target.EmitInt64( o );
         }
 
         public class DUInt64 : ExternalTypeSerializationDriver<UInt64>
@@ -175,6 +215,9 @@ namespace CK.Observable
             {
                 w.Write( o );
             }
+            public override bool IsExportable => true;
+
+            public override void Export( int num, ulong o, ObjectExporter exporter ) => exporter.Target.EmitUInt64( o );
         }
 
         public class DString : ExternalTypeSerializationDriver<String>
@@ -188,6 +231,9 @@ namespace CK.Observable
             {
                 w.WriteNullableString( o );
             }
+            public override bool IsExportable => true;
+
+            public override void Export( int num, string o, ObjectExporter exporter ) => exporter.Target.EmitString( o );
         }
 
         public class DGuid : ExternalTypeSerializationDriver<Guid>
@@ -201,6 +247,9 @@ namespace CK.Observable
             {
                 w.Write( o.ToByteArray() );
             }
+            public override bool IsExportable => true;
+
+            public override void Export( int num, Guid o, ObjectExporter exporter ) => exporter.Target.EmitGuid( o );
         }
 
         public class DDateTime : ExternalTypeSerializationDriver<DateTime>
@@ -214,6 +263,9 @@ namespace CK.Observable
             {
                 w.Write( o.ToBinary() );
             }
+            public override bool IsExportable => true;
+
+            public override void Export( int num, DateTime o, ObjectExporter exporter ) => exporter.Target.EmitDateTime( o );
         }
 
         public class DTimeSpan : ExternalTypeSerializationDriver<TimeSpan>
@@ -227,6 +279,9 @@ namespace CK.Observable
             {
                 w.Write( o.Ticks );
             }
+            public override bool IsExportable => true;
+
+            public override void Export( int num, TimeSpan o, ObjectExporter exporter ) => exporter.Target.EmitTimeSpan( o );
         }
 
         public class DDateTimeOffset : ExternalTypeSerializationDriver<DateTimeOffset>
@@ -241,6 +296,9 @@ namespace CK.Observable
                 w.Write( o.DateTime.ToBinary() );
                 w.Write( o.Offset.Ticks );
             }
+            public override bool IsExportable => true;
+
+            public override void Export( int num, DateTimeOffset o, ObjectExporter exporter ) => exporter.Target.EmitDateTimeOffset( o );
         }
 
 

@@ -32,6 +32,7 @@ namespace CK.Observable
         /// </summary>
         public TypeSerializationKind SerializationKind => TypeSerializationKind.External;
 
+
         object ITypeSerializationDriver.ReadInstance( Deserializer r, ObjectStreamReader.TypeBasedInfo readInfo )
         {
             return ReadInstance( r.Reader, readInfo );
@@ -64,6 +65,21 @@ namespace CK.Observable
         {
             s.DoWriteSimpleType( Type );
         }
+
+        /// <summary>
+        /// Gets whether <see cref="Export"/> can be called: this driver knows hox to export
+        /// instances of its type.
+        /// </summary>
+        public abstract bool IsExportable { get; }
+
+        /// <summary>
+        /// Exports an instance. <see cref="IsExportable"/> must be true otherwise a <see cref="NotSupportedException"/>
+        /// must be thrown.
+        /// </summary>
+        /// <param name="o">The object instance. Must not ne null.</param>
+        /// <param name="num">The reference number for this object. -1 for value type.</param>
+        /// <param name="exporter">The exporter.</param>
+        public abstract void Export(object o, int num, ObjectExporter exporter);
     }
 
 }

@@ -65,6 +65,23 @@ namespace CK.Observable
             s.DoWriteSimpleType( Type );
         }
 
+        /// <summary>
+        /// Gets whether <see cref="Export"/> can be called: this driver knows hox to export
+        /// instances of its type.
+        /// </summary>
+        public abstract bool IsExportable { get; }
+
+        void IObjectExportTypeDriver.Export(object o, int num, ObjectExporter exporter) => Export( num, (T)o, exporter );
+
+        /// <summary>
+        /// Exports an instance. <see cref="IsExportable"/> must be true otherwise a <see cref="NotSupportedException"/>
+        /// must be thrown.
+        /// </summary>
+        /// <param name="num">The reference number for this object. -1 for value type.</param>
+        /// <param name="o">The object instance. Must not ne null.</param>
+        /// <param name="exporter">The exporter.</param>
+        public abstract void Export( int num, T o, ObjectExporter exporter );
+
     }
 
 }

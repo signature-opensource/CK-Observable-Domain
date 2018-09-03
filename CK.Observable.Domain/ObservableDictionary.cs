@@ -38,6 +38,11 @@ namespace CK.Observable
             }
         }
 
+        void Export( object o, int num, ObjectExporter e )
+        {
+            e.ExportMap( num, _map );
+        }
+
         public TValue this[TKey key]
         {
             get => _map[key];

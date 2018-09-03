@@ -14,10 +14,10 @@ namespace CK.Observable
 {
     public class ObservableDomain
     {
-        class PropInfo
+        class PropInfo 
         {
             public readonly PropertyChangedEventArgs EventArg;
-            public readonly int PropertyId;
+            public int PropertyId { get; }
             public string Name => EventArg.PropertyName;
 
             public PropInfo( int propertyId, string name )
@@ -522,15 +522,22 @@ namespace CK.Observable
             if( _deserializing ) return null;
             using( CheckTransactionAndReentrancy() )
             {
-                if( !_properties.TryGetValue( propertyName, out var p ) )
-                {
-                    p = new PropInfo( _properties.Count, propertyName );
-                    _changeTracker.OnNewProperty( p );
-                    _properties.Add( propertyName, p );
-                }
+                PropInfo p = EnsurePropertyInfo( propertyName );
                 _changeTracker.OnPropertyChanged( o, p, before, after );
                 return p.EventArg;
             }
+        }
+
+        PropInfo EnsurePropertyInfo( string propertyName )
+        {
+            if( !_properties.TryGetValue( propertyName, out var p ) )
+            {
+                p = new PropInfo( _properties.Count, propertyName );
+                _changeTracker.OnNewProperty( p );
+                _properties.Add( propertyName, p );
+            }
+
+            return p;
         }
 
         internal void OnListRemoveAt( ObservableObject o, int index )

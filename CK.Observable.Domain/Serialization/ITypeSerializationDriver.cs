@@ -6,13 +6,12 @@ using System.Threading.Tasks;
 
 namespace CK.Observable
 {
-    public interface ITypeSerializationDriver
+    /// <summary>
+    /// Extends the <see cref="IObjectExportTypeDriver"/>.
+    /// This is just becaus I'm in a hurry: the two conerns should be separated.
+    /// </summary>
+    public interface ITypeSerializationDriver : IObjectExportTypeDriver
     {
-        /// <summary>
-        /// Gets the type that this driver handles.
-        /// </summary>
-        Type Type { get; }
-
         /// <summary>
         /// Must be <see cref="TypeSerializationKind.TypeBased"/> or <see cref="TypeSerializationKind.External"/>.
         /// </summary>
@@ -41,5 +40,6 @@ namespace CK.Observable
         /// </param>
         /// <returns>The new instance.</returns>
         object ReadInstance( Deserializer r, ObjectStreamReader.TypeBasedInfo readInfo );
+
     }
 }

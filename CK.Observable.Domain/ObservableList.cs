@@ -34,6 +34,11 @@ namespace CK.Observable
             foreach( var o in _list ) s.WriteObject( o );
         }
 
+        void Export( object o, int num, ObjectExporter e )
+        {
+            e.ExportList( num, _list );
+        }
+
         public T this[int index] { get => _list[index]; set => _list[index] = value; }
 
         public int Count => _list.Count;

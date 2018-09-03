@@ -44,10 +44,61 @@ namespace CK.Observable
 
         public void WriteObject( object o )
         {
-            if( o == null )
+            switch( o )
             {
-                Write( (byte)0 );
-                return;
+                case null:
+                    {
+                        Write( (byte)SerializationMarker.Null );
+                        return;
+                    }
+                case string s:
+                    {
+                        Write( (byte)SerializationMarker.String );
+                        Write( s );
+                        return;
+                    }
+                case int i:
+                    {
+                        Write( (byte)SerializationMarker.Int32 );
+                        Write( i );
+                        return;
+                    }
+                case double d:
+                    {
+                        Write( (byte)SerializationMarker.Double );
+                        Write( d );
+                        return;
+                    }
+                case char c:
+                    {
+                        Write( (byte)SerializationMarker.Char );
+                        Write( c );
+                        return;
+                    }
+                case uint ui:
+                    {
+                        Write( (byte)SerializationMarker.UInt32 );
+                        Write( ui );
+                        return;
+                    }
+                case float f:
+                    {
+                        Write( (byte)SerializationMarker.Float );
+                        Write( f );
+                        return;
+                    }
+                case DateTime d:
+                    {
+                        Write( (byte)SerializationMarker.DateTime );
+                        Write( d.ToBinary() );
+                        return;
+                    }
+                case Guid g:
+                    {
+                        Write( (byte)SerializationMarker.Guid );
+                        Write( g.ToByteArray() );
+                        return;
+                    }
             }
             Type t = o.GetType();
             int idxSeen = -1;
@@ -55,7 +106,7 @@ namespace CK.Observable
             {
                 if( _seen.TryGetValue( o, out var num ) )
                 {
-                    Write( (byte)1 );
+                    Write( (byte)SerializationMarker.Reference );
                     Write( num );
                     return;
                 }
@@ -63,12 +114,12 @@ namespace CK.Observable
                 _seen.Add( o, _seen.Count );
                 if( t == typeof( object ) )
                 {
-                    Write( (byte)2 );
+                    Write( (byte)SerializationMarker.EmptyObject );
                     Write( idxSeen );
                     return;
                 }
             }
-            Write( (byte)3 );
+            Write( (byte)SerializationMarker.Object );
             Write( idxSeen );
             var driver = SerializableTypes.FindDriver( t, TypeSerializationKind.Serializable );
             Debug.Assert( driver != null );

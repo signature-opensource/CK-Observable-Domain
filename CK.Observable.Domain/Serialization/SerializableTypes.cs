@@ -14,12 +14,14 @@ namespace CK.Observable
         static readonly ConcurrentDictionary<Type, ITypeSerializationDriver> _types;
         static readonly Type[] _ctorParameters;
         static readonly Type[] _writeParameters;
+        static readonly Type[] _exportParameters;
 
         static SerializableTypes()
         {
             _types = new ConcurrentDictionary<Type, ITypeSerializationDriver>();
             _ctorParameters = new Type[] { typeof( Deserializer ) };
             _writeParameters = new Type[] { typeof( Serializer ) };
+            _exportParameters = new Type[] { typeof( object ), typeof( int ), typeof( ObjectExporter ) };
             Register( new BasicTypeDrivers.DBool() );
             Register( new BasicTypeDrivers.DByte() );
             Register( new BasicTypeDrivers.DChar() );
@@ -70,9 +72,15 @@ namespace CK.Observable
             /// </summary>
             public IReadOnlyList<TypeInfo> TypePath => _typePath;
 
+            public bool IsExportable { get; }
+
             readonly TypeInfo[] _typePath;
             readonly MethodInfo _write;
             readonly ConstructorInfo _ctor;
+
+            // Export.
+            readonly MethodInfo _exporter;
+            readonly IReadOnlyList<PropertyInfo> _exportedProperties;
 
             /// <summary>
             /// Calls the Write methods on <see cref="TypePath"/>.
@@ -115,6 +123,32 @@ namespace CK.Observable
                 s.DoWriteSerializableType( this );
             }
 
+            public void Export(object o, int num, ObjectExporter exporter)
+            {
+                if( _exporter != null )
+                {
+                    _exporter.Invoke( o, new object[] { num, exporter } );
+                }
+                else
+                {
+                    if( _exportedProperties == null ) throw new InvalidOperationException( $"Type {Type.Name} is not exportable." );
+                    if( _exportedProperties.Count == 0 )
+                    {
+                        exporter.Target.EmitEmptyObject( num );
+                    }
+                    else
+                    {
+                        exporter.Target.EmitStartObject( num, ObjectExportedKind.Object );
+                        foreach( var p in _exportedProperties )
+                        {
+                            exporter.Target.EmitObjectProperty( p.Name );
+                            exporter.ExportObject( p.GetValue( o ) );
+                        }
+                        exporter.Target.EmitEndObject( num, ObjectExportedKind.Object );
+                    }
+                }
+            }
+
             internal TypeInfo( TypeInfo baseType, TypeSerializableParts parts )
             {
                 Type = parts.Type;
@@ -130,6 +164,25 @@ namespace CK.Observable
                     _typePath = p;
                 }
                 else _typePath = new[] { this };
+                _exporter = Type.GetMethod( "Export",
+                                            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+                                            null,
+                                            _exportParameters,
+                                            null );
+                if( _exporter != null )
+                {
+                    IsExportable = true;
+                }
+                else
+                {
+                    IsExportable = !Type.GetCustomAttributes<NotExportableAttribute>().Any();
+                    if( IsExportable )
+                    {
+                        _exportedProperties = Type.GetProperties().Where( p => p.GetIndexParameters().Length == 0
+                                                            && !p.GetCustomAttributes<NotExportableAttribute>().Any() )
+                                             .ToArray();
+                    }
+                }
             }
         }
 

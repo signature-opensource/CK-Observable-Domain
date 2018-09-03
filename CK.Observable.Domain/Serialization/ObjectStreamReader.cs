@@ -135,26 +135,35 @@ namespace CK.Observable
         {
             resolved = true;
             idx = -1;
-            var b = ReadByte();
-            if( b == 0 )
+            var b = (SerializationMarker)ReadByte();
+            switch( b )
             {
-                return null;
+                case SerializationMarker.Null: return null;
+                case SerializationMarker.String: return ReadString();
+                case SerializationMarker.Int32: return ReadInt32();
+                case SerializationMarker.Double: return ReadDouble();
+                case SerializationMarker.Char: return ReadChar();
+                case SerializationMarker.UInt32: return ReadUInt32();
+                case SerializationMarker.Float: return ReadSingle();
+                case SerializationMarker.DateTime: return DateTime.FromBinary( ReadInt64() );
+                case SerializationMarker.Guid: return new Guid( ReadBytes( 16 ) );
+
+                case SerializationMarker.Reference:
+                    {
+                        idx = ReadInt32();
+                        if( idx >= _objects.Count || _objects[idx] == null )
+                        {
+                            resolved = false;
+                            return null;
+                        }
+                        return _objects[idx];
+                    }
             }
-            if( b == 1 )
-            {
-                idx = ReadInt32();
-                if( idx >= _objects.Count || _objects[idx] == null )
-                {
-                    resolved = false;
-                    return null;
-                }
-                return _objects[idx];
-            }
-            if( b > 3 ) throw new InvalidDataException();
+            Debug.Assert( b == SerializationMarker.EmptyObject || b == SerializationMarker.Object );
             idx = ReadInt32();
             if( idx >= 0 ) _objects.Add( null );
             object result;
-            if( b == 2 ) result = new object();
+            if( b == SerializationMarker.EmptyObject ) result = new object();
             else
             {
                 Type t = ReadType();

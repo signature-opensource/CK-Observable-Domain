@@ -13,7 +13,7 @@ using static CK.Testing.MonitorTestHelper;
 namespace CK.Observable.Domain.Tests
 {
     [TestFixture]
-    public class SerializationTests
+    public class DomainSerializationTests
     {
         [Test]
         public void simple_serialization()
