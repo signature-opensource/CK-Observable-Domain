@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -39,7 +40,8 @@ namespace CK.Observable
         [ThreadStatic]
         internal static ObservableDomain CurrentThreadDomain;
 
-        readonly Dictionary<string,PropInfo> _properties;
+        readonly Dictionary<string, PropInfo> _properties;
+        readonly List<PropInfo> _propertiesByIndex;
         readonly ChangeTracker _changeTracker;
         readonly IDisposable _reentrancyHandler;
         readonly AllCollection _exposedObjects;
@@ -65,7 +67,9 @@ namespace CK.Observable
 
             public int Count => _d._actualObjectCount;
 
-            public IEnumerator<ObservableObject> GetEnumerator() => _d._objects.Where( o => o != null ).GetEnumerator();
+            public IEnumerator<ObservableObject> GetEnumerator() => _d._objects.Take( _d._objectsListCount )
+                                                                               .Where( o => o != null )
+                                                                               .GetEnumerator();
 
             IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
         }
@@ -111,20 +115,29 @@ namespace CK.Observable
                 }
             }
 
-            readonly List<IObservableEvent> _changeEvents;
-            readonly HashSet<ObservableObject> _newObjects;
+            readonly List<ObservableEvent> _changeEvents;
+            readonly Dictionary<ObservableObject,List<PropertyInfo>> _newObjects;
             readonly Dictionary<long, PropChanged> _propChanged;
             PropChanged _firstPropChanged;
             PropChanged _lastPropChanged;
 
+            class PureRefEquality : IEqualityComparer<ObservableObject>
+            {
+                public bool Equals( ObservableObject x, ObservableObject y ) => ReferenceEquals( x, y );
+
+                public int GetHashCode( ObservableObject obj ) => obj.GetHashCode();
+            }
+
+            static readonly PureRefEquality RefEquality = new PureRefEquality();
+
             public ChangeTracker()
             {
-                _changeEvents = new List<IObservableEvent>();
-                _newObjects = new HashSet<ObservableObject>();
+                _changeEvents = new List<ObservableEvent>();
+                _newObjects = new Dictionary<ObservableObject, List<PropertyInfo>>( RefEquality );
                 _propChanged = new Dictionary<long, PropChanged>();
             }
 
-            public IReadOnlyList<IObservableEvent> Commit()
+            public IReadOnlyList<ObservableEvent> Commit( Func<string,PropInfo> ensurePropertInfo )
             {
                 PropChanged p = _lastPropChanged;
                 while( p != null )
@@ -132,8 +145,24 @@ namespace CK.Observable
                     if( !p.Object.IsDisposed )
                     {
                         _changeEvents.Add( new PropertyChangedEvent( p.Object, p.Info.PropertyId, p.Info.Name, p.FinalValue ) );
+                        if( _newObjects.TryGetValue( p.Object, out var exportables ) )
+                        {
+                            Debug.Assert( exportables != null, "If the object is not exportable, there must be no property changed events." );
+                            int idx = exportables.IndexOf( exp => exp.Name == p.Info.Name );
+                            if( idx >= 0 ) exportables.RemoveAt( idx );
+                        }
                     }
                     p = p.Prev;
+                }
+                foreach( var kv in _newObjects )
+                {
+                    if( kv.Value == null || kv.Value.Count == 0 ) continue;
+                    foreach( var exp in kv.Value )
+                    {
+                        object propValue = exp.GetValue( kv.Key );
+                        var pInfo = ensurePropertInfo( exp.Name );
+                        _changeEvents.Add( new PropertyChangedEvent( kv.Key, pInfo.PropertyId, pInfo.Name, propValue ) );
+                    }
                 }
                 var result = _changeEvents.ToArray();
                 Reset();
@@ -148,19 +177,24 @@ namespace CK.Observable
                 _firstPropChanged = _lastPropChanged = null;
             }
 
-            internal bool IsNewObject( ObservableObject o ) => _newObjects.Contains( o );
+            internal bool IsNewObject( ObservableObject o ) => _newObjects.ContainsKey( o );
 
             internal void OnNewObject( ObservableObject o, int objectId )
             {
                 _changeEvents.Add( new NewObjectEvent( o, objectId ) );
-                _newObjects.Add( o );
+                if( o.SerializationDriver != null && o.SerializationDriver.IsExportable )
+                {
+                    _newObjects.Add( o, o.SerializationDriver.ExportableProperties.ToList() );
+                }
+                else _newObjects.Add( o, null );
             }
 
             internal void OnDisposeObject( ObservableObject o )
             {
                 if( IsNewObject( o ) )
                 {
-                    _changeEvents.RemoveAt( _changeEvents.OfType<NewObjectEvent>().IndexOf( e => e.Object == o ) );
+                    int idx = _changeEvents.IndexOf( e => e is NewObjectEvent n ? n.Object == o : false );
+                    _changeEvents.RemoveAt( idx );
                     _newObjects.Remove( o );
                 }
                 else
@@ -241,13 +275,13 @@ namespace CK.Observable
                 CurrentThreadDomain = d;
             }
 
-            public IReadOnlyList<IObservableEvent> Commit()
+            public IReadOnlyList<ObservableEvent> Commit()
             {
                 CurrentThreadDomain = _previous;
                 _domain._currentTran = null;
-                var events = _domain._changeTracker.Commit();
+                var events = _domain._changeTracker.Commit( _domain.EnsurePropertyInfo );
                 ++_domain._transactionSerialNumber;
-                _domain.TransactionManager?.OnTransactionCommit( _domain, events );
+                _domain.TransactionManager?.OnTransactionCommit( _domain, DateTime.UtcNow, events );
                 return events;
             }
 
@@ -306,6 +340,7 @@ namespace CK.Observable
             _objects = new ObservableObject[512];
             _freeList = new Stack<int>();
             _properties = new Dictionary<string, PropInfo>();
+            _propertiesByIndex = new List<PropInfo>();
             _changeTracker = new ChangeTracker();
             _reentrancyHandler = new ReetrancyHandler( this );
             _exposedObjects = new AllCollection( this );
@@ -366,9 +401,9 @@ namespace CK.Observable
         /// Enables modifications to be done inside a transaction and a try/catch block.
         /// On success, the event list is returned (that may be empty) and on error returns null.
         /// </summary>
-        /// <param name="actions">Any action that alters the objects of this domain.</param>
+        /// <param name="actions">Any action that can alter the objects of this domain.</param>
         /// <returns>Null on error, a possibly empty list of events on success.</returns>
-        public IReadOnlyList<IObservableEvent> Modify( Action actions )
+        public IReadOnlyList<ObservableEvent> Modify( Action actions )
         {
             using( var t = BeginTransaction() )
             {
@@ -385,6 +420,49 @@ namespace CK.Observable
             }
         }
 
+        /// <summary>
+        /// Exports this domain as a JSON object with the <see cref="TransactionSerialNumber"/>,
+        /// the property name mappings, and the object graph itself that is compatible
+        /// with @Signature/json-graph-serialization package and requires a post processing to lift
+        /// container (map, list and set) contents.
+        /// </summary>
+        /// <param name="w">The text writer.</param>
+        public void Export( TextWriter w )
+        {
+            using( CheckReentrancyOnly() )
+            {
+                var target = new JSONExportTarget( w );
+
+                target.EmitStartObject( -1, ObjectExportedKind.Object );
+                target.EmitPropertyName( "N" );
+                target.EmitInt32( _transactionSerialNumber );
+                target.EmitPropertyName( "P" );
+                target.EmitStartObject( -1, ObjectExportedKind.List );
+                foreach( var p in _properties )
+                {
+                    target.EmitString( p.Value.Name );
+                }
+                target.EmitEndObject( -1, ObjectExportedKind.List );
+
+                target.EmitPropertyName( "O" );
+                ObjectExporter.ExportRootList( target, _objects.Take( _objectsListCount ) );
+                target.EmitEndObject( -1, ObjectExportedKind.Object );
+            }
+        }
+
+        public string ExportToString()
+        {
+            var w = new StringWriter();
+            Export( w );
+            return w.ToString();
+        }
+
+        /// <summary>
+        /// Saves <see cref="AllObjects"/> of this domain.
+        /// </summary>
+        /// <param name="s">The output stream.</param>
+        /// <param name="leaveOpen">True to leave the stream opened.</param>
+        /// <param name="encoding">Optional encoding for characters. Defaults to UTF-8.</param>
         public void Save( Stream s, bool leaveOpen = false, Encoding encoding = null )
         {
             using( CheckReentrancyOnly() )
@@ -395,17 +473,22 @@ namespace CK.Observable
                 w.WriteSmallInt32( _freeList.Count );
                 foreach( var i in _freeList ) w.WriteSmallInt32( i );
                 w.WriteSmallInt32( _properties.Count );
-                foreach( var kv in _properties )
+                foreach( var p in _propertiesByIndex )
                 {
-                    w.Write( kv.Key );
-                    Debug.Assert( kv.Key == kv.Value.Name );
-                    w.WriteSmallInt32( kv.Value.PropertyId );
+                    w.Write( p.Name );
+                    w.WriteSmallInt32( p.PropertyId );
                 }
                 Debug.Assert( _objectsListCount == _actualObjectCount + _freeList.Count );
                 foreach( var o in _objects ) w.WriteObject( o );
             }
         }
 
+        /// <summary>
+        /// Loads previously <see cref="Save"/>d objects into this domain.
+        /// </summary>
+        /// <param name="s">The input stream.</param>
+        /// <param name="leaveOpen">True to leave the stream opened.</param>
+        /// <param name="encoding">Optional encoding for characters. Defaults to UTF-8.</param>
         public void Load( Stream s, bool leaveOpen = false, Encoding encoding = null )
         {
             using( Monitor.OpenInfo( $"Loading Domain n°{DomainNumber}." ) )
@@ -433,12 +516,15 @@ namespace CK.Observable
                 }
 
                 _properties.Clear();
+                _propertiesByIndex.Clear();
                 count = r.ReadSmallInt32();
                 while( --count >= 0 )
                 {
-                    string key = r.ReadString();
+                    string name = r.ReadString();
                     int propertyId = r.ReadSmallInt32();
-                    _properties.Add( key, new PropInfo( propertyId, key ) );
+                    var p = new PropInfo( propertyId, name );
+                    _properties.Add( name, p );
+                    _propertiesByIndex.Add( p );
                 }
 
                 Array.Clear( _objects, 0, _objectsListCount );
@@ -498,7 +584,10 @@ namespace CK.Observable
                     }
                 }
                 _objects[idx] = o;
-                _changeTracker.OnNewObject( o, idx );
+                if( !_deserializing )
+                {
+                    _changeTracker.OnNewObject( o, idx );
+                }
                 ++_actualObjectCount;
                 return idx;
             }
@@ -509,7 +598,7 @@ namespace CK.Observable
             Debug.Assert( !o.IsDisposed );
             using( CheckTransactionAndReentrancy() )
             {
-                _changeTracker.OnDisposeObject( o );
+                if( !_deserializing ) _changeTracker.OnDisposeObject( o );
                 _objects[o.OId] = null;
                 _freeList.Push( o.OId );
                 --_actualObjectCount;
@@ -518,7 +607,13 @@ namespace CK.Observable
 
         internal PropertyChangedEventArgs OnPropertyChanged( ObservableObject o, string propertyName, object before, object after )
         {
-            if( _deserializing ) return null;
+            if( _deserializing
+                || o.SerializationDriver == null
+                || !o.SerializationDriver.IsExportable
+                || !o.SerializationDriver.ExportableProperties.Any( p => p.Name == propertyName ) )
+            {
+                return null;
+            }
             using( CheckTransactionAndReentrancy() )
             {
                 PropInfo p = EnsurePropertyInfo( propertyName );
@@ -534,6 +629,7 @@ namespace CK.Observable
                 p = new PropInfo( _properties.Count, propertyName );
                 _changeTracker.OnNewProperty( p );
                 _properties.Add( propertyName, p );
+                _propertiesByIndex.Add( p );
             }
 
             return p;
@@ -541,6 +637,7 @@ namespace CK.Observable
 
         internal void OnListRemoveAt( ObservableObject o, int index )
         {
+            if( _deserializing ) return;
             using( CheckTransactionAndReentrancy() )
             {
                 _changeTracker.OnListRemoveAt( o, index );
@@ -549,6 +646,7 @@ namespace CK.Observable
 
         internal void OnCollectionClear( ObservableObject o )
         {
+            if( _deserializing ) return;
             using( CheckTransactionAndReentrancy() )
             {
                 _changeTracker.OnCollectionClear( o );
@@ -557,6 +655,7 @@ namespace CK.Observable
 
         internal void OnListInsert( ObservableObject o, int index, object item )
         {
+            if( _deserializing ) return;
             using( CheckTransactionAndReentrancy() )
             {
                 _changeTracker.OnListInsert( o, index, item );
@@ -565,6 +664,7 @@ namespace CK.Observable
 
         internal void OnCollectionMapSet( ObservableObject o, object key, object value )
         {
+            if( _deserializing ) return;
             using( CheckTransactionAndReentrancy() )
             {
                 _changeTracker.OnCollectionMapSet( o, key, value );
@@ -573,6 +673,7 @@ namespace CK.Observable
 
         internal void OnCollectionRemoveKey( ObservableObject o, object key )
         {
+            if( _deserializing ) return;
             using( CheckTransactionAndReentrancy() )
             {
                 _changeTracker.OnCollectionRemoveKey( o, key );

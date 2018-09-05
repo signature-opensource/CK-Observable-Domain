@@ -38,10 +38,16 @@ namespace CK.Observable
             }
         }
 
-        void Export( object o, int num, ObjectExporter e )
+        void Export( int num, ObjectExporter e )
         {
+            e.Target.EmitStartObject( -1, ObjectExportedKind.Object );
+            e.ExportNamedProperty( ExportContentOIdName, OId );
+            e.Target.EmitPropertyName( ExportContentPropName );
             e.ExportMap( num, _map );
+            e.Target.EmitEndObject( -1, ObjectExportedKind.Object );
         }
+
+        internal override ObjectExportedKind ExportedKind => ObjectExportedKind.Map;
 
         public TValue this[TKey key]
         {

@@ -8,7 +8,7 @@ using static CK.Testing.MonitorTestHelper;
 
 namespace CK.Observable.Domain.Tests.Sample
 {
-    public static class SempleDomain
+    public static class SampleDomain
     {
         public static ObservableDomain CreateSample( IObservableTransactionManager tm = null )
         {
@@ -36,7 +36,7 @@ namespace CK.Observable.Domain.Tests.Sample
             return d;
         }
 
-        public static IReadOnlyList<IObservableEvent> TransactedSetPaulMincLastName( ObservableDomain d, string newLastName, bool throwException = false )
+        public static IReadOnlyList<ObservableEvent> TransactedSetPaulMincLastName( ObservableDomain d, string newLastName, bool throwException = false )
         {
             return d.Modify( () =>
             {

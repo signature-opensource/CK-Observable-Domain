@@ -72,7 +72,7 @@ namespace CK.Observable
             }
             public override bool IsExportable => true;
 
-            public override void Export( int num, float o, ObjectExporter exporter ) => exporter.Target.EmitDouble( o );
+            public override void Export( int num, float o, ObjectExporter exporter ) => exporter.Target.EmitSingle( o );
         }
 
         public class DDecimal : ExternalTypeSerializationDriver<Decimal>
@@ -240,12 +240,12 @@ namespace CK.Observable
         {
             public override Guid ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo )
             {
-                return new Guid( r.ReadBytes( 16 ) );
+                return r.ReadGuid();
             }
 
             public override void WriteData( Serializer w, Guid o )
             {
-                w.Write( o.ToByteArray() );
+                w.Write( o );
             }
             public override bool IsExportable => true;
 
@@ -256,12 +256,12 @@ namespace CK.Observable
         {
             public override DateTime ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo )
             {
-                return DateTime.FromBinary( r.ReadInt64() );
+                return r.ReadDateTime();
             }
 
             public override void WriteData( Serializer w, DateTime o )
             {
-                w.Write( o.ToBinary() );
+                w.Write( o );
             }
             public override bool IsExportable => true;
 
@@ -272,12 +272,12 @@ namespace CK.Observable
         {
             public override TimeSpan ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo )
             {
-                return TimeSpan.FromTicks( r.ReadInt64() );
+                return r.ReadTimeSpan();
             }
 
             public override void WriteData( Serializer w, TimeSpan o )
             {
-                w.Write( o.Ticks );
+                w.Write( o );
             }
             public override bool IsExportable => true;
 
@@ -288,13 +288,12 @@ namespace CK.Observable
         {
             public override DateTimeOffset ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo )
             {
-                return new DateTimeOffset( r.ReadInt64(), TimeSpan.FromTicks( r.ReadInt64() ) );
+                return r.ReadDateTimeOffset();
             }
 
             public override void WriteData( Serializer w, DateTimeOffset o )
             {
-                w.Write( o.DateTime.ToBinary() );
-                w.Write( o.Offset.Ticks );
+                w.Write( o );
             }
             public override bool IsExportable => true;
 

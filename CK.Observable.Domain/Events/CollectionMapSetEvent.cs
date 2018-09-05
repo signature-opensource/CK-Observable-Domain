@@ -6,10 +6,8 @@ using System.Threading.Tasks;
 
 namespace CK.Observable
 {
-    public class CollectionMapSetEvent : IObservableEvent
+    public class CollectionMapSetEvent : ObservableEvent
     {
-        public ObservableEventType EventType => ObservableEventType.CollectionRemoveKey;
-
         public int ObjectId { get; }
 
         public ObservableObject Object { get; }
@@ -19,6 +17,7 @@ namespace CK.Observable
         public object Value { get; }
 
         public CollectionMapSetEvent( ObservableObject o, object key, object value )
+            : base( ObservableEventType.CollectionRemoveKey )
         {
             ObjectId = o.OId;
             Object = o;
@@ -26,6 +25,12 @@ namespace CK.Observable
             Value = value;
         }
 
+        protected override void ExportEventData( ObjectExporter e )
+        {
+            e.Target.EmitInt32( ObjectId );
+            ExportEventObject( e, Key );
+            ExportEventObject( e, Value );
+        }
 
         public override string ToString() => $"{EventType} {ObjectId}[{Key}] = {Value ?? "null"}";
     }

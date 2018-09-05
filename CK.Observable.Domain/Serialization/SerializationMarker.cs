@@ -13,10 +13,13 @@ namespace CK.Observable
         Int32,
         Double,
         Char,
+        Boolean,
         UInt32,
         Float,
         DateTime,
         Guid,
+        TimeSpan,
+        DateTimeOffset,
 
         Reference = 253,
         EmptyObject = 254,

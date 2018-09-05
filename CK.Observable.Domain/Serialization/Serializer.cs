@@ -75,6 +75,12 @@ namespace CK.Observable
                         Write( c );
                         return;
                     }
+                case bool b:
+                    {
+                        Write( (byte)SerializationMarker.Boolean );
+                        Write( b );
+                        return;
+                    }
                 case uint ui:
                     {
                         Write( (byte)SerializationMarker.UInt32 );
@@ -90,13 +96,25 @@ namespace CK.Observable
                 case DateTime d:
                     {
                         Write( (byte)SerializationMarker.DateTime );
-                        Write( d.ToBinary() );
+                        Write( d );
                         return;
                     }
                 case Guid g:
                     {
                         Write( (byte)SerializationMarker.Guid );
-                        Write( g.ToByteArray() );
+                        Write( g );
+                        return;
+                    }
+                case TimeSpan ts:
+                    {
+                        Write( (byte)SerializationMarker.TimeSpan );
+                        Write( ts );
+                        return;
+                    }
+                case DateTimeOffset ds:
+                    {
+                        Write( (byte)SerializationMarker.DateTimeOffset );
+                        Write( ds );
                         return;
                     }
             }
@@ -121,7 +139,9 @@ namespace CK.Observable
             }
             Write( (byte)SerializationMarker.Object );
             Write( idxSeen );
-            var driver = SerializableTypes.FindDriver( t, TypeSerializationKind.Serializable );
+            var driver = o is IKnowSerializationDriver k
+                            ? k.SerializationDriver
+                            : SerializableTypes.FindDriver( t, TypeSerializationKind.Serializable );
             Debug.Assert( driver != null );
             driver.WriteTypeInformation( this );
             driver.WriteData( this, o );
@@ -163,6 +183,44 @@ namespace CK.Observable
             return false;
         }
 
+        // TODO: transfer these helpers to CKBinaryReader.
+
+        /// <summary>
+        /// Writes a DateTime value.
+        /// </summary>
+        /// <param name="d">The value to write.</param>
+        public void Write( DateTime d )
+        {
+            Write( d.ToBinary() );
+        }
+
+        /// <summary>
+        /// Writes a TimeSpan value.
+        /// </summary>
+        /// <param name="t">The value to write.</param>
+        public void Write( TimeSpan t )
+        {
+            Write( t.Ticks );
+        }
+
+        /// <summary>
+        /// Writes a DateTimeOffset value.
+        /// </summary>
+        /// <param name="ds">The value to write.</param>
+        public void Write( DateTimeOffset ds )
+        {
+            Write( ds.DateTime );
+            Write( (short)ds.Offset.TotalMinutes );
+        }
+
+        /// <summary>
+        /// Writes a DateTimeOffset value.
+        /// </summary>
+        /// <param name="g">The value to write.</param>
+        public void Write( Guid g )
+        {
+            Write( g.ToByteArray() );
+        }
 
     }
 }

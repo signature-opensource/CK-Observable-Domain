@@ -19,8 +19,9 @@ namespace CK.Observable
         /// Called when a transaction ends successfully.
         /// </summary>
         /// <param name="d">The associated domain.</param>
+        /// <param name="timeUtc">The date time utc of the commit.</param>
         /// <param name="events">The events of the transaction. Can be empty.</param>
-        void OnTransactionCommit( ObservableDomain d, IReadOnlyList<IObservableEvent> events );
+        void OnTransactionCommit( ObservableDomain d, DateTime timeUtc, IReadOnlyList<ObservableEvent> events );
 
         /// <summary>
         /// Called when an error occured in a transaction. 

@@ -15,6 +15,6 @@ namespace CK.Observable
         /// Commits all changes and retrieves the event list.
         /// </summary>
         /// <returns>The event list.</returns>
-        IReadOnlyList<IObservableEvent> Commit();
+        IReadOnlyList<ObservableEvent> Commit();
     }
 }

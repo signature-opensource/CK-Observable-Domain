@@ -27,6 +27,20 @@ namespace CK.Observable
             _seen = new Dictionary<object, int>( RefEquality );
         }
 
+        public static void ExportRootList( IObjectExporterTarget target, IEnumerable objects )
+        {
+            var e = new ObjectExporter( target );
+            e._seen.Add( e, 0 );
+            e.ExportList( 0, objects );
+        }
+
+        public static void ExportRootMap<TKey,TValue>( IObjectExporterTarget target, IEnumerable<KeyValuePair<TKey, TValue>> map )
+        {
+            var e = new ObjectExporter( target );
+            e._seen.Add( e, 0 );
+            e.ExportMap( 0, map );
+        }
+
         public IObjectExporterTarget Target => _target;
 
         public void ExportList( int num, IEnumerable list )
@@ -49,16 +63,84 @@ namespace CK.Observable
             Target.EmitEndObject( num, ObjectExportedKind.Map );
         }
 
+        public void ExportNamedProperty( string name, object o )
+        {
+            Target.EmitPropertyName( name );
+            ExportObject( o );
+        }
+
+        public void ExportProperties( IEnumerable<ExportableProperty> properties )
+        {
+            foreach( var p in properties )
+            {
+                Target.EmitPropertyName( p.Name );
+                ExportObject( p.Value );
+            }
+        }
+
         public void ExportObject( object o )
         {
-            if( o == null )
+            switch( o )
             {
-                _target.EmitNull();
-                return;
+                case null:
+                    {
+                        _target.EmitNull();
+                        return;
+                    }
+                case string s:
+                    {
+                        _target.EmitString( s );
+                        return;
+                    }
+                case int i:
+                    {
+                        _target.EmitInt32( i );
+                        return;
+                    }
+                case double d:
+                    {
+                        _target.EmitDouble( d );
+                        return;
+                    }
+                case char c:
+                    {
+                        _target.EmitChar( c );
+                        return;
+                    }
+                case bool b:
+                    {
+                        _target.EmitBool( b );
+                        return;
+                    }
+                case uint ui:
+                    {
+                        _target.EmitUInt32( ui );
+                        return;
+                    }
+                case float f:
+                    {
+                        _target.EmitSingle( f );
+                        return;
+                    }
+                case DateTime d:
+                    {
+                        _target.EmitDateTime( d );
+                        return;
+                    }
+                case Guid g:
+                    {
+                        _target.EmitGuid( g );
+                        return;
+                    }
+                case TimeSpan ts:
+                    {
+                        _target.EmitTimeSpan( ts );
+                        return;
+                    }
             }
             Type t = o.GetType();
             int idxSeen = -1;
-            if( t.IsClass && t != typeof(string) )
+            if( t.IsClass )
             {
                 if( _seen.TryGetValue( o, out var num ) )
                 {
@@ -73,10 +155,12 @@ namespace CK.Observable
                     return;
                 }
             }
-            IObjectExportTypeDriver driver = SerializableTypes.FindDriver( t, TypeSerializationKind.None );
+            var driver = o is IKnowSerializationDriver k
+                           ? k.SerializationDriver
+                           : SerializableTypes.FindDriver( t, TypeSerializationKind.None );
             if( !driver.IsExportable )
             {
-                throw new Exception( $"Type {t.Name} is not exportable." );
+                throw new Exception( $"Type '{t.FullName}' is not exportable." );
             }
             driver.Export(o, idxSeen, this);
         }

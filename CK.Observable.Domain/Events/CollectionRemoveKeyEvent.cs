@@ -6,10 +6,8 @@ using System.Threading.Tasks;
 
 namespace CK.Observable
 {
-    public class CollectionRemoveKeyEvent : IObservableEvent
+    public class CollectionRemoveKeyEvent : ObservableEvent
     {
-        public ObservableEventType EventType => ObservableEventType.CollectionRemoveKey;
-
         public int ObjectId { get; }
 
         public ObservableObject Object { get; }
@@ -17,10 +15,17 @@ namespace CK.Observable
         public object Key { get; }
 
         public CollectionRemoveKeyEvent( ObservableObject o, object key )
+            : base( ObservableEventType.CollectionRemoveKey )
         {
             ObjectId = o.OId;
             Object = o;
             Key = key;
+        }
+
+        protected override void ExportEventData( ObjectExporter e )
+        {
+            e.Target.EmitInt32( ObjectId );
+            ExportEventObject( e, Key );
         }
 
         public override string ToString() => $"{EventType} {ObjectId}[{Key}]";

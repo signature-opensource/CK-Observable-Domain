@@ -8,16 +8,22 @@ namespace CK.Observable
 {
     public interface IObjectExporterTarget
     {
+        /// <summary>
+        /// Resets any internal state so that any contextual information are lost.
+        /// </summary>
+        void ResetContext();
+
         void EmitNull();
         void EmitReference( int num );
         void EmitEmptyObject( int num );
         void EmitString( string value );
         void EmitStartObject( int num, ObjectExportedKind kind );
-        void EmitObjectProperty( string name );
+        void EmitPropertyName( string name );
         void EmitEndObject( int num, ObjectExportedKind kind );
+        void EmitDouble( double o );
+        void EmitSingle( float o );
         void EmitBool( bool o );
         void EmitChar( char o );
-        void EmitDouble( double o );
         void EmitSByte( decimal o );
         void EmitInt16( short o );
         void EmitByte( byte o );

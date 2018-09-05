@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static CK.Testing.MonitorTestHelper;
 
 namespace CK.Observable.Domain.Tests
 {
@@ -33,25 +34,25 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void transaction_manager_with_rollbacks()
         {
-            var d = SempleDomain.CreateSample( new SecureInMemoryTransactionManager() );
+            var d = SampleDomain.CreateSample( new SecureInMemoryTransactionManager() );
             d.TransactionSerialNumber.Should().Be( 1 );
-            var events = SempleDomain.TransactedSetPaulMincLastName( d, "No-More-Minc" );
+            var events = SampleDomain.TransactedSetPaulMincLastName( d, "No-More-Minc" );
             events.Should().NotBeNull();
             d.TransactionSerialNumber.Should().Be( 2 );
             d.AllObjects.OfType<Person>().Single( x => x.FirstName == "Paul" ).LastName.Should().Be( "No-More-Minc" );
 
-            events = SempleDomain.TransactedSetPaulMincLastName( d, "Minc" );
+            events = SampleDomain.TransactedSetPaulMincLastName( d, "Minc" );
             events.Should().NotBeNull();
             d.TransactionSerialNumber.Should().Be( 3 );
-            SempleDomain.CheckSampleGarage1( d );
+            SampleDomain.CheckSampleGarage1( d );
 
-            events = SempleDomain.TransactedSetPaulMincLastName( d, "No-More-Minc", throwException: true );
+            events = SampleDomain.TransactedSetPaulMincLastName( d, "No-More-Minc", throwException: true );
             events.Should().BeNull();
             d.TransactionSerialNumber.Should().Be( 3 );
-            SempleDomain.CheckSampleGarage1( d );
+            SampleDomain.CheckSampleGarage1( d );
         }
 
-        static void Check( IReadOnlyList<IObservableEvent> events, params string[] e )
+        static void Check( IReadOnlyList<ObservableEvent> events, params string[] e )
         {
             events.Should().HaveCount( e.Length );
             events.Select( ev => ev.ToString() ).Should().ContainInOrder( e );

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -64,6 +65,12 @@ namespace CK.Observable
         {
             s.DoWriteSimpleType( Type );
         }
+
+        /// <summary>
+        /// Gets the property that must be exported.
+        /// Defaults to empty.
+        /// </summary>
+        public virtual IReadOnlyList<PropertyInfo> ExportableProperties => Array.Empty<PropertyInfo>();
 
         /// <summary>
         /// Gets whether <see cref="Export"/> can be called: this driver knows hox to export

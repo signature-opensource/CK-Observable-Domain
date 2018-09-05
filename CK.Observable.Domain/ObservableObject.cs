@@ -9,9 +9,12 @@ using System.Diagnostics;
 namespace CK.Observable
 {
     [SerializationVersionAttribute(0)]
-    public abstract class ObservableObject : INotifyPropertyChanged, IDisposable
+    public abstract class ObservableObject : INotifyPropertyChanged, IKnowSerializationDriver, IDisposable
     {
+        protected const string ExportContentOIdName = "$i";
+        protected const string ExportContentPropName = "$C";
         int _id;
+        ITypeSerializationDriver _serializationDriver;
         internal readonly ObservableDomain Domain;
         PropertyChangedEventHandler _handler;
         internal int OId => _id;
@@ -21,23 +24,27 @@ namespace CK.Observable
         {
         }
 
-
         protected ObservableObject( ObservableDomain domain )
         {
             if( domain == null ) throw new ArgumentNullException( nameof(domain) );
+            _serializationDriver = SerializableTypes.FindDriver( GetType(), TypeSerializationKind.None );
             Domain = domain;
             _id = Domain.Register( this );
             Debug.Assert( _id >= 0 );
         }
 
-
         protected ObservableObject( Deserializer d )
         {
+            _serializationDriver = SerializableTypes.FindDriver( GetType(), TypeSerializationKind.None );
             Domain = d.Domain;
             var r = d.StartReading();
             Debug.Assert( r.CurrentReadInfo.Version == 0 );
             _id = r.ReadInt32();
         }
+
+        ITypeSerializationDriver IKnowSerializationDriver.SerializationDriver => _serializationDriver;
+
+        internal IObjectExportTypeDriver SerializationDriver => _serializationDriver;
 
         void Write( Serializer w )
         {
@@ -52,9 +59,12 @@ namespace CK.Observable
 
         protected IActivityMonitor DomainMonitor => Domain.Monitor;
 
+        [NotExportable]
         public bool IsDisposed => _id < 0;
 
         protected bool IsDeserializing => Domain.IsDeserializing;
+
+        internal virtual ObjectExportedKind ExportedKind => ObjectExportedKind.Object;
 
         public void Dispose()
         {

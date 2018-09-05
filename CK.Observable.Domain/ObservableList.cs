@@ -34,14 +34,20 @@ namespace CK.Observable
             foreach( var o in _list ) s.WriteObject( o );
         }
 
-        void Export( object o, int num, ObjectExporter e )
+        void Export( int num, ObjectExporter e )
         {
+            e.Target.EmitStartObject( -1, ObjectExportedKind.Object );
+            e.ExportNamedProperty( ExportContentOIdName, OId );
+            e.Target.EmitPropertyName( ExportContentPropName );
             e.ExportList( num, _list );
+            e.Target.EmitEndObject( -1, ObjectExportedKind.Object );
         }
 
         public T this[int index] { get => _list[index]; set => _list[index] = value; }
 
         public int Count => _list.Count;
+
+        internal override ObjectExportedKind ExportedKind => ObjectExportedKind.List;
 
         bool ICollection<T>.IsReadOnly => false;
 

@@ -6,10 +6,8 @@ using System.Threading.Tasks;
 
 namespace CK.Observable
 {
-    public class PropertyChangedEvent : IObservableEvent
+    public class PropertyChangedEvent : ObservableEvent
     {
-        public ObservableEventType EventType => ObservableEventType.PropertyChanged;
-
         public int ObjectId { get; }
 
         public ObservableObject Object { get; }
@@ -21,12 +19,20 @@ namespace CK.Observable
         public object Value { get; }
 
         public PropertyChangedEvent( ObservableObject o, int propertyId, string propertyName, object value )
+            : base( ObservableEventType.PropertyChanged )
         {
             ObjectId = o.OId;
             Object = o;
             PropertyId = propertyId;
             PropertyName = propertyName;
             Value = value;
+        }
+
+        protected override void ExportEventData( ObjectExporter e )
+        {
+            e.Target.EmitInt32( ObjectId );
+            e.Target.EmitInt32( PropertyId );
+            ExportEventObject( e, Value );
         }
 
         public override string ToString() => $"{EventType} {ObjectId}.{PropertyName} = {Value ?? "null"}.";

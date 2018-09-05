@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -27,5 +28,11 @@ namespace CK.Observable
         /// <param name="num">The reference number for this object. -1 for value type.</param>
         /// <param name="exporter">The exporter.</param>
         void Export( object o, int num, ObjectExporter exporter );
+
+        /// <summary>
+        /// Gets the property that must be exported.
+        /// This is empty for basic types.
+        /// </summary>
+        IReadOnlyList<PropertyInfo> ExportableProperties { get; }
     }
 }

@@ -40,6 +40,11 @@ namespace CK.Observable.Domain.Tests
             {
             }
             public int Speed { get; set; }
+
+            void Export( ObjectExporter e )
+            {
+            }
+
         }
 
         [Test]
@@ -51,7 +56,10 @@ namespace CK.Observable.Domain.Tests
                 Action reentrancies = () => Parallel.For( 0, 20, i =>
                 {
                     var c = new FakeReentrancy( d );
-                    for( int j = 0; j < 100; ++j ) c.Speed = j;
+                    for( int j = 0; j < 100; ++j )
+                    {
+                        c.Speed = j;
+                    }
                 } );
                 reentrancies.Should()
                             .Throw<AggregateException>()

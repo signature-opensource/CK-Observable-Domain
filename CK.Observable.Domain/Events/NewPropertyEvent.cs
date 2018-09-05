@@ -7,18 +7,24 @@ using System.Threading.Tasks;
 namespace CK.Observable
 {
 
-    public class NewPropertyEvent : IObservableEvent
+    public class NewPropertyEvent : ObservableEvent
     {
-        public ObservableEventType EventType => ObservableEventType.NewProperty;
+        public string Name { get; }
 
         public int PropertyId { get; }
 
-        public string Name { get; }
-
         public NewPropertyEvent( int id, string name )
+            : base( ObservableEventType.NewProperty )
         {
             PropertyId = id;
             Name = name;
+        }
+
+
+        protected override void ExportEventData( ObjectExporter e )
+        {
+            e.Target.EmitString( Name );
+            e.Target.EmitInt32( PropertyId );
         }
 
         public override string ToString() => $"{EventType} {Name} -> {PropertyId}.";

@@ -155,21 +155,66 @@ namespace CK.Observable
         /// </summary>
         public TypeReadInfo CurrentReadInfo { get; internal set; }
 
-        public void ReadObject<T>( Action<T> assign )
+        public void ReadObject<T>( Action<T> onRead )
         {
-            ReadObject( o => assign( (T)o ) );
+            ReadObject( o => onRead( (T)o ) );
         }
 
-        public bool ReadObjects( Action<object,object> a )
+        public bool ReadObjects( Action<object, object> onRead )
         {
             object result1 = DoReadObject( out bool resolved1, out int idx1 );
             object result2 = DoReadObject( out bool resolved2, out int idx2 );
             if( resolved1 && resolved2 )
             {
-                a( result1, result2 );
+                onRead( result1, result2 );
                 return true;
             }
-            _deferredComplex.Add( () => a( _objects[idx1], _objects[idx2] ) );
+            _deferredComplex.Add( () => onRead( _objects[idx1], _objects[idx2] ) );
+            return false;
+        }
+
+        public bool ReadObjects( Action<object, object, object> onRead )
+        {
+            object result1 = DoReadObject( out bool resolved1, out int idx1 );
+            object result2 = DoReadObject( out bool resolved2, out int idx2 );
+            object result3 = DoReadObject( out bool resolved3, out int idx3 );
+            if( resolved1 && resolved2 && resolved3 )
+            {
+                onRead( result1, result2, result3 );
+                return true;
+            }
+            _deferredComplex.Add( () => onRead( _objects[idx1], _objects[idx2], _objects[idx3] ) );
+            return false;
+        }
+
+        public bool ReadObjects( Action<object, object, object, object> onRead )
+        {
+            object result1 = DoReadObject( out bool resolved1, out int idx1 );
+            object result2 = DoReadObject( out bool resolved2, out int idx2 );
+            object result3 = DoReadObject( out bool resolved3, out int idx3 );
+            object result4 = DoReadObject( out bool resolved4, out int idx4 );
+            if( resolved1 && resolved2 && resolved3 && resolved4 )
+            {
+                onRead( result1, result2, result3, result4 );
+                return true;
+            }
+            _deferredComplex.Add( () => onRead( _objects[idx1], _objects[idx2], _objects[idx3], _objects[idx4] ) );
+            return false;
+        }
+
+        public bool ReadObjects( Action<object, object, object, object, object> onRead )
+        {
+            object result1 = DoReadObject( out bool resolved1, out int idx1 );
+            object result2 = DoReadObject( out bool resolved2, out int idx2 );
+            object result3 = DoReadObject( out bool resolved3, out int idx3 );
+            object result4 = DoReadObject( out bool resolved4, out int idx4 );
+            object result5 = DoReadObject( out bool resolved5, out int idx5 );
+            if( resolved1 && resolved2 && resolved3 && resolved4 && resolved5 )
+            {
+                onRead( result1, result2, result3, result4, result5 );
+                return true;
+            }
+            _deferredComplex.Add( () => onRead( _objects[idx1], _objects[idx2], _objects[idx3], _objects[idx4], _objects[idx5] ) );
             return false;
         }
 
@@ -196,10 +241,13 @@ namespace CK.Observable
                 case SerializationMarker.Int32: return ReadInt32();
                 case SerializationMarker.Double: return ReadDouble();
                 case SerializationMarker.Char: return ReadChar();
+                case SerializationMarker.Boolean: return ReadBoolean();
                 case SerializationMarker.UInt32: return ReadUInt32();
                 case SerializationMarker.Float: return ReadSingle();
-                case SerializationMarker.DateTime: return DateTime.FromBinary( ReadInt64() );
-                case SerializationMarker.Guid: return new Guid( ReadBytes( 16 ) );
+                case SerializationMarker.DateTime: return ReadDateTime();
+                case SerializationMarker.Guid: return ReadGuid();
+                case SerializationMarker.TimeSpan: return ReadTimeSpan();
+                case SerializationMarker.DateTimeOffset: return ReadDateTimeOffset();
 
                 case SerializationMarker.Reference:
                     {
@@ -282,8 +330,43 @@ namespace CK.Observable
             }
         }
 
+        // TODO: transfer thess helpers to CKBinaryReader.
 
+        /// <summary>
+        /// Reads a DateTime value.
+        /// </summary>
+        /// <returns>The DateTime read.</returns>
+        public DateTime ReadDateTime()
+        {
+            return DateTime.FromBinary( ReadInt64() );
+        }
 
+        /// <summary>
+        /// Reads a TimeSpan value.
+        /// </summary>
+        /// <returns>The TimeSpan read.</returns>
+        public TimeSpan ReadTimeSpan()
+        {
+            return TimeSpan.FromTicks( ReadInt64() );
+        }
+
+        /// <summary>
+        /// Reads a DateTimeOffset value.
+        /// </summary>
+        /// <returns>The DateTimeOffset read.</returns>
+        public DateTimeOffset ReadDateTimeOffset()
+        {
+            return new DateTimeOffset( ReadDateTime(), TimeSpan.FromMinutes( ReadInt16() ) );
+        }
+
+        /// <summary>
+        /// Reads a Guid value.
+        /// </summary>
+        /// <returns>The Guid read.</returns>
+        public Guid ReadGuid()
+        {
+            return new Guid( ReadBytes( 16 ) );
+        }
 
     }
 }

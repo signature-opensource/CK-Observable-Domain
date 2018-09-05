@@ -6,18 +6,22 @@ using System.Threading.Tasks;
 
 namespace CK.Observable
 {
-    public class CollectionClearEvent : IObservableEvent
+    public class CollectionClearEvent : ObservableEvent
     {
-        public ObservableEventType EventType => ObservableEventType.CollectionClear;
-
         public int ObjectId { get; }
 
         public ObservableObject Object { get; }
 
         public CollectionClearEvent( ObservableObject o )
+            : base( ObservableEventType.CollectionClear )
         {
             ObjectId = o.OId;
             Object = o;
+        }
+
+        protected override void ExportEventData( ObjectExporter e )
+        {
+            e.Target.EmitInt32( ObjectId );
         }
 
         public override string ToString() => $"{EventType} {ObjectId}.";

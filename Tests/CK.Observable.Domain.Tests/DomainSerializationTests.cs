@@ -31,6 +31,35 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
+        public void serialization_with_mutiple_types()
+        {
+            var domain = new ObservableDomain( TestHelper.Monitor );
+            MultiPropertyType defValue = null;
+            domain.Modify( () =>
+            {
+                defValue = new MultiPropertyType();
+                var other = new MultiPropertyType();
+                domain.AllObjects.First().Should().BeSameAs( defValue );
+                domain.AllObjects.ElementAt(1).Should().BeSameAs( other );
+            } );
+
+            var d2 = SaveAndLoad( domain );
+            d2.AllObjects.OfType<MultiPropertyType>().All( o => o.Equals( defValue ) );
+
+            d2.Modify( () =>
+            {
+                var other = d2.AllObjects.OfType<MultiPropertyType>().ElementAt( 1 );
+                other.ChangeAll( "Changed", 3, Guid.NewGuid() );
+            } );
+            d2.AllObjects.First().Should().Match( o => o.Equals( defValue ) );
+            d2.AllObjects.ElementAt( 1 ).Should().Match( o => !o.Equals( defValue ) );
+
+            var d3 = SaveAndLoad( d2 );
+            d3.AllObjects.First().Should().Match( o => o.Equals( defValue ) );
+            d3.AllObjects.ElementAt( 1 ).Should().Match( o => !o.Equals( defValue ) );
+        }
+
+        [Test]
         public void with_cycle_serialization()
         {
             var domain = new ObservableDomain( TestHelper.Monitor );
@@ -97,9 +126,9 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void sample_graph_serialization()
         {
-            var domain = Sample.SempleDomain.CreateSample();
+            var domain = Sample.SampleDomain.CreateSample();
             var d2 = SaveAndLoad( domain );
-            Sample.SempleDomain.CheckSampleGarage1( d2 );
+            Sample.SampleDomain.CheckSampleGarage1( d2 );
         }
 
         static ObservableDomain SaveAndLoad( ObservableDomain domain )

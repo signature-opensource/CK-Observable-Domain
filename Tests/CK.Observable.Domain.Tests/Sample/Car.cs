@@ -9,34 +9,6 @@ using System.Threading.Tasks;
 namespace CK.Observable.Domain.Tests.Sample
 {
     [SerializationVersionAttribute(0)]
-    public struct Position
-    {
-        public readonly double Latitude;
-        public readonly double Longitude;
-
-        public Position( double latitude, double longitude )
-        {
-            Latitude = latitude;
-            Longitude = longitude;
-        }
-
-        private Position( Deserializer d )
-        {
-            var r = d.StartReading();
-            Latitude = r.ReadDouble();
-            Longitude = r.ReadDouble();
-        }
-
-        void Write( Serializer s )
-        {
-            s.Write( Latitude );
-            s.Write( Longitude );
-        }
-
-        public override string ToString() => $"({Latitude.ToString(CultureInfo.InvariantCulture)},{Longitude.ToString( CultureInfo.InvariantCulture )})";
-    }
-
-    [SerializationVersionAttribute(0)]
     public class Car : ObservableObject
     {
         public Car( string name )

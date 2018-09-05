@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -71,6 +72,12 @@ namespace CK.Observable
         /// instances of its type.
         /// </summary>
         public abstract bool IsExportable { get; }
+
+        /// <summary>
+        /// Gets the property that must be exported.
+        /// This is empty for basic types.
+        /// </summary>
+        public abstract IReadOnlyList<PropertyInfo> ExportableProperties { get; }
 
         /// <summary>
         /// Exports an instance. <see cref="IsExportable"/> must be true otherwise a <see cref="NotSupportedException"/>
