@@ -17,7 +17,7 @@ namespace CK.Observable
             _list = new List<T>();
         }
 
-        protected ObservableList( Deserializer d ) : base( d )
+        protected ObservableList( BinaryDeserializer d ) : base( d )
         {
             var r = d.StartReading();
             int count = r.ReadNonNegativeSmallInt32();
@@ -28,7 +28,7 @@ namespace CK.Observable
             }
         }
 
-        void Write( Serializer s )
+        void Write( BinarySerializer s )
         {
             s.WriteNonNegativeSmallInt32( _list.Count );
             foreach( var o in _list ) s.WriteObject( o );

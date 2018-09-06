@@ -19,7 +19,7 @@ namespace CK.Observable.Domain.Tests.Sample
             _replacementCars = new ObservableDictionary<Car, Car>();
         }
 
-        public Garage( Deserializer d )
+        public Garage( BinaryDeserializer d )
             : base( d )
         {
             var r = d.StartReading();
@@ -29,7 +29,7 @@ namespace CK.Observable.Domain.Tests.Sample
             r.ReadObject<ObservableDictionary<Car, Car>>( x => _replacementCars = x );
         }
 
-        void Write( Serializer s )
+        void Write( BinarySerializer s )
         {
             s.WriteNullableString( CompanyName );
             s.WriteObject( Employees );

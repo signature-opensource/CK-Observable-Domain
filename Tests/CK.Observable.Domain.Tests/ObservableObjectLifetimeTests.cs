@@ -56,10 +56,7 @@ namespace CK.Observable.Domain.Tests
                 Action reentrancies = () => Parallel.For( 0, 20, i =>
                 {
                     var c = new FakeReentrancy( d );
-                    for( int j = 0; j < 100; ++j )
-                    {
-                        c.Speed = j;
-                    }
+                    System.Threading.Thread.Sleep( 2 );
                 } );
                 reentrancies.Should()
                             .Throw<AggregateException>()

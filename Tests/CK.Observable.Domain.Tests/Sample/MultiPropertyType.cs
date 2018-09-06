@@ -1,6 +1,7 @@
 using CK.Core;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -77,10 +78,11 @@ namespace CK.Observable.Domain.Tests.Sample
             Single += delta;
             Char = (char)(Char + delta);
             Boolean = (delta&1) == 0;
+            Enum = (MechanicLevel)(((int)Enum + delta) % (int)(MechanicLevel.Master + 1));
             Position = new Position( Position.Latitude + delta, Position.Longitude + delta );
         }
 
-        public MultiPropertyType( Deserializer d ) : base( d )
+        public MultiPropertyType( BinaryDeserializer d ) : base( d )
         {
             var r = d.StartReading();
             String = r.ReadNullableString();
@@ -101,10 +103,16 @@ namespace CK.Observable.Domain.Tests.Sample
             Char = r.ReadChar();
             Boolean = r.ReadBoolean();
 
+            // Enum can be serialized through their drivers:
+            r.ReadObject<MechanicLevel>( l => Enum = l );
+            // Or directly (simpler and more efficient):
+            var e = (MechanicLevel)r.ReadInt32();
+            Debug.Assert( e == Enum );
+
             r.ReadObject<Position>( x => Position = x );
         }
 
-        void Write( Serializer w )
+        void Write( BinarySerializer w )
         {
             w.WriteNullableString( String );
             w.Write( Int32 );
@@ -123,6 +131,10 @@ namespace CK.Observable.Domain.Tests.Sample
             w.Write( Single );
             w.Write( Char );
             w.Write( Boolean );
+
+            // See the deserialization part.
+            w.WriteObject( Enum );
+            w.Write( (int)Enum );
 
             w.WriteObject( Position );
         }
@@ -150,7 +162,8 @@ namespace CK.Observable.Domain.Tests.Sample
                     Char,
                     Boolean,
                     Position.Latitude,
-                    Position.Longitude );
+                    Position.Longitude,
+                    Enum );
         }
 
         public bool Equals( MultiPropertyType other )
@@ -173,7 +186,8 @@ namespace CK.Observable.Domain.Tests.Sample
                     Char == other.Char &&
                     Boolean == other.Boolean &&
                     Position.Latitude == other.Position.Latitude &&
-                    Position.Longitude == other.Position.Longitude;
+                    Position.Longitude == other.Position.Longitude &&
+                    Enum == other.Enum;
         }
 
         public string String { get; set; }
@@ -211,5 +225,7 @@ namespace CK.Observable.Domain.Tests.Sample
         public bool Boolean { get; set; }
 
         public Position Position { get; set; }
+
+        public MechanicLevel Enum { get; set; }
     }
 }

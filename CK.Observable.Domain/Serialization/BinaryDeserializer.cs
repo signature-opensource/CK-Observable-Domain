@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace CK.Observable
 {
-    public class Deserializer : IDisposable
+    public class BinaryDeserializer : IDisposable
     {
         readonly ObservableDomain _domain;
         readonly ObjectStreamReader _reader;
@@ -26,7 +26,7 @@ namespace CK.Observable
             }
         }
 
-        internal Deserializer( ObservableDomain d, Stream stream, bool leaveOpen, Encoding encoding = null )
+        internal BinaryDeserializer( ObservableDomain d, Stream stream, bool leaveOpen, Encoding encoding = null )
         {
             _domain = d;
             _reader = new ObjectStreamReader( this, stream, leaveOpen, encoding ?? Encoding.UTF8 );

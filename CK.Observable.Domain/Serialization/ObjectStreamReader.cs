@@ -11,7 +11,7 @@ namespace CK.Observable
 {
     public class ObjectStreamReader : CKBinaryReader
     {
-        readonly Deserializer _deserializer;
+        readonly BinaryDeserializer _deserializer;
         readonly List<string> _typesIdx;
         readonly Dictionary<string, TypeReadInfo> _typeInfos;
         readonly List<object> _objects;
@@ -126,7 +126,7 @@ namespace CK.Observable
             }
         }
 
-        internal ObjectStreamReader( Deserializer d, Stream stream, bool leaveOpen = false, Encoding encoding = null )
+        internal ObjectStreamReader( BinaryDeserializer d, Stream stream, bool leaveOpen = false, Encoding encoding = null )
             : base( stream, encoding ?? Encoding.UTF8, leaveOpen )
         {
             _deserializer = d;

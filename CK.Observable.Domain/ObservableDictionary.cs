@@ -17,7 +17,7 @@ namespace CK.Observable
             _map = new Dictionary<TKey, TValue>();
         }
 
-        protected ObservableDictionary( Deserializer d ) : base( d )
+        protected ObservableDictionary( BinaryDeserializer d ) : base( d )
         {
             var r = d.StartReading();
             int count = r.ReadNonNegativeSmallInt32();
@@ -28,7 +28,7 @@ namespace CK.Observable
             }
         }
 
-        void Write( Serializer s )
+        void Write( BinarySerializer s )
         {
             s.WriteNonNegativeSmallInt32( _map.Count );
             foreach( var kv in _map )

@@ -20,8 +20,8 @@ namespace CK.Observable
         static SerializableTypes()
         {
             _types = new ConcurrentDictionary<Type, ITypeSerializationDriver>();
-            _ctorParameters = new Type[] { typeof( Deserializer ) };
-            _writeParameters = new Type[] { typeof( Serializer ) };
+            _ctorParameters = new Type[] { typeof( BinaryDeserializer ) };
+            _writeParameters = new Type[] { typeof( BinarySerializer ) };
             _exportParameters = new Type[] { typeof( int ), typeof( ObjectExporter ) };
             _exportBaseParameters = new Type[] { typeof( int ), typeof( ObjectExporter ), typeof( IReadOnlyList<ExportableProperty> ) };
             Register( new BasicTypeDrivers.DBool() );
@@ -97,7 +97,7 @@ namespace CK.Observable
             /// </summary>
             /// <param name="w">The serializer.</param>
             /// <param name="o">The object instance.</param>
-            public void WriteData( Serializer w, object o )
+            public void WriteData( BinarySerializer w, object o )
             {
                 var parameters = new object[] { w };
                 foreach( var t in _typePath )
@@ -115,7 +115,7 @@ namespace CK.Observable
             /// Null if the type has been previously written by an external driver.
             /// </param>
             /// <returns>The new instance.</returns>
-            public object ReadInstance( Deserializer r, ObjectStreamReader.TypeReadInfo readInfo )
+            public object ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
             {
                 r.PushCtorContext( readInfo );
                 var o = _ctor.Invoke( new object[] { r } );
@@ -128,9 +128,9 @@ namespace CK.Observable
             /// written yet (they are unknown to the Serializer).
             /// </summary>
             /// <param name="s">The serializer.</param>
-            public void WriteTypeInformation( Serializer s )
+            public void WriteTypeInformation( BinarySerializer s )
             {
-                s.DoWriteSerializableType( this );
+                s.DoWriteSerializableTypeBased( this );
             }
 
             public void Export(object o, int num, ObjectExporter exporter)
@@ -247,6 +247,10 @@ namespace CK.Observable
                 }
                 return info;
             }
+            if( t.IsEnum )
+            {
+                return _types.GetOrAdd( t, new EnumTypeSerializationDriver( t ) );
+            }
             var parts = GetTypeSerializableParts( t );
             if( requirements == TypeSerializationKind.TypeBased ) parts.CheckValid( requirements );
             else if( parts.IsValid ) requirements = TypeSerializationKind.TypeBased;
@@ -284,11 +288,11 @@ namespace CK.Observable
                 }
                 if( Ctor == null && Version == null && Write == null )
                 {
-                    throw new InvalidOperationException( $"Type {Type.Name} is not serializable. Either define [{nameof( SerializationVersionAttribute )}], public or protected {Type.Name}({nameof( Deserializer )} ) constructor and 'void {Type.Name}.Write({nameof( Serializer )} )' method on it or register an external driver." );
+                    throw new InvalidOperationException( $"Type {Type.Name} is not serializable. Either define [{nameof( SerializationVersionAttribute )}], public or protected {Type.Name}({nameof( BinaryDeserializer )} ) constructor and 'void {Type.Name}.Write({nameof( BinarySerializer )} )' method on it or register an external driver." );
                 }
-                if( Ctor == null ) throw new InvalidOperationException( $"Missing public or protected {Type.Name}({nameof( Deserializer )} ) constructor." );
+                if( Ctor == null ) throw new InvalidOperationException( $"Missing public or protected {Type.Name}({nameof( BinaryDeserializer )} ) constructor." );
                 if( Version == null ) throw new InvalidOperationException( $"Missing [{nameof(SerializationVersionAttribute)}] attribute on type {Type.Name}." );
-                if( Write == null ) throw new InvalidOperationException( $"Missing 'void {Type.Name}.Write({nameof( Serializer )} )' method." );
+                if( Write == null ) throw new InvalidOperationException( $"Missing 'void {Type.Name}.Write({nameof( BinarySerializer )} )' method." );
             }
 
             public bool IsValid => Version != null && Ctor != null && Write != null;

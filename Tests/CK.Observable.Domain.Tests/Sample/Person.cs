@@ -14,7 +14,7 @@ namespace CK.Observable.Domain.Tests.Sample
         {
         }
 
-        protected Person( Deserializer d ) : base( d )
+        protected Person( BinaryDeserializer d ) : base( d )
         {
             var r = d.StartReading();
             r.ReadObject<Person>( x => Friend = x );
@@ -22,7 +22,7 @@ namespace CK.Observable.Domain.Tests.Sample
             LastName = r.ReadNullableString();
         }
 
-        void Write( Serializer s )
+        void Write( BinarySerializer s )
         {
             s.WriteObject( Friend );
             s.WriteNullableString( FirstName );

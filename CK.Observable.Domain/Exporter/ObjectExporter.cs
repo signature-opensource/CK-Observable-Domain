@@ -158,7 +158,7 @@ namespace CK.Observable
             var driver = o is IKnowSerializationDriver k
                            ? k.SerializationDriver
                            : SerializableTypes.FindDriver( t, TypeSerializationKind.None );
-            if( !driver.IsExportable )
+            if( driver == null || !driver.IsExportable )
             {
                 throw new Exception( $"Type '{t.FullName}' is not exportable." );
             }

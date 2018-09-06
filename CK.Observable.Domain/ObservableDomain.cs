@@ -466,7 +466,7 @@ namespace CK.Observable
         public void Save( Stream s, bool leaveOpen = false, Encoding encoding = null )
         {
             using( CheckReentrancyOnly() )
-            using( var w = new Serializer( s, leaveOpen, encoding ) )
+            using( var w = new BinarySerializer( s, leaveOpen, encoding ) )
             {
                 w.WriteSmallInt32( 0 ); // Version
                 w.Write( _actualObjectCount );
@@ -493,13 +493,13 @@ namespace CK.Observable
         {
             using( Monitor.OpenInfo( $"Loading Domain n°{DomainNumber}." ) )
             using( CheckReentrancyOnly() )
-            using( var d = new Deserializer( this, s, leaveOpen, encoding ) )
+            using( var d = new BinaryDeserializer( this, s, leaveOpen, encoding ) )
             {
                 DoLoad( d );
             }
         }
 
-        void DoLoad( Deserializer d )
+        void DoLoad( BinaryDeserializer d )
         {
             _deserializing = true;
             try

@@ -17,7 +17,7 @@ namespace CK.Observable.Domain.Tests.Sample
             Name = name;
         }
 
-        public Car( Deserializer d ) : base( d )
+        public Car( BinaryDeserializer d ) : base( d )
         {
             var r = d.StartReading();
             Name = r.ReadNullableString();
@@ -25,7 +25,7 @@ namespace CK.Observable.Domain.Tests.Sample
             r.ReadObject<Position>( x => Position = x );
         }
 
-        void Write( Serializer w )
+        void Write( BinarySerializer w )
         {
             w.WriteNullableString( Name );
             w.Write( Speed );

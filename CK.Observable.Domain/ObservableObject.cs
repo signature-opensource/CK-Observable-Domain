@@ -33,7 +33,7 @@ namespace CK.Observable
             Debug.Assert( _id >= 0 );
         }
 
-        protected ObservableObject( Deserializer d )
+        protected ObservableObject( BinaryDeserializer d )
         {
             _serializationDriver = SerializableTypes.FindDriver( GetType(), TypeSerializationKind.None );
             Domain = d.Domain;
@@ -46,7 +46,7 @@ namespace CK.Observable
 
         internal IObjectExportTypeDriver SerializationDriver => _serializationDriver;
 
-        void Write( Serializer w )
+        void Write( BinarySerializer w )
         {
             w.Write( _id );
         }

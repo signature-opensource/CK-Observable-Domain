@@ -13,7 +13,7 @@ namespace CK.Observable
         /// </summary>
         /// <param name="w">The serializer.</param>
         /// <param name="o">The object instance.</param>
-        void WriteData( Serializer w, T o );
+        void WriteData( BinarySerializer w, T o );
 
         /// <summary>
         /// Reads the data and instanciates a new object.
@@ -24,7 +24,7 @@ namespace CK.Observable
         /// Null if the type has been previously written by an external driver.
         /// </param>
         /// <returns>The new instance.</returns>
-        new T ReadInstance( Deserializer r, ObjectStreamReader.TypeReadInfo readInfo );
+        new T ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo );
 
         /// <summary>
         /// Exports an instance. <see cref="IsExportable"/> must be true otherwise a <see cref="NotSupportedException"/>

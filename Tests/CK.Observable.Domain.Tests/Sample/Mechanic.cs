@@ -15,18 +15,20 @@ namespace CK.Observable.Domain.Tests.Sample
         {
         }
 
-        protected Mechanic( Deserializer d ) : base( d )
+        protected Mechanic( BinaryDeserializer d ) : base( d )
         {
             var r = d.StartReading();
             r.ReadObject<Car>( c => CurrentCar = c );
         }
 
-        void Write( Serializer s )
+        void Write( BinarySerializer s )
         {
             s.WriteObject( CurrentCar );
         }
 
         public Car CurrentCar { get; set; }
+
+        public MechanicLevel Level { get; set; }
 
         void OnCurrentCarChanged( object before, object after )
         {

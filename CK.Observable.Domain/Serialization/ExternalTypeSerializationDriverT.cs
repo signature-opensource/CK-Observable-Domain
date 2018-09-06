@@ -23,12 +23,12 @@ namespace CK.Observable
         /// </summary>
         public TypeSerializationKind SerializationKind => TypeSerializationKind.External;
 
-        object ITypeSerializationDriver.ReadInstance( Deserializer r, ObjectStreamReader.TypeReadInfo readInfo )
+        object ITypeSerializationDriver.ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
         {
             return ReadInstance( r.Reader, readInfo );
         }
 
-        T ITypeSerializationDriver<T>.ReadInstance( Deserializer r, ObjectStreamReader.TypeReadInfo readInfo )
+        T ITypeSerializationDriver<T>.ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
         {
             return ReadInstance( r.Reader, readInfo );
         }
@@ -45,7 +45,7 @@ namespace CK.Observable
         /// <returns>The new instance.</returns>
         public abstract T ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo );
 
-        void ITypeSerializationDriver.WriteData( Serializer w, object o )
+        void ITypeSerializationDriver.WriteData( BinarySerializer w, object o )
         {
             WriteData( w, (T)o );
         }
@@ -55,15 +55,15 @@ namespace CK.Observable
         /// </summary>
         /// <param name="w">The serializer.</param>
         /// <param name="o">The object instance.</param>
-        public abstract void WriteData( Serializer w, T o );
+        public abstract void WriteData( BinarySerializer w, T o );
 
         /// <summary>
         /// Writes the type descriptor in the serializer.
         /// </summary>
         /// <param name="s">The serializer.</param>
-        public void WriteTypeInformation( Serializer s )
+        public void WriteTypeInformation( BinarySerializer s )
         {
-            s.DoWriteSimpleType( Type );
+            s.WriteSimpleType( Type );
         }
 
         /// <summary>

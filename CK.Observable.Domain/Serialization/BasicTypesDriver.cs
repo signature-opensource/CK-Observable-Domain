@@ -15,7 +15,7 @@ namespace CK.Observable
                 return r.ReadBoolean();
             }
 
-            public override void WriteData( Serializer w, bool o )
+            public override void WriteData( BinarySerializer w, bool o )
             {
                 w.Write( o );
             }
@@ -32,7 +32,7 @@ namespace CK.Observable
                 return r.ReadChar();
             }
 
-            public override void WriteData( Serializer w, char o )
+            public override void WriteData( BinarySerializer w, char o )
             {
                 w.Write( o );
             }
@@ -48,7 +48,7 @@ namespace CK.Observable
                 return r.ReadDouble();
             }
 
-            public override void WriteData( Serializer w, double o )
+            public override void WriteData( BinarySerializer w, double o )
             {
                 w.Write( o );
             }
@@ -66,7 +66,7 @@ namespace CK.Observable
                 return r.ReadSingle();
             }
 
-            public override void WriteData( Serializer w, float o )
+            public override void WriteData( BinarySerializer w, float o )
             {
                 w.Write( o );
             }
@@ -82,7 +82,7 @@ namespace CK.Observable
                 return r.ReadDecimal();
             }
 
-            public override void WriteData( Serializer w, decimal o )
+            public override void WriteData( BinarySerializer w, decimal o )
             {
                 w.Write( o );
             }
@@ -98,7 +98,7 @@ namespace CK.Observable
                 return r.ReadSByte();
             }
 
-            public override void WriteData( Serializer w, sbyte o )
+            public override void WriteData( BinarySerializer w, sbyte o )
             {
                 w.Write( o );
             }
@@ -114,7 +114,7 @@ namespace CK.Observable
                 return r.ReadByte();
             }
 
-            public override void WriteData( Serializer w, byte o )
+            public override void WriteData( BinarySerializer w, byte o )
             {
                 w.Write( o );
             }
@@ -130,7 +130,7 @@ namespace CK.Observable
                 return r.ReadInt16();
             }
 
-            public override void WriteData( Serializer w, short o )
+            public override void WriteData( BinarySerializer w, short o )
             {
                 w.Write( o );
             }
@@ -146,7 +146,7 @@ namespace CK.Observable
                 return r.ReadUInt16();
             }
 
-            public override void WriteData( Serializer w, ushort o )
+            public override void WriteData( BinarySerializer w, ushort o )
             {
                 w.Write( o );
             }
@@ -162,7 +162,7 @@ namespace CK.Observable
                 return r.ReadInt32();
             }
 
-            public override void WriteData( Serializer w, int o )
+            public override void WriteData( BinarySerializer w, int o )
             {
                 w.Write( o );
             }
@@ -178,7 +178,7 @@ namespace CK.Observable
                 return r.ReadUInt32();
             }
 
-            public override void WriteData( Serializer w, uint o )
+            public override void WriteData( BinarySerializer w, uint o )
             {
                 w.Write( o );
             }
@@ -195,7 +195,7 @@ namespace CK.Observable
                 return r.ReadInt64();
             }
 
-            public override void WriteData( Serializer w, long o )
+            public override void WriteData( BinarySerializer w, long o )
             {
                 w.Write( o );
             }
@@ -211,7 +211,7 @@ namespace CK.Observable
                 return r.ReadUInt64();
             }
 
-            public override void WriteData( Serializer w, ulong o )
+            public override void WriteData( BinarySerializer w, ulong o )
             {
                 w.Write( o );
             }
@@ -227,7 +227,7 @@ namespace CK.Observable
                 return r.ReadNullableString();
             }
 
-            public override void WriteData( Serializer w, string o )
+            public override void WriteData( BinarySerializer w, string o )
             {
                 w.WriteNullableString( o );
             }
@@ -243,7 +243,7 @@ namespace CK.Observable
                 return r.ReadGuid();
             }
 
-            public override void WriteData( Serializer w, Guid o )
+            public override void WriteData( BinarySerializer w, Guid o )
             {
                 w.Write( o );
             }
@@ -259,7 +259,7 @@ namespace CK.Observable
                 return r.ReadDateTime();
             }
 
-            public override void WriteData( Serializer w, DateTime o )
+            public override void WriteData( BinarySerializer w, DateTime o )
             {
                 w.Write( o );
             }
@@ -275,7 +275,7 @@ namespace CK.Observable
                 return r.ReadTimeSpan();
             }
 
-            public override void WriteData( Serializer w, TimeSpan o )
+            public override void WriteData( BinarySerializer w, TimeSpan o )
             {
                 w.Write( o );
             }
@@ -291,7 +291,7 @@ namespace CK.Observable
                 return r.ReadDateTimeOffset();
             }
 
-            public override void WriteData( Serializer w, DateTimeOffset o )
+            public override void WriteData( BinarySerializer w, DateTimeOffset o )
             {
                 w.Write( o );
             }

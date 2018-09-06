@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace CK.Observable
 {
-    public class Serializer : CKBinaryWriter
+    public class BinarySerializer : CKBinaryWriter
     {
         readonly Dictionary<Type, TypeInfo> _types;
         readonly Dictionary<object, int> _seen;
@@ -35,7 +35,7 @@ namespace CK.Observable
             }
         }
 
-        internal Serializer( Stream output, bool leaveOpen, Encoding encoding = null )
+        internal BinarySerializer( Stream output, bool leaveOpen, Encoding encoding = null )
             : base( output, encoding ?? Encoding.UTF8, leaveOpen )
         {
             _types = new Dictionary<Type, TypeInfo>();
@@ -147,17 +147,27 @@ namespace CK.Observable
             driver.WriteData( this, o );
         }
 
-        internal void DoWriteSerializableType( SerializableTypes.TypeInfo tInfo )
+        internal void DoWriteSerializableTypeBased( SerializableTypes.TypeInfo tInfo )
         {
             Debug.Assert( tInfo != null );
             while( DoWriteSimpleType( tInfo?.Type ) )
             {
+                Debug.Assert( tInfo.Version >= 0 );
                 WriteSmallInt32( tInfo.Version );
                 tInfo = tInfo.BaseType;
             }
         }
+        internal bool WriteSimpleType( Type t )
+        {
+            if( DoWriteSimpleType( t ) )
+            {
+                WriteSmallInt32( -1 );
+                return true;
+            }
+            return false;
+        }
 
-        internal bool DoWriteSimpleType( Type t )
+        bool DoWriteSimpleType( Type t )
         {
             if( t == null ) Write( (byte)0 );
             else if( t == typeof( object ) )

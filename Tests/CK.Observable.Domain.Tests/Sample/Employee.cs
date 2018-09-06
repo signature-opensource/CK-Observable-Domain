@@ -16,13 +16,13 @@ namespace CK.Observable.Domain.Tests.Sample
             Garage.Employees.Add( this );
         }
 
-        protected Employee( Deserializer d ) : base( d )
+        protected Employee( BinaryDeserializer d ) : base( d )
         {
             var r = d.StartReading();
             r.ReadObject<Garage>( x => Garage = x );
         }
 
-        void Write( Serializer s )
+        void Write( BinarySerializer s )
         {
             s.WriteObject( Garage );
         }
