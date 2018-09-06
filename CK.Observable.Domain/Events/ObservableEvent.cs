@@ -16,6 +16,7 @@ namespace CK.Observable
         ListInsert,
         CollectionClear,
         ListRemoveAt,
+        ListSetAt,
         CollectionRemoveKey,
     }
 
@@ -31,6 +32,7 @@ namespace CK.Observable
                 "I",  // ListInsert
                 "CL", // CollectionClear
                 "R",  // ListRemoveAt
+                "S",  // ListSetAt
                 "K"   // CollectionRemoveKey
             };
 

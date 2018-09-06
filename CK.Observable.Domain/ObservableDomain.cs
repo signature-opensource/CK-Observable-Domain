@@ -40,18 +40,53 @@ namespace CK.Observable
         [ThreadStatic]
         internal static ObservableDomain CurrentThreadDomain;
 
+        /// <summary>
+        /// Maps property names to PropInfo that contains the property index.
+        /// </summary>
         readonly Dictionary<string, PropInfo> _properties;
+        /// <summary>
+        /// Map property index to PropInfo that contains the property name.
+        /// </summary>
         readonly List<PropInfo> _propertiesByIndex;
+
+        /// <summary>
+        /// The number of properties that are required by root objects.
+        /// Since root objects are always here, their properties must be preserved.
+        /// </summary>
+        int _propertiesLockCount;
+
         readonly ChangeTracker _changeTracker;
         readonly IDisposable _reentrancyHandler;
         readonly AllCollection _exposedObjects;
         Stack<int> _freeList;
 
         ObservableObject[] _objects;
+
+        /// <summary>
+        /// Since we manage the array directly, this is
+        /// the equivalent of a List<ObservableObject>.Count (and _objects.Length
+        /// is the capacity):
+        /// the null cells (the ones registered in _freeList) are included.
+        /// </summary>
         int _objectsListCount;
 
+        /// <summary>
+        /// This is the actual number of objects, null cells of _objects are NOT included.
+        /// This is greater or equal to _rootObjectCount.
+        /// </summary>
         int _actualObjectCount;
-        Transaction _currentTran;
+
+        /// <summary>
+        /// The number of objects that have been created by roots instanciation.
+        /// </summary>
+        int _rootObjectCount;
+
+        /// <summary>
+        /// The actual list of root objects.
+        /// </summary>
+        List<ObservableRootObject> _roots;
+
+        IObservableTransaction _currentTran;
         int _transactionSerialNumber;
         int _reentrancyFlag;
         bool _deserializing;
@@ -242,6 +277,11 @@ namespace CK.Observable
                 _changeEvents.Add( new ListRemoveAtEvent( o, index ) );
             }
 
+            internal void OnListSetAt( ObservableObject o, int index, object value )
+            {
+                _changeEvents.Add( new ListSetAtEvent( o, index, value ) );
+            }
+
             internal void OnCollectionClear( ObservableObject o )
             {
                 _changeEvents.Add( new CollectionClearEvent( o ) );
@@ -344,23 +384,92 @@ namespace CK.Observable
             _changeTracker = new ChangeTracker();
             _reentrancyHandler = new ReetrancyHandler( this );
             _exposedObjects = new AllCollection( this );
+            _roots = new List<ObservableRootObject>();
+        }
+
+        /// <summary>
+        /// Initializes a previously <see cref="Save"/>d domain.
+        /// </summary>
+        /// <param name="tm">The transaction manager to use. Can be null.</param>
+        /// <param name="monitor">The monitor associated to the domain. Can be null (a dedicated one will be created).</param>
+        /// <param name="s">The input stream.</param>
+        /// <param name="leaveOpen">True to leave the stream opened.</param>
+        /// <param name="encoding">Optional encoding for characters. Defaults to UTF-8.</param>
+        public ObservableDomain(
+            IObservableTransactionManager tm,
+            IActivityMonitor monitor,
+            Stream s,
+            bool leaveOpen = false,
+            Encoding encoding = null )
+            : this( tm, monitor )
+        {
+            Load( s, leaveOpen, encoding );
         }
 
         void Reset()
         {
             _freeList.Clear();
-            _properties.Clear();
-            Array.Clear( _objects, 0, _objectsListCount );
-            _objectsListCount = 0;
-            _actualObjectCount = 0;
+            for( int i = _propertiesLockCount; i < _propertiesByIndex.Count; ++i )
+            {
+                _properties.Remove( _propertiesByIndex[i].Name );
+            }
+            _propertiesByIndex.RemoveRange( _propertiesLockCount, _properties.Count - _propertiesLockCount );
+            Array.Clear( _objects, _rootObjectCount, _objectsListCount - _rootObjectCount );
+            _objectsListCount = _actualObjectCount = _rootObjectCount;
+        }
+
+        class NoTransaction : IObservableTransaction
+        {
+            public static readonly IObservableTransaction Default = new NoTransaction();
+            IReadOnlyList<ObservableEvent> IObservableTransaction.Commit() => Array.Empty<ObservableEvent>();
+
+            void IDisposable.Dispose()
+            {
+            }
         }
 
         /// <summary>
-        /// Gets all the observable objects that this domain contains.
+        /// This must be called only from <see cref="ObservableDomain{T}"/> constructors.
+        /// No event are collected: this is the initial state of the domain.
+        /// </summary>
+        /// <typeparam name="T">The root type.</typeparam>
+        /// <returns>The instance.</returns>
+        protected T AddRoot<T>() where T : ObservableRootObject
+        {
+            _currentTran = NoTransaction.Default;
+            var previous = CurrentThreadDomain;
+            CurrentThreadDomain = this;
+            _deserializing = true;
+            try
+            {
+                var o = (T)typeof( T ).GetConstructor( new Type[] { typeof(ObservableDomain) } )
+                                                         .Invoke( new[] { this } );
+                _roots.Add( o );
+                _rootObjectCount = _objectsListCount;
+                _propertiesLockCount = _propertiesByIndex.Count;
+                return o;
+            }
+            finally
+            {
+                _deserializing = false;
+                CurrentThreadDomain = previous;
+                _currentTran = null;
+            }
+        }
+
+        /// <summary>
+        /// Gets all the observable objects that this domain contains (roots included).
         /// These exposed objects are out of any transactions or reentrancy checks: any attempt
         /// to modify one of them will throw.
         /// </summary>
         public IReadOnlyCollection<ObservableObject> AllObjects => _exposedObjects;
+
+        /// <summary>
+        /// Gets the root observable objects that this domain contains.
+        /// These exposed objects are out of any transactions or reentrancy checks: any attempt
+        /// to modify one of them will throw.
+        /// </summary>
+        public IReadOnlyList<ObservableRootObject> AllRoots => _roots;
 
         /// <summary>
         /// Gets the current transaction number.
@@ -446,6 +555,15 @@ namespace CK.Observable
 
                 target.EmitPropertyName( "O" );
                 ObjectExporter.ExportRootList( target, _objects.Take( _objectsListCount ) );
+
+                target.EmitPropertyName( "R" );
+                target.EmitStartObject( -1, ObjectExportedKind.List );
+                foreach( var r in _roots )
+                {
+                    target.EmitInt32( r.OId );
+                }
+                target.EmitEndObject( -1, ObjectExportedKind.List );
+
                 target.EmitEndObject( -1, ObjectExportedKind.Object );
             }
         }
@@ -469,17 +587,25 @@ namespace CK.Observable
             using( var w = new BinarySerializer( s, leaveOpen, encoding ) )
             {
                 w.WriteSmallInt32( 0 ); // Version
+                w.Write( _transactionSerialNumber );
                 w.Write( _actualObjectCount );
-                w.WriteSmallInt32( _freeList.Count );
-                foreach( var i in _freeList ) w.WriteSmallInt32( i );
-                w.WriteSmallInt32( _properties.Count );
+                w.WriteNonNegativeSmallInt32( _rootObjectCount );
+                w.WriteNonNegativeSmallInt32( _propertiesLockCount );
+                w.WriteNonNegativeSmallInt32( _freeList.Count );
+                foreach( var i in _freeList ) w.WriteNonNegativeSmallInt32( i );
+                w.WriteNonNegativeSmallInt32( _properties.Count );
                 foreach( var p in _propertiesByIndex )
                 {
                     w.Write( p.Name );
-                    w.WriteSmallInt32( p.PropertyId );
+                    w.WriteNonNegativeSmallInt32( p.PropertyId );
                 }
                 Debug.Assert( _objectsListCount == _actualObjectCount + _freeList.Count );
-                foreach( var o in _objects ) w.WriteObject( o );
+                for( int i = 0; i < _objectsListCount; ++i )
+                {
+                    w.WriteObject( _objects[i] );
+                }
+                w.WriteNonNegativeSmallInt32( _roots.Count );
+                foreach( var r in _roots ) w.WriteNonNegativeSmallInt32( r.OId );
             }
         }
 
@@ -506,22 +632,25 @@ namespace CK.Observable
             {
                 var r = d.Reader;
                 int version = r.ReadSmallInt32();
+                _transactionSerialNumber = r.ReadInt32();
                 _actualObjectCount = r.ReadInt32();
+                _rootObjectCount = r.ReadNonNegativeSmallInt32();
+                _propertiesLockCount = r.ReadNonNegativeSmallInt32();
 
                 _freeList.Clear();
-                int count = r.ReadSmallInt32();
+                int count = r.ReadNonNegativeSmallInt32();
                 while( --count >= 0 )
                 {
-                    _freeList.Push( r.ReadSmallInt32() );
+                    _freeList.Push( r.ReadNonNegativeSmallInt32() );
                 }
 
                 _properties.Clear();
                 _propertiesByIndex.Clear();
-                count = r.ReadSmallInt32();
+                count = r.ReadNonNegativeSmallInt32();
                 while( --count >= 0 )
                 {
                     string name = r.ReadString();
-                    int propertyId = r.ReadSmallInt32();
+                    int propertyId = r.ReadNonNegativeSmallInt32();
                     var p = new PropInfo( propertyId, name );
                     _properties.Add( name, p );
                     _propertiesByIndex.Add( p );
@@ -538,6 +667,12 @@ namespace CK.Observable
                     r.ReadObject<ObservableObject>( x => _objects[x.OId] = x );
                 }
                 r.ExecuteDeferredActions();
+                _roots.Clear();
+                count = r.ReadNonNegativeSmallInt32();
+                while( --count >= 0 )
+                {
+                    _roots.Add( _objects[r.ReadNonNegativeSmallInt32()] as ObservableRootObject );
+                }
             }
             catch( Exception ex )
             {
@@ -641,6 +776,15 @@ namespace CK.Observable
             using( CheckTransactionAndReentrancy() )
             {
                 _changeTracker.OnListRemoveAt( o, index );
+            }
+        }
+
+        internal void OnListSetAt( ObservableObject o, int index, object value )
+        {
+            if( _deserializing ) return;
+            using( CheckTransactionAndReentrancy() )
+            {
+                _changeTracker.OnListSetAt( o, index, value );
             }
         }
 

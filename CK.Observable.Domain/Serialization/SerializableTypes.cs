@@ -252,12 +252,12 @@ namespace CK.Observable
                 return _types.GetOrAdd( t, new EnumTypeSerializationDriver( t ) );
             }
             var parts = GetTypeSerializableParts( t );
-            if( requirements == TypeSerializationKind.TypeBased ) parts.CheckValid( requirements );
-            else if( parts.IsValid ) requirements = TypeSerializationKind.TypeBased;
-            else
+            if( (requirements & TypeSerializationKind.Serializable) != 0 ) parts.CheckValid( requirements );
+            else if( !parts.IsValid ) 
             {
                 return _types.GetOrAdd( t, (TypeInfo)null );
             }
+            requirements = TypeSerializationKind.TypeBased;
             return _types.GetOrAdd( t, newType => new TypeInfo( (TypeInfo)FindDriver( t.BaseType, requirements ), parts ) );
         }
 

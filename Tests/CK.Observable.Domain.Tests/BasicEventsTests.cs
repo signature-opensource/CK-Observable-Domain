@@ -66,7 +66,7 @@ namespace CK.Observable.Domain.Tests
 
             events = domain.Modify( () =>
             {
-                c = new Car( "First Car" );;
+                c = new Car( "First Car" );
             } );
             
             events = domain.Modify( () =>

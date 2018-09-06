@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace CK.Observable.Domain.Tests.Sample
 {
-    [SerializationVersionAttribute(0)]
+    [SerializationVersion(0)]
     public class Car : ObservableObject
     {
         public Car( string name )

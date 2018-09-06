@@ -42,14 +42,15 @@ namespace CK.Observable
             _id = r.ReadInt32();
         }
 
-        ITypeSerializationDriver IKnowSerializationDriver.SerializationDriver => _serializationDriver;
-
-        internal IObjectExportTypeDriver SerializationDriver => _serializationDriver;
-
         void Write( BinarySerializer w )
         {
             w.Write( _id );
         }
+
+        ITypeSerializationDriver IKnowSerializationDriver.SerializationDriver => _serializationDriver;
+
+        internal IObjectExportTypeDriver SerializationDriver => _serializationDriver;
+
 
         event PropertyChangedEventHandler INotifyPropertyChanged.PropertyChanged
         {

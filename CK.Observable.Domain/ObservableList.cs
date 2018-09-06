@@ -43,7 +43,15 @@ namespace CK.Observable
             e.Target.EmitEndObject( -1, ObjectExportedKind.Object );
         }
 
-        public T this[int index] { get => _list[index]; set => _list[index] = value; }
+        public T this[int index]
+        {
+            get => _list[index];
+            set
+            {
+                _list[index] = value;
+                Domain.OnListSetAt( this, index, value );
+            }
+        }
 
         public int Count => _list.Count;
 

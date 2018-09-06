@@ -156,7 +156,7 @@ namespace CK.Observable
 
         public void EmitDateTimeOffset( DateTimeOffset o ) => EmitString( o.ToString() );
 
-        public void EmitGuid( Guid o ) => EmitString( o.ToString() );
+        public void EmitGuid( Guid o ) => EmitString( o.ToString("N") );
 
         public void EmitByte( byte o ) => EmitDouble( o );
 

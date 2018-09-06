@@ -39,10 +39,10 @@ namespace CK.Observable.Domain.Tests.Sample
 
         public string CompanyName { get; set; }
 
-        public ObservableList<Person> Employees { get; private set; }
+        public IList<Person> Employees { get; private set; }
 
         public ObservableList<Car> Cars { get; private set; }
 
-        public ObservableDictionary<Car, Car> ReplacementCar => _replacementCars;
+        public IDictionary<Car, Car> ReplacementCar => _replacementCars;
     }
 }

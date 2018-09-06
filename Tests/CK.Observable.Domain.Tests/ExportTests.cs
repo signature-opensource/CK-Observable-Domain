@@ -72,6 +72,25 @@ namespace CK.Observable.Domain.Tests
 
             string t6 = eventCollector.WriteEventsFrom( 5 );
 
+            d.Modify( () =>
+            {
+                d.AllObjects.OfType<MultiPropertyType>().Single().Dispose();
+                var l = new ObservableList<string>();
+                l.Add( "One" );
+                l.Add( "Two" );
+
+            } ).Should().NotBeNull();
+
+            string t7 = eventCollector.WriteEventsFrom( 6 );
+
+            d.Modify( () =>
+            {
+                var l = d.AllObjects.OfType<ObservableList<string>>().Single();
+                l[0] = "Three";
+            } ).Should().NotBeNull();
+
+            string t8 = eventCollector.WriteEventsFrom( 7 );
+
         }
 
         [Test]
