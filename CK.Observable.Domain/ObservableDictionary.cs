@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace CK.Observable
 {
     [SerializationVersionAttribute(0)]
-    public class ObservableDictionary<TKey, TValue> : ObservableObject, IDictionary<TKey, TValue>
+    public class ObservableDictionary<TKey, TValue> : ObservableObject, IDictionary<TKey, TValue>, IReadOnlyDictionary<TKey, TValue>
     {
         readonly Dictionary<TKey, TValue> _map;
 
@@ -66,6 +66,10 @@ namespace CK.Observable
         public int Count => _map.Count;
 
         bool ICollection<KeyValuePair<TKey, TValue>>.IsReadOnly => false;
+
+        IEnumerable<TKey> IReadOnlyDictionary<TKey, TValue>.Keys => _map.Keys;
+
+        IEnumerable<TValue> IReadOnlyDictionary<TKey, TValue>.Values => _map.Values;
 
         public void Add( TKey key, TValue value )
         {
