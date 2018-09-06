@@ -101,6 +101,20 @@ namespace CK.Observable.Domain.Tests
             } );
             string t2 = eventCollector.WriteEventsFrom( 2 );
 
+            d.Modify( () =>
+            {
+                var spi = d.AllObjects.OfType<Mechanic>().Single( m => m.LastName == "Spinelli" );
+                spi.Dispose();
+            } );
+            string t3 = eventCollector.WriteEventsFrom( 3 );
+
+            d.Modify( () =>
+            {
+                var g1 = d.AllObjects.OfType<Garage>().Single( g => g.CompanyName == "Boite" );
+                g1.ReplacementCar.Remove( g1.Cars[0] );
+            } );
+            string t4 = eventCollector.WriteEventsFrom( 3 );
+
         }
     }
 }
