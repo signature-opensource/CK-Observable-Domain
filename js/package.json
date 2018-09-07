@@ -1,6 +1,6 @@
 {
   "name": "@signature/ck-observable-domain",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "CK-Observable-Domain client implementation using json-graph-serializer",
   "main": "dist/ck-observable-domain.js",
   "module": "src/index.js",
@@ -8,8 +8,7 @@
     "test": "mocha --require @babel/register",
     "build": "webpack",
     "preversion": "npm test",
-    "version": "npm run build && git add -A dist",
-    "postversion": "git push && git push --tags"
+    "version": "npm run build"
   },
   "repository": {
     "type": "git",
