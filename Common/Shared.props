@@ -34,8 +34,12 @@
   <PropertyGroup>
     <!-- Standard properties. -->
     <AssemblyOriginatorKeyFile>$(SharedDir)SharedKey.snk</AssemblyOriginatorKeyFile>
-    <SignAssembly>true</SignAssembly>
-    <PublicSign Condition=" '$(OS)' != 'Windows_NT' ">true</PublicSign>
+
+    <!--<SignAssembly>true</SignAssembly>-->
+    <!--<PublicSign Condition=" '$(OS)' != 'Windows_NT' ">true</PublicSign>-->
+    
+    <!-- dotnet build does not seem to work with strong naming with Fody 3.2.0. BC 20180907 -->
+    <SignAssembly>false</SignAssembly>
 
     <!-- Invenietis standard properties. -->
     <Copyright>Copyright Invenietis 2007-$([System.DateTime]::UtcNow.ToString("yyyy"))</Copyright>
