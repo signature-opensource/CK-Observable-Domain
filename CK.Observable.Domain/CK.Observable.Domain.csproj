@@ -8,12 +8,6 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <Compile Remove="Collections\**" />
-    <EmbeddedResource Remove="Collections\**" />
-    <None Remove="Collections\**" />
-  </ItemGroup>
-  
-  <ItemGroup>
     <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="10.1.1" />
     <PackageReference Include="Fody" Version="3.2.0">
       <PrivateAssets>all</PrivateAssets>

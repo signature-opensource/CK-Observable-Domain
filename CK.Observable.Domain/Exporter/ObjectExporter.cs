@@ -12,19 +12,10 @@ namespace CK.Observable
         readonly IObjectExporterTarget _target;
         readonly Dictionary<object, int> _seen;
 
-        class PureRefEquality : IEqualityComparer<object>
-        {
-            public new bool Equals( object x, object y ) => ReferenceEquals( x, y );
-
-            public int GetHashCode( object obj ) => obj.GetHashCode();
-        }
-
-        static readonly PureRefEquality RefEquality = new PureRefEquality();
-
         public ObjectExporter( IObjectExporterTarget target )
         {
             _target = target;
-            _seen = new Dictionary<object, int>( RefEquality );
+            _seen = new Dictionary<object, int>( PureObjectRefEqualityComparer<object>.Default );
         }
 
         public static void ExportRootList( IObjectExporterTarget target, IEnumerable objects )

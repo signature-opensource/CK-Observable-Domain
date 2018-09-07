@@ -20,11 +20,11 @@ namespace CK.Observable
         /// <see cref="IObservableTransaction.Errors"/> xhenever a tranasaction
         /// has not been committed.
         /// </summary>
-        public static readonly CKExceptionData UncomittedTransaction = new CKExceptionData("Uncommitted transaction.","CKExceptionData", "CKExceptionData,CK.Core", null, null, null, null, null, null );
+        public static readonly CKExceptionData UncomittedTransaction = new CKExceptionData("Uncommitted transaction.", "Not.An.Exception", "Not.An.Exception, No.Assembly", null, null, null, null, null, null );
 
         static readonly Type[] _observableRootCtorParameters = new Type[] { typeof(ObservableDomain) };
 
-    class PropInfo 
+        class PropInfo 
         {
             public readonly PropertyChangedEventArgs EventArg;
             public int PropertyId { get; }
@@ -165,19 +165,10 @@ namespace CK.Observable
             PropChanged _firstPropChanged;
             PropChanged _lastPropChanged;
 
-            class PureRefEquality : IEqualityComparer<ObservableObject>
-            {
-                public bool Equals( ObservableObject x, ObservableObject y ) => ReferenceEquals( x, y );
-
-                public int GetHashCode( ObservableObject obj ) => obj.GetHashCode();
-            }
-
-            static readonly PureRefEquality RefEquality = new PureRefEquality();
-
             public ChangeTracker()
             {
                 _changeEvents = new List<ObservableEvent>();
-                _newObjects = new Dictionary<ObservableObject, List<PropertyInfo>>( RefEquality );
+                _newObjects = new Dictionary<ObservableObject, List<PropertyInfo>>( PureObjectRefEqualityComparer<ObservableObject>.Default );
                 _propChanged = new Dictionary<long, PropChanged>();
             }
 

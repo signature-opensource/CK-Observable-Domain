@@ -28,7 +28,10 @@ namespace CK.Observable
         /// Called when an error occurred in a transaction.
         /// </summary>
         /// <param name="d">The associated domain.</param>
-        /// <param name="errors">A necessarily non null list of errors with at least one error.</param>
+        /// <param name="errors">
+        /// A necessarily non null list of errors with at least one error.
+        /// 
+        /// </param>
         void OnTransactionFailure( ObservableDomain d, IReadOnlyList<CKExceptionData> errors );
     }
 }

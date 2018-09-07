@@ -14,15 +14,6 @@ namespace CK.Observable
         readonly Dictionary<Type, TypeInfo> _types;
         readonly Dictionary<object, int> _seen;
 
-        class PureRefEquality : IEqualityComparer<object>
-        {
-            public new bool Equals( object x, object y ) => ReferenceEquals( x, y );
-
-            public int GetHashCode( object obj ) => obj.GetHashCode();
-        }
-
-        static readonly PureRefEquality RefEquality = new PureRefEquality();
-
         struct TypeInfo
         {
             public readonly Type Type;
@@ -39,7 +30,7 @@ namespace CK.Observable
             : base( output, encoding ?? Encoding.UTF8, leaveOpen )
         {
             _types = new Dictionary<Type, TypeInfo>();
-            _seen = new Dictionary<object, int>( RefEquality );
+            _seen = new Dictionary<object, int>( PureObjectRefEqualityComparer<object>.Default );
         }
 
         public void WriteObject( object o )

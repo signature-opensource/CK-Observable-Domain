@@ -15,7 +15,7 @@ namespace CK.Observable
         Type Type { get; }
 
         /// <summary>
-        /// Gets whether <see cref="Export"/> can be called: this driver knows hox to export
+        /// Gets whether <see cref="Export"/> can be called: this driver knows how to export
         /// instances of its type.
         /// </summary>
         bool IsExportable { get; }
