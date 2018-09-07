@@ -1,0 +1,38 @@
+{
+  "name": "@signature/ck-observable-domain",
+  "version": "0.0.0",
+  "description": "CK-Observable-Domain client implementation using json-graph-serializer",
+  "main": "dist/ck-observable-domain.js",
+  "module": "src/index.js",
+  "scripts": {
+    "test": "mocha --require @babel/register",
+    "build": "webpack",
+    "preversion": "npm test",
+    "version": "npm run build && git add -A dist",
+    "postversion": "git push && git push --tags"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://invenietis.visualstudio.com/DefaultCollection/CK/_git/CK-Observable-Domain"
+  },
+  "author": "Signature Code",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://invenietis.visualstudio.com/CK/_workitems/create/bug"
+  },
+  "homepage": "https://invenietis.visualstudio.com/CK/_git/CK-Observable-Domain",
+  "devDependencies": {
+    "@babel/cli": "^7.0.0",
+    "@babel/core": "^7.0.0",
+    "@babel/preset-env": "^7.0.0",
+    "@babel/register": "^7.0.0",
+    "babel-loader": "^8.0.2",
+    "chai": "^4.1.2",
+    "mocha": "^5.2.0",
+    "webpack": "^4.17.2",
+    "webpack-cli": "^3.1.0"
+  },
+  "dependencies": {
+    "@signature/json-graph-serializer": "0.0.1"
+  }
+}
