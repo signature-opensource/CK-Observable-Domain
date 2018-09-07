@@ -1,3 +1,4 @@
+using CK.Core;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -120,9 +121,9 @@ namespace CK.Observable
             return _buffer.ToString();
         }
 
-        void IObservableTransactionManager.OnTransactionFailure( ObservableDomain d )
+        void IObservableTransactionManager.OnTransactionFailure( ObservableDomain d, IReadOnlyList<CKExceptionData> errors )
         {
-            _next?.OnTransactionFailure( d );
+            _next?.OnTransactionFailure( d, errors );
         }
 
         void IObservableTransactionManager.OnTransactionStart( ObservableDomain d )

@@ -15,7 +15,16 @@ namespace CK.Observable
 {
     public class ObservableDomain
     {
-        class PropInfo 
+        /// <summary>
+        /// An artificial <see cref="CKExceptionData"/> that is added to
+        /// <see cref="IObservableTransaction.Errors"/> xhenever a tranasaction
+        /// has not been committed.
+        /// </summary>
+        public static readonly CKExceptionData UncomittedTransaction = new CKExceptionData("Uncommitted transaction.","CKExceptionData", "CKExceptionData,CK.Core", null, null, null, null, null, null );
+
+        static readonly Type[] _observableRootCtorParameters = new Type[] { typeof(ObservableDomain) };
+
+    class PropInfo 
         {
             public readonly PropertyChangedEventArgs EventArg;
             public int PropertyId { get; }
@@ -307,16 +316,28 @@ namespace CK.Observable
         {
             readonly ObservableDomain _previous;
             readonly ObservableDomain _domain;
+            CKExceptionData[] _errors;
 
             public Transaction( ObservableDomain d )
             {
                 _domain = d;
                 _previous = CurrentThreadDomain;
                 CurrentThreadDomain = d;
+                _errors = Array.Empty<CKExceptionData>();
+            }
+
+            public IReadOnlyList<CKExceptionData> Errors => _errors;
+
+            public void AddError( CKExceptionData d )
+            {
+                Debug.Assert( d != null );
+                Array.Resize( ref _errors, _errors.Length + 1 );
+                _errors[_errors.Length-1] = d;
             }
 
             public IReadOnlyList<ObservableEvent> Commit()
             {
+                if( _errors.Length != 0 ) Dispose();
                 CurrentThreadDomain = _previous;
                 _domain._currentTran = null;
                 var events = _domain._changeTracker.Commit( _domain.EnsurePropertyInfo );
@@ -329,7 +350,8 @@ namespace CK.Observable
             {
                 if( _domain._currentTran != null )
                 {
-                    CurrentThreadDomain = null;
+                    if( _errors.Length == 0 ) AddError( UncomittedTransaction );
+                    CurrentThreadDomain = _previous;
                     _domain._currentTran = null;
                     _domain._changeTracker.Reset();
                     // Edge case: very first transaction. We simply reset the
@@ -338,7 +360,7 @@ namespace CK.Observable
                     {
                         _domain.Reset();
                     }
-                    else _domain.TransactionManager?.OnTransactionFailure( _domain );
+                    else _domain.TransactionManager?.OnTransactionFailure( _domain, _errors );
                 }
             }
         }
@@ -421,7 +443,14 @@ namespace CK.Observable
         class NoTransaction : IObservableTransaction
         {
             public static readonly IObservableTransaction Default = new NoTransaction();
+
+            public void AddError( CKExceptionData d )
+            {
+            }
+
             IReadOnlyList<ObservableEvent> IObservableTransaction.Commit() => Array.Empty<ObservableEvent>();
+
+            public IReadOnlyList<CKExceptionData> Errors => Array.Empty<CKExceptionData>();
 
             void IDisposable.Dispose()
             {
@@ -442,8 +471,10 @@ namespace CK.Observable
             _deserializing = true;
             try
             {
-                var o = (T)typeof( T ).GetConstructor( new Type[] { typeof(ObservableDomain) } )
-                                                         .Invoke( new[] { this } );
+                var o = (T)typeof( T ).GetConstructor( BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic,
+                                                       null,
+                                                       _observableRootCtorParameters,
+                                                       null ).Invoke( new[] { this } );
                 _roots.Add( o );
                 _rootObjectCount = _objectsListCount;
                 _propertiesLockCount = _propertiesByIndex.Count;
@@ -524,6 +555,7 @@ namespace CK.Observable
                 catch( Exception ex )
                 {
                     Monitor.Error( ex );
+                    t.AddError( CKExceptionData.CreateFrom( ex ) );
                     return null;
                 }
             }

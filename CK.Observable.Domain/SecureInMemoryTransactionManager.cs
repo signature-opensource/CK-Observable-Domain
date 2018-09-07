@@ -78,9 +78,10 @@ namespace CK.Observable
         /// if no snapshot was available.
         /// </summary>
         /// <param name="d">The associated domain.</param>
-        public virtual void OnTransactionFailure( ObservableDomain d )
+        /// <param name="errors">A necessarily non null list of errors with at least one error.</param>
+        public virtual void OnTransactionFailure( ObservableDomain d, IReadOnlyList<CKExceptionData> errors )
         {
-            _next?.OnTransactionFailure( d );
+            _next?.OnTransactionFailure( d, errors );
             if( !RestoreLastSnapshot( d ) )
             {
                 throw new Exception( "No snapshot available." );

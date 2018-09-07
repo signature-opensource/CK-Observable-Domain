@@ -9,7 +9,7 @@ namespace CK.Observable.Domain.Tests.RootSample
     [SerializationVersion(0)]
     public class ApplicationState : ObservableRootObject
     {
-        public ApplicationState( ObservableDomain domain )
+        protected ApplicationState( ObservableDomain domain )
             : base( domain )
         {
             ToDoNumbers = new ObservableList<int>();
