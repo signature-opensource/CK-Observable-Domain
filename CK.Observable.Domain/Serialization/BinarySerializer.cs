@@ -130,24 +130,21 @@ namespace CK.Observable
             }
             Write( (byte)SerializationMarker.Object );
             Write( idxSeen );
-            var driver = o is IKnowSerializationDriver k
-                            ? k.SerializationDriver
-                            : SerializableTypes.FindDriver( t, TypeSerializationKind.Serializable );
-            Debug.Assert( driver != null );
+            ITypeSerializationDriver driver = (o is IKnowUnifiedTypeDriver k
+                                                ? k.UnifiedTypeDriver
+                                                : UnifiedTypeRegistry.FindDriver( t )).SerializationDriver;
+            if( driver == null )
+            {
+                throw new InvalidOperationException( $"Type '{t.FullName}' is not serializable." );
+            }
             driver.WriteTypeInformation( this );
             driver.WriteData( this, o );
         }
 
-        internal void DoWriteSerializableTypeBased( SerializableTypes.TypeInfo tInfo )
+        internal void DoWriteSerializableTypeBased( UnifiedTypeRegistry.TypeInfo tInfo )
         {
-            Debug.Assert( tInfo != null );
-            while( DoWriteSimpleType( tInfo?.Type ) )
-            {
-                Debug.Assert( tInfo.Version >= 0 );
-                WriteSmallInt32( tInfo.Version );
-                tInfo = tInfo.BaseType;
-            }
         }
+
         internal bool WriteSimpleType( Type t )
         {
             if( DoWriteSimpleType( t ) )
@@ -158,7 +155,7 @@ namespace CK.Observable
             return false;
         }
 
-        bool DoWriteSimpleType( Type t )
+        internal bool DoWriteSimpleType( Type t )
         {
             if( t == null ) Write( (byte)0 );
             else if( t == typeof( object ) )

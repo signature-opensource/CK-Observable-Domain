@@ -9,12 +9,12 @@ using System.Diagnostics;
 namespace CK.Observable
 {
     [SerializationVersionAttribute(0)]
-    public abstract class ObservableObject : INotifyPropertyChanged, IKnowSerializationDriver, IDisposable
+    public abstract class ObservableObject : INotifyPropertyChanged, IKnowUnifiedTypeDriver, IDisposable
     {
         protected const string ExportContentOIdName = "$i";
         protected const string ExportContentPropName = "$C";
         int _id;
-        ITypeSerializationDriver _serializationDriver;
+        IUnifiedTypeDriver _driver;
         internal readonly ObservableDomain Domain;
         PropertyChangedEventHandler _handler;
         internal int OId => _id;
@@ -27,7 +27,8 @@ namespace CK.Observable
         protected ObservableObject( ObservableDomain domain )
         {
             if( domain == null ) throw new ArgumentNullException( nameof(domain) );
-            _serializationDriver = SerializableTypes.FindDriver( GetType(), TypeSerializationKind.None );
+            _driver = UnifiedTypeRegistry.FindDriver( GetType() );
+            Debug.Assert( _driver != null );
             Domain = domain;
             _id = Domain.Register( this );
             Debug.Assert( _id >= 0 );
@@ -35,11 +36,13 @@ namespace CK.Observable
 
         protected ObservableObject( BinaryDeserializer d )
         {
-            _serializationDriver = SerializableTypes.FindDriver( GetType(), TypeSerializationKind.None );
+            _driver = UnifiedTypeRegistry.FindDriver( GetType() );
+            Debug.Assert( _driver != null );
             Domain = d.Domain;
             var r = d.StartReading();
             Debug.Assert( r.CurrentReadInfo.Version == 0 );
             _id = r.ReadInt32();
+            Debug.Assert( _id >= 0 );
         }
 
         void Write( BinarySerializer w )
@@ -47,9 +50,9 @@ namespace CK.Observable
             w.Write( _id );
         }
 
-        ITypeSerializationDriver IKnowSerializationDriver.SerializationDriver => _serializationDriver;
+        IUnifiedTypeDriver IKnowUnifiedTypeDriver.UnifiedTypeDriver => _driver;
 
-        internal IObjectExportTypeDriver SerializationDriver => _serializationDriver;
+        internal IUnifiedTypeDriver UnifiedTypeDriver => _driver;
 
 
         event PropertyChangedEventHandler INotifyPropertyChanged.PropertyChanged

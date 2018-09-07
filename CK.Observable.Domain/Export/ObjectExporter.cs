@@ -146,12 +146,12 @@ namespace CK.Observable
                     return;
                 }
             }
-            var driver = o is IKnowSerializationDriver k
-                           ? k.SerializationDriver
-                           : SerializableTypes.FindDriver( t, TypeSerializationKind.None );
-            if( driver == null || !driver.IsExportable )
+            IObjectExportTypeDriver driver = (o is IKnowUnifiedTypeDriver k
+                                               ? k.UnifiedTypeDriver
+                                               : UnifiedTypeRegistry.FindDriver( t ) ).ExportDriver;
+            if( driver == null )
             {
-                throw new Exception( $"Type '{t.FullName}' is not exportable." );
+                throw new InvalidOperationException( $"Type '{t.FullName}' is not exportable." );
             }
             driver.Export(o, idxSeen, this);
         }

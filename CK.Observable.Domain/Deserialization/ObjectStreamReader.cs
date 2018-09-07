@@ -38,29 +38,27 @@ namespace CK.Observable
             public string AssemblyQualifiedName { get; }
 
             /// <summary>
-            /// Written version for <see cref="TypeSerializationKind.TypeBased"/>.
-            /// It is -1 if this type was not serializable when the stream
-            /// has been written or instances have been written by external
-            /// serializers.
+            /// Gets the version (greater or equal to 0) if this type information has been serialized
+            /// by the type itself. -1 otherwise.
             /// </summary>
             public readonly int Version;
 
             /// <summary>
             /// Gets the base type infromation.
-            /// Not null only for <see cref="TypeSerializationKind.TypeBased"/> and if the
+            /// Not null only if this type information has been serialized by the type itself and if the
             /// type was a specialized class.
             /// </summary>
             public TypeReadInfo BaseType => _baseType;
 
             /// <summary>
-            /// Gets the types from the base types (excluding Object) up to this one.
-            /// Not null only for <see cref="TypeSerializationKind.TypeBased"/>.
+            /// Gets the types from the root inherited type (excluding Object) down to this one.
+            /// Not null only if this type information has been serialized by the type itself.
             /// When not null, the list ends with this <see cref="TypeReadInfo"/> itself.
             /// </summary>
             public IReadOnlyList<TypeReadInfo> TypePath => _typePath;
 
             /// <summary>
-            /// Gets the Type if it can be resolved locally.
+            /// Gets the Type if it can be resolved locally, null otherwise.
             /// </summary>
             public Type LocalType
             {
@@ -75,26 +73,28 @@ namespace CK.Observable
                 }
             }
 
-            internal ITypeSerializationDriver EnsureSerializationDriver()
+            /// <summary>
+            /// Gets the deserialization driver if it can be resolved, null otherwise.
+            /// </summary>
+            public IDeserializationDriver DeserializationDriver
             {
-                if( _driver == null )
+                get
                 {
-                    var t = LocalType;
-                    if( t == null ) throw new InvalidDataException( $"Unable to load Type {AssemblyQualifiedName}. Current Serialization version makes read type mandatory. This should be corrected in a next version." );
-                    _driver = SerializableTypes.FindDriver( t, TypeSerializationKind.Serializable );
-                    if( _driver == null )
+                    if( !_driverLookupDone )
                     {
-                        throw new InvalidDataException( $"Read type {t.Name} is no more serializable." );
+                        _driverLookupDone = true;
+                        _driver = UnifiedTypeRegistry.FindDeserializationDriver( AssemblyQualifiedName, () => LocalType );
                     }
+                    return _driver;
                 }
-                return _driver;
             }
 
             TypeReadInfo _baseType;
             TypeReadInfo[] _typePath;
             Type _localType;
-            ITypeSerializationDriver _driver;
+            IDeserializationDriver _driver;
             bool _localTypeLookupDone;
+            bool _driverLookupDone;
 
             internal TypeReadInfo( string t, int version )
             {
@@ -267,15 +267,20 @@ namespace CK.Observable
             if( b == SerializationMarker.EmptyObject ) result = new object();
             else
             {
-                var info = ReadTypeInfo();
-                result = info.EnsureSerializationDriver().ReadInstance( _deserializer, info );
+                var info = ReadTypeReadInfo();
+                var d = info.DeserializationDriver;
+                if( d == null )
+                {
+                    throw new InvalidOperationException( $"Unable to find a deserialization driver for Assembly Qualified Name '{info.AssemblyQualifiedName}'." );
+                }
+                result = d.ReadInstance( _deserializer, info );
             }
             Debug.Assert( result.GetType().IsClass == !(result is ValueType) );
             if( idx >= 0 ) _objects[idx] = result;           
             return result;
         }
 
-        public TypeReadInfo ReadTypeInfo()
+        public TypeReadInfo ReadTypeReadInfo()
         {
             TypeReadInfo leaf;
             string sT = DoReadOneTypeName( out bool newType );

@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 
 namespace CK.Observable
 {
-    public interface IKnowSerializationDriver
+    public interface IKnowUnifiedTypeDriver
     {
-        ITypeSerializationDriver SerializationDriver { get; }
+        IUnifiedTypeDriver UnifiedTypeDriver { get; }
     }
 }

@@ -217,9 +217,9 @@ namespace CK.Observable
             internal void OnNewObject( ObservableObject o, int objectId )
             {
                 _changeEvents.Add( new NewObjectEvent( o, objectId ) );
-                if( o.SerializationDriver != null && o.SerializationDriver.IsExportable )
+                if( o.UnifiedTypeDriver.ExportDriver != null )
                 {
-                    _newObjects.Add( o, o.SerializationDriver.ExportableProperties.ToList() );
+                    _newObjects.Add( o, o.UnifiedTypeDriver.ExportDriver.ExportableProperties.ToList() );
                 }
                 else _newObjects.Add( o, null );
             }
@@ -766,9 +766,8 @@ namespace CK.Observable
         internal PropertyChangedEventArgs OnPropertyChanged( ObservableObject o, string propertyName, object before, object after )
         {
             if( _deserializing
-                || o.SerializationDriver == null
-                || !o.SerializationDriver.IsExportable
-                || !o.SerializationDriver.ExportableProperties.Any( p => p.Name == propertyName ) )
+                || o.UnifiedTypeDriver.ExportDriver == null
+                || !o.UnifiedTypeDriver.ExportDriver.ExportableProperties.Any( p => p.Name == propertyName ) )
             {
                 return null;
             }
