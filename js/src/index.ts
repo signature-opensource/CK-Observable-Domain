@@ -52,9 +52,16 @@ export class ObservableDomain {
         return this._tranNum;
     }
 
-    public get allObjects() : ReadonlyArray<any> { 
-        return this._graph;
-    }
+    public get allObjects() : Iterable<any>  { 
+        function* all(g:any[])
+        {
+            for( const o of g )
+            {
+                if( o !== null ) yield o;
+            }
+        }
+        return all( this._graph );
+     }
 
     public get roots() : ReadonlyArray<any> { 
         return this._roots;
