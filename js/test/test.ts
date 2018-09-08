@@ -15,21 +15,21 @@ describe('ObservableDomain eyeball tests - ', function () {
         const t8 = '{"N":8,"E":[["S",0,0,"Three"]]}';
 
         var o = new ObservableDomain(initial);
-        console.log("intial Simple graph:", o.graph);
+        console.log("intial Simple graph:", o._graph);
         o.applyEvent(JSON.parse(t2));
-        console.log("Simple graph after t2:", o.graph);
+        console.log("Simple graph after t2:", o._graph);
         o.applyEvent(JSON.parse(t3));
-        console.log("Simple graph after t3:", o.graph);
+        console.log("Simple graph after t3:", o._graph);
         o.applyEvent(JSON.parse(t4));
-        console.log("Simple graph after t4:", o.graph);
+        console.log("Simple graph after t4:", o._graph);
         o.applyEvent(JSON.parse(t5));
-        console.log("Simple graph after t5:", o.graph);
+        console.log("Simple graph after t5:", o._graph);
         o.applyEvent(JSON.parse(t6));
-        console.log("Simple graph after t6:", o.graph);
+        console.log("Simple graph after t6:", o._graph);
         o.applyEvent(JSON.parse(t7));
-        console.log("Simple graph after t7:", o.graph);
+        console.log("Simple graph after t7:", o._graph);
         o.applyEvent(JSON.parse(t8));
-        console.log("Simple graph after t8:", o.graph);
+        console.log("Simple graph after t8:", o._graph);
 
     });
 
@@ -42,14 +42,14 @@ describe('ObservableDomain eyeball tests - ', function () {
         const t4 = '{"N":5,"E":[["R",17,5],["D",25],["K",3,{">":4}]]}';
 
         var o = new ObservableDomain(initial);
-        console.log("intial Sample graph:", o.graph);
+        console.log("intial Sample graph:", o._graph);
         o.applyEvent(JSON.parse(t1));
         o.applyEvent(JSON.parse(t2));
-        console.log("Sample graph after t1 and t2:", o.graph);
+        console.log("Sample graph after t1 and t2:", o._graph);
         o.applyEvent(JSON.parse(t3));
-        console.log("Sample graph after t3:", o.graph);
+        console.log("Sample graph after t3:", o._graph);
         o.applyEvent(JSON.parse(t4));
-        console.log("Sample graph after t4:", o.graph);
+        console.log("Sample graph after t4:", o._graph);
 
     });
 });

@@ -3,56 +3,66 @@ import { deserialize } from "@signature/json-graph-serializer";
 
 export interface ObservableDomainEvent {
     N: number;
-    E: [string, string, number | string][]; // EventCode, TargetRef, Param
+    E: any[];
 }
 
 export interface ObservableDomainState {
     N: number;
     P: string[];
     O: any;
-    R: string[];
-}
-
-function liftGraphContainerContent(g: any[]) {
-    const len = g.length;
-    for (let i = 0; i < len; ++i) {
-        const o = g[i];
-        if (o && typeof (o) === "object") {
-            for (let p in o) {
-                const v = o[p];
-                if (v && typeof (v) === "object") {
-                    const c = v["$C"];
-                    if (c !== undefined) {
-                        o[p] = g[v["$i"]];
-                    }
-                }
-            }
-        }
-    }
-    return g;
+    R: number[];
 }
 
 export class ObservableDomain {
-    private o: ObservableDomainState;
-    private props: string[];
-    private tranNum: number;
-    public graph: any;
-    public roots: any[];
+    private readonly  _props: string[];
+    private _tranNum: number;
+    private readonly _graph: any[];
+    private readonly  _roots: any[];        
 
     constructor(initialState: string | ObservableDomainState) {
-        this.o = typeof (initialState) === "string"
-            ? deserialize(initialState, { prefix: "" })
-            : initialState;
-        this.props = this.o.P;
-        this.tranNum = this.o.N
-        this.graph = liftGraphContainerContent(this.o.O);
+        const o : ObservableDomainState = typeof (initialState) === "string"
+                                            ? deserialize(initialState, { prefix: "" })
+                                            : initialState;
+        this._props = o.P;
+        this._tranNum = o.N
+        this._graph = liftGraphContainerContent(o.O);
+        this._roots = o.R.map(i => this._graph[i]);
 
-        this.roots = this.o.R.map(i => this.graph[i]);
+        function liftGraphContainerContent(g: any[]) {
+            const len = g.length;
+            for (let i = 0; i < len; ++i) {
+                const o = g[i];
+                if (o && typeof (o) === "object") {
+                    for (let p in o) {
+                        const v = o[p];
+                        if (v && typeof (v) === "object") {
+                            const c = v["$C"];
+                            if (c !== undefined) {
+                                o[p] = g[v["$i"]];
+                            }
+                        }
+                    }
+                }
+            }
+            return g;
+        }
+    }
+
+    public get transactionNumber() : number { 
+        return this._tranNum;
+    }
+
+    public get allObjects() : ReadonlyArray<any> { 
+        return this._graph;
+    }
+
+    public get roots() : ReadonlyArray<any> { 
+        return this._roots;
     }
 
     public applyEvent(event: ObservableDomainEvent) {
-        if (this.tranNum + 1 > event.N) {
-            throw new Error(`Invalid transaction number. Expected: greater than ${this.tranNum + 1}, got ${event.N}.`);
+        if (this._tranNum + 1 !== event.N) {
+            throw new Error(`Invalid transaction number. Expected: ${this._tranNum + 1}, got ${event.N}.`);
         }
 
         const events = event.E;
@@ -60,7 +70,7 @@ export class ObservableDomain {
             const e = events[i];
             const code: string = e[0];
             switch (code) {
-                case "N":  // NewObject
+                case "N": // NewObject
                     {
                         let newOne;
                         switch (e[2]) {
@@ -70,30 +80,30 @@ export class ObservableDomain {
                             case "S": newOne = new Set(); break;
                             default: throw new Error(`Unexpected Object type; ${e[2]}. Must be A, M, S or empty string.`);
                         }
-                        this.graph[e[1]] = newOne;
+                        this._graph[e[1]] = newOne;
                         break;
                     }
-                case "D":  // DisposedObject
+                case "D": // DisposedObject
                     {
-                        this.graph[e[1]] = null;
+                        this._graph[e[1]] = null;
                         break;
                     }
-                case "P":  // NewProperty
+                case "P": // NewProperty
                     {
-                        if (e[2] != this.props.length) {
-                            throw new Error(`Invalid property creation event for '${e[1]}': index must be ${this.props.length}, got ${e[2]}.`);
+                        if (e[2] != this._props.length) {
+                            throw new Error(`Invalid property creation event for '${e[1]}': index must be ${this._props.length}, got ${e[2]}.`);
                         }
-                        this.props.push(e[1]);
+                        this._props.push(e[1]);
                         break;
                     }
                 case "C":  // PropertyChanged
                     {
-                        this.graph[e[1]][this.props[<any>e[2]]] = this.getValue(e[3]);
+                        this._graph[e[1]][this._props[<any>e[2]]] = this.getValue(e[3]);
                         break;
                     }
                 case "I":  // ListInsert
                     {
-                        const a = this.graph[e[1]];
+                        const a = this._graph[e[1]];
                         const idx = e[2];
                         const v = this.getValue(e[3]);
                         if (idx === a.length) a[idx] = v;
@@ -102,37 +112,40 @@ export class ObservableDomain {
                     }
                 case "CL": // CollectionClear
                     {
-                        const c = this.graph[e[1]];
+                        const c = this._graph[e[1]];
                         if (c instanceof Array) c.length = 0;
                         else c.clear();
                         break;
                     }
                 case "R":  // ListRemoveAt
                     {
-                        this.graph[e[1]].splice(e[2], 1);
+                        this._graph[e[1]].splice(e[2], 1);
                         break;
                     }
                 case "S":  // ListSetAt
                     {
-                        this.graph[e[1]].splice(e[2], 1, this.getValue(e[3]));
+                        this._graph[e[1]].splice(e[2], 1, this.getValue(e[3]));
                         break;
                     }
                 case "K":   // CollectionRemoveKey
                     {
-                        this.graph[e[1]].delete(this.getValue(e[2]));
+                        this._graph[e[1]].delete(this.getValue(e[2]));
                         break;
                     }
                 default: throw new Error(`Unexpected Event code: '${e[0]}'.`);
             }
         }
-        this.tranNum = event.N;
+        this._tranNum = event.N;
     }
 
     private getValue(o: any) {
         if (o != null) {
             var ref = o[">"];
-            if (ref !== undefined) return this.graph[ref];
+            if (ref !== undefined) return this._graph[ref];
         }
         return o;
     }
 }
+
+
+
