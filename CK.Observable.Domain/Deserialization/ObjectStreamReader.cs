@@ -335,7 +335,7 @@ namespace CK.Observable
             }
         }
 
-        // TODO: transfer thess helpers to CKBinaryReader.
+        // TODO: To be removed @next CK.Core version (transfered to CKBinaryReader).
 
         /// <summary>
         /// Reads a DateTime value.

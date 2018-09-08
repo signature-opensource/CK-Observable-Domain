@@ -126,9 +126,9 @@ namespace CK.Observable
             _next?.OnTransactionFailure( d, errors );
         }
 
-        void IObservableTransactionManager.OnTransactionStart( ObservableDomain d )
+        void IObservableTransactionManager.OnTransactionStart( ObservableDomain d, DateTime timeUtc )
         {
-            _next?.OnTransactionStart( d );
+            _next?.OnTransactionStart( d, timeUtc );
         }
     }
 }

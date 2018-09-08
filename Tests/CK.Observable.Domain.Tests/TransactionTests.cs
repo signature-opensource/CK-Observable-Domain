@@ -14,9 +14,9 @@ namespace CK.Observable.Domain.Tests
     public class TransactionManagerTests
     {
         [Test]
-        public void Without_transaction_manager_the_very_first_operation_is_transacted()
+        public void transaction_works_for_the_very_first_one()
         {
-            var d = new ObservableDomain();
+            var d = new ObservableDomain( new SecureInMemoryTransactionManager() );
             d.TransactionSerialNumber.Should().Be( 0 );
             var events = d.Modify( () =>
             {

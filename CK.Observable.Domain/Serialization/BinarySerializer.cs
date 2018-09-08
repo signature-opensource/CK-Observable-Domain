@@ -181,7 +181,7 @@ namespace CK.Observable
             return false;
         }
 
-        // TODO: transfer these helpers to CKBinaryReader.
+        // TODO: To be removed @next CK.Core version (transfered to CKBinaryWriter).
 
         /// <summary>
         /// Writes a DateTime value.

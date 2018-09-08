@@ -14,7 +14,8 @@ namespace CK.Observable
         /// Called before a transaction starts.
         /// </summary>
         /// <param name="d">The associated domain.</param>
-        void OnTransactionStart( ObservableDomain d );
+        /// <param name="timeUtc">The date time utc of the transaction start.</param>
+        void OnTransactionStart( ObservableDomain d, DateTime timeUtc );
 
         /// <summary>
         /// Called when a transaction ends successfully.

@@ -58,12 +58,6 @@ namespace CK.Observable
         /// </summary>
         readonly List<PropInfo> _propertiesByIndex;
 
-        /// <summary>
-        /// The number of properties that are required by root objects.
-        /// Since root objects are always here, their properties must be preserved.
-        /// </summary>
-        int _propertiesLockCount;
-
         readonly ChangeTracker _changeTracker;
         readonly IDisposable _reentrancyHandler;
         readonly AllCollection _exposedObjects;
@@ -84,11 +78,6 @@ namespace CK.Observable
         /// This is greater or equal to _rootObjectCount.
         /// </summary>
         int _actualObjectCount;
-
-        /// <summary>
-        /// The number of objects that have been created by roots instanciation.
-        /// </summary>
-        int _rootObjectCount;
 
         /// <summary>
         /// The actual list of root objects.
@@ -345,13 +334,7 @@ namespace CK.Observable
                     CurrentThreadDomain = _previous;
                     _domain._currentTran = null;
                     _domain._changeTracker.Reset();
-                    // Edge case: very first transaction. We simply reset the
-                    // domain.
-                    if( _domain._transactionSerialNumber == 0 )
-                    {
-                        _domain.Reset();
-                    }
-                    else _domain.TransactionManager?.OnTransactionFailure( _domain, _errors );
+                    _domain.TransactionManager?.OnTransactionFailure( _domain, _errors );
                 }
             }
         }
@@ -419,18 +402,6 @@ namespace CK.Observable
             Load( s, leaveOpen, encoding );
         }
 
-        void Reset()
-        {
-            _freeList.Clear();
-            for( int i = _propertiesLockCount; i < _propertiesByIndex.Count; ++i )
-            {
-                _properties.Remove( _propertiesByIndex[i].Name );
-            }
-            _propertiesByIndex.RemoveRange( _propertiesLockCount, _properties.Count - _propertiesLockCount );
-            Array.Clear( _objects, _rootObjectCount, _objectsListCount - _rootObjectCount );
-            _objectsListCount = _actualObjectCount = _rootObjectCount;
-        }
-
         class NoTransaction : IObservableTransaction
         {
             public static readonly IObservableTransaction Default = new NoTransaction();
@@ -467,8 +438,6 @@ namespace CK.Observable
                                                        _observableRootCtorParameters,
                                                        null ).Invoke( new[] { this } );
                 _roots.Add( o );
-                _rootObjectCount = _objectsListCount;
-                _propertiesLockCount = _propertiesByIndex.Count;
                 return o;
             }
             finally
@@ -525,6 +494,7 @@ namespace CK.Observable
         {
             if( _currentTran != null ) throw new InvalidOperationException( $"A transaction is already opened for this ObservableDomain n°{DomainNumber}." );
             _currentTran = new Transaction( this );
+            TransactionManager?.OnTransactionStart( this, DateTime.UtcNow );
             return _currentTran;
         }
 
@@ -612,15 +582,12 @@ namespace CK.Observable
                 w.WriteSmallInt32( 0 ); // Version
                 w.Write( _transactionSerialNumber );
                 w.Write( _actualObjectCount );
-                w.WriteNonNegativeSmallInt32( _rootObjectCount );
-                w.WriteNonNegativeSmallInt32( _propertiesLockCount );
                 w.WriteNonNegativeSmallInt32( _freeList.Count );
                 foreach( var i in _freeList ) w.WriteNonNegativeSmallInt32( i );
                 w.WriteNonNegativeSmallInt32( _properties.Count );
                 foreach( var p in _propertiesByIndex )
                 {
                     w.Write( p.Name );
-                    w.WriteNonNegativeSmallInt32( p.PropertyId );
                 }
                 Debug.Assert( _objectsListCount == _actualObjectCount + _freeList.Count );
                 for( int i = 0; i < _objectsListCount; ++i )
@@ -657,8 +624,6 @@ namespace CK.Observable
                 int version = r.ReadSmallInt32();
                 _transactionSerialNumber = r.ReadInt32();
                 _actualObjectCount = r.ReadInt32();
-                _rootObjectCount = r.ReadNonNegativeSmallInt32();
-                _propertiesLockCount = r.ReadNonNegativeSmallInt32();
 
                 _freeList.Clear();
                 int count = r.ReadNonNegativeSmallInt32();
@@ -670,11 +635,10 @@ namespace CK.Observable
                 _properties.Clear();
                 _propertiesByIndex.Clear();
                 count = r.ReadNonNegativeSmallInt32();
-                while( --count >= 0 )
+                for( int iProp = 0; iProp < count; iProp++ )
                 {
                     string name = r.ReadString();
-                    int propertyId = r.ReadNonNegativeSmallInt32();
-                    var p = new PropInfo( propertyId, name );
+                    var p = new PropInfo( iProp, name );
                     _properties.Add( name, p );
                     _propertiesByIndex.Add( p );
                 }
@@ -685,9 +649,13 @@ namespace CK.Observable
                 {
                     Array.Resize( ref _objects, _objects.Length * 2 );
                 }
-                while( --count >= 0 )
+                for( int i = 0; i < count; ++i )
                 {
-                    r.ReadObject<ObservableObject>( x => _objects[x.OId] = x );
+                    r.ReadObject<ObservableObject>( x =>
+                    {
+                        Debug.Assert( x == null || x.OId == i );
+                        _objects[i] = x;
+                    } );
                 }
                 r.ExecuteDeferredActions();
                 _roots.Clear();
