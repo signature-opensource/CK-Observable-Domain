@@ -14,8 +14,9 @@ export interface ObservableDomainState {
 }
 
 export class ObservableDomain {
-    private readonly  _props: string[];
+    private readonly _props: string[];
     private _tranNum: number;
+    private _objCount: number;
     private readonly _graph: any[];
     private readonly  _roots: any[];        
 
@@ -24,32 +25,42 @@ export class ObservableDomain {
                                             ? deserialize(initialState, { prefix: "" })
                                             : initialState;
         this._props = o.P;
-        this._tranNum = o.N
-        this._graph = liftGraphContainerContent(o.O);
+        this._tranNum = o.N;
+        const r = countAndLiftContainers(o.O);
+        this._objCount = r.count;
+        this._graph = r.graph;
         this._roots = o.R.map(i => this._graph[i]);
 
-        function liftGraphContainerContent(g: any[]) {
+        function countAndLiftContainers(g: any[]) {
+            let count = 0;
             const len = g.length;
             for (let i = 0; i < len; ++i) {
                 const o = g[i];
-                if (o && typeof (o) === "object") {
-                    for (let p in o) {
-                        const v = o[p];
-                        if (v && typeof (v) === "object") {
-                            const c = v["$C"];
-                            if (c !== undefined) {
-                                o[p] = g[v["$i"]];
+                if (o != null ) {
+                    ++count;
+                    if( typeof o === "object") {
+                        for (let p in o) {
+                            const v = o[p];
+                            if (v && typeof v === "object") {
+                                const c = v["$C"];
+                                if (c !== undefined) {
+                                    o[p] = g[v["$i"]];
+                                }
                             }
                         }
-                    }
+                    }   
                 }
             }
-            return g;
+            return {count:count,graph:g};
         }
     }
 
     public get transactionNumber() : number { 
         return this._tranNum;
+    }
+
+    public get allObjectsCount() : number { 
+        return this._objCount;
     }
 
     public get allObjects() : Iterable<any>  { 
@@ -88,11 +99,13 @@ export class ObservableDomain {
                             default: throw new Error(`Unexpected Object type; ${e[2]}. Must be A, M, S or empty string.`);
                         }
                         this._graph[e[1]] = newOne;
+                        this._objCount++;
                         break;
                     }
                 case "D": // DisposedObject
                     {
                         this._graph[e[1]] = null;
+                        this._objCount--;
                         break;
                     }
                 case "P": // NewProperty
