@@ -59,7 +59,8 @@ namespace CodeCake
 
             Task( "Unit-Testing" )
                 .IsDependentOn( "Build" )
-                .WithCriteria( () => Cake.ReadInteractiveOption( "Run Unit Tests?", 'Y', 'N' ) == 'Y' )
+                .WithCriteria( () => Cake.InteractiveMode() == InteractiveMode.NoInteraction
+                                     || Cake.ReadInteractiveOption( "RunUnitTests", "Run Unit Tests?", 'Y', 'N' ) == 'Y' )
                 .Does( () =>
                  {
                      var testProjects = projects.Where( p => p.Name.EndsWith( ".Tests" ) );
