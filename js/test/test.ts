@@ -1,3 +1,4 @@
+/* tslint:disable */
 import 'chai/register-should';
 import { ObservableDomain } from '../src';
 
