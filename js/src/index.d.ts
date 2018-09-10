@@ -1,20 +1,24 @@
 export interface ObservableDomainEvent {
     N: number;
-    E: [string, string, number | string][];
+    E: any[];
 }
 export interface ObservableDomainState {
     N: number;
     P: string[];
     O: any;
-    R: string[];
+    R: number[];
 }
 export declare class ObservableDomain {
-    private o;
-    private props;
-    private tranNum;
-    graph: any;
-    roots: any[];
+    private readonly _props;
+    private _tranNum;
+    private _objCount;
+    private readonly _graph;
+    private readonly _roots;
     constructor(initialState: string | ObservableDomainState);
+    readonly transactionNumber: number;
+    readonly allObjectsCount: number;
+    readonly allObjects: Iterable<any>;
+    readonly roots: ReadonlyArray<any>;
     applyEvent(event: ObservableDomainEvent): void;
     private getValue;
 }
