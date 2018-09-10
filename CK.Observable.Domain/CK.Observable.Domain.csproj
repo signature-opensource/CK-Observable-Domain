@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   
   <Import Project="..\Common\Shared.props" />
   
@@ -6,12 +6,6 @@
     <TargetFrameworks>net461;netstandard2.0</TargetFrameworks>
     <LangVersion>7.2</LangVersion>
   </PropertyGroup>
-  
-  <ItemGroup>
-    <Compile Remove="Collections\**" />
-    <EmbeddedResource Remove="Collections\**" />
-    <None Remove="Collections\**" />
-  </ItemGroup>
   
   <ItemGroup>
     <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="10.1.1" />

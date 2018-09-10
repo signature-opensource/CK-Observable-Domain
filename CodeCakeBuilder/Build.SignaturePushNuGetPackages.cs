@@ -30,7 +30,7 @@ namespace CodeCake
                 Cake.DeleteDirectory( outputDir, new DeleteDirectorySettings() { Recursive = true, Force = true } );
             }
 
-            if( Cake.IsInteractiveMode() )
+            if( Cake.InteractiveMode() == InteractiveMode.Interactive )
             {
                 var localFeed = Cake.FindDirectoryAbove( "LocalFeed" );
                 if( localFeed != null )

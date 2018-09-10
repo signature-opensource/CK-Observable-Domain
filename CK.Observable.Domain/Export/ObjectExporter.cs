@@ -12,19 +12,10 @@ namespace CK.Observable
         readonly IObjectExporterTarget _target;
         readonly Dictionary<object, int> _seen;
 
-        class PureRefEquality : IEqualityComparer<object>
-        {
-            public new bool Equals( object x, object y ) => ReferenceEquals( x, y );
-
-            public int GetHashCode( object obj ) => obj.GetHashCode();
-        }
-
-        static readonly PureRefEquality RefEquality = new PureRefEquality();
-
         public ObjectExporter( IObjectExporterTarget target )
         {
             _target = target;
-            _seen = new Dictionary<object, int>( RefEquality );
+            _seen = new Dictionary<object, int>( PureObjectRefEqualityComparer<object>.Default );
         }
 
         public static void ExportRootList( IObjectExporterTarget target, IEnumerable objects )
@@ -155,12 +146,12 @@ namespace CK.Observable
                     return;
                 }
             }
-            var driver = o is IKnowSerializationDriver k
-                           ? k.SerializationDriver
-                           : SerializableTypes.FindDriver( t, TypeSerializationKind.None );
-            if( driver == null || !driver.IsExportable )
+            IObjectExportTypeDriver driver = (o is IKnowUnifiedTypeDriver k
+                                               ? k.UnifiedTypeDriver
+                                               : UnifiedTypeRegistry.FindDriver( t ) ).ExportDriver;
+            if( driver == null )
             {
-                throw new Exception( $"Type '{t.FullName}' is not exportable." );
+                throw new InvalidOperationException( $"Type '{t.FullName}' is not exportable." );
             }
             driver.Export(o, idxSeen, this);
         }

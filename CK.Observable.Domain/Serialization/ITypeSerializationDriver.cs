@@ -7,15 +7,14 @@ using System.Threading.Tasks;
 namespace CK.Observable
 {
     /// <summary>
-    /// Extends the <see cref="IObjectExportTypeDriver"/>.
-    /// This is just becaus I'm in a hurry: the two conerns should be separated.
+    /// Handles serialization for instances of a given type.
     /// </summary>
-    public interface ITypeSerializationDriver : IObjectExportTypeDriver
+    public interface ITypeSerializationDriver
     {
         /// <summary>
-        /// Must be <see cref="TypeSerializationKind.TypeBased"/> or <see cref="TypeSerializationKind.External"/>.
+        /// Gets the type that this driver handles.
         /// </summary>
-        TypeSerializationKind SerializationKind { get; }
+        Type Type { get; }
 
         /// <summary>
         /// Writes the type descriptor in the serializer.
@@ -29,17 +28,6 @@ namespace CK.Observable
         /// <param name="w">The serializer.</param>
         /// <param name="o">The object instance.</param>
         void WriteData( BinarySerializer w, object o );
-
-        /// <summary>
-        /// Reads the data and instanciates a new object.
-        /// </summary>
-        /// <param name="r">The deserializer.</param>
-        /// <param name="readInfo">
-        /// The type based information (with versions and ancestors) of the type as it has been written.
-        /// Null if the type has been previously written by an external driver.
-        /// </param>
-        /// <returns>The new instance.</returns>
-        object ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo );
 
     }
 }

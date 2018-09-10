@@ -131,7 +131,7 @@ namespace CK.Observable.Domain.Tests
             Sample.SampleDomain.CheckSampleGarage1( d2 );
         }
 
-        static ObservableDomain SaveAndLoad( ObservableDomain domain )
+        internal static ObservableDomain SaveAndLoad( ObservableDomain domain )
         {
             using( var s = new MemoryStream() )
             {

@@ -8,44 +8,40 @@ namespace CK.Observable
 {
     public class BasicTypeDrivers
     {
-        public class DBool : ExternalTypeSerializationDriver<Boolean>
+        public class DBool : UnifiedTypeDriverBase<Boolean>
         {
-            public override bool ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo )
+            public override bool ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
             {
-                return r.ReadBoolean();
+                return r.Reader.ReadBoolean();
             }
 
             public override void WriteData( BinarySerializer w, bool o )
             {
                 w.Write( o );
             }
-
-            public override bool IsExportable => true;
-
-            public override void Export( int num, bool o, ObjectExporter exporter ) => exporter.Target.EmitBool( o );
+            public override void Export( bool o, int num, ObjectExporter exporter ) => exporter.Target.EmitBool( o );
         }
 
-        public class DChar : ExternalTypeSerializationDriver<Char>
+        public class DChar : UnifiedTypeDriverBase<Char>
         {
-            public override char ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo )
+            public override char ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
             {
-                return r.ReadChar();
+                return r.Reader.ReadChar();
             }
 
             public override void WriteData( BinarySerializer w, char o )
             {
                 w.Write( o );
             }
-            public override bool IsExportable => true;
 
-            public override void Export( int num, char o, ObjectExporter exporter ) => exporter.Target.EmitChar( o );
+            public override void Export( char o, int num, ObjectExporter exporter ) => exporter.Target.EmitChar( o );
         }
 
-        public class DDouble : ExternalTypeSerializationDriver<Double>
+        public class DDouble : UnifiedTypeDriverBase<Double>
         {
-            public override double ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo )
+            public override double ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
             {
-                return r.ReadDouble();
+                return r.Reader.ReadDouble();
             }
 
             public override void WriteData( BinarySerializer w, double o )
@@ -53,129 +49,118 @@ namespace CK.Observable
                 w.Write( o );
             }
 
-            public override bool IsExportable => true;
-
-            public override void Export( int num, double o, ObjectExporter exporter ) => exporter.Target.EmitDouble( o );
+            public override void Export( double o, int num, ObjectExporter exporter ) => exporter.Target.EmitDouble( o );
 
         }
 
-        public class DSingle : ExternalTypeSerializationDriver<Single>
+        public class DSingle : UnifiedTypeDriverBase<Single>
         {
-            public override float ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo )
+            public override float ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
             {
-                return r.ReadSingle();
+                return r.Reader.ReadSingle();
             }
 
             public override void WriteData( BinarySerializer w, float o )
             {
                 w.Write( o );
             }
-            public override bool IsExportable => true;
-
-            public override void Export( int num, float o, ObjectExporter exporter ) => exporter.Target.EmitSingle( o );
+            public override void Export( float o, int num, ObjectExporter exporter ) => exporter.Target.EmitSingle( o );
         }
 
-        public class DDecimal : ExternalTypeSerializationDriver<Decimal>
+        public class DDecimal : UnifiedTypeDriverBase<Decimal>
         {
-            public override decimal ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo )
+            public override decimal ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
             {
-                return r.ReadDecimal();
+                return r.Reader.ReadDecimal();
             }
 
             public override void WriteData( BinarySerializer w, decimal o )
             {
                 w.Write( o );
             }
-            public override bool IsExportable => true;
 
-            public override void Export( int num, decimal o, ObjectExporter exporter ) => exporter.Target.EmitSByte( o );
+            public override void Export( decimal o, int num, ObjectExporter exporter ) => exporter.Target.EmitSByte( o );
         }
 
-        public class DSByte : ExternalTypeSerializationDriver<SByte>
+        public class DSByte : UnifiedTypeDriverBase<SByte>
         {
-            public override sbyte ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo )
+            public override sbyte ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
             {
-                return r.ReadSByte();
+                return r.Reader.ReadSByte();
             }
 
             public override void WriteData( BinarySerializer w, sbyte o )
             {
                 w.Write( o );
             }
-            public override bool IsExportable => true;
-
-            public override void Export( int num, sbyte o, ObjectExporter exporter ) => exporter.Target.EmitSByte( o );
+            public override void Export( sbyte o, int num, ObjectExporter exporter ) => exporter.Target.EmitSByte( o );
         }
 
-        public class DByte : ExternalTypeSerializationDriver<Byte>
+        public class DByte : UnifiedTypeDriverBase<Byte>
         {
-            public override byte ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo )
+            public override byte ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
             {
-                return r.ReadByte();
+                return r.Reader.ReadByte();
             }
 
             public override void WriteData( BinarySerializer w, byte o )
             {
                 w.Write( o );
             }
-            public override bool IsExportable => true;
 
-            public override void Export( int num, byte o, ObjectExporter exporter ) => exporter.Target.EmitByte( o );
+            public override void Export( byte o, int num, ObjectExporter exporter ) => exporter.Target.EmitByte( o );
         }
 
-        public class DInt16 : ExternalTypeSerializationDriver<Int16>
+        public class DInt16 : UnifiedTypeDriverBase<Int16>
         {
-            public override short ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo )
+            public override short ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
             {
-                return r.ReadInt16();
+                return r.Reader.ReadInt16();
             }
 
             public override void WriteData( BinarySerializer w, short o )
             {
                 w.Write( o );
             }
-            public override bool IsExportable => true;
 
-            public override void Export( int num, short o, ObjectExporter exporter ) => exporter.Target.EmitInt16( o );
+            public override void Export( short o, int num, ObjectExporter exporter ) => exporter.Target.EmitInt16( o );
         }
 
-        public class DUInt16 : ExternalTypeSerializationDriver<UInt16>
+        public class DUInt16 : UnifiedTypeDriverBase<UInt16>
         {
-            public override ushort ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo )
+            public override ushort ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
             {
-                return r.ReadUInt16();
+                return r.Reader.ReadUInt16();
             }
 
             public override void WriteData( BinarySerializer w, ushort o )
             {
                 w.Write( o );
             }
-            public override bool IsExportable => true;
 
-            public override void Export( int num, ushort o, ObjectExporter exporter ) => exporter.Target.EmitUInt16( o );
+            public override void Export( ushort o, int num, ObjectExporter exporter ) => exporter.Target.EmitUInt16( o );
         }
 
-        public class DInt32 : ExternalTypeSerializationDriver<Int32>
+        public class DInt32 : UnifiedTypeDriverBase<Int32>
         {
-            public override int ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo )
+            public override int ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
             {
-                return r.ReadInt32();
+                return r.Reader.ReadInt32();
             }
 
             public override void WriteData( BinarySerializer w, int o )
             {
                 w.Write( o );
             }
-            public override bool IsExportable => true;
 
-            public override void Export( int num, int o, ObjectExporter exporter ) => exporter.Target.EmitInt32( o );
+            public override void Export( int o, int num, ObjectExporter exporter ) => exporter.Target.EmitInt32( o );
         }
 
-        public class DUInt32 : ExternalTypeSerializationDriver<UInt32>
+        public class DUInt32 : UnifiedTypeDriverBase<UInt32>
         {
-            public override uint ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo )
+            public override uint ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
             {
-                return r.ReadUInt32();
+                return r.Reader.ReadUInt32();
             }
 
             public override void WriteData( BinarySerializer w, uint o )
@@ -183,121 +168,112 @@ namespace CK.Observable
                 w.Write( o );
             }
 
-            public override bool IsExportable => true;
-
-            public override void Export( int num, uint o, ObjectExporter exporter ) => exporter.Target.EmitUInt32( o );
+            public override void Export( uint o, int num, ObjectExporter exporter ) => exporter.Target.EmitUInt32( o );
         }
 
-        public class DInt64 : ExternalTypeSerializationDriver<Int64>
+        public class DInt64 : UnifiedTypeDriverBase<Int64>
         {
-            public override long ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo )
+            public override long ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
             {
-                return r.ReadInt64();
+                return r.Reader.ReadInt64();
             }
 
             public override void WriteData( BinarySerializer w, long o )
             {
                 w.Write( o );
             }
-            public override bool IsExportable => true;
 
-            public override void Export( int num, long o, ObjectExporter exporter ) => exporter.Target.EmitInt64( o );
+            public override void Export( long o, int num, ObjectExporter exporter ) => exporter.Target.EmitInt64( o );
         }
 
-        public class DUInt64 : ExternalTypeSerializationDriver<UInt64>
+        public class DUInt64 : UnifiedTypeDriverBase<UInt64>
         {
-            public override ulong ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo )
+            public override ulong ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
             {
-                return r.ReadUInt64();
+                return r.Reader.ReadUInt64();
             }
 
             public override void WriteData( BinarySerializer w, ulong o )
             {
                 w.Write( o );
             }
-            public override bool IsExportable => true;
 
-            public override void Export( int num, ulong o, ObjectExporter exporter ) => exporter.Target.EmitUInt64( o );
+            public override void Export( ulong o, int num, ObjectExporter exporter ) => exporter.Target.EmitUInt64( o );
         }
 
-        public class DString : ExternalTypeSerializationDriver<String>
+        public class DString : UnifiedTypeDriverBase<String>
         {
-            public override string ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo )
+            public override string ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
             {
-                return r.ReadNullableString();
+                return r.Reader.ReadNullableString();
             }
 
             public override void WriteData( BinarySerializer w, string o )
             {
                 w.WriteNullableString( o );
             }
-            public override bool IsExportable => true;
 
-            public override void Export( int num, string o, ObjectExporter exporter ) => exporter.Target.EmitString( o );
+            public override void Export( string o, int num, ObjectExporter exporter ) => exporter.Target.EmitString( o );
         }
 
-        public class DGuid : ExternalTypeSerializationDriver<Guid>
+        public class DGuid : UnifiedTypeDriverBase<Guid>
         {
-            public override Guid ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo )
+            public override Guid ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
             {
-                return r.ReadGuid();
+                return r.Reader.ReadGuid();
             }
 
             public override void WriteData( BinarySerializer w, Guid o )
             {
                 w.Write( o );
             }
-            public override bool IsExportable => true;
 
-            public override void Export( int num, Guid o, ObjectExporter exporter ) => exporter.Target.EmitGuid( o );
+            public override void Export( Guid o, int num, ObjectExporter exporter ) => exporter.Target.EmitGuid( o );
         }
 
-        public class DDateTime : ExternalTypeSerializationDriver<DateTime>
+        public class DDateTime : UnifiedTypeDriverBase<DateTime>
         {
-            public override DateTime ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo )
+            public override DateTime ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
             {
-                return r.ReadDateTime();
+                return r.Reader.ReadDateTime();
             }
 
             public override void WriteData( BinarySerializer w, DateTime o )
             {
                 w.Write( o );
             }
-            public override bool IsExportable => true;
 
-            public override void Export( int num, DateTime o, ObjectExporter exporter ) => exporter.Target.EmitDateTime( o );
+            public override void Export( DateTime o, int num, ObjectExporter exporter ) => exporter.Target.EmitDateTime( o );
         }
 
-        public class DTimeSpan : ExternalTypeSerializationDriver<TimeSpan>
+        public class DTimeSpan : UnifiedTypeDriverBase<TimeSpan>
         {
-            public override TimeSpan ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo )
+            public override TimeSpan ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
             {
-                return r.ReadTimeSpan();
+                return r.Reader.ReadTimeSpan();
             }
 
             public override void WriteData( BinarySerializer w, TimeSpan o )
             {
                 w.Write( o );
             }
-            public override bool IsExportable => true;
 
-            public override void Export( int num, TimeSpan o, ObjectExporter exporter ) => exporter.Target.EmitTimeSpan( o );
+            public override void Export( TimeSpan o, int num, ObjectExporter exporter ) => exporter.Target.EmitTimeSpan( o );
         }
 
-        public class DDateTimeOffset : ExternalTypeSerializationDriver<DateTimeOffset>
+        public class DDateTimeOffset : UnifiedTypeDriverBase<DateTimeOffset>
         {
-            public override DateTimeOffset ReadInstance( ObjectStreamReader r, ObjectStreamReader.TypeReadInfo readInfo )
+            public override DateTimeOffset ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
             {
-                return r.ReadDateTimeOffset();
+                return r.Reader.ReadDateTimeOffset();
             }
 
             public override void WriteData( BinarySerializer w, DateTimeOffset o )
             {
                 w.Write( o );
             }
-            public override bool IsExportable => true;
 
-            public override void Export( int num, DateTimeOffset o, ObjectExporter exporter ) => exporter.Target.EmitDateTimeOffset( o );
+            public override void Export( DateTimeOffset o, int num, ObjectExporter exporter ) => exporter.Target.EmitDateTimeOffset( o );
         }
 
 

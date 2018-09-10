@@ -14,15 +14,6 @@ namespace CK.Observable
         readonly Dictionary<Type, TypeInfo> _types;
         readonly Dictionary<object, int> _seen;
 
-        class PureRefEquality : IEqualityComparer<object>
-        {
-            public new bool Equals( object x, object y ) => ReferenceEquals( x, y );
-
-            public int GetHashCode( object obj ) => obj.GetHashCode();
-        }
-
-        static readonly PureRefEquality RefEquality = new PureRefEquality();
-
         struct TypeInfo
         {
             public readonly Type Type;
@@ -39,7 +30,7 @@ namespace CK.Observable
             : base( output, encoding ?? Encoding.UTF8, leaveOpen )
         {
             _types = new Dictionary<Type, TypeInfo>();
-            _seen = new Dictionary<object, int>( RefEquality );
+            _seen = new Dictionary<object, int>( PureObjectRefEqualityComparer<object>.Default );
         }
 
         public void WriteObject( object o )
@@ -139,24 +130,21 @@ namespace CK.Observable
             }
             Write( (byte)SerializationMarker.Object );
             Write( idxSeen );
-            var driver = o is IKnowSerializationDriver k
-                            ? k.SerializationDriver
-                            : SerializableTypes.FindDriver( t, TypeSerializationKind.Serializable );
-            Debug.Assert( driver != null );
+            ITypeSerializationDriver driver = (o is IKnowUnifiedTypeDriver k
+                                                ? k.UnifiedTypeDriver
+                                                : UnifiedTypeRegistry.FindDriver( t )).SerializationDriver;
+            if( driver == null )
+            {
+                throw new InvalidOperationException( $"Type '{t.FullName}' is not serializable." );
+            }
             driver.WriteTypeInformation( this );
             driver.WriteData( this, o );
         }
 
-        internal void DoWriteSerializableTypeBased( SerializableTypes.TypeInfo tInfo )
+        internal void DoWriteSerializableTypeBased( UnifiedTypeRegistry.TypeInfo tInfo )
         {
-            Debug.Assert( tInfo != null );
-            while( DoWriteSimpleType( tInfo?.Type ) )
-            {
-                Debug.Assert( tInfo.Version >= 0 );
-                WriteSmallInt32( tInfo.Version );
-                tInfo = tInfo.BaseType;
-            }
         }
+
         internal bool WriteSimpleType( Type t )
         {
             if( DoWriteSimpleType( t ) )
@@ -167,7 +155,7 @@ namespace CK.Observable
             return false;
         }
 
-        bool DoWriteSimpleType( Type t )
+        internal bool DoWriteSimpleType( Type t )
         {
             if( t == null ) Write( (byte)0 );
             else if( t == typeof( object ) )
@@ -193,7 +181,7 @@ namespace CK.Observable
             return false;
         }
 
-        // TODO: transfer these helpers to CKBinaryReader.
+        // TODO: To be removed @next CK.Core version (transfered to CKBinaryWriter).
 
         /// <summary>
         /// Writes a DateTime value.

@@ -13,22 +13,21 @@ namespace CK.Observable
     /// <summary>
     /// This is more a demo than an actual useful participant since it keeps everything
     /// in memory. However it is open to extensions and can be used as a base class.
-    /// It implements the chain of respnsibility design pattern.
+    /// It implements the chain of responsibility design pattern.
     /// </summary>
     public class SecureInMemoryTransactionManager : IObservableTransactionManager
     {
         readonly IObservableTransactionManager _next;
         readonly List<Snapshot> _snapshots;
 
-        public class Snapshot
+        public struct Snapshot
         {
-            internal Snapshot( int serialNumber, DateTime timeUtc, MemoryStream c, IReadOnlyList<ObservableEvent> e )
+            internal Snapshot( int serialNumber, MemoryStream c, DateTime timeUtc )
             {
-                Debug.Assert( c != null && c.Position == 0 && e != null );
+                Debug.Assert( c != null && c.Position == 0 );
                 SerialNumber = serialNumber;
-                Capture = c;
-                Events = e;
                 TimeUtc = timeUtc;
+                Capture = c;
             }
 
             public int SerialNumber { get; }
@@ -37,11 +36,9 @@ namespace CK.Observable
 
             public MemoryStream Capture { get; }
 
-            public IReadOnlyList<ObservableEvent> Events { get; }
-
             public override string ToString()
             {
-                return $"Snapshot {SerialNumber} ({TimeUtc}) - {Events.Count} events.";
+                return $"Snapshot {SerialNumber} - {TimeUtc}.";
             }
         }
 
@@ -70,7 +67,7 @@ namespace CK.Observable
         public virtual void OnTransactionCommit( ObservableDomain d, DateTime timeUtc, IReadOnlyList<ObservableEvent> events )
         {
             _next?.OnTransactionCommit( d, timeUtc, events );
-            CreateSnapshot( d, timeUtc, events );
+            CreateSnapshot( d, timeUtc );
         }
 
         /// <summary>
@@ -78,9 +75,10 @@ namespace CK.Observable
         /// if no snapshot was available.
         /// </summary>
         /// <param name="d">The associated domain.</param>
-        public virtual void OnTransactionFailure( ObservableDomain d )
+        /// <param name="errors">A necessarily non null list of errors with at least one error.</param>
+        public virtual void OnTransactionFailure( ObservableDomain d, IReadOnlyList<CKExceptionData> errors )
         {
-            _next?.OnTransactionFailure( d );
+            _next?.OnTransactionFailure( d, errors );
             if( !RestoreLastSnapshot( d ) )
             {
                 throw new Exception( "No snapshot available." );
@@ -88,12 +86,14 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Does nothing except calling the next <see cref="IObservableTransactionManager"/> in the chain of respnsibility.
+        /// Does nothing except calling the next <see cref="IObservableTransactionManager"/> in the chain of respnsibility
+        /// except for the very first transaction where a snapshot is created.
         /// </summary>
         /// <param name="d">The associated domain.</param>
-        public virtual void OnTransactionStart( ObservableDomain d )
+        public virtual void OnTransactionStart( ObservableDomain d, DateTime timeUtc )
         {
-            _next?.OnTransactionStart( d );
+            _next?.OnTransactionStart( d, timeUtc );
+            if( d.TransactionSerialNumber == 0 ) CreateSnapshot( d, timeUtc );
         }
 
         /// <summary>
@@ -133,15 +133,15 @@ namespace CK.Observable
         /// Creates and add a snapshot to <see cref="Snapshots"/>.
         /// </summary>
         /// <param name="d">The associated domain.</param>
-        /// <param name="events">The events.</param>
-        protected void CreateSnapshot( ObservableDomain d, DateTime timeUtc, IReadOnlyList<ObservableEvent> events )
+        /// <param name="timeUtc">Time of the operation.</param>
+        protected void CreateSnapshot( ObservableDomain d, DateTime timeUtc )
         {
             using( d.Monitor.OpenTrace( $"Creating snapshot." ) )
             {
                 var capture = new MemoryStream();
                 d.Save( capture, true );
                 capture.Position = 0;
-                var snapshot = new Snapshot( d.TransactionSerialNumber, timeUtc, capture, events );
+                var snapshot = new Snapshot( d.TransactionSerialNumber, capture, timeUtc );
                 _snapshots.Add( snapshot );
                 d.Monitor.CloseGroup( snapshot.ToString() );
             }

@@ -59,9 +59,9 @@ namespace CK.Observable
             }
         }
 
-        public ICollection<TKey> Keys => _map.Keys;
+        public Dictionary<TKey, TValue>.KeyCollection Keys => _map.Keys;
 
-        public ICollection<TValue> Values => _map.Values;
+        public Dictionary<TKey, TValue>.ValueCollection Values => _map.Values;
 
         public int Count => _map.Count;
 
@@ -70,6 +70,10 @@ namespace CK.Observable
         IEnumerable<TKey> IReadOnlyDictionary<TKey, TValue>.Keys => _map.Keys;
 
         IEnumerable<TValue> IReadOnlyDictionary<TKey, TValue>.Values => _map.Values;
+
+        ICollection<TKey> IDictionary<TKey, TValue>.Keys => _map.Keys;
+
+        ICollection<TValue> IDictionary<TKey, TValue>.Values => _map.Values;
 
         public void Add( TKey key, TValue value )
         {
