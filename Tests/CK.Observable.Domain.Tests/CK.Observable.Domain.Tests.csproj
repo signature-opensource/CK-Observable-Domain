@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <Import Project="..\..\Common\Shared.props" />
 
@@ -11,11 +11,7 @@
     <PackageReference Include="NUnit" Version="2.6.4" />
     <PackageReference Include="CK.Testing.Monitoring" Version="0.6.0" />
     
-    <PackageReference Include="AutoProperties.Fody" Version="1.14.0">
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-    
-    <PackageReference Include="Fody" Version="3.2.0">
+    <PackageReference Include="Fody" Version="3.2.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>

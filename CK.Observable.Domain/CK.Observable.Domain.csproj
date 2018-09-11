@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   
   <Import Project="..\Common\Shared.props" />
   
@@ -9,7 +9,7 @@
   
   <ItemGroup>
     <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="10.1.1" />
-    <PackageReference Include="Fody" Version="3.2.0">
+    <PackageReference Include="Fody" Version="3.2.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>

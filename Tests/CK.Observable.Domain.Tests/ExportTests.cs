@@ -150,7 +150,12 @@ namespace CK.Observable.Domain.Tests
             d.TransactionSerialNumber.Should().Be( 1 );
 
             string initial = d.ExportToString();
-            TestHelper.Monitor.Info( initial );
+            d.Modify( () =>
+            {
+                d.Root.Products.Add( new RootSample.Product() { Name = "Product n°2" } );
+                d.Root.CurrentProduct = d.Root.Products[1];
+            } );
+
 
             string t1 = eventCollector.WriteEventsFrom( 0 );
 

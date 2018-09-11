@@ -41,5 +41,7 @@ namespace CK.Observable.Domain.Tests.RootSample
         public ObservableList<int> ToDoNumbers { get; private set; }
 
         public ObservableList<Product> Products { get; private set; }
+
+        public Product CurrentProduct { get; set; }
     }
 }

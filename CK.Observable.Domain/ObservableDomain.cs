@@ -144,6 +144,7 @@ namespace CK.Observable
                     Prev.Next = Next;
                     Prev = null;
                     Next = first;
+                    first.Prev = this;
                     first = this;
                 }
             }
@@ -234,15 +235,16 @@ namespace CK.Observable
 
             internal void OnPropertyChanged( ObservableObject o, PropInfo p, object before, object after )
             {
+                PropChanged c;
                 if( _firstPropChanged == null )
                 {
-                    var c = new PropChanged( o, p, before, after );
+                    c = new PropChanged( o, p, before, after );
                     _propChanged.Add( c.Key, c );
                     _firstPropChanged = _lastPropChanged = c;
                 }
                 else
                 {
-                    if( _propChanged.TryGetValue( p.GetObjectPropertyId( o ), out var c ) )
+                    if( _propChanged.TryGetValue( p.GetObjectPropertyId( o ), out c ) )
                     {
                         c.FinalValue = after;
                         if( _firstPropChanged != c )
