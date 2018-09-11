@@ -538,6 +538,8 @@ namespace CK.Observable
                 target.EmitStartObject( -1, ObjectExportedKind.Object );
                 target.EmitPropertyName( "N" );
                 target.EmitInt32( _transactionSerialNumber );
+                target.EmitPropertyName( "C" );
+                target.EmitInt32( _actualObjectCount );
                 target.EmitPropertyName( "P" );
                 target.EmitStartObject( -1, ObjectExportedKind.List );
                 foreach( var p in _properties )

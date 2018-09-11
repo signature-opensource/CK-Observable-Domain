@@ -21,15 +21,11 @@ namespace CK.Observable
         public static void ExportRootList( IObjectExporterTarget target, IEnumerable objects )
         {
             var e = new ObjectExporter( target );
-            e._seen.Add( e, 0 );
-            e.ExportList( 0, objects );
-        }
-
-        public static void ExportRootMap<TKey,TValue>( IObjectExporterTarget target, IEnumerable<KeyValuePair<TKey, TValue>> map )
-        {
-            var e = new ObjectExporter( target );
-            e._seen.Add( e, 0 );
-            e.ExportMap( 0, map );
+            //for( int i = 0; i < 100; ++i )
+            //{
+            //    e._seen.Add( Guid.NewGuid(), i );
+            //}
+            e.ExportList( -1, objects );
         }
 
         public IObjectExporterTarget Target => _target;

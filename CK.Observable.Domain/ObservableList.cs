@@ -36,11 +36,11 @@ namespace CK.Observable
 
         void Export( int num, ObjectExporter e )
         {
-            e.Target.EmitStartObject( -1, ObjectExportedKind.Object );
-            e.ExportNamedProperty( ExportContentOIdName, OId );
-            e.Target.EmitPropertyName( ExportContentPropName );
+            //e.Target.EmitStartObject( -1, ObjectExportedKind.Object );
+            //e.ExportNamedProperty( ExportContentOIdName, OId );
+            //e.Target.EmitPropertyName( ExportContentPropName );
             e.ExportList( num, _list );
-            e.Target.EmitEndObject( -1, ObjectExportedKind.Object );
+            //e.Target.EmitEndObject( -1, ObjectExportedKind.Object );
         }
 
         public T this[int index]
