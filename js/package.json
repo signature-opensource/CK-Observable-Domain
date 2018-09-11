@@ -3,7 +3,7 @@
   "version": "0.0.3",
   "description": "CK-Observable-Domain client implementation using json-graph-serializer",
   "main": "dist/ck-observable-domain.js",
-  "module": "src/index.ts",
+  "module": "dist/ck-observable-domain.js",
   "types": "src/index.d.ts",
   "scripts": {
     "test": "mocha -r ts-node/register test/**/*.ts",
