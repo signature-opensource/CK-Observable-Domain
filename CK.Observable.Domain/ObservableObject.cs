@@ -50,26 +50,26 @@ namespace CK.Observable
             w.Write( _id );
         }
 
-        void Export( int num, ObjectExporter e, IReadOnlyList<ExportableProperty> props )
-        {
-            e.Target.EmitStartObject( -1, ObjectExportedKind.Object );
-            e.ExportNamedProperty( ExportContentOIdName, OId );
-            e.Target.EmitPropertyName( ExportContentPropName );
-            if( props.Count == 0 )
-            {
-                e.Target.EmitEmptyObject( num );
-            }
-            else
-            {
-                e.Target.EmitStartObject( num, ObjectExportedKind.Object );
-                foreach( var p in props )
-                {
-                    e.ExportNamedProperty( p.Name, p.Value );
-                }
-                e.Target.EmitEndObject( num, ObjectExportedKind.Object );
-            }
-            e.Target.EmitEndObject( -1, ObjectExportedKind.Object );
-        }
+        //void Export( int num, ObjectExporter e, IReadOnlyList<ExportableProperty> props )
+        //{
+        //    e.Target.EmitStartObject( -1, ObjectExportedKind.Object );
+        //    e.ExportNamedProperty( ExportContentOIdName, OId );
+        //    e.Target.EmitPropertyName( ExportContentPropName );
+        //    if( props.Count == 0 )
+        //    {
+        //        e.Target.EmitEmptyObject( num );
+        //    }
+        //    else
+        //    {
+        //        e.Target.EmitStartObject( num, ObjectExportedKind.Object );
+        //        foreach( var p in props )
+        //        {
+        //            e.ExportNamedProperty( p.Name, p.Value );
+        //        }
+        //        e.Target.EmitEndObject( num, ObjectExportedKind.Object );
+        //    }
+        //    e.Target.EmitEndObject( -1, ObjectExportedKind.Object );
+        //}
 
         IUnifiedTypeDriver IKnowUnifiedTypeDriver.UnifiedTypeDriver => _driver;
 
