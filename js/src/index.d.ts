@@ -4,6 +4,7 @@ export interface ObservableDomainEvent {
 }
 export interface ObservableDomainState {
     N: number;
+    C: number;
     P: string[];
     O: any;
     R: number[];
