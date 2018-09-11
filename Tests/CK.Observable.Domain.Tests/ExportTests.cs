@@ -135,5 +135,26 @@ namespace CK.Observable.Domain.Tests
             string t4 = eventCollector.WriteEventsFrom( 3 );
 
         }
+
+        [Test]
+        public void exporting_and_altering_ApplicatinState()
+        {
+            var eventCollector = new TransactionEventCollector();
+
+            var d = new ObservableDomain<RootSample.ApplicationState>( eventCollector );
+            d.Modify( () =>
+            {
+                d.Root.Products.Add( new RootSample.Product() { Name = "Product n°1" } );
+            } );
+       
+            d.TransactionSerialNumber.Should().Be( 1 );
+
+            string initial = d.ExportToString();
+            TestHelper.Monitor.Info( initial );
+
+            string t1 = eventCollector.WriteEventsFrom( 0 );
+
+        }
+
     }
 }
