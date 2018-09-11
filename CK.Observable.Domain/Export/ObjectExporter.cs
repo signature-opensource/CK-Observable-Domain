@@ -21,11 +21,8 @@ namespace CK.Observable
         public static void ExportRootList( IObjectExporterTarget target, IEnumerable objects )
         {
             var e = new ObjectExporter( target );
-            //for( int i = 0; i < 100; ++i )
-            //{
-            //    e._seen.Add( Guid.NewGuid(), i );
-            //}
-            e.ExportList( -1, objects );
+            e._seen.Add( objects, 0 );
+            e.ExportList( 0, objects );
         }
 
         public IObjectExporterTarget Target => _target;

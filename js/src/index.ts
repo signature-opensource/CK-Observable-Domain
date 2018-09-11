@@ -28,32 +28,8 @@ export class ObservableDomain {
         this._props = o.P;
         this._tranNum = o.N;
         this._objCount = o.C;
-        //const r = countAndLiftContainers(o.O);
         this._graph = o.O;
         this._roots = o.R.map(i => this._graph[i]);
-
-        // function countAndLiftContainers(g: any[]) {
-        //     let count = 0;
-        //     const len = g.length;
-        //     for (let i = 0; i < len; ++i) {
-        //         const o = g[i];
-        //         if (o != null ) {
-        //             ++count;
-        //             if( typeof o === "object") {
-        //                 for (let p in o) {
-        //                     const v = o[p];
-        //                     if (v && typeof v === "object") {
-        //                         const c = v["$C"];
-        //                         if (c !== undefined) {
-        //                             o[p] = g[v["$i"]];
-        //                         }
-        //                     }
-        //                 }
-        //             }   
-        //         }
-        //     }
-        //     return {count:count,graph:g};
-        // }
     }
 
     public get transactionNumber() : number { 

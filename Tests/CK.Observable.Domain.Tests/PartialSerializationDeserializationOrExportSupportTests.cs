@@ -26,7 +26,7 @@ namespace CK.Observable.Domain.Tests
                 new ExportableOnly() { Name = "Albert" };
             } );
             var export = d.ExportToString();
-            export.Should().Be( @"{""N"":1,""C"":1,""P"":[""Name""],""O"":[{""°"":0,""Name"":""Albert""}],""R"":[]}" );
+            export.Should().Be( @"{""N"":1,""C"":1,""P"":[""Name""],""O"":[{""þ"":[0,""A""]},{""°"":1,""Name"":""Albert""}],""R"":[]}" );
             d.Invoking( sut => sut.Save( new MemoryStream() ) )
                 .Should().Throw<InvalidOperationException>().WithMessage( "*is not serializable*" );
         }
