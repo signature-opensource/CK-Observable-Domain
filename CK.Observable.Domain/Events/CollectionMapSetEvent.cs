@@ -17,7 +17,7 @@ namespace CK.Observable
         public object Value { get; }
 
         public CollectionMapSetEvent( ObservableObject o, object key, object value )
-            : base( ObservableEventType.CollectionRemoveKey )
+            : base( ObservableEventType.CollectionMapSet )
         {
             ObjectId = o.OId;
             Object = o;

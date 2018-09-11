@@ -129,6 +129,11 @@ export class ObservableDomain {
                         this._graph[e[1]].delete(this.getValue(e[2]));
                         break;
                     }
+                case "M":   // CollectionMapSet
+                    {
+                        this._graph[e[1]].set(this.getValue(e[2]),this.getValue(e[3]));
+                        break;
+                    }
                 default: throw new Error(`Unexpected Event code: '${e[0]}'.`);
             }
         }
