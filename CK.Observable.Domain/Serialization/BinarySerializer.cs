@@ -1,5 +1,6 @@
 using CK.Core;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -26,11 +27,27 @@ namespace CK.Observable
             }
         }
 
-        internal BinarySerializer( Stream output, bool leaveOpen, Encoding encoding = null )
+        /// <summary>
+        /// Initializes a new <see cref="BinarySerializer"/> onto a stream.
+        /// </summary>
+        /// <param name="output">The stream to write to.</param>
+        /// <param name="leaveOpen">True to leave the stram opened when disposing. False to close it.</param>
+        /// <param name="encoding">Optional encoding for texts. Defaults to UTF-8.</param>
+        public BinarySerializer( Stream output, bool leaveOpen, Encoding encoding = null )
             : base( output, encoding ?? Encoding.UTF8, leaveOpen )
         {
             _types = new Dictionary<Type, TypeInfo>();
             _seen = new Dictionary<object, int>( PureObjectRefEqualityComparer<object>.Default );
+        }
+
+        public void WriteObjects( int length, IEnumerable o )
+        {
+            if( o == null ) WriteSmallInt32( -1 );
+            else
+            {
+                WriteSmallInt32( length );
+                foreach( var i in o ) WriteObject( i );
+            }
         }
 
         public void WriteObject( object o )

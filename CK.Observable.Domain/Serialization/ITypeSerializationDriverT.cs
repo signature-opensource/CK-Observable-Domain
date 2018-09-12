@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace CK.Observable
 {
-    public interface ITypeSerializationDriver<in T> : ITypeSerializationDriver
+    public interface ITypeSerializationDriver<T> : ITypeSerializationDriver
     {
         /// <summary>
         /// Writes the object's data.

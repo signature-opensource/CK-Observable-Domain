@@ -1,5 +1,6 @@
 using CK.Core;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -215,6 +216,47 @@ namespace CK.Observable
                 return true;
             }
             _deferredComplex.Add( () => onRead( _objects[idx1], _objects[idx2], _objects[idx3], _objects[idx4], _objects[idx5] ) );
+            return false;
+        }
+
+        public bool ReadObjects( Action<int,object[]> onRead )
+        {
+            var len = ReadSmallInt32();
+            if( len == -1 )
+            {
+                onRead( -1, null );
+                return true;
+            }
+            if( len == 0 )
+            {
+                onRead( 0, Array.Empty<object>() );
+                return true;
+            }
+
+            bool allSolved = true;
+            var res = new object[len];
+            var sol = new bool[len];
+            var idx = new int[len];
+            for( int i = 0; i < res.Length; ++i )
+            {
+                res[i] = DoReadObject( out var s, out var x );
+                sol[i] = s;
+                allSolved &= s;
+                idx[i] = x;
+            }
+            if( allSolved )
+            {
+                onRead( len, res );
+                return true;
+            }
+            _deferredComplex.Add( () =>
+            {
+                for( int i = 0; i < res.Length; ++i )
+                {
+                    res[i] = _objects[idx[i]];
+                }
+                onRead( len, res );
+            } );
             return false;
         }
 
