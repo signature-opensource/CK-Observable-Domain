@@ -19,7 +19,7 @@ namespace CK.Observable.Domain.Tests.Sample
             Longitude = longitude;
         }
 
-        Position( BinaryDeserializer d )
+        Position( IBinaryDeserializerContext d )
         {
             var r = d.StartReading();
             Latitude = r.ReadDouble();

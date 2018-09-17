@@ -30,7 +30,7 @@ namespace CK.Observable
 
         void ITypeSerializationDriver.WriteData( BinarySerializer w, object o ) => WriteData( w, (T)o );
 
-        object IDeserializationDriver.ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo ) => ReadInstance( r, readInfo );
+        object IDeserializationDriver.ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  ) => ReadInstance( r, readInfo );
 
         string IDeserializationDriver.AssemblyQualifiedName => typeof( T ).AssemblyQualifiedName;
 
@@ -61,7 +61,7 @@ namespace CK.Observable
         /// Null if the type has been previously written by an external driver.
         /// </param>
         /// <returns>The value or new instance.</returns>
-        public abstract T ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo );
+        public abstract T ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  );
 
     }
 }

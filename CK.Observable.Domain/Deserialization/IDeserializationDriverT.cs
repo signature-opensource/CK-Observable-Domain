@@ -20,7 +20,7 @@ namespace CK.Observable
         /// type as it has been written. Null when type is known by design.
         /// </param>
         /// <returns>The new instance.</returns>
-        new T ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo );
+        new T ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  );
 
     }
 }

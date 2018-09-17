@@ -39,7 +39,7 @@ namespace CK.Observable.Domain.Tests
             {
             }
 
-            public SerializableOnly( BinaryDeserializer d )
+            public SerializableOnly( IBinaryDeserializerContext d )
                 : base( d )
             {
                 var r = d.StartReading();

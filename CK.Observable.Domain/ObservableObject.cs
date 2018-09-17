@@ -34,13 +34,13 @@ namespace CK.Observable
             Debug.Assert( _id >= 0 );
         }
 
-        protected ObservableObject( BinaryDeserializer d )
+        protected ObservableObject( IBinaryDeserializerContext d )
         {
             _driver = UnifiedTypeRegistry.FindDriver( GetType() );
             Debug.Assert( _driver != null );
-            Domain = d.Domain;
             var r = d.StartReading();
             Debug.Assert( r.CurrentReadInfo.Version == 0 );
+            Domain = r.Services.GetService<ObservableDomain>( throwOnNull: true );
             _id = r.ReadInt32();
             Debug.Assert( _id >= 0 );
         }

@@ -17,21 +17,15 @@ namespace CK.Observable
             _list = new List<T>();
         }
 
-        protected ObservableList( BinaryDeserializer d ) : base( d )
+        protected ObservableList( IBinaryDeserializerContext d ) : base( d )
         {
             var r = d.StartReading();
-            int count = r.ReadNonNegativeSmallInt32();
-            _list = new List<T>( count );
-            while( --count >= 0 )
-            {
-                r.ReadObject<T>( x => _list.Add( x ) );
-            }
+            _list = r.ReadObjectList<T>();
         }
 
         void Write( BinarySerializer s )
         {
-            s.WriteNonNegativeSmallInt32( _list.Count );
-            foreach( var o in _list ) s.WriteObject( o );
+            s.WriteObjects( _list.Count, _list );
         }
 
         void Export( int num, ObjectExporter e )

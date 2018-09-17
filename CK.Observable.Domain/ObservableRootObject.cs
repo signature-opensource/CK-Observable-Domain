@@ -14,7 +14,7 @@ namespace CK.Observable
         {
         }
 
-        protected ObservableRootObject( BinaryDeserializer d )
+        protected ObservableRootObject( IBinaryDeserializerContext d )
             : base( d )
         {
             d.StartReading();

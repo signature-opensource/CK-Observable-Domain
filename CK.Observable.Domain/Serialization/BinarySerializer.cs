@@ -40,13 +40,31 @@ namespace CK.Observable
             _seen = new Dictionary<object, int>( PureObjectRefEqualityComparer<object>.Default );
         }
 
-        public void WriteObjects( int length, IEnumerable o )
+        /// <summary>
+        /// Writes zero or more objects from any enumerable (that can be null).
+        /// </summary>
+        /// <param name="count">The number of objects to write. Must be zero or positive.</param>
+        /// <param name="objects">
+        /// The set of at least <paramref name="count"/> objects.
+        /// Can be null (in such case count must be zero).
+        /// </param>
+        public void WriteObjects( int count, IEnumerable objects )
         {
-            if( o == null ) WriteSmallInt32( -1 );
+            if( count < 0 ) throw new ArgumentException( "Must be greater or equal to 0.", nameof( count ) );
+            if( objects == null )
+            {
+                if( count != 0 ) throw new ArgumentNullException( nameof( objects ) );
+                WriteSmallInt32( -1 );
+            }
             else
             {
-                WriteSmallInt32( length );
-                foreach( var i in o ) WriteObject( i );
+                WriteSmallInt32( count );
+                foreach( var o in objects )
+                {
+                    WriteObject( o );
+                    if( --count == 0 ) break;
+                }
+                if( count > 0 ) throw new ArgumentException( $"Not enough objects: missing {count} objects.", nameof( count ) );
             }
         }
 
@@ -141,12 +159,11 @@ namespace CK.Observable
                 if( t == typeof( object ) )
                 {
                     Write( (byte)SerializationMarker.EmptyObject );
-                    Write( idxSeen );
                     return;
                 }
+                Write( (byte)SerializationMarker.Object );
             }
-            Write( (byte)SerializationMarker.Object );
-            Write( idxSeen );
+            else Write( (byte)SerializationMarker.Struct );
             ITypeSerializationDriver driver = (o is IKnowUnifiedTypeDriver k
                                                 ? k.UnifiedTypeDriver
                                                 : UnifiedTypeRegistry.FindDriver( t )).SerializationDriver;
@@ -156,10 +173,6 @@ namespace CK.Observable
             }
             driver.WriteTypeInformation( this );
             driver.WriteData( this, o );
-        }
-
-        internal void DoWriteSerializableTypeBased( UnifiedTypeRegistry.TypeInfo tInfo )
-        {
         }
 
         internal bool WriteSimpleType( Type t )
@@ -189,11 +202,8 @@ namespace CK.Observable
                     Write( info.Type.AssemblyQualifiedName );
                     return true;
                 }
-                else
-                {
-                    Write( (byte)3 );
-                    WriteNonNegativeSmallInt32( info.Number );
-                }
+                Write( (byte)3 );
+                WriteNonNegativeSmallInt32( info.Number );
             }
             return false;
         }

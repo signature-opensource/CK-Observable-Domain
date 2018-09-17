@@ -42,9 +42,9 @@ namespace CK.Observable
             w.Write( (int)o );
         }
 
-        object IDeserializationDriver.ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
+        object IDeserializationDriver.ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  )
         {
-            return r.Reader.ReadInt32();
+            return r.ReadInt32();
         }
 
         string IDeserializationDriver.AssemblyQualifiedName => Type.AssemblyQualifiedName;

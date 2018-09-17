@@ -8,11 +8,11 @@ namespace CK.Observable
 {
     public class BasicTypeDrivers
     {
-        public class DBool : UnifiedTypeDriverBase<Boolean>
+        public sealed class DBool : UnifiedTypeDriverBase<Boolean>
         {
-            public override bool ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
+            public override bool ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  )
             {
-                return r.Reader.ReadBoolean();
+                return r.ReadBoolean();
             }
 
             public override void WriteData( BinarySerializer w, bool o )
@@ -22,11 +22,11 @@ namespace CK.Observable
             public override void Export( bool o, int num, ObjectExporter exporter ) => exporter.Target.EmitBool( o );
         }
 
-        public class DChar : UnifiedTypeDriverBase<Char>
+        public sealed class DChar : UnifiedTypeDriverBase<Char>
         {
-            public override char ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
+            public override char ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  )
             {
-                return r.Reader.ReadChar();
+                return r.ReadChar();
             }
 
             public override void WriteData( BinarySerializer w, char o )
@@ -37,11 +37,11 @@ namespace CK.Observable
             public override void Export( char o, int num, ObjectExporter exporter ) => exporter.Target.EmitChar( o );
         }
 
-        public class DDouble : UnifiedTypeDriverBase<Double>
+        public sealed class DDouble : UnifiedTypeDriverBase<Double>
         {
-            public override double ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
+            public override double ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  )
             {
-                return r.Reader.ReadDouble();
+                return r.ReadDouble();
             }
 
             public override void WriteData( BinarySerializer w, double o )
@@ -53,11 +53,11 @@ namespace CK.Observable
 
         }
 
-        public class DSingle : UnifiedTypeDriverBase<Single>
+        public sealed class DSingle : UnifiedTypeDriverBase<Single>
         {
-            public override float ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
+            public override float ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  )
             {
-                return r.Reader.ReadSingle();
+                return r.ReadSingle();
             }
 
             public override void WriteData( BinarySerializer w, float o )
@@ -67,11 +67,11 @@ namespace CK.Observable
             public override void Export( float o, int num, ObjectExporter exporter ) => exporter.Target.EmitSingle( o );
         }
 
-        public class DDecimal : UnifiedTypeDriverBase<Decimal>
+        public sealed class DDecimal : UnifiedTypeDriverBase<Decimal>
         {
-            public override decimal ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
+            public override decimal ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  )
             {
-                return r.Reader.ReadDecimal();
+                return r.ReadDecimal();
             }
 
             public override void WriteData( BinarySerializer w, decimal o )
@@ -82,11 +82,11 @@ namespace CK.Observable
             public override void Export( decimal o, int num, ObjectExporter exporter ) => exporter.Target.EmitSByte( o );
         }
 
-        public class DSByte : UnifiedTypeDriverBase<SByte>
+        public sealed class DSByte : UnifiedTypeDriverBase<SByte>
         {
-            public override sbyte ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
+            public override sbyte ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  )
             {
-                return r.Reader.ReadSByte();
+                return r.ReadSByte();
             }
 
             public override void WriteData( BinarySerializer w, sbyte o )
@@ -96,11 +96,11 @@ namespace CK.Observable
             public override void Export( sbyte o, int num, ObjectExporter exporter ) => exporter.Target.EmitSByte( o );
         }
 
-        public class DByte : UnifiedTypeDriverBase<Byte>
+        public sealed class DByte : UnifiedTypeDriverBase<Byte>
         {
-            public override byte ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
+            public override byte ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  )
             {
-                return r.Reader.ReadByte();
+                return r.ReadByte();
             }
 
             public override void WriteData( BinarySerializer w, byte o )
@@ -111,11 +111,11 @@ namespace CK.Observable
             public override void Export( byte o, int num, ObjectExporter exporter ) => exporter.Target.EmitByte( o );
         }
 
-        public class DInt16 : UnifiedTypeDriverBase<Int16>
+        public sealed class DInt16 : UnifiedTypeDriverBase<Int16>
         {
-            public override short ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
+            public override short ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  )
             {
-                return r.Reader.ReadInt16();
+                return r.ReadInt16();
             }
 
             public override void WriteData( BinarySerializer w, short o )
@@ -126,11 +126,11 @@ namespace CK.Observable
             public override void Export( short o, int num, ObjectExporter exporter ) => exporter.Target.EmitInt16( o );
         }
 
-        public class DUInt16 : UnifiedTypeDriverBase<UInt16>
+        public sealed class DUInt16 : UnifiedTypeDriverBase<UInt16>
         {
-            public override ushort ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
+            public override ushort ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  )
             {
-                return r.Reader.ReadUInt16();
+                return r.ReadUInt16();
             }
 
             public override void WriteData( BinarySerializer w, ushort o )
@@ -141,11 +141,11 @@ namespace CK.Observable
             public override void Export( ushort o, int num, ObjectExporter exporter ) => exporter.Target.EmitUInt16( o );
         }
 
-        public class DInt32 : UnifiedTypeDriverBase<Int32>
+        public sealed class DInt32 : UnifiedTypeDriverBase<Int32>
         {
-            public override int ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
+            public override int ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  )
             {
-                return r.Reader.ReadInt32();
+                return r.ReadInt32();
             }
 
             public override void WriteData( BinarySerializer w, int o )
@@ -156,11 +156,11 @@ namespace CK.Observable
             public override void Export( int o, int num, ObjectExporter exporter ) => exporter.Target.EmitInt32( o );
         }
 
-        public class DUInt32 : UnifiedTypeDriverBase<UInt32>
+        public sealed class DUInt32 : UnifiedTypeDriverBase<UInt32>
         {
-            public override uint ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
+            public override uint ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  )
             {
-                return r.Reader.ReadUInt32();
+                return r.ReadUInt32();
             }
 
             public override void WriteData( BinarySerializer w, uint o )
@@ -171,11 +171,11 @@ namespace CK.Observable
             public override void Export( uint o, int num, ObjectExporter exporter ) => exporter.Target.EmitUInt32( o );
         }
 
-        public class DInt64 : UnifiedTypeDriverBase<Int64>
+        public sealed class DInt64 : UnifiedTypeDriverBase<Int64>
         {
-            public override long ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
+            public override long ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  )
             {
-                return r.Reader.ReadInt64();
+                return r.ReadInt64();
             }
 
             public override void WriteData( BinarySerializer w, long o )
@@ -186,11 +186,11 @@ namespace CK.Observable
             public override void Export( long o, int num, ObjectExporter exporter ) => exporter.Target.EmitInt64( o );
         }
 
-        public class DUInt64 : UnifiedTypeDriverBase<UInt64>
+        public sealed class DUInt64 : UnifiedTypeDriverBase<UInt64>
         {
-            public override ulong ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
+            public override ulong ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  )
             {
-                return r.Reader.ReadUInt64();
+                return r.ReadUInt64();
             }
 
             public override void WriteData( BinarySerializer w, ulong o )
@@ -201,11 +201,11 @@ namespace CK.Observable
             public override void Export( ulong o, int num, ObjectExporter exporter ) => exporter.Target.EmitUInt64( o );
         }
 
-        public class DString : UnifiedTypeDriverBase<String>
+        public sealed class DString : UnifiedTypeDriverBase<String>
         {
-            public override string ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
+            public override string ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  )
             {
-                return r.Reader.ReadNullableString();
+                return r.ReadNullableString();
             }
 
             public override void WriteData( BinarySerializer w, string o )
@@ -216,11 +216,11 @@ namespace CK.Observable
             public override void Export( string o, int num, ObjectExporter exporter ) => exporter.Target.EmitString( o );
         }
 
-        public class DGuid : UnifiedTypeDriverBase<Guid>
+        public sealed class DGuid : UnifiedTypeDriverBase<Guid>
         {
-            public override Guid ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
+            public override Guid ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  )
             {
-                return r.Reader.ReadGuid();
+                return r.ReadGuid();
             }
 
             public override void WriteData( BinarySerializer w, Guid o )
@@ -231,11 +231,11 @@ namespace CK.Observable
             public override void Export( Guid o, int num, ObjectExporter exporter ) => exporter.Target.EmitGuid( o );
         }
 
-        public class DDateTime : UnifiedTypeDriverBase<DateTime>
+        public sealed class DDateTime : UnifiedTypeDriverBase<DateTime>
         {
-            public override DateTime ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
+            public override DateTime ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  )
             {
-                return r.Reader.ReadDateTime();
+                return r.ReadDateTime();
             }
 
             public override void WriteData( BinarySerializer w, DateTime o )
@@ -246,11 +246,11 @@ namespace CK.Observable
             public override void Export( DateTime o, int num, ObjectExporter exporter ) => exporter.Target.EmitDateTime( o );
         }
 
-        public class DTimeSpan : UnifiedTypeDriverBase<TimeSpan>
+        public sealed class DTimeSpan : UnifiedTypeDriverBase<TimeSpan>
         {
-            public override TimeSpan ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
+            public override TimeSpan ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  )
             {
-                return r.Reader.ReadTimeSpan();
+                return r.ReadTimeSpan();
             }
 
             public override void WriteData( BinarySerializer w, TimeSpan o )
@@ -261,11 +261,11 @@ namespace CK.Observable
             public override void Export( TimeSpan o, int num, ObjectExporter exporter ) => exporter.Target.EmitTimeSpan( o );
         }
 
-        public class DDateTimeOffset : UnifiedTypeDriverBase<DateTimeOffset>
+        public sealed class DDateTimeOffset : UnifiedTypeDriverBase<DateTimeOffset>
         {
-            public override DateTimeOffset ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
+            public override DateTimeOffset ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  )
             {
-                return r.Reader.ReadDateTimeOffset();
+                return r.ReadDateTimeOffset();
             }
 
             public override void WriteData( BinarySerializer w, DateTimeOffset o )

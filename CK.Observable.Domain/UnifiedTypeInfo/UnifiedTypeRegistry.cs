@@ -56,15 +56,15 @@ namespace CK.Observable
             readonly TypeInfo _baseType;
             readonly TypeInfo[] _typePath;
 
-            // Deserialization.
-            readonly MethodInfo _write;
-
             // Serialization.
-            readonly ConstructorInfo _ctor;
+            readonly MethodInfo _write;
             /// <summary>
             /// The version from the <see cref="SerializationVersionAttribute"/>.
             /// </summary>
             readonly int _version;
+
+            // Deserialization.
+            readonly ConstructorInfo _ctor;
 
             // Export.
             readonly MethodInfo _exporter;
@@ -96,11 +96,12 @@ namespace CK.Observable
             /// Null if the type has been previously written by an external driver.
             /// </param>
             /// <returns>The new instance.</returns>
-            object IDeserializationDriver.ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
+            object IDeserializationDriver.ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  )
             {
-                r.PushCtorContext( readInfo );
-                var o = _ctor.Invoke( new object[] { r } );
-                r.PopCtorContext();
+                var o = r.ImplementationServices.CreateUninitializedInstance( Type );
+                var ctx = r.ImplementationServices.PushConstructorContext( readInfo );
+                _ctor.Invoke( o, new object[] { ctx } );
+                r.ImplementationServices.PopConstructorContext();
                 return o;
             }
 
@@ -130,7 +131,7 @@ namespace CK.Observable
                 var parameters = new object[] { w };
                 foreach( var t in _typePath )
                 {
-                    t._write.Invoke( o, new object[] { w } );
+                    t._write.Invoke( o, parameters );
                 }
             }
 

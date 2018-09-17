@@ -15,10 +15,10 @@ namespace CK.Observable.Domain.Tests.Sample
         {
         }
 
-        protected Mechanic( BinaryDeserializer d ) : base( d )
+        protected Mechanic( IBinaryDeserializerContext d ) : base( d )
         {
             var r = d.StartReading();
-            r.ReadObject<Car>( c => CurrentCar = c );
+            CurrentCar = (Car)r.ReadObject();
         }
 
         void Write( BinarySerializer s )

@@ -13,10 +13,10 @@ namespace CK.Observable.Domain.Tests.Sample
         {
         }
 
-        protected Person( BinaryDeserializer d ) : base( d )
+        protected Person( IBinaryDeserializerContext d ) : base( d )
         {
             var r = d.StartReading();
-            r.ReadObject<Person>( x => Friend = x );
+            Friend = (Person)r.ReadObject();
             FirstName = r.ReadNullableString();
             LastName = r.ReadNullableString();
             if( r.CurrentReadInfo.Version >= 1 )

@@ -13,7 +13,7 @@ namespace CK.Observable.Domain.Tests.RootSample
         {
         }
 
-        public Product( BinaryDeserializer d )
+        public Product( IBinaryDeserializerContext d )
             : base( d )
         {
             var r = d.StartReading();

@@ -17,14 +17,14 @@ namespace CK.Observable
             _map = new Dictionary<TKey, TValue>();
         }
 
-        protected ObservableDictionary( BinaryDeserializer d ) : base( d )
+        protected ObservableDictionary( IBinaryDeserializerContext d ) : base( d )
         {
             var r = d.StartReading();
             int count = r.ReadNonNegativeSmallInt32();
             _map = new Dictionary<TKey, TValue>( count );
             while( --count >= 0 )
             {
-                r.ReadObjects( (x1, x2) => _map.Add( (TKey)x1, (TValue)x2 ) );
+                _map.Add( (TKey)r.ReadObject(), (TValue)r.ReadObject() );
             }
         }
 

@@ -19,12 +19,12 @@ namespace CK.Observable
 
         public string AssemblyQualifiedName => typeof(T[]).AssemblyQualifiedName;
 
-        public T[] ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo )
+        public T[] ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  )
         {
-            bool monoType = r.Reader.ReadBoolean();
+            bool monoType = r.ReadBoolean();
             if( monoType )
             {
-                var len = r.Reader.ReadSmallInt32();
+                var len = r.ReadSmallInt32();
                 if( len == -1 ) return null;
                 if( len == 0 ) return Array.Empty<T>();
                 var result = new T[len];
@@ -32,17 +32,11 @@ namespace CK.Observable
                 {
                     result[i] = _item.ReadInstance( r, null ); 
                 }
+                return result;
             }
-            else
-            {
-                for( int i = 0; i < result.Length; ++i )
-                {
-                    result[i] = r.Reader.ReadObjects( r, null );
-                }
-
-            }
+            return r.ReadObjectArray<T>();
         }
 
-        object IDeserializationDriver.ReadInstance( BinaryDeserializer r, ObjectStreamReader.TypeReadInfo readInfo ) => ReadInstance( r, readInfo );
+        object IDeserializationDriver.ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  ) => ReadInstance( r, readInfo );
     }
 }

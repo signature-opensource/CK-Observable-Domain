@@ -21,6 +21,7 @@ namespace CK.Observable
         TimeSpan,
         DateTimeOffset,
 
+        Struct = 252,
         Reference = 253,
         EmptyObject = 254,
         Object = 255

@@ -613,18 +613,18 @@ namespace CK.Observable
         {
             using( Monitor.OpenInfo( $"Loading Domain n°{DomainNumber}." ) )
             using( CheckReentrancyOnly() )
-            using( var d = new BinaryDeserializer( this, s, leaveOpen, encoding ) )
+            using( var d = new BinaryDeserializer( s, null, leaveOpen, encoding ) )
             {
+                d.Services.Add( this );
                 DoLoad( d );
             }
         }
 
-        void DoLoad( BinaryDeserializer d )
+        void DoLoad( BinaryDeserializer r )
         {
             _deserializing = true;
             try
             {
-                var r = d.Reader;
                 int version = r.ReadSmallInt32();
                 _transactionSerialNumber = r.ReadInt32();
                 _actualObjectCount = r.ReadInt32();
@@ -655,13 +655,9 @@ namespace CK.Observable
                 }
                 for( int i = 0; i < count; ++i )
                 {
-                    r.ReadObject<ObservableObject>( x =>
-                    {
-                        Debug.Assert( x == null || x.OId == i );
-                        _objects[i] = x;
-                    } );
+                    _objects[i] = (ObservableObject)r.ReadObject();
                 }
-                r.ExecuteDeferredActions();
+                r.ImplementationServices.ExecutePostDeserializationActions();
                 _roots.Clear();
                 count = r.ReadNonNegativeSmallInt32();
                 while( --count >= 0 )

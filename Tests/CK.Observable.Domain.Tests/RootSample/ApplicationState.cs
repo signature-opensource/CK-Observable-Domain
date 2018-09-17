@@ -24,12 +24,12 @@ namespace CK.Observable.Domain.Tests.RootSample
             p2.Dispose();
         }
 
-        protected ApplicationState( BinaryDeserializer d )
+        protected ApplicationState( IBinaryDeserializerContext d )
             : base( d )
         {
             var r = d.StartReading();
-            r.ReadObject<ObservableList<int>>( list => ToDoNumbers = list );
-            r.ReadObject<ObservableList<Product>>( p => Products = p );
+            ToDoNumbers = (ObservableList<int>)r.ReadObject();
+            Products = (ObservableList<Product>)r.ReadObject();
         }
 
         void Write( BinarySerializer s )
@@ -38,9 +38,9 @@ namespace CK.Observable.Domain.Tests.RootSample
             s.WriteObject( Products );
         }
 
-        public ObservableList<int> ToDoNumbers { get; private set; }
+        public ObservableList<int> ToDoNumbers { get; }
 
-        public ObservableList<Product> Products { get; private set; }
+        public ObservableList<Product> Products { get; }
 
         public Product CurrentProduct { get; set; }
     }
