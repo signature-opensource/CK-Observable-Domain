@@ -31,7 +31,7 @@ namespace CK.Observable
             }
         }
 
-        internal BinaryDeserializer( Stream stream, IServiceProvider services = null, bool leaveOpen = false, Encoding encoding = null )
+        public BinaryDeserializer( Stream stream, IServiceProvider services = null, bool leaveOpen = false, Encoding encoding = null )
             : base( stream, encoding ?? Encoding.UTF8, leaveOpen )
         {
             Services = new SimpleServiceContainer( services );
@@ -52,7 +52,7 @@ namespace CK.Observable
 
         TypeReadInfo ICtorBinaryDeserializer.CurrentReadInfo => _currentCtorReadInfo;
 
-        void ICtorBinaryDeserializer.OnPostDeserialization( Action a )
+        void IBinaryDeserializerImpl.OnPostDeserialization( Action a )
         {
             if( a == null ) throw new ArgumentNullException();
             _postDeserializationActions.Add( a );
@@ -71,12 +71,10 @@ namespace CK.Observable
         /// </summary>
         public IBinaryDeserializerImpl ImplementationServices => this;
 
-        TypeReadInfo IBinaryDeserializerImpl.ReadTypeReadInfo() => ReadTypeReadInfo();
-
-        object IBinaryDeserializerImpl.CreateUninitializedInstance( Type t )
+        object IBinaryDeserializerImpl.CreateUninitializedInstance( Type t, bool isTrackedObject )
         {
             var o = System.Runtime.Serialization.FormatterServices.GetUninitializedObject( t );
-            _objects.Add( o );
+            if( isTrackedObject ) _objects.Add( o );
             return o;
         }
 
@@ -143,7 +141,7 @@ namespace CK.Observable
             }
             else
             {
-                var info = ReadTypeReadInfo();
+                var info = ReadTypeReadInfo( b == SerializationMarker.Object );
                 var d = info.DeserializationDriver;
                 if( d == null )
                 {
@@ -171,6 +169,32 @@ namespace CK.Observable
         }
 
         /// <summary>
+        /// Reads an array of <typeparamref name="T"/> that have been previously written
+        /// by <see cref="BinarySerializer.WriteListContent{T}(int, IEnumerable{T}, ITypeSerializationDriver{T}).
+        /// </summary>
+        /// <typeparam name="T">Type of the item.</typeparam>
+        /// <param name="itemDeserialization">Item deserializer. Must not be null.</param>
+        /// <returns>The object array.</returns>
+        public T[] ReadArray<T>( IDeserializationDriver<T> itemDeserialization )
+        {
+            if( itemDeserialization == null ) throw new ArgumentNullException( nameof( itemDeserialization ) );
+            int len = ReadSmallInt32();
+            if( len == -1 ) return null;
+            if( len == 0 ) return Array.Empty<T>();
+
+            var result = new T[len];
+            if( ReadBoolean() )
+            {
+                for( int i = 0; i < len; ++i ) result[i] = itemDeserialization.ReadInstance( this, null );
+            }
+            else
+            {
+                for( int i = 0; i < len; ++i ) result[i] = (T)ReadObject();
+            }
+            return result;
+        }
+
+        /// <summary>
         /// Reads a list of objects that have been previously written
         /// by <see cref="BinarySerializer.WriteObjects(int, System.Collections.IEnumerable)"/>.
         /// </summary>
@@ -181,19 +205,18 @@ namespace CK.Observable
             if( len == -1 ) return null;
             if( len == 0 ) return new List<T>();
             var r = new List<T>( len );
-            while( --len < 0 ) r.Add( (T)ReadObject() );
+            while( --len >= 0 ) r.Add( (T)ReadObject() );
             return r;
         }
 
-
-        TypeReadInfo ReadTypeReadInfo()
+        TypeReadInfo ReadTypeReadInfo( bool isTrackedObject )
         {
             TypeReadInfo leaf;
             string sT = DoReadOneTypeName( out bool newType );
             if( newType )
             {
                 int version = ReadSmallInt32();
-                leaf = new TypeReadInfo( sT, version );
+                leaf = new TypeReadInfo( sT, version, isTrackedObject );
                 var current = leaf;
                 _typeInfos.Add( sT, leaf );
                 if( version >= 0 )
@@ -203,7 +226,7 @@ namespace CK.Observable
                     {
                         if( newType )
                         {
-                            var pInfo = new TypeReadInfo( parent, ReadSmallInt32() );
+                            var pInfo = new TypeReadInfo( parent, ReadSmallInt32(), isTrackedObject );
                             current.SetBaseType( pInfo );
                             _typeInfos.Add( parent, pInfo );
                             current = pInfo;

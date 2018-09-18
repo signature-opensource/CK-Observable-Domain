@@ -59,13 +59,18 @@ namespace CK.Observable
             else
             {
                 WriteSmallInt32( count );
-                foreach( var o in objects )
-                {
-                    WriteObject( o );
-                    if( --count == 0 ) break;
-                }
-                if( count > 0 ) throw new ArgumentException( $"Not enough objects: missing {count} objects.", nameof( count ) );
+                DoWriteObjects( count, objects );
             }
+        }
+
+        void DoWriteObjects( int count, IEnumerable objects )
+        {
+            foreach( var o in objects )
+            {
+                WriteObject( o );
+                if( --count == 0 ) break;
+            }
+            if( count > 0 ) throw new ArgumentException( $"Not enough objects: missing {count} objects.", nameof( count ) );
         }
 
         public void WriteObject( object o )
@@ -207,6 +212,80 @@ namespace CK.Observable
             }
             return false;
         }
+
+
+        /// <summary>
+        /// Writes a dictionary content.
+        /// </summary>
+        /// <param name="count">Number of items. Must be zero or positive.</param>
+        /// <param name="items">The items. Can be null (in such case, <paramref name="count"/> must be 0).</param>
+        /// <param name="keySerialization">Key serialization driver. Must not be null.</param>
+        /// <param name="valueSerialization">Value serialization driver. Must not be null.</param>
+        public void WriteDictionaryContent<TKey,TValue>(
+            int count,
+            IEnumerable<KeyValuePair<TKey, TValue>> items,
+            ITypeSerializationDriver<TKey> keySerialization,
+            ITypeSerializationDriver<TValue> valueSerialization )
+        {
+            if( count < 0 ) throw new ArgumentException( "Must be greater or equal to 0.", nameof( count ) );
+            if( keySerialization == null ) throw new ArgumentNullException( nameof( keySerialization ) );
+            if( valueSerialization == null ) throw new ArgumentNullException( nameof( valueSerialization ) );
+            if( items == null )
+            {
+                if( count != 0 ) throw new ArgumentNullException( nameof( items ) );
+                WriteSmallInt32( -1 );
+            }
+            else WriteSmallInt32( count );
+            if( count > 0 )
+            {
+                var tKey = keySerialization.Type;
+                var tVal = valueSerialization.Type;
+                bool monoTypeKey = tKey.IsSealed || tKey.IsValueType;
+                bool monoTypeVal = tVal.IsSealed || tVal.IsValueType;
+
+                int dicType = monoTypeKey ? 1 : 0;
+                dicType |= monoTypeVal ? 2 : 0;
+                Write( (byte)dicType );
+
+                foreach( var kv in items )
+                {
+                    if( monoTypeKey ) keySerialization.WriteData( this, kv.Key );
+                    else WriteObject( kv.Key );
+                    if( monoTypeVal ) valueSerialization.WriteData( this, kv.Value );
+                    else WriteObject( kv.Value );
+                    if( --count == 0 ) break;
+                }
+                if( count > 0 ) throw new ArgumentException( $"Not enough items: missing {count} items.", nameof( count ) );
+            }
+        }
+
+        public void WriteListContent<T>( int count, IEnumerable<T> items, ITypeSerializationDriver<T> itemSerializer )
+        {
+            if( count < 0 ) throw new ArgumentException( "Must be greater or equal to 0.", nameof( count ) );
+            if( itemSerializer == null ) throw new ArgumentNullException( nameof( itemSerializer ) );
+            if( items == null )
+            {
+                if( count != 0 ) throw new ArgumentNullException( nameof( items ) );
+                WriteSmallInt32( -1 );
+            }
+            var tI = itemSerializer.Type;
+            bool monoType = tI.IsSealed || tI.IsValueType;
+            Write( monoType );
+            if( monoType )
+            {
+                foreach( var i in items )
+                {
+                    itemSerializer.WriteData( this, i );
+                    if( --count == 0 ) break;
+                }
+                if( count > 0 ) throw new ArgumentException( $"Not enough items: missing {count} items.", nameof( count ) );
+            }
+            else
+            {
+                DoWriteObjects( count, items );
+            }
+        }
+
 
         // TODO: To be removed @next CK.Core version (transfered to CKBinaryWriter).
 

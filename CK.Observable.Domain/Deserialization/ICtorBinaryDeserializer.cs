@@ -10,10 +10,5 @@ namespace CK.Observable
         /// </summary>
         TypeReadInfo CurrentReadInfo { get; }
 
-        /// <summary>
-        /// Registers an acvtion that will be executed once all objects are deserialized.
-        /// </summary>
-        /// <param name="a">An action to be registered. Must not be null.</param>
-        void OnPostDeserialization( Action a );
     }
 }

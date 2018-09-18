@@ -21,25 +21,7 @@ namespace CK.Observable
 
         public void WriteData( BinarySerializer w, T[] o )
         {
-            var tI = _itemSerializer.Type;
-            bool monoType = tI.IsSealed || tI.IsValueType;
-            w.Write( monoType );
-            if( monoType )
-            {
-                if( o == null ) w.WriteSmallInt32( -1 );
-                else
-                {
-                    w.WriteSmallInt32( o.Length );
-                    foreach( var i in o )
-                    {
-                        _itemSerializer.WriteData( w, i );
-                    }
-                }
-            }
-            else
-            {
-                w.WriteObjects( o.Length, o );
-            }
+            w.WriteListContent( o?.Length ?? 0, o, _itemSerializer );
         }
 
         public void WriteData( BinarySerializer w, object o ) => WriteData( w, (T[])o );

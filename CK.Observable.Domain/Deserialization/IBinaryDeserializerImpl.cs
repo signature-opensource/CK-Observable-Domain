@@ -11,18 +11,18 @@ namespace CK.Observable
     public interface IBinaryDeserializerImpl 
     {
         /// <summary>
-        /// Reads a <see cref="TypeReadInfo"/> descriptor previously saved
-        /// by a <see cref="ITypeSerializationDriver.WriteTypeInformation(BinarySerializer)"/>.
+        /// Registers an action that will be executed once all objects are deserialized.
         /// </summary>
-        /// <returns>A type descriptor.</returns>
-        TypeReadInfo ReadTypeReadInfo();
+        /// <param name="a">An action to be registered. Must not be null.</param>
+        void OnPostDeserialization( Action a );
 
         /// <summary>
         /// Creates a new uninitialized object instance. 
         /// </summary>
         /// <param name="t">The type of the instance to create.</param>
+        /// <param name="isTrackedObject">True if the object must be tracked (reference type).</param>
         /// <returns>An uninitialized instance of the type.</returns>
-        object CreateUninitializedInstance( Type t );
+        object CreateUninitializedInstance( Type t, bool isTrackedObject );
 
         /// <summary>
         /// Pushes a type information before calling a deserialization constructor and

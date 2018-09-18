@@ -29,6 +29,15 @@ namespace CK.Observable
         T[] ReadObjectArray<T>();
 
         /// <summary>
+        /// Reads an array of <typeparamref name="T"/> that have been previously written
+        /// by <see cref="BinarySerializer.WriteListContent{T}(int, IEnumerable{T}, ITypeSerializationDriver{T}).
+        /// </summary>
+        /// <typeparam name="T">Type of the item.</typeparam>
+        /// <param name="itemDeserialization">Item deserializer. Must not be null.</param>
+        /// <returns>The object array.</returns>
+        T[] ReadArray<T>( IDeserializationDriver<T> itemDeserialization );
+
+        /// <summary>
         /// Reads a list of objects that have been previously written
         /// by <see cref="BinarySerializer.WriteObjects(int, System.Collections.IEnumerable)"/>.
         /// </summary>

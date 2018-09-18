@@ -16,6 +16,11 @@ namespace CK.Observable
         public string AssemblyQualifiedName { get; }
 
         /// <summary>
+        /// Gets whether the object is tracked (reference type) or not (value type).
+        /// </summary>
+        public bool IsTrackedObject { get; }
+
+        /// <summary>
         /// Gets the version (greater or equal to 0) if this type information has been serialized
         /// by the type itself. -1 otherwise.
         /// </summary>
@@ -74,10 +79,11 @@ namespace CK.Observable
         bool _localTypeLookupDone;
         bool _driverLookupDone;
 
-        internal TypeReadInfo( string t, int version )
+        internal TypeReadInfo( string t, int version, bool isTrackedObject )
         {
             AssemblyQualifiedName = t;
             Version = version;
+            IsTrackedObject = isTrackedObject;
         }
 
         internal void SetBaseType( TypeReadInfo b )

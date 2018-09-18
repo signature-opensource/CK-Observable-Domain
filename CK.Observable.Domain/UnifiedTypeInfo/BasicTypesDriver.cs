@@ -8,9 +8,25 @@ namespace CK.Observable
 {
     public class BasicTypeDrivers
     {
+        /// <summary>
+        /// Handles object root type: redirects to standard object handling that knows how to deal
+        /// with pure object.
+        /// This driver is required for object[], List{object} or any other generic type that do not
+        /// specify a more precise type.
+        /// </summary>
+        public sealed class DObject : UnifiedTypeDriverBase<Object>
+        {
+            public override object ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo ) =>  r.ReadObject();
+
+            public override void WriteData( BinarySerializer w, object o ) => w.WriteObject( o );
+
+            public override void Export( object o, int num, ObjectExporter exporter ) => exporter.ExportObject( o );
+
+        }
+
         public sealed class DBool : UnifiedTypeDriverBase<Boolean>
         {
-            public override bool ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  )
+            public override bool ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo )
             {
                 return r.ReadBoolean();
             }

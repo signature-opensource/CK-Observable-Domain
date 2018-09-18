@@ -14,6 +14,7 @@ namespace CK.Observable
     {
         static readonly ConcurrentDictionary<Type, IUnifiedTypeDriver> _types;
         static readonly ConcurrentDictionary<string, IDeserializationDriver> _deserializations;
+        static readonly IUnifiedTypeDriver<object> _objectFallback;
         static readonly Type[] _ctorParameters;
         static readonly Type[] _writeParameters;
         static readonly Type[] _exportParameters;
@@ -27,6 +28,7 @@ namespace CK.Observable
             _writeParameters = new Type[] { typeof( BinarySerializer ) };
             _exportParameters = new Type[] { typeof( int ), typeof( ObjectExporter ) };
             _exportBaseParameters = new Type[] { typeof( int ), typeof( ObjectExporter ), typeof( IReadOnlyList<ExportableProperty> ) };
+            RegisterValidFullDriver( _objectFallback = new BasicTypeDrivers.DObject() );
             RegisterValidFullDriver( new BasicTypeDrivers.DBool() );
             RegisterValidFullDriver( new BasicTypeDrivers.DByte() );
             RegisterValidFullDriver( new BasicTypeDrivers.DChar() );
@@ -98,7 +100,7 @@ namespace CK.Observable
             /// <returns>The new instance.</returns>
             object IDeserializationDriver.ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  )
             {
-                var o = r.ImplementationServices.CreateUninitializedInstance( Type );
+                var o = r.ImplementationServices.CreateUninitializedInstance( Type, readInfo.IsTrackedObject );
                 var ctx = r.ImplementationServices.PushConstructorContext( readInfo );
                 _ctor.Invoke( o, new object[] { ctx } );
                 r.ImplementationServices.PopConstructorContext();
@@ -229,11 +231,12 @@ namespace CK.Observable
         /// <summary>
         /// Finds driver for a Type that may be serializable, exportable, deserializable or not.
         /// </summary>
-        /// <param name="t">The type to register. Can be null, typeof(ValueType) or typeof(object): null is returned.</param>
-        /// <returns>Null if the type is null, typeof(object) or typeof(ValueType), the driver otherwise.</returns>
+        /// <param name="t">The type to register. Can be null: null is returned.</param>
+        /// <returns>Null if the type is null, the driver otherwise.</returns>
         public static IUnifiedTypeDriver FindDriver( Type t )
         {
-            if( t == null || t == typeof( object ) || t == typeof( ValueType ) ) return null;
+            if( t == null ) return null;
+            if( t == typeof( object ) || t == typeof( ValueType ) ) return _objectFallback;
             if( _types.TryGetValue( t, out var info ) )
             {
                 return info;
@@ -243,7 +246,33 @@ namespace CK.Observable
             {
                 d = _types.GetOrAdd( t, new EnumTypeUnifiedDriver( t ) );
             }
-            else d = _types.GetOrAdd( t, newType => new TypeInfo( t, (TypeInfo)FindDriver( t.BaseType ) ) );
+            else if( t.IsArray )
+            {
+                var eType = t.GetElementType();
+                var eDriver = FindDriver( eType );
+                var arrayType = typeof( ArrayTypeUnifiedDriver<> ).MakeGenericType( eType );
+                d = _types.GetOrAdd( t, (IUnifiedTypeDriver)Activator.CreateInstance( arrayType, eDriver ) );
+            }
+            else
+            {
+                d = null;
+                if( t.IsGenericType )
+                {
+                    if( t.GetGenericTypeDefinition() == typeof( List<> ) )
+                    {
+                        var eType = t.GetGenericArguments()[0];
+                        var eDriver = FindDriver( eType );
+                        var listType = typeof( ListTypeUnifiedDriver<> ).MakeGenericType( eType );
+                        d = _types.GetOrAdd( t, (IUnifiedTypeDriver)Activator.CreateInstance( listType, eDriver ) );
+                    }
+                }
+                if( d == null )
+                {
+                    d = _types.GetOrAdd( t, newType => new TypeInfo( t, t.BaseType == typeof( object ) || t.BaseType == typeof( ValueType )
+                                                                            ? null
+                                                                            : (TypeInfo)FindDriver( t.BaseType ) ) );
+                }
+            }
             if( d.DeserializationDriver != null )
             {
                 RegisterDeserializer( t.AssemblyQualifiedName, d.DeserializationDriver );
@@ -252,7 +281,7 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Tries to find a desrialization driver for the assembly qualified name or, as a last resort,
+        /// Tries to find a deserialization driver for the assembly qualified name or, as a last resort,
         /// from a Type that may be resolved locally and for which a driver can be built automatically.
         /// Returns null if not found.
         /// </summary>

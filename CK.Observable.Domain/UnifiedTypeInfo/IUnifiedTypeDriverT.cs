@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace CK.Observable
 {
-    public interface IUnifiedTypeDriver<T> : IUnifiedTypeDriver, ITypeSerializationDriver<T>, IDeserializationDriver<T>, IObjectExportTypeDriver<T>
+    public interface IUnifiedTypeDriver<T> : IUnifiedTypeDriver
     {
         /// <summary>
         /// Gets the serialization driver.

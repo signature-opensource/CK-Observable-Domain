@@ -62,6 +62,29 @@ namespace CK.Observable
             }
         }
 
+        public void Export<T>( T o, IObjectExportTypeDriver<T> typedExporter )
+        {
+            if( typedExporter == null ) throw new ArgumentNullException( nameof( typedExporter ) );
+            int idxSeen = -1;
+            if( typedExporter.Type.IsClass )
+            {
+                if( _seen.TryGetValue( o, out var num ) )
+                {
+                    _target.EmitReference( num );
+                    return;
+                }
+                idxSeen = _seen.Count;
+                _seen.Add( o, _seen.Count );
+                if( typedExporter.Type == typeof( object ) )
+                {
+                    _target.EmitEmptyObject( idxSeen );
+                    return;
+                }
+            }
+            typedExporter.Export( o, idxSeen, this );
+        }
+
+
         public void ExportObject( object o )
         {
             switch( o )

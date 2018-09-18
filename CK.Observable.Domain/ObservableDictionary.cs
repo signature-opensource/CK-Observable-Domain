@@ -22,9 +22,19 @@ namespace CK.Observable
             var r = d.StartReading();
             int count = r.ReadNonNegativeSmallInt32();
             _map = new Dictionary<TKey, TValue>( count );
-            while( --count >= 0 )
+            if( count > 0 )
             {
-                _map.Add( (TKey)r.ReadObject(), (TValue)r.ReadObject() );
+                var content = new KeyValuePair<TKey, TValue>[count];
+                for( int i = 0; i < content.Length; ++i )
+                {
+                    var k = (TKey)r.ReadObject();
+                    var v = (TValue)r.ReadObject();
+                    content[i] = new KeyValuePair<TKey, TValue>( k, v );
+                }
+                r.ImplementationServices.OnPostDeserialization( () =>
+                {
+                    foreach( var kv in content ) _map.Add( kv.Key, kv.Value );
+                } );
             }
         }
 
@@ -40,11 +50,7 @@ namespace CK.Observable
 
         void Export( int num, ObjectExporter e )
         {
-            //e.Target.EmitStartObject( -1, ObjectExportedKind.Object );
-            //e.ExportNamedProperty( ExportContentOIdName, OId );
-            //e.Target.EmitPropertyName( ExportContentPropName );
             e.ExportMap( num, _map );
-            //e.Target.EmitEndObject( -1, ObjectExportedKind.Object );
         }
 
         internal override ObjectExportedKind ExportedKind => ObjectExportedKind.Map;
