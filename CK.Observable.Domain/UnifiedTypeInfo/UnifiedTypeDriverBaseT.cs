@@ -10,6 +10,13 @@ namespace CK.Observable
 {
     public abstract class UnifiedTypeDriverBase<T> : IUnifiedTypeDriver<T>, ITypeSerializationDriver<T>, IDeserializationDriver<T>, IObjectExportTypeDriver<T>
     {
+        readonly string _typeAlias;
+
+        protected UnifiedTypeDriverBase( string typeAlias = null )
+        {
+            _typeAlias = null;
+        }
+
         public ITypeSerializationDriver<T> SerializationDriver => this;
 
         public IDeserializationDriver<T> DeserializationDriver => this;
@@ -26,7 +33,7 @@ namespace CK.Observable
 
         IReadOnlyList<PropertyInfo> IObjectExportTypeDriver.ExportableProperties => Array.Empty<PropertyInfo>();
 
-        void ITypeSerializationDriver.WriteTypeInformation( BinarySerializer s ) => s.WriteSimpleType( typeof( T ) );
+        void ITypeSerializationDriver.WriteTypeInformation( BinarySerializer s ) => s.WriteSimpleType( typeof( T ), _typeAlias );
 
         void ITypeSerializationDriver.WriteData( BinarySerializer w, object o ) => WriteData( w, (T)o );
 
@@ -35,6 +42,8 @@ namespace CK.Observable
         string IDeserializationDriver.AssemblyQualifiedName => typeof( T ).AssemblyQualifiedName;
 
         void IObjectExportTypeDriver.Export( object o, int num, ObjectExporter exporter ) => Export( (T)o, num, exporter );
+
+        Type IObjectExportTypeDriver.BaseType => Type;
 
         /// <summary>
         /// Exports an instance.

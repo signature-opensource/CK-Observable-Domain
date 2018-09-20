@@ -12,7 +12,7 @@ namespace CK.Observable
         {
             SerializationDriver = new ArrayTypeSerializer<T>( itemDriver.SerializationDriver );
             DeserializationDriver = new ArrayTypeDeserializer<T>( itemDriver.DeserializationDriver );
-            ExportDriver = new ArrayTypeExportDriver<T>( itemDriver.ExportDriver );
+            ExportDriver = new EnumerableTypeExporter<T>( itemDriver.ExportDriver );
         }
 
         public ITypeSerializationDriver<T[]> SerializationDriver { get; }

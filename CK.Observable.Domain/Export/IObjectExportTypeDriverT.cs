@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace CK.Observable
 {
-    public interface IObjectExportTypeDriver<T> : IObjectExportTypeDriver
+    public interface IObjectExportTypeDriver<in T> : IObjectExportTypeDriver
     {
         /// <summary>
         /// Exports an instance.

@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 
 namespace CK.Observable
 {
-    public interface IKnowUnifiedTypeDriver
+    public interface IKnowMyExportDriver
     {
-        IUnifiedTypeDriver UnifiedTypeDriver { get; }
+        IObjectExportTypeDriver ExportDriver { get; }
     }
 }

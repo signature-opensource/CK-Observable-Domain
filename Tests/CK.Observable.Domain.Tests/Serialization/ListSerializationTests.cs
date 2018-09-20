@@ -34,18 +34,6 @@ namespace CK.Observable.Domain.Tests
             b.Should().BeEquivalentTo( objects, options => options.WithStrictOrdering() );
         }
 
-        internal static object SaveAndLoad( object o )
-        {
-            using( var s = new MemoryStream() )
-            using( var w = new BinarySerializer( s, true ) )
-            {
-                w.WriteObject( o );
-                s.Position = 0;
-                using( var r = new BinaryDeserializer( s ) )
-                {
-                    return r.ReadObject();
-                }
-            }
-        }
+        static object SaveAndLoad( object o ) => ArraySerializationTests.SaveAndLoad( o );
     }
 }

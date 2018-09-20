@@ -19,25 +19,7 @@ namespace CK.Observable
 
         public string AssemblyQualifiedName => typeof(List<T>).AssemblyQualifiedName;
 
-        public List<T> ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  )
-        {
-            var len = r.ReadSmallInt32();
-            if( len == -1 ) return null;
-            bool monoType = r.ReadBoolean();
-            if( monoType )
-            {
-                var result = new List<T>(len);
-                if( len > 0 )
-                {
-                    for( int i = 0; i < len; ++i )
-                    {
-                        result.Add( _item.ReadInstance( r, null ) );
-                    }
-                }
-                return result;
-            }
-            return r.ReadObjectList<T>();
-        }
+        public List<T> ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo ) => r.ReadList( _item );
 
         object IDeserializationDriver.ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  ) => ReadInstance( r, readInfo );
     }

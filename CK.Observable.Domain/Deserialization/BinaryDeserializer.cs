@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -12,12 +13,14 @@ namespace CK.Observable
 {
     public class BinaryDeserializer : CKBinaryReader, IBinaryDeserializer, IBinaryDeserializerImpl, ICtorBinaryDeserializer, IBinaryDeserializerContext
     {
+        readonly IDeserializerResolver _drivers;
         readonly List<string> _typesIdx;
         readonly Dictionary<string, TypeReadInfo> _typeInfos;
         readonly List<object> _objects;
         readonly List<Action> _postDeserializationActions;
         readonly Stack<ConstructorContext> _ctorContextStack;
         TypeReadInfo _currentCtorReadInfo;
+        BinaryFormatter _binaryFormatter;
 
         class ConstructorContext
         {
@@ -31,7 +34,12 @@ namespace CK.Observable
             }
         }
 
-        public BinaryDeserializer( Stream stream, IServiceProvider services = null, bool leaveOpen = false, Encoding encoding = null )
+        public BinaryDeserializer(
+            Stream stream,
+            IServiceProvider services = null,
+            IDeserializerResolver drivers = null,
+            bool leaveOpen = false,
+            Encoding encoding = null )
             : base( stream, encoding ?? Encoding.UTF8, leaveOpen )
         {
             Services = new SimpleServiceContainer( services );
@@ -40,6 +48,7 @@ namespace CK.Observable
             _objects = new List<object>();
             _postDeserializationActions = new List<Action>();
             _ctorContextStack = new Stack<ConstructorContext>();
+            _drivers = drivers ?? DeserializerRegistry.Default;
         }
 
         /// <summary>
@@ -70,6 +79,8 @@ namespace CK.Observable
         /// Gets a set of low level methods and helpers.
         /// </summary>
         public IBinaryDeserializerImpl ImplementationServices => this;
+
+        IDeserializerResolver IBinaryDeserializerImpl.Drivers => _drivers;
 
         object IBinaryDeserializerImpl.CreateUninitializedInstance( Type t, bool isTrackedObject )
         {
@@ -133,19 +144,29 @@ namespace CK.Observable
                         return _objects[idx];
                     }
             }
-            Debug.Assert( b == SerializationMarker.EmptyObject || b == SerializationMarker.Object || b == SerializationMarker.Struct );
+            Debug.Assert( b == SerializationMarker.EmptyObject
+                          || b == SerializationMarker.ObjectBinaryFormatter
+                          || b == SerializationMarker.StructBinaryFormatter
+                          || b == SerializationMarker.Object
+                          || b == SerializationMarker.Struct );
             object result;
             if( b == SerializationMarker.EmptyObject )
             {
                 _objects.Add( result = new object() );
             }
-            else
+            else if( b == SerializationMarker.ObjectBinaryFormatter || b == SerializationMarker.StructBinaryFormatter )
+            {
+                if( _binaryFormatter == null ) _binaryFormatter = new BinaryFormatter();
+                result = _binaryFormatter.Deserialize( BaseStream );
+                if( b == SerializationMarker.ObjectBinaryFormatter ) _objects.Add( result );
+            }
+            else 
             {
                 var info = ReadTypeReadInfo( b == SerializationMarker.Object );
-                var d = info.DeserializationDriver;
+                var d = info.GetDeserializationDriver( _drivers );
                 if( d == null )
                 {
-                    throw new InvalidOperationException( $"Unable to find a deserialization driver for Assembly Qualified Name '{info.AssemblyQualifiedName}'." );
+                    throw new InvalidOperationException( $"Unable to find a deserialization driver for Assembly Qualified Name '{info.TypeName}'." );
                 }
                 result = d.ReadInstance( this, info );
             }
@@ -207,6 +228,31 @@ namespace CK.Observable
             var r = new List<T>( len );
             while( --len >= 0 ) r.Add( (T)ReadObject() );
             return r;
+        }
+
+        /// <summary>
+        /// Reads a list of <typeparamref name="T"/> that have been previously written
+        /// by <see cref="BinarySerializer.WriteListContent{T}(int, IEnumerable{T}, ITypeSerializationDriver{T}).
+        /// </summary>
+        /// <typeparam name="T">Type of the item.</typeparam>
+        /// <param name="itemDeserialization">Item deserializer. Must not be null.</param>
+        /// <returns>The list.</returns>
+        public List<T> ReadList<T>( IDeserializationDriver<T> itemDeserialization )
+        {
+            if( itemDeserialization == null ) throw new ArgumentNullException( nameof( itemDeserialization ) );
+            int len = ReadSmallInt32();
+            if( len == -1 ) return null;
+            if( len == 0 ) return new List<T>();
+            var result = new List<T>( len );
+            if( ReadBoolean() )
+            {
+                for( int i = 0; i < len; ++i ) result.Add( itemDeserialization.ReadInstance( this, null ) );
+            }
+            else
+            {
+                for( int i = 0; i < len; ++i ) result.Add( (T)ReadObject() );
+            }
+            return result;
         }
 
         TypeReadInfo ReadTypeReadInfo( bool isTrackedObject )

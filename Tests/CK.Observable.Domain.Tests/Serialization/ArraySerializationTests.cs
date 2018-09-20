@@ -34,14 +34,14 @@ namespace CK.Observable.Domain.Tests
             b.Should().BeEquivalentTo( objects, options => options.WithStrictOrdering() );
         }
 
-        internal static object SaveAndLoad( object o )
+        internal static object SaveAndLoad( object o, ISerializerResolver serializers = null, IDeserializerResolver deserializers = null )
         {
             using( var s = new MemoryStream() )
-            using( var w = new BinarySerializer( s, true ) )
+            using( var w = new BinarySerializer( s, serializers, true ) )
             {
                 w.WriteObject( o );
                 s.Position = 0;
-                using( var r = new BinaryDeserializer( s ) )
+                using( var r = new BinaryDeserializer( s, null, deserializers ) )
                 {
                     return r.ReadObject();
                 }

@@ -10,9 +10,9 @@ namespace CK.Observable
     public interface IObjectExportTypeDriver
     {
         /// <summary>
-        /// Gets the type that this driver handles.
+        /// Gets the base type that this driver handles.
         /// </summary>
-        Type Type { get; }
+        Type BaseType { get; }
 
         /// <summary>
         /// Exports an instance.

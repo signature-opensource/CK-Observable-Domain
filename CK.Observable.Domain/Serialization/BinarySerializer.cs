@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -14,6 +15,8 @@ namespace CK.Observable
     {
         readonly Dictionary<Type, TypeInfo> _types;
         readonly Dictionary<object, int> _seen;
+        readonly ISerializerResolver _drivers;
+        BinaryFormatter _binaryFormatter;
 
         struct TypeInfo
         {
@@ -33,12 +36,24 @@ namespace CK.Observable
         /// <param name="output">The stream to write to.</param>
         /// <param name="leaveOpen">True to leave the stram opened when disposing. False to close it.</param>
         /// <param name="encoding">Optional encoding for texts. Defaults to UTF-8.</param>
-        public BinarySerializer( Stream output, bool leaveOpen, Encoding encoding = null )
+        public BinarySerializer(
+            Stream output,
+            ISerializerResolver drivers = null,
+            bool leaveOpen = false,
+            Encoding encoding = null )
             : base( output, encoding ?? Encoding.UTF8, leaveOpen )
         {
             _types = new Dictionary<Type, TypeInfo>();
             _seen = new Dictionary<object, int>( PureObjectRefEqualityComparer<object>.Default );
+            _drivers = drivers ?? SerializerRegistry.Default;
         }
+
+        /// <summary>
+        /// Finds a serialization driver for a type or null if the type is not serializable.
+        /// </summary>
+        /// <typeparam name="T">The type.</typeparam>
+        /// <returns>The driver or null.</returns>
+        public ITypeSerializationDriver<T> FindDriver<T>() => _drivers.FindDriver<T>();
 
         /// <summary>
         /// Writes zero or more objects from any enumerable (that can be null).
@@ -59,7 +74,7 @@ namespace CK.Observable
             else
             {
                 WriteSmallInt32( count );
-                DoWriteObjects( count, objects );
+                if( count > 0 ) DoWriteObjects( count, objects );
             }
         }
 
@@ -149,6 +164,7 @@ namespace CK.Observable
                         return;
                     }
             }
+            SerializationMarker marker;
             Type t = o.GetType();
             int idxSeen = -1;
             if( t.IsClass )
@@ -166,23 +182,28 @@ namespace CK.Observable
                     Write( (byte)SerializationMarker.EmptyObject );
                     return;
                 }
-                Write( (byte)SerializationMarker.Object );
+                marker = SerializationMarker.Object;
             }
-            else Write( (byte)SerializationMarker.Struct );
-            ITypeSerializationDriver driver = (o is IKnowUnifiedTypeDriver k
-                                                ? k.UnifiedTypeDriver
-                                                : UnifiedTypeRegistry.FindDriver( t )).SerializationDriver;
+            else marker = SerializationMarker.Struct;
+            ITypeSerializationDriver driver = _drivers.FindDriver( t );
             if( driver == null )
             {
-                throw new InvalidOperationException( $"Type '{t.FullName}' is not serializable." );
+                marker -= 2;
+                Write( (byte)marker );
+                if( _binaryFormatter == null ) _binaryFormatter = new BinaryFormatter();
+                _binaryFormatter.Serialize( BaseStream, o );
             }
-            driver.WriteTypeInformation( this );
-            driver.WriteData( this, o );
+            else
+            {
+                Write( (byte)marker );
+                driver.WriteTypeInformation( this );
+                driver.WriteData( this, o );
+            }
         }
 
-        internal bool WriteSimpleType( Type t )
+        internal bool WriteSimpleType( Type t, string alias )
         {
-            if( DoWriteSimpleType( t ) )
+            if( DoWriteSimpleType( t, alias ) )
             {
                 WriteSmallInt32( -1 );
                 return true;
@@ -190,7 +211,7 @@ namespace CK.Observable
             return false;
         }
 
-        internal bool DoWriteSimpleType( Type t )
+        internal bool DoWriteSimpleType( Type t, string alias )
         {
             if( t == null ) Write( (byte)0 );
             else if( t == typeof( object ) )
@@ -204,7 +225,7 @@ namespace CK.Observable
                     info = new TypeInfo( t, _types.Count );
                     _types.Add( t, info );
                     Write( (byte)2 );
-                    Write( info.Type.AssemblyQualifiedName );
+                    Write( alias ?? info.Type.AssemblyQualifiedName );
                     return true;
                 }
                 Write( (byte)3 );
@@ -213,52 +234,13 @@ namespace CK.Observable
             return false;
         }
 
-
         /// <summary>
-        /// Writes a dictionary content.
+        /// Writes any list content
         /// </summary>
-        /// <param name="count">Number of items. Must be zero or positive.</param>
-        /// <param name="items">The items. Can be null (in such case, <paramref name="count"/> must be 0).</param>
-        /// <param name="keySerialization">Key serialization driver. Must not be null.</param>
-        /// <param name="valueSerialization">Value serialization driver. Must not be null.</param>
-        public void WriteDictionaryContent<TKey,TValue>(
-            int count,
-            IEnumerable<KeyValuePair<TKey, TValue>> items,
-            ITypeSerializationDriver<TKey> keySerialization,
-            ITypeSerializationDriver<TValue> valueSerialization )
-        {
-            if( count < 0 ) throw new ArgumentException( "Must be greater or equal to 0.", nameof( count ) );
-            if( keySerialization == null ) throw new ArgumentNullException( nameof( keySerialization ) );
-            if( valueSerialization == null ) throw new ArgumentNullException( nameof( valueSerialization ) );
-            if( items == null )
-            {
-                if( count != 0 ) throw new ArgumentNullException( nameof( items ) );
-                WriteSmallInt32( -1 );
-            }
-            else WriteSmallInt32( count );
-            if( count > 0 )
-            {
-                var tKey = keySerialization.Type;
-                var tVal = valueSerialization.Type;
-                bool monoTypeKey = tKey.IsSealed || tKey.IsValueType;
-                bool monoTypeVal = tVal.IsSealed || tVal.IsValueType;
-
-                int dicType = monoTypeKey ? 1 : 0;
-                dicType |= monoTypeVal ? 2 : 0;
-                Write( (byte)dicType );
-
-                foreach( var kv in items )
-                {
-                    if( monoTypeKey ) keySerialization.WriteData( this, kv.Key );
-                    else WriteObject( kv.Key );
-                    if( monoTypeVal ) valueSerialization.WriteData( this, kv.Value );
-                    else WriteObject( kv.Value );
-                    if( --count == 0 ) break;
-                }
-                if( count > 0 ) throw new ArgumentException( $"Not enough items: missing {count} items.", nameof( count ) );
-            }
-        }
-
+        /// <typeparam name="T">The item type.</typeparam>
+        /// <param name="count">The number of items. Must be 0 zero or positive.</param>
+        /// <param name="items">The items. Can be null (in such case, <paramref name="count"/> must be zero).</param>
+        /// <param name="itemSerializer">The item serializer. Must not be null.</param>
         public void WriteListContent<T>( int count, IEnumerable<T> items, ITypeSerializationDriver<T> itemSerializer )
         {
             if( count < 0 ) throw new ArgumentException( "Must be greater or equal to 0.", nameof( count ) );
@@ -267,22 +249,27 @@ namespace CK.Observable
             {
                 if( count != 0 ) throw new ArgumentNullException( nameof( items ) );
                 WriteSmallInt32( -1 );
+                return;
             }
-            var tI = itemSerializer.Type;
-            bool monoType = tI.IsSealed || tI.IsValueType;
-            Write( monoType );
-            if( monoType )
+            WriteSmallInt32( count );
+            if( count > 0 )
             {
-                foreach( var i in items )
+                var tI = itemSerializer.Type;
+                bool monoType = tI.IsSealed || tI.IsValueType;
+                Write( monoType );
+                if( monoType )
                 {
-                    itemSerializer.WriteData( this, i );
-                    if( --count == 0 ) break;
+                    foreach( var i in items )
+                    {
+                        itemSerializer.WriteData( this, i );
+                        if( --count == 0 ) break;
+                    }
+                    if( count > 0 ) throw new ArgumentException( $"Not enough items: missing {count} items.", nameof( count ) );
                 }
-                if( count > 0 ) throw new ArgumentException( $"Not enough items: missing {count} items.", nameof( count ) );
-            }
-            else
-            {
-                DoWriteObjects( count, items );
+                else
+                {
+                    DoWriteObjects( count, items );
+                }
             }
         }
 

@@ -9,15 +9,13 @@ using System.Diagnostics;
 namespace CK.Observable
 {
     [SerializationVersionAttribute(0)]
-    public abstract class ObservableObject : INotifyPropertyChanged, IKnowUnifiedTypeDriver, IDisposable
+    public abstract class ObservableObject : INotifyPropertyChanged, IDisposable, IKnowMyExportDriver
     {
-        protected const string ExportContentOIdName = "$i";
-        protected const string ExportContentPropName = "$C";
         int _id;
-        IUnifiedTypeDriver _driver;
         internal readonly ObservableDomain Domain;
         PropertyChangedEventHandler _handler;
         internal int OId => _id;
+        internal readonly IObjectExportTypeDriver _exporter;
 
         protected ObservableObject()
             : this( ObservableDomain.GetCurrentActiveDomain() )
@@ -27,17 +25,14 @@ namespace CK.Observable
         protected ObservableObject( ObservableDomain domain )
         {
             if( domain == null ) throw new ArgumentNullException( nameof(domain) );
-            _driver = UnifiedTypeRegistry.FindDriver( GetType() );
-            Debug.Assert( _driver != null );
             Domain = domain;
+            _exporter = Domain._exporters.FindDriver( GetType() );
             _id = Domain.Register( this );
             Debug.Assert( _id >= 0 );
         }
 
         protected ObservableObject( IBinaryDeserializerContext d )
         {
-            _driver = UnifiedTypeRegistry.FindDriver( GetType() );
-            Debug.Assert( _driver != null );
             var r = d.StartReading();
             Debug.Assert( r.CurrentReadInfo.Version == 0 );
             Domain = r.Services.GetService<ObservableDomain>( throwOnNull: true );
@@ -49,32 +44,6 @@ namespace CK.Observable
         {
             w.Write( _id );
         }
-
-        //void Export( int num, ObjectExporter e, IReadOnlyList<ExportableProperty> props )
-        //{
-        //    e.Target.EmitStartObject( -1, ObjectExportedKind.Object );
-        //    e.ExportNamedProperty( ExportContentOIdName, OId );
-        //    e.Target.EmitPropertyName( ExportContentPropName );
-        //    if( props.Count == 0 )
-        //    {
-        //        e.Target.EmitEmptyObject( num );
-        //    }
-        //    else
-        //    {
-        //        e.Target.EmitStartObject( num, ObjectExportedKind.Object );
-        //        foreach( var p in props )
-        //        {
-        //            e.ExportNamedProperty( p.Name, p.Value );
-        //        }
-        //        e.Target.EmitEndObject( num, ObjectExportedKind.Object );
-        //    }
-        //    e.Target.EmitEndObject( -1, ObjectExportedKind.Object );
-        //}
-
-        IUnifiedTypeDriver IKnowUnifiedTypeDriver.UnifiedTypeDriver => _driver;
-
-        internal IUnifiedTypeDriver UnifiedTypeDriver => _driver;
-
 
         event PropertyChangedEventHandler INotifyPropertyChanged.PropertyChanged
         {
@@ -90,6 +59,8 @@ namespace CK.Observable
         protected bool IsDeserializing => Domain.IsDeserializing;
 
         internal virtual ObjectExportedKind ExportedKind => ObjectExportedKind.Object;
+
+        IObjectExportTypeDriver IKnowMyExportDriver.ExportDriver => _exporter;
 
         public void Dispose()
         {

@@ -19,10 +19,7 @@ namespace CK.Observable
 
         public string AssemblyQualifiedName => typeof(T[]).AssemblyQualifiedName;
 
-        public T[] ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  )
-        {
-            return r.ReadArray( _item );
-        }
+        public T[] ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  ) => r.ReadArray( _item );
 
         object IDeserializationDriver.ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  ) => ReadInstance( r, readInfo );
     }

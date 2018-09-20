@@ -7,20 +7,20 @@ using System.Threading.Tasks;
 
 namespace CK.Observable
 {
-    class ArrayTypeExportDriver<T> : IObjectExportTypeDriver<T[]>
+    class EnumerableTypeExporter<T> : IObjectExportTypeDriver<IEnumerable<T>>
     {
         readonly IObjectExportTypeDriver<T> _itemExporter;
 
-        public ArrayTypeExportDriver( IObjectExportTypeDriver<T> itemExporter )
+        public EnumerableTypeExporter( IObjectExportTypeDriver<T> itemExporter )
         {
             _itemExporter = itemExporter;
         }
 
-        public Type Type => typeof(T[]);
+        public Type BaseType => typeof( IEnumerable<T> );
 
         public IReadOnlyList<PropertyInfo> ExportableProperties => Array.Empty<PropertyInfo>();
 
-        public void Export( T[] o, int num, ObjectExporter exporter )
+        public void Export( IEnumerable<T> o, int num, ObjectExporter exporter )
         {
             if( _itemExporter != null )
             {
@@ -31,6 +31,6 @@ namespace CK.Observable
             else exporter.ExportList( num, o );
         }
 
-        void IObjectExportTypeDriver.Export( object o, int num, ObjectExporter exporter ) => Export( (T[])o, num, exporter );
+        void IObjectExportTypeDriver.Export( object o, int num, ObjectExporter exporter ) => Export( (IEnumerable<T>)o, num, exporter );
     }
 }

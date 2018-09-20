@@ -11,9 +11,9 @@ namespace CK.Observable
     public class TypeReadInfo
     {
         /// <summary>
-        /// Gets the assembly qualified name of the type.
+        /// Gets the serialized type name. It may be an assembly qualified name or an alias.
         /// </summary>
-        public string AssemblyQualifiedName { get; }
+        public string TypeName { get; }
 
         /// <summary>
         /// Gets whether the object is tracked (reference type) or not (value type).
@@ -50,7 +50,7 @@ namespace CK.Observable
                 if( !_localTypeLookupDone )
                 {
                     _localTypeLookupDone = true;
-                    _localType = SimpleTypeFinder.WeakResolver( AssemblyQualifiedName, false );
+                    _localType = SimpleTypeFinder.WeakResolver( TypeName, false );
                 }
                 return _localType;
             }
@@ -59,17 +59,14 @@ namespace CK.Observable
         /// <summary>
         /// Gets the deserialization driver if it can be resolved, null otherwise.
         /// </summary>
-        public IDeserializationDriver DeserializationDriver
+        public IDeserializationDriver GetDeserializationDriver( IDeserializerResolver r )
         {
-            get
+            if( !_driverLookupDone )
             {
-                if( !_driverLookupDone )
-                {
-                    _driverLookupDone = true;
-                    _driver = UnifiedTypeRegistry.FindDeserializationDriver( AssemblyQualifiedName, () => LocalType );
-                }
-                return _driver;
+                _driverLookupDone = true;
+                _driver = r.FindDriver( TypeName, () => LocalType );
             }
+            return _driver;
         }
 
         TypeReadInfo _baseType;
@@ -81,7 +78,7 @@ namespace CK.Observable
 
         internal TypeReadInfo( string t, int version, bool isTrackedObject )
         {
-            AssemblyQualifiedName = t;
+            TypeName = t;
             Version = version;
             IsTrackedObject = isTrackedObject;
         }

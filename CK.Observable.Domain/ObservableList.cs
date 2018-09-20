@@ -20,22 +20,18 @@ namespace CK.Observable
         protected ObservableList( IBinaryDeserializerContext d ) : base( d )
         {
             var r = d.StartReading();
-            _list = r.ReadObjectList<T>();
+            _list = (List<T>)r.ReadObject();
         }
 
         void Write( BinarySerializer s )
         {
-            s.WriteObjects( _list.Count, _list );
+            s.WriteObject( _list );
         }
 
-        void Export( int num, ObjectExporter e )
-        {
-            //e.Target.EmitStartObject( -1, ObjectExportedKind.Object );
-            //e.ExportNamedProperty( ExportContentOIdName, OId );
-            //e.Target.EmitPropertyName( ExportContentPropName );
-            e.ExportList( num, _list );
-            //e.Target.EmitEndObject( -1, ObjectExportedKind.Object );
-        }
+        //void Export( int num, ObjectExporter e )
+        //{
+        //    e.ExportList( num, _list );
+        //}
 
         public T this[int index]
         {

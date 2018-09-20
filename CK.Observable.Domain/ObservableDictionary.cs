@@ -20,6 +20,7 @@ namespace CK.Observable
         protected ObservableDictionary( IBinaryDeserializerContext d ) : base( d )
         {
             var r = d.StartReading();
+
             int count = r.ReadNonNegativeSmallInt32();
             _map = new Dictionary<TKey, TValue>( count );
             if( count > 0 )

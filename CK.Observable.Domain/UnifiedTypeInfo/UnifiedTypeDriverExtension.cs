@@ -14,7 +14,7 @@ namespace CK.Observable
                     && @this.DeserializationDriver != null
                     && @this.ExportDriver != null
                     && @this.SerializationDriver != null
-                    && @this.SerializationDriver.Type == @this.ExportDriver.Type;
+                    && @this.ExportDriver.BaseType.IsAssignableFrom( @this.SerializationDriver.Type );
         }
 
         /// <summary>
@@ -30,7 +30,7 @@ namespace CK.Observable
             if( @this.DeserializationDriver == null ) throw new ArgumentException( "Missing DeserializationDriver.", "driver." );
             if( @this.SerializationDriver == null ) throw new ArgumentException( "Missing SerializationDriver.", "driver." );
             if( @this.ExportDriver == null ) throw new ArgumentException( "Missing ExportDriver.", "driver." );
-            if( @this.SerializationDriver.Type != @this.ExportDriver.Type ) throw new ArgumentException( "SerializationDriver and ExportDriver don't handle the same Type.", "driver." );
+            if( !@this.ExportDriver.BaseType.IsAssignableFrom( @this.SerializationDriver.Type ) ) throw new ArgumentException( $"ExportDriver base type {@this.ExportDriver.BaseType} is not compatible with SerializationDriver.Type {@this.SerializationDriver.Type}.", "driver" );
             return @this.SerializationDriver.Type;
         }
     }

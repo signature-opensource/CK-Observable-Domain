@@ -49,6 +49,10 @@ namespace CK.Observable
         [ThreadStatic]
         internal static ObservableDomain CurrentThreadDomain;
 
+        internal readonly IExporterResolver _exporters;
+        readonly ISerializerResolver _serializers;
+        readonly IDeserializerResolver _deserializers;
+
         /// <summary>
         /// Maps property names to PropInfo that contains the property index.
         /// </summary>
@@ -204,12 +208,12 @@ namespace CK.Observable
 
             internal bool IsNewObject( ObservableObject o ) => _newObjects.ContainsKey( o );
 
-            internal void OnNewObject( ObservableObject o, int objectId )
+            internal void OnNewObject( ObservableObject o, int objectId, IObjectExportTypeDriver exporter )
             {
                 _changeEvents.Add( new NewObjectEvent( o, objectId ) );
-                if( o.UnifiedTypeDriver.ExportDriver != null )
+                if( exporter != null )
                 {
-                    _newObjects.Add( o, o.UnifiedTypeDriver.ExportDriver.ExportableProperties.ToList() );
+                    _newObjects.Add( o, exporter.ExportableProperties.ToList() );
                 }
                 else _newObjects.Add( o, null );
             }
@@ -370,10 +374,18 @@ namespace CK.Observable
         {
         }
 
-        public ObservableDomain( IObservableTransactionManager tm, IActivityMonitor monitor )
+        public ObservableDomain(
+            IObservableTransactionManager tm,
+            IActivityMonitor monitor,
+            IExporterResolver exporters = null,
+            ISerializerResolver serializers = null,
+            IDeserializerResolver deserializers = null )
         {
             DomainNumber = Interlocked.Increment( ref _domainNumber );
             Monitor = monitor ?? new ActivityMonitor( $"Observable Domain n°{DomainNumber}." );
+            _exporters = exporters ?? ExporterRegistry.Default;
+            _serializers = serializers ?? SerializerRegistry.Default;
+            _deserializers = deserializers ?? DeserializerRegistry.Default;
             TransactionManager = tm;
             _objects = new ObservableObject[512];
             _freeList = new Stack<int>();
@@ -551,7 +563,7 @@ namespace CK.Observable
                 target.EmitEndObject( -1, ObjectExportedKind.List );
 
                 target.EmitPropertyName( "O" );
-                ObjectExporter.ExportRootList( target, _objects.Take( _objectsListCount ) );
+                ObjectExporter.ExportRootList( target, _objects.Take( _objectsListCount ), _exporters );
 
                 target.EmitPropertyName( "R" );
                 target.EmitStartObject( -1, ObjectExportedKind.List );
@@ -581,7 +593,7 @@ namespace CK.Observable
         public void Save( Stream s, bool leaveOpen = false, Encoding encoding = null )
         {
             using( CheckReentrancyOnly() )
-            using( var w = new BinarySerializer( s, leaveOpen, encoding ) )
+            using( var w = new BinarySerializer( s, _serializers, leaveOpen, encoding ) )
             {
                 w.WriteSmallInt32( 0 ); // Version
                 w.Write( _transactionSerialNumber );
@@ -613,7 +625,7 @@ namespace CK.Observable
         {
             using( Monitor.OpenInfo( $"Loading Domain n°{DomainNumber}." ) )
             using( CheckReentrancyOnly() )
-            using( var d = new BinaryDeserializer( s, null, leaveOpen, encoding ) )
+            using( var d = new BinaryDeserializer( s, null, _deserializers, leaveOpen, encoding ) )
             {
                 d.Services.Add( this );
                 DoLoad( d );
@@ -712,7 +724,7 @@ namespace CK.Observable
                 _objects[idx] = o;
                 if( !_deserializing )
                 {
-                    _changeTracker.OnNewObject( o, idx );
+                    _changeTracker.OnNewObject( o, idx, o._exporter );
                 }
                 ++_actualObjectCount;
                 return idx;
@@ -734,8 +746,8 @@ namespace CK.Observable
         internal PropertyChangedEventArgs OnPropertyChanged( ObservableObject o, string propertyName, object before, object after )
         {
             if( _deserializing
-                || o.UnifiedTypeDriver.ExportDriver == null
-                || !o.UnifiedTypeDriver.ExportDriver.ExportableProperties.Any( p => p.Name == propertyName ) )
+                || o._exporter == null
+                || !o._exporter.ExportableProperties.Any( p => p.Name == propertyName ) )
             {
                 return null;
             }

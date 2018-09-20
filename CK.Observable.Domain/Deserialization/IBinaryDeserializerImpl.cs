@@ -11,6 +11,11 @@ namespace CK.Observable
     public interface IBinaryDeserializerImpl 
     {
         /// <summary>
+        /// Gets the <see cref="IDeserializerResolver"/>.
+        /// </summary>
+        IDeserializerResolver Drivers { get; }
+
+        /// <summary>
         /// Registers an action that will be executed once all objects are deserialized.
         /// </summary>
         /// <param name="a">An action to be registered. Must not be null.</param>
