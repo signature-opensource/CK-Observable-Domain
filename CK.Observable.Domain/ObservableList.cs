@@ -28,11 +28,6 @@ namespace CK.Observable
             s.WriteObject( _list );
         }
 
-        //void Export( int num, ObjectExporter e )
-        //{
-        //    e.ExportList( num, _list );
-        //}
-
         public T this[int index]
         {
             get => _list[index];

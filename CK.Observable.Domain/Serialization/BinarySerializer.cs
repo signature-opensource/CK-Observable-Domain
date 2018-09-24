@@ -49,45 +49,14 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Finds a serialization driver for a type or null if the type is not serializable.
+        /// Gets the serialization drivers.
         /// </summary>
-        /// <typeparam name="T">The type.</typeparam>
-        /// <returns>The driver or null.</returns>
-        public ITypeSerializationDriver<T> FindDriver<T>() => _drivers.FindDriver<T>();
+        public ISerializerResolver Drivers => _drivers;
 
         /// <summary>
-        /// Writes zero or more objects from any enumerable (that can be null).
+        /// Writes an object that can be null and of any type.
         /// </summary>
-        /// <param name="count">The number of objects to write. Must be zero or positive.</param>
-        /// <param name="objects">
-        /// The set of at least <paramref name="count"/> objects.
-        /// Can be null (in such case count must be zero).
-        /// </param>
-        public void WriteObjects( int count, IEnumerable objects )
-        {
-            if( count < 0 ) throw new ArgumentException( "Must be greater or equal to 0.", nameof( count ) );
-            if( objects == null )
-            {
-                if( count != 0 ) throw new ArgumentNullException( nameof( objects ) );
-                WriteSmallInt32( -1 );
-            }
-            else
-            {
-                WriteSmallInt32( count );
-                if( count > 0 ) DoWriteObjects( count, objects );
-            }
-        }
-
-        void DoWriteObjects( int count, IEnumerable objects )
-        {
-            foreach( var o in objects )
-            {
-                WriteObject( o );
-                if( --count == 0 ) break;
-            }
-            if( count > 0 ) throw new ArgumentException( $"Not enough objects: missing {count} objects.", nameof( count ) );
-        }
-
+        /// <param name="o">The object to write.</param>
         public void WriteObject( object o )
         {
             switch( o )
@@ -188,6 +157,7 @@ namespace CK.Observable
             ITypeSerializationDriver driver = _drivers.FindDriver( t );
             if( driver == null )
             {
+                if( !t.IsSerializable ) throw new InvalidOperationException( $"Type {t} is not serializable." );
                 marker -= 2;
                 Write( (byte)marker );
                 if( _binaryFormatter == null ) _binaryFormatter = new BinaryFormatter();
@@ -201,7 +171,40 @@ namespace CK.Observable
             }
         }
 
-        internal bool WriteSimpleType( Type t, string alias )
+        public void Write<T>( T o, ITypeSerializationDriver<T> driver )
+        {
+            if( driver == null ) throw new ArgumentNullException( nameof( driver ) );
+            if( o == null )
+            {
+                Write( (byte)SerializationMarker.Null );
+                return;
+            }
+            SerializationMarker marker;
+            Type t = o.GetType();
+            int idxSeen = -1;
+            if( t.IsClass )
+            {
+                if( _seen.TryGetValue( o, out var num ) )
+                {
+                    Write( (byte)SerializationMarker.Reference );
+                    Write( num );
+                    return;
+                }
+                idxSeen = _seen.Count;
+                _seen.Add( o, _seen.Count );
+                if( t == typeof( object ) )
+                {
+                    Write( (byte)SerializationMarker.EmptyObject );
+                    return;
+                }
+                marker = SerializationMarker.Object;
+            }
+            else marker = SerializationMarker.Struct;
+            Write( (byte)marker );
+            driver.WriteData( this, o );
+        }
+
+        internal bool WriteSimpleType( Type t, string alias)
         {
             if( DoWriteSimpleType( t, alias ) )
             {
@@ -234,45 +237,12 @@ namespace CK.Observable
             return false;
         }
 
-        /// <summary>
-        /// Writes any list content
-        /// </summary>
-        /// <typeparam name="T">The item type.</typeparam>
-        /// <param name="count">The number of items. Must be 0 zero or positive.</param>
-        /// <param name="items">The items. Can be null (in such case, <paramref name="count"/> must be zero).</param>
-        /// <param name="itemSerializer">The item serializer. Must not be null.</param>
-        public void WriteListContent<T>( int count, IEnumerable<T> items, ITypeSerializationDriver<T> itemSerializer )
+        TypeInfo RegisterType( Type t )
         {
-            if( count < 0 ) throw new ArgumentException( "Must be greater or equal to 0.", nameof( count ) );
-            if( itemSerializer == null ) throw new ArgumentNullException( nameof( itemSerializer ) );
-            if( items == null )
-            {
-                if( count != 0 ) throw new ArgumentNullException( nameof( items ) );
-                WriteSmallInt32( -1 );
-                return;
-            }
-            WriteSmallInt32( count );
-            if( count > 0 )
-            {
-                var tI = itemSerializer.Type;
-                bool monoType = tI.IsSealed || tI.IsValueType;
-                Write( monoType );
-                if( monoType )
-                {
-                    foreach( var i in items )
-                    {
-                        itemSerializer.WriteData( this, i );
-                        if( --count == 0 ) break;
-                    }
-                    if( count > 0 ) throw new ArgumentException( $"Not enough items: missing {count} items.", nameof( count ) );
-                }
-                else
-                {
-                    DoWriteObjects( count, items );
-                }
-            }
+            var info = new TypeInfo( t, _types.Count );
+            _types.Add( t, info );
+            return info;
         }
-
 
         // TODO: To be removed @next CK.Core version (transfered to CKBinaryWriter).
 

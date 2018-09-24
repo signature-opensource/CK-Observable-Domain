@@ -8,7 +8,7 @@ using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace CK.Observable.Domain.Tests
+namespace CK.Serialization.Tests
 {
      [TestFixture]
     public class DictionarySerializationTests
@@ -37,6 +37,43 @@ namespace CK.Observable.Domain.Tests
                 return new BinaryFormatter().Deserialize( s );
             }
         }
+
+        [Test]
+        public void basic_types_dictionary_serialization()
+        {
+            var int2String = new Dictionary<int,string>
+            {
+                { 12, "Twelve" },
+                { 11, "Eleven" },
+                { 10, "Ten" },
+                { 9, "Nine" },
+                { 8, "Eight" }
+            };
+            object back = SaveAndLoad( int2String );
+            back.Should().BeAssignableTo<Dictionary<int, string>>();
+            var b = (Dictionary<int, string>)back;
+            b.Should().BeEquivalentTo( int2String );
+        }
+
+        [Test]
+        public void dictionary_with_comparer_serialization()
+        {
+            var string2Int = new Dictionary<string,int>( StringComparer.InvariantCultureIgnoreCase )
+            {
+                { "Twelve", 12 },
+                { "Eleven", 11 },
+                { "Ten", 10 },
+                { "Nine", 9 },
+                { "Eight", 8 }
+            };
+            object back = SaveAndLoad( string2Int );
+            back.Should().BeAssignableTo<Dictionary<string,int>>();
+            var b = (Dictionary<string, int>)back;
+            b.Should().BeEquivalentTo( string2Int );
+            b["TWELVE"].Should().Be( 12 );
+        }
+
+        static object SaveAndLoad( object o ) => ArraySerializationTests.SaveAndLoad( o );
 
     }
 }

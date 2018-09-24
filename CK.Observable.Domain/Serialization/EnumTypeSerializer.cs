@@ -24,8 +24,8 @@ namespace CK.Observable
 
         void ITypeSerializationDriver.WriteTypeInformation( BinarySerializer s ) => s.WriteSimpleType( Type, null );
 
-        public void WriteData( BinarySerializer w, object o ) => _underlyingType.WriteData( w, (TU)o );
+        void ITypeSerializationDriver.WriteData( BinarySerializer w, object o ) => _underlyingType.WriteData( w, (TU)o );
 
-        void ITypeSerializationDriver<T>.WriteData( BinarySerializer w, T o ) => WriteData( w, o );
+        void ITypeSerializationDriver<T>.WriteData( BinarySerializer w, T o ) => _underlyingType.WriteData( w, o );
     }
 }

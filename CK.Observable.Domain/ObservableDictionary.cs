@@ -20,38 +20,12 @@ namespace CK.Observable
         protected ObservableDictionary( IBinaryDeserializerContext d ) : base( d )
         {
             var r = d.StartReading();
-
-            int count = r.ReadNonNegativeSmallInt32();
-            _map = new Dictionary<TKey, TValue>( count );
-            if( count > 0 )
-            {
-                var content = new KeyValuePair<TKey, TValue>[count];
-                for( int i = 0; i < content.Length; ++i )
-                {
-                    var k = (TKey)r.ReadObject();
-                    var v = (TValue)r.ReadObject();
-                    content[i] = new KeyValuePair<TKey, TValue>( k, v );
-                }
-                r.ImplementationServices.OnPostDeserialization( () =>
-                {
-                    foreach( var kv in content ) _map.Add( kv.Key, kv.Value );
-                } );
-            }
+            _map = (Dictionary<TKey,TValue>)r.ReadObject();
         }
 
         void Write( BinarySerializer s )
         {
-            s.WriteNonNegativeSmallInt32( _map.Count );
-            foreach( var kv in _map )
-            {
-                s.WriteObject( kv.Key );
-                s.WriteObject( kv.Value );
-            }
-        }
-
-        void Export( int num, ObjectExporter e )
-        {
-            e.ExportMap( num, _map );
+            s.WriteObject( _map );
         }
 
         internal override ObjectExportedKind ExportedKind => ObjectExportedKind.Map;

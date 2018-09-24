@@ -48,11 +48,7 @@ namespace CK.Observable
         {
             if( String.IsNullOrWhiteSpace( name ) ) throw new ArgumentNullException( nameof( name ) );
             if( driver == null ) throw new ArgumentNullException( nameof( driver ) );
-            if( !SimpleTypeFinder.WeakenAssemblyQualifiedName( name, out string weakName ) )
-            {
-                throw new Exception( $"Unable to weaken the AQN: {name}" );
-            }
-            _drivers.AddOrUpdate( weakName, driver, ( type, already ) => driver );
+            _drivers.AddOrUpdate( name, driver, ( type, already ) => driver );
         }
 
         /// <summary>
@@ -134,7 +130,7 @@ namespace CK.Observable
             {
                 var eType = type.GetElementType();
                 var eDriver = FindDriver( eType );
-                var arrayType = typeof( ArrayTypeDeserializer<> ).MakeGenericType( eType );
+                var arrayType = typeof( ArrayDeserializer<> ).MakeGenericType( eType );
                 return (IDeserializationDriver)Activator.CreateInstance( arrayType, eDriver );
             }
 
@@ -147,7 +143,7 @@ namespace CK.Observable
                 {
                     var eType = type.GetGenericArguments()[0];
                     var eDriver = FindDriver( eType );
-                    var listType = typeof( ListTypeDeserializer<> ).MakeGenericType( eType );
+                    var listType = typeof( ListDeserializer<> ).MakeGenericType( eType );
                     d = (IDeserializationDriver)Activator.CreateInstance( listType, eDriver );
                 }
                 else if( type.GetGenericTypeDefinition() == typeof( Dictionary<,> ) )
@@ -156,7 +152,7 @@ namespace CK.Observable
                     var eKeyDriver = FindDriver( eKeyType );
                     var eValType = type.GetGenericArguments()[1];
                     var eValDriver = FindDriver( eValType );
-                    var dType = typeof( DictionaryTypeDeserializer<,> ).MakeGenericType( eKeyType, eValType );
+                    var dType = typeof( DictionaryDeserializer<,> ).MakeGenericType( eKeyType, eValType );
                     d = (IDeserializationDriver)Activator.CreateInstance( dType, eKeyDriver, eValDriver );
                 }
             }

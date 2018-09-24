@@ -90,7 +90,7 @@ namespace CK.Observable
             {
                 var eType = type.GetElementType();
                 var eDriver = FindDriver( eType );
-                var arrayType = typeof( ArrayTypeSerializer<> ).MakeGenericType( eType );
+                var arrayType = typeof( ArraySerializer<> ).MakeGenericType( eType );
                 return (ITypeSerializationDriver)Activator.CreateInstance( arrayType, eDriver );
             }
             var d = AutoTypeRegistry.FindDriver( type ).SerializationDriver;
@@ -111,7 +111,7 @@ namespace CK.Observable
                     var eKeyDriver = FindDriver( eKeyType );
                     var eValType = type.GetGenericArguments()[1];
                     var eValDriver = FindDriver( eValType );
-                    var dType = typeof( DictionaryTypeSerializer<,> ).MakeGenericType( eKeyType, eValType );
+                    var dType = typeof( DictionarySerializer<,> ).MakeGenericType( eKeyType, eValType );
                     d = (ITypeSerializationDriver)Activator.CreateInstance( dType, eKeyDriver, eValDriver );
                 }
             }

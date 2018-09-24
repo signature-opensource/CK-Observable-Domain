@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace CK.Observable.Domain.Tests
+namespace CK.Serialization.Tests
 {
     [TestFixture]
     public class ListSerializationTests

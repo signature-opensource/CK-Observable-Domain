@@ -175,12 +175,13 @@ namespace CK.Observable
                     return;
                 }
             }
-            IObjectExportTypeDriver driver = _drivers.FindDriver( t );
+            IObjectExportTypeDriver driver = (o is IKnowMyExportDriver drv ? drv.ExportDriver : null )
+                                                ?? _drivers.FindDriver( t );
             if( driver == null )
             {
                 throw new InvalidOperationException( $"Type '{t.FullName}' is not exportable." );
             }
-            driver.Export(o, idxSeen, this);
+            driver.Export( o, idxSeen, this );
         }
     }
 }

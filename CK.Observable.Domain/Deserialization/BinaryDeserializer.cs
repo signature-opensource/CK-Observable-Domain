@@ -89,6 +89,26 @@ namespace CK.Observable
             return o;
         }
 
+        T IBinaryDeserializerImpl.TrackObject<T>( T o )
+        {
+            if( o == null ) throw new ArgumentException( nameof( o ) );
+            _objects.Add( o );
+            return o;
+        }
+
+        int IBinaryDeserializerImpl.PreTrackObject()
+        {
+            _objects.Add( null );
+            return _objects.Count - 1;
+        }
+
+        T IBinaryDeserializerImpl.TrackPreTrackedObject<T>( T o, int num )
+        {
+            if( o == null ) throw new ArgumentException( nameof( o ) );
+            _objects[num] = o;
+            return o;
+        }
+
         IBinaryDeserializerContext IBinaryDeserializerImpl.PushConstructorContext( TypeReadInfo info )
         {
             _ctorContextStack.Push( info != null ? new ConstructorContext( info ) : null );
@@ -112,7 +132,7 @@ namespace CK.Observable
         /// Reads an object previously written by <see cref="BinarySerializer.WriteObject(object)"/>.
         /// </summary>
         /// <returns>The object read, possibly in an intermediate state.</returns>
-        public object ReadObject()
+        public object ReadObject( int idxOffset = 0 )
         {
             var b = (SerializationMarker)ReadByte();
             switch( b )
@@ -129,20 +149,7 @@ namespace CK.Observable
                 case SerializationMarker.Guid: return ReadGuid();
                 case SerializationMarker.TimeSpan: return ReadTimeSpan();
                 case SerializationMarker.DateTimeOffset: return ReadDateTimeOffset();
-
-                case SerializationMarker.Reference:
-                    {
-                        int idx = ReadInt32();
-                        if( idx >= _objects.Count )
-                        {
-                            throw new InvalidDataException( $"Unable to resolve reference {idx}. Current is {_objects.Count}." );
-                        }
-                        if( _objects[idx] == null )
-                        {
-                            throw new InvalidDataException( $"Unable to resolve reference {idx}. Object has not been created or has not been registered." );
-                        }
-                        return _objects[idx];
-                    }
+                case SerializationMarker.Reference: return ReadReference();
             }
             Debug.Assert( b == SerializationMarker.EmptyObject
                           || b == SerializationMarker.ObjectBinaryFormatter
@@ -158,7 +165,15 @@ namespace CK.Observable
             {
                 if( _binaryFormatter == null ) _binaryFormatter = new BinaryFormatter();
                 result = _binaryFormatter.Deserialize( BaseStream );
-                if( b == SerializationMarker.ObjectBinaryFormatter ) _objects.Add( result );
+                if( b == SerializationMarker.ObjectBinaryFormatter )
+                {
+                    if( idxOffset != 0 )
+                    {
+                        if( idxOffset < 0 ) throw new ArgumentException();
+                        _objects.Insert( _objects.Count - idxOffset, result );
+                    }
+                    else _objects.Add( result );
+                }
             }
             else 
             {
@@ -174,86 +189,51 @@ namespace CK.Observable
             return result;
         }
 
-        /// <summary>
-        /// Reads an array of objects that have been previously written
-        /// by <see cref="BinarySerializer.WriteObjects(int, System.Collections.IEnumerable)"/>.
-        /// </summary>
-        /// <returns>The object array.</returns>
-        public T[] ReadObjectArray<T>()
+        object ReadReference()
         {
-            int len = ReadSmallInt32();
-            if( len == -1 ) return null;
-            if( len == 0 ) return Array.Empty<T>();
-            var r = new T[len];
-            for( int i = 0; i < len; ++i ) r[i] = (T)ReadObject();
-            return r;
+            int idx = ReadInt32();
+            if( idx >= _objects.Count )
+            {
+                throw new InvalidDataException( $"Unable to resolve reference {idx}. Current is {_objects.Count}." );
+            }
+            if( _objects[idx] == null )
+            {
+                throw new InvalidDataException( $"Unable to resolve reference {idx}. Object has not been created or has not been registered." );
+            }
+            return _objects[idx];
         }
 
-        /// <summary>
-        /// Reads an array of <typeparamref name="T"/> that have been previously written
-        /// by <see cref="BinarySerializer.WriteListContent{T}(int, IEnumerable{T}, ITypeSerializationDriver{T}).
-        /// </summary>
-        /// <typeparam name="T">Type of the item.</typeparam>
-        /// <param name="itemDeserialization">Item deserializer. Must not be null.</param>
-        /// <returns>The object array.</returns>
-        public T[] ReadArray<T>( IDeserializationDriver<T> itemDeserialization )
+        public T Read<T>( IDeserializationDriver<T> driver )
         {
-            if( itemDeserialization == null ) throw new ArgumentNullException( nameof( itemDeserialization ) );
-            int len = ReadSmallInt32();
-            if( len == -1 ) return null;
-            if( len == 0 ) return Array.Empty<T>();
-
-            var result = new T[len];
-            if( ReadBoolean() )
+            if( driver == null ) throw new ArgumentNullException( nameof( driver ) );
+            var b = (SerializationMarker)ReadByte();
+            switch( b )
             {
-                for( int i = 0; i < len; ++i ) result[i] = itemDeserialization.ReadInstance( this, null );
+                case SerializationMarker.Null: return default( T );
+                case SerializationMarker.Reference: return (T)ReadReference();
+                case SerializationMarker.EmptyObject:
+                    {
+                        var o = new object();
+                        _objects.Add( o );
+                        return (T)o;
+                    }
+                case SerializationMarker.Object:
+                case SerializationMarker.Struct:
+                    {
+                        return driver.ReadInstance( this, null );
+                    }
+                case SerializationMarker.ObjectBinaryFormatter:
+                case SerializationMarker.StructBinaryFormatter:
+                    {
+                        if( _binaryFormatter == null ) _binaryFormatter = new BinaryFormatter();
+                        object result = _binaryFormatter.Deserialize( BaseStream );
+                        if( b == SerializationMarker.ObjectBinaryFormatter ) _objects.Add( result );
+                        return (T)result;
+                    }
+                default: throw new InvalidDataException();
             }
-            else
-            {
-                for( int i = 0; i < len; ++i ) result[i] = (T)ReadObject();
-            }
-            return result;
         }
 
-        /// <summary>
-        /// Reads a list of objects that have been previously written
-        /// by <see cref="BinarySerializer.WriteObjects(int, System.Collections.IEnumerable)"/>.
-        /// </summary>
-        /// <returns>The object list.</returns>
-        public List<T> ReadObjectList<T>()
-        {
-            int len = ReadSmallInt32();
-            if( len == -1 ) return null;
-            if( len == 0 ) return new List<T>();
-            var r = new List<T>( len );
-            while( --len >= 0 ) r.Add( (T)ReadObject() );
-            return r;
-        }
-
-        /// <summary>
-        /// Reads a list of <typeparamref name="T"/> that have been previously written
-        /// by <see cref="BinarySerializer.WriteListContent{T}(int, IEnumerable{T}, ITypeSerializationDriver{T}).
-        /// </summary>
-        /// <typeparam name="T">Type of the item.</typeparam>
-        /// <param name="itemDeserialization">Item deserializer. Must not be null.</param>
-        /// <returns>The list.</returns>
-        public List<T> ReadList<T>( IDeserializationDriver<T> itemDeserialization )
-        {
-            if( itemDeserialization == null ) throw new ArgumentNullException( nameof( itemDeserialization ) );
-            int len = ReadSmallInt32();
-            if( len == -1 ) return null;
-            if( len == 0 ) return new List<T>();
-            var result = new List<T>( len );
-            if( ReadBoolean() )
-            {
-                for( int i = 0; i < len; ++i ) result.Add( itemDeserialization.ReadInstance( this, null ) );
-            }
-            else
-            {
-                for( int i = 0; i < len; ++i ) result.Add( (T)ReadObject() );
-            }
-            return result;
-        }
 
         TypeReadInfo ReadTypeReadInfo( bool isTrackedObject )
         {
