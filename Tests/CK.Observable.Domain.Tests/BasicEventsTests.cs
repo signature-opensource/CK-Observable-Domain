@@ -143,7 +143,7 @@ namespace CK.Observable.Domain.Tests
         static void Check( IReadOnlyList<ObservableEvent> events, params string[] e )
         {
             events.Should().HaveCount( e.Length );
-            events.Select( ev => ev.ToString() ).Should().ContainInOrder( e );
+            events.Select( ev => ev.ToString() ).Should().Contain( e );
         }
 
     }

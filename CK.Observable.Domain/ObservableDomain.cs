@@ -119,8 +119,6 @@ namespace CK.Observable
                 public readonly PropInfo Info;
                 public readonly object InitialValue;
                 public object FinalValue;
-                public PropChanged Next;
-                public PropChanged Prev;
 
                 public long Key => Info.GetObjectPropertyId( Object );
 
@@ -131,33 +129,11 @@ namespace CK.Observable
                     InitialValue = initial;
                     FinalValue = final;
                 }
-
-                public void MoveToFirst( ref PropChanged first, ref PropChanged last )
-                {
-                    Debug.Assert( first != this );
-                    Debug.Assert( Prev != null );
-                    if( Next != null )
-                    {
-                        Next.Prev = Prev;
-                    }
-                    else
-                    {
-                        Debug.Assert( last == this );
-                        last = Prev;
-                    }
-                    Prev.Next = Next;
-                    Prev = null;
-                    Next = first;
-                    first.Prev = this;
-                    first = this;
-                }
             }
 
             readonly List<ObservableEvent> _changeEvents;
             readonly Dictionary<ObservableObject,List<PropertyInfo>> _newObjects;
             readonly Dictionary<long, PropChanged> _propChanged;
-            PropChanged _firstPropChanged;
-            PropChanged _lastPropChanged;
 
             public ChangeTracker()
             {
@@ -168,8 +144,7 @@ namespace CK.Observable
 
             public IReadOnlyList<ObservableEvent> Commit( Func<string,PropInfo> ensurePropertInfo )
             {
-                PropChanged p = _lastPropChanged;
-                while( p != null )
+                foreach( var p in _propChanged.Values )
                 {
                     if( !p.Object.IsDisposed )
                     {
@@ -181,7 +156,6 @@ namespace CK.Observable
                             if( idx >= 0 ) exportables.RemoveAt( idx );
                         }
                     }
-                    p = p.Prev;
                 }
                 foreach( var kv in _newObjects )
                 {
@@ -203,7 +177,6 @@ namespace CK.Observable
                 _changeEvents.Clear();
                 _newObjects.Clear();
                 _propChanged.Clear();
-                _firstPropChanged = _lastPropChanged = null;
             }
 
             internal bool IsNewObject( ObservableObject o ) => _newObjects.ContainsKey( o );
@@ -240,30 +213,14 @@ namespace CK.Observable
             internal void OnPropertyChanged( ObservableObject o, PropInfo p, object before, object after )
             {
                 PropChanged c;
-                if( _firstPropChanged == null )
+                if( _propChanged.TryGetValue( p.GetObjectPropertyId( o ), out c ) )
                 {
-                    c = new PropChanged( o, p, before, after );
-                    _propChanged.Add( c.Key, c );
-                    _firstPropChanged = _lastPropChanged = c;
+                    c.FinalValue = after;
                 }
                 else
                 {
-                    if( _propChanged.TryGetValue( p.GetObjectPropertyId( o ), out c ) )
-                    {
-                        c.FinalValue = after;
-                        if( _firstPropChanged != c )
-                        {
-                            c.MoveToFirst( ref _firstPropChanged, ref _lastPropChanged );
-                        }
-                    }
-                    else
-                    {
-                        c = new PropChanged( o, p, before, after );
-                        _firstPropChanged.Prev = c;
-                        c.Next = _firstPropChanged;
-                        _firstPropChanged = c;
-                        _propChanged.Add( c.Key, c );
-                    }
+                    c = new PropChanged( o, p, before, after );
+                    _propChanged.Add( c.Key, c );
                 }
             }
 
