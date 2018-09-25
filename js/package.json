@@ -39,6 +39,6 @@
     "webpack-cli": "^3.1.0"
   },
   "dependencies": {
-    "@signature/json-graph-serializer": "0.0.2"
+    "@signature/json-graph-serializer": "0.0.3"
   }
 }
