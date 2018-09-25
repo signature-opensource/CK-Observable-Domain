@@ -174,7 +174,7 @@ namespace CK.Observable
                     return;
                 }
                 idxSeen = _seen.Count;
-                _seen.Add( o, _seen.Count );
+                _seen.Add( o, idxSeen );
                 if( t == typeof( object ) )
                 {
                     _target.EmitEmptyObject( idxSeen );
