@@ -31,6 +31,8 @@ namespace CK.Observable
 
         public Type Type => typeof( T );
 
+        bool IObjectExportTypeDriver.IsDefaultBehavior => false;
+
         IReadOnlyList<PropertyInfo> IObjectExportTypeDriver.ExportableProperties => Array.Empty<PropertyInfo>();
 
         void ITypeSerializationDriver.WriteTypeInformation( BinarySerializer s ) => s.WriteSimpleType( typeof( T ), _typeAlias );

@@ -95,8 +95,17 @@ namespace CK.Observable
                 return (IObjectExportTypeDriver)Activator.CreateInstance( arrayType, eDriver );
             }
             var d = AutoTypeRegistry.FindDriver( type ).ExportDriver;
-            if( d != null ) return d;
+            if( d == null || d.IsDefaultBehavior )
+            {
+                var enumerableDriver = TryCreateEnumerableExportDriver( type );
+                if( enumerableDriver != null ) d = enumerableDriver;
+            }
+            return d;
+        }
 
+        IObjectExportTypeDriver TryCreateEnumerableExportDriver( Type type )
+        {
+            IObjectExportTypeDriver d = null;
             if( typeof( System.Collections.IEnumerable ).IsAssignableFrom( type ) )
             {
                 var enumType = type.GetInterfaces().FirstOrDefault( t => t.IsGenericType
@@ -104,7 +113,7 @@ namespace CK.Observable
                 if( enumType != null )
                 {
                     var itemType = enumType.GetGenericArguments()[0];
-                    if( itemType.IsGenericType && itemType.GetGenericTypeDefinition() == typeof( KeyValuePair<,>) )
+                    if( itemType.IsGenericType && itemType.GetGenericTypeDefinition() == typeof( KeyValuePair<,> ) )
                     {
                         var kvTypes = itemType.GetGenericArguments();
                         var mapType = typeof( MapTypeExportDriver<,> ).MakeGenericType( kvTypes[0], kvTypes[1] );

@@ -20,12 +20,14 @@ namespace CK.Observable
 
         public Type BaseType => typeof( IEnumerable<KeyValuePair<TKey, TValue>> );
 
+        public bool IsDefaultBehavior => false;
+
         public IReadOnlyList<PropertyInfo> ExportableProperties => Array.Empty<PropertyInfo>();
 
         public void Export( IEnumerable<KeyValuePair<TKey, TValue>> o, int num, ObjectExporter exporter )
         {
             if( exporter == null ) throw new ArgumentNullException( nameof( exporter ) );
-            exporter.ExportMap( num, o, _keyExporter, _valueExporter );
+            exporter.ExportMap( num, o, null, null );
         }
 
         void IObjectExportTypeDriver.Export( object o, int num, ObjectExporter exporter ) => Export( (IEnumerable<KeyValuePair<TKey, TValue>>)o, num, exporter );

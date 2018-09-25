@@ -22,6 +22,8 @@ namespace CK.Observable
 
         public Type BaseType => typeof( T );
 
+        public bool IsDefaultBehavior => false;
+
         IReadOnlyList<PropertyInfo> IObjectExportTypeDriver.ExportableProperties => Array.Empty<PropertyInfo>();
 
         public void Export( object o, int num, ObjectExporter exporter ) => _underlyingType.Export( (TU)o, num, exporter );

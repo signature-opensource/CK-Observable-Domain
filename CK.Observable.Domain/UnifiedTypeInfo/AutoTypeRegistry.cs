@@ -61,6 +61,8 @@ namespace CK.Observable
 
             IReadOnlyList<PropertyInfo> IObjectExportTypeDriver.ExportableProperties => _exportableProperties;
 
+            bool IObjectExportTypeDriver.IsDefaultBehavior => _isExportable && _exporter == null && _exporterBase == null;
+
             Type IObjectExportTypeDriver.BaseType => Type;
 
             string IDeserializationDriver.AssemblyQualifiedName => _type.AssemblyQualifiedName;
@@ -169,16 +171,18 @@ namespace CK.Observable
                 }
                 else _typePath = new[] { this };
 
+                // Propagates exporterBase method if any regardless of exportability
+                // of this exact type.
+                if( _exporterBase == null )
+                {
+                    _exporterBase = baseType?._exporterBase;
+                }
                 _exportableProperties = Array.Empty<PropertyInfo>();
                 if( !Type.GetCustomAttributes<NotExportableAttribute>().Any() )
                 {
                     _isExportable = true;
                     if( _exporter == null )
                     {
-                        if( _exporterBase == null )
-                        {
-                            _exporterBase = baseType?._exporterBase;
-                        }
                         _exportableProperties = Type.GetProperties().Where( p => p.GetIndexParameters().Length == 0
                                                             && !p.GetCustomAttributes<NotExportableAttribute>().Any() )
                                                 .ToArray();

@@ -7,12 +7,20 @@ using System.Threading.Tasks;
 
 namespace CK.Observable
 {
+    /// <summary>
+    /// Export driver.
+    /// </summary>
     public interface IObjectExportTypeDriver
     {
         /// <summary>
         /// Gets the base type that this driver handles.
         /// </summary>
         Type BaseType { get; }
+
+        /// <summary>
+        /// Gets whether the export is done by exporting the <see cref="ExportableProperties"/>.
+        /// </summary>
+        bool IsDefaultBehavior { get; }
 
         /// <summary>
         /// Exports an instance.
@@ -24,7 +32,8 @@ namespace CK.Observable
 
         /// <summary>
         /// Gets the property that must be exported.
-        /// This is empty for basic types.
+        /// This is empty for basic types and for Type that has a private Export( int, <see cref="ObjectExporter"/> )
+        /// method that takes control of the export.
         /// </summary>
         IReadOnlyList<PropertyInfo> ExportableProperties { get; }
     }

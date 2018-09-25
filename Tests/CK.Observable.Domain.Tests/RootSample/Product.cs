@@ -6,29 +6,19 @@ using System.Threading.Tasks;
 
 namespace CK.Observable.Domain.Tests.RootSample
 {
-    [SerializationVersion(0)]
-    public class Product : ObservableObject
+    public class Product
     {
-        public Product()
+        public Product( string n, int p )
         {
+            Name = n;
+            Power = p;
+            ExtraData = new Dictionary<string, string>();
         }
 
-        public Product( IBinaryDeserializerContext d )
-            : base( d )
-        {
-            var r = d.StartReading();
-            ProductNumber = r.ReadInt32();
-            Name = r.ReadNullableString();
-        }
+        public string Name { get; }
 
-        void Write( BinarySerializer s )
-        {
-            s.Write( ProductNumber );
-            s.WriteNullableString( Name );
-        }
+        public int Power { get; }
 
-        public int ProductNumber { get; set; }
-
-        public string Name { get; set; }
+        public IDictionary<string,string> ExtraData { get; }
     }
 }

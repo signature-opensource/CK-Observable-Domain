@@ -60,10 +60,12 @@ namespace CK.Observable
 
         public string WriteEventsFrom( int transactionNumber )
         {
-            if( _events.Count == 0 ) return "{}";
+            if( _events.Count == 0 ) throw new InvalidOperationException( "OnTransactionCommit has not been called yet." );
             var last = _events[_events.Count - 1];
-            if( transactionNumber >= last.TransactionNumber ) return "{}";
-
+            if( transactionNumber >= last.TransactionNumber )
+            {
+                throw new InvalidOperationException( $"Transaction requested n°{transactionNumber}. Current is {last.TransactionNumber}." );
+            }
             _buffer.GetStringBuilder().Clear();
             _exporter.Target.ResetContext();
 
@@ -102,10 +104,7 @@ namespace CK.Observable
 
         void IObservableTransactionManager.OnTransactionCommit( ObservableDomain d, DateTime timeUtc, IReadOnlyList<ObservableEvent> events )
         {
-            if( events.Count > 0 )
-            {
-                _events.Add( new Event( d.TransactionSerialNumber, timeUtc, events, Export( events ) ) );
-            }
+            _events.Add( new Event( d.TransactionSerialNumber, timeUtc, events, Export( events ) ) );
             ApplyKeepDuration();
             _next?.OnTransactionCommit( d, timeUtc, events );
         }
