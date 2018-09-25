@@ -1,3 +1,4 @@
+using CK.Text;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -13,12 +14,14 @@ namespace CK.Observable
     {
         readonly JSONExportTargetOptions _options;
         readonly TextWriter _w;
+        readonly StringBuilder _buffer;
         bool _commaNeeded;
 
         public JSONExportTarget( TextWriter w, JSONExportTargetOptions options = null )
         {
             _w = w;
             _options = options ?? JSONExportTargetOptions.EmptyPrefix;
+            _buffer = new StringBuilder();
         }
 
         /// <summary>
@@ -127,9 +130,11 @@ namespace CK.Observable
         public void EmitString( string value )
         {
             if( _commaNeeded ) _w.Write( ',' );
-            _w.Write( '"' );
-            _w.Write( value.Replace( "\"", "\\\"" ) );
-            _w.Write( '"' );
+            _buffer.Clear();
+            _buffer.Append( '"' );
+            _buffer.AppendJSONEscaped( value );
+            _buffer.Append( '"' );
+            _w.Write( _buffer.ToString() );
             _commaNeeded = true;
         }
 

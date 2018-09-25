@@ -67,20 +67,23 @@ namespace CK.Observable
                 throw new InvalidOperationException( $"Transaction requested n°{transactionNumber}. Current is {last.TransactionNumber}." );
             }
             _buffer.GetStringBuilder().Clear();
-            _exporter.Target.ResetContext();
-
+            _exporter.Reset();
             _exporter.Target.EmitStartObject( -1, ObjectExportedKind.Object );
             _exporter.Target.EmitPropertyName( "N" );
             _exporter.Target.EmitInt32( last.TransactionNumber );
             _exporter.Target.EmitPropertyName( "E" );
             _buffer.Write( "[" );
-            bool atLeastOne = false;
-            foreach( var e in _events )
+            if( last.TransactionNumber == transactionNumber )
             {
-                if( e.TransactionNumber <= transactionNumber ) continue;
-                if( atLeastOne ) _buffer.Write( "," );
-                atLeastOne = true;
-                _buffer.Write( e.ExportedEvents );
+                _buffer.Write( last.ExportedEvents );
+            }
+            else
+            {
+                foreach( var e in _events )
+                {
+                    if( e.TransactionNumber <= transactionNumber ) continue;
+                    foreach( var ev in e.Events ) ev.Export( _exporter );
+                }
             }
             _buffer.Write( "]" );
             _exporter.Target.EmitEndObject( -1, ObjectExportedKind.Object );
@@ -104,20 +107,12 @@ namespace CK.Observable
 
         void IObservableTransactionManager.OnTransactionCommit( ObservableDomain d, DateTime timeUtc, IReadOnlyList<ObservableEvent> events )
         {
-            _events.Add( new Event( d.TransactionSerialNumber, timeUtc, events, Export( events ) ) );
+            _buffer.GetStringBuilder().Clear();
+            _exporter.Reset();
+            foreach( var e in events ) e.Export( _exporter );
+            _events.Add( new Event( d.TransactionSerialNumber, timeUtc, events, _buffer.ToString() ) );
             ApplyKeepDuration();
             _next?.OnTransactionCommit( d, timeUtc, events );
-        }
-
-        string Export( IReadOnlyList<ObservableEvent> events )
-        {
-            _buffer.GetStringBuilder().Clear();
-            _exporter.Target.ResetContext();
-            foreach( var e in events )
-            {
-                e.Export( _exporter );
-            }
-            return _buffer.ToString();
         }
 
         void IObservableTransactionManager.OnTransactionFailure( ObservableDomain d, IReadOnlyList<CKExceptionData> errors )
