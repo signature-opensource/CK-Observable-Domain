@@ -142,7 +142,7 @@ export class ObservableDomain {
 
     private getValue(o: any) {
         if (o != null) {
-            var ref = o[">"];
+            var ref = o["="];
             if (ref !== undefined) return this._graph[ref];
         }
         return o;

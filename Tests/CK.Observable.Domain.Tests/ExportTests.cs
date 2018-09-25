@@ -139,7 +139,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void exporting_and_altering_ApplicatinState()
         {
-            var eventCollector = new TransactionEventCollector();
+            var eventCollector = new TransactionEventCollector( new SecureInMemoryTransactionManager() );
 
             var d = new ObservableDomain<RootSample.ApplicationState>( eventCollector );
             d.Modify( () =>
@@ -147,41 +147,44 @@ namespace CK.Observable.Domain.Tests
                 var p1 = new RootSample.Product( "Name n°1", 12 );
                 p1.ExtraData.Add( "Toto", "TVal" );
                 p1.ExtraData.Add( "Tata", "TVal" );
-                d.Root.Products.Add( new RootSample.ProductState( p1 ) { Name = "Product n°1" } );
+                d.Root.Products.Add( p1.Name, p1 );
+                d.Root.ProductStateList.Add( new RootSample.ProductState( p1 ) { Name = "Product n°1" } );
+                d.Root.CurrentProductState = d.Root.ProductStateList[0];
             } );
-            d.Root.Products[0].GetOId().Should().Be( 4, "Product n°1 OId is 4." );
+            d.Root.ProductStateList[0].GetOId().Should().Be( 6, "Product n°1 OId is 6." );
             d.TransactionSerialNumber.Should().Be( 1 );
 
             string initial = d.ExportToString();
-            initial.Should().ContainAll( "Name n°1", "Product n°1", @"""CurrentProduct"":null" );
+            initial.Should().ContainAll( "Name n°1", "Product n°1", @"""CurrentProductState"":{"">"":7}" );
             initial.Should().Contain( @"[""Toto"",""TVal""]" );
             initial.Should().Contain( @"[""Tata"",""TVal""]" );
             d.Modify( () =>
             {
                 var p2 = new RootSample.Product( "Name n°2", 22 );
+                d.Root.Products.Add( p2.Name, p2 );
                 p2.ExtraData.Add( "Ex2", ">>Ex2" );
-                d.Root.Products.Add( new RootSample.ProductState( p2 ) { Name = "Product n°2" } );
-                d.Root.CurrentProduct = d.Root.Products[1];
+                d.Root.ProductStateList.Add( new RootSample.ProductState( p2 ) { Name = "Product n°2" } );
+                d.Root.CurrentProductState = d.Root.ProductStateList[1];
             } );
-            d.Root.Products[1].GetOId().Should().Be( 3, "Product n°2 OId is 3." );
+            d.Root.ProductStateList[1].GetOId().Should().Be( 5, "Product n°2 OId is 5." );
 
             string t1 = eventCollector.WriteEventsFrom( 1 );
-            // p2 is the object n°3.
-            t1.Should().Contain( @"[""N"",3,""""]" );
+            // p2 is the object n°5.
+            t1.Should().Contain( @"[""N"",5,""""]" );
             // p2.ExtraData is exported as a Map.
             t1.Should().Contain( @"[""Ex2"","">>Ex2""]" );
             // ApplicationState.CurrentProduct is p2:
-            t1.Should().Contain( @"[""C"",0,3,{"">"":3}]" );
+            t1.Should().Contain( @"[""C"",0,1,{""="":5}]" );
 
             d.Modify( () =>
             {
-                d.Root.CurrentProduct.Name.Should().Be( "Product n°2" );
+                d.Root.CurrentProductState.Name.Should().Be( "Product n°2" );
                 d.Root.SkipToNextProduct();
-                d.Root.CurrentProduct.Name.Should().Be( "Product n°1" );
+                d.Root.CurrentProductState.Name.Should().Be( "Product n°1" );
             } );
             string t2 = eventCollector.WriteEventsFrom( 2 );
             // Switch to Product n°1 (OId is 4).
-            t2.Should().Contain( @"[""C"",0,3,{"">"":4}]" );
+            t2.Should().Contain( @"[""C"",0,1,{""="":6}]" );
         }
 
     }

@@ -14,8 +14,6 @@ namespace CK.Observable
 
         public DictionarySerializer( ITypeSerializationDriver<TKey> key, ITypeSerializationDriver<TValue> value )
         {
-            if( key == null ) throw new ArgumentNullException( nameof( key ) );
-            if( value == null ) throw new ArgumentNullException( nameof( value ) );
             _key = key;
             _value = value;
         }

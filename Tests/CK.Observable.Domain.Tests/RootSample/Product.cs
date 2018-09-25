@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace CK.Observable.Domain.Tests.RootSample
 {
+    [Serializable]
     public class Product
     {
         public Product( string n, int p )

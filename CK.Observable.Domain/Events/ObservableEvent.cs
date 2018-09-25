@@ -58,7 +58,7 @@ namespace CK.Observable
             if( o is ObservableObject obs )
             {
                 e.Target.EmitStartObject( -1, ObjectExportedKind.Object );
-                e.Target.EmitPropertyName( ">" );
+                e.Target.EmitPropertyName( "=" );
                 e.Target.EmitInt32( obs.OId );
                 e.Target.EmitEndObject( -1, ObjectExportedKind.Object );
             }
