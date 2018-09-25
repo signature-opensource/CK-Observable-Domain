@@ -1,6 +1,6 @@
 {
   "name": "@signature/ck-observable-domain",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "CK-Observable-Domain client implementation using json-graph-serializer",
   "main": "dist/ck-observable-domain.js",
   "module": "dist/ck-observable-domain.js",
@@ -13,14 +13,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://invenietis.visualstudio.com/DefaultCollection/CK/_git/CK-Observable-Domain"
+    "url": "git+https://dev.azure.com/invenietis/DefaultCollection/CK/_git/CK-Observable-Domain"
   },
   "author": "Signature Code",
   "license": "UNLICENSED",
   "bugs": {
-    "url": "https://invenietis.visualstudio.com/CK/_workitems/create/bug"
+    "url": "https://dev.azure.com/invenietis/CK/_workitems/create/bug"
   },
-  "homepage": "https://invenietis.visualstudio.com/CK/_git/CK-Observable-Domain",
+  "homepage": "https://dev.azure.com/invenietis/CK/_git/CK-Observable-Domain",
   "devDependencies": {
     "@babel/cli": "^7.0.0",
     "@babel/core": "^7.0.0",
