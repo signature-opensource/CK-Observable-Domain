@@ -634,10 +634,6 @@ namespace CK.Observable
                     _roots.Add( _objects[r.ReadNonNegativeSmallInt32()] as ObservableRootObject );
                 }
             }
-            catch( Exception ex )
-            {
-                Monitor.Fatal( $"While loading Domain n°{DomainNumber}", ex );
-            }
             finally
             {
                 _deserializing = false;

@@ -65,6 +65,43 @@ namespace CK.Observable.Domain.Tests
             BinarySerializer.IdempotenceCheck( d.Root, services );
         }
 
+        //[Test]
+        //public void serialization_test_of_NotificationState()
+        //{
+        //    var od = new ObservableDomain<Signature.Process.Dispatching.NotificationState>();
+        //    od.Modify( () =>
+        //    {
+        //        od.Root.BarcodeScanner.UpdateOnScan( "aaa", null );
+        //    } );
+
+        //    var od2 = SaveAndLoad( od );
+
+        //    var services = new SimpleServiceContainer();
+        //    var domain = new ObservableDomain<Signature.Process.Dispatching.NotificationState>();
+        //    services.Add( domain );
+        //    services.Add<ObservableDomain>( domain );
+        //    BinarySerializer.IdempotenceCheck( od.Root.BarcodeScanner, services );
+        //}
+
+        //[Test]
+        //public void SerializationTest_2()
+        //{
+        //    Signature.Process.Dispatching.BarcodeScannerState bs = null;
+
+        //    var od = new ObservableDomain();
+        //    od.Modify( () =>
+        //    {
+        //        bs = new Signature.Process.Dispatching.BarcodeScannerState();
+        //        bs.UpdateOnScan( "aaa", null );
+        //    } );
+
+        //    var services = new SimpleServiceContainer();
+        //    services.Add( new ObservableDomain() );
+
+        //    BinarySerializer.IdempotenceCheck( bs, services );
+        //}
+
+
         static ObservableDomain<T> SaveAndLoad<T>( ObservableDomain<T> domain ) where T : ObservableRootObject
         {
             using( var s = new MemoryStream() )

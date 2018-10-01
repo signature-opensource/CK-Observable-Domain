@@ -13,7 +13,7 @@ namespace CK.Observable
 
         public ListDeserializer( IDeserializationDriver<T> item )
         {
-            Debug.Assert( item != null );
+            if( item == null ) throw new ArgumentException( $"Type {typeof(T)} seems to be not serializable." );
             _item = item;
         }
 

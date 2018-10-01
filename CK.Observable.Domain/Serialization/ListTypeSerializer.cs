@@ -13,7 +13,6 @@ namespace CK.Observable
 
         public ListTypeSerializer( ITypeSerializationDriver<T> itemSerializer )
         {
-            Debug.Assert( itemSerializer != null );
             _itemSerializer = itemSerializer;
         }
 
