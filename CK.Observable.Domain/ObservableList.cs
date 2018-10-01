@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace CK.Observable
 {
-    [SerializationVersionAttribute(0)]
+    [SerializationVersion(0)]
     public class ObservableList<T> : ObservableObject, IList<T>, IReadOnlyList<T>
     {
         readonly List<T> _list;
