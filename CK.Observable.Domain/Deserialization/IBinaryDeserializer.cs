@@ -19,7 +19,7 @@ namespace CK.Observable
         /// Reads an object previously written by <see cref="BinarySerializer.WriteObject(object)"/>.
         /// </summary>
         /// <returns>The object read, possibly in an intermediate state.</returns>
-        object ReadObject( int idxOffset = 0 );
+        object ReadObject();
 
         /// <summary>
         /// Reads an object previously written by <see cref="BinarySerializer.Write{T}(T,ITypeSerializationDriver{T})"/>.

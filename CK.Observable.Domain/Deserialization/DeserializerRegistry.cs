@@ -133,7 +133,6 @@ namespace CK.Observable
                 var arrayType = typeof( ArrayDeserializer<> ).MakeGenericType( eType );
                 return (IDeserializationDriver)Activator.CreateInstance( arrayType, eDriver );
             }
-
             var d = AutoTypeRegistry.FindDriver( type ).DeserializationDriver;
             if( d != null ) return d;
 

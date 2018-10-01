@@ -257,12 +257,15 @@ namespace CK.Observable
                     using( var r = new BinaryDeserializer( s, services, null ) )
                     {
                         var o2 = r.ReadObject();
-                        s.Position = 0;
-                        w.WriteObject( o2 );
-                        var rewriteBytes = s.ToArray();
-                        if( !originalBytes.SequenceEqual( rewriteBytes ) )
+                        using( var s2 = new MemoryStream() )
+                        using( var w2 = new BinarySerializer( s2, null, true ) )
                         {
-                            throw new Exception( "Reserialized bytes differ from original serialized bytes." );
+                            w2.WriteObject( o2 );
+                            var rewriteBytes = s2.ToArray();
+                            if( !originalBytes.SequenceEqual( rewriteBytes ) )
+                            {
+                                throw new Exception( "Reserialized bytes differ from original serialized bytes." );
+                            }
                         }
                     }
                 }

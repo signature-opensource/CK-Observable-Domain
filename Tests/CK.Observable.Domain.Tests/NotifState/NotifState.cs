@@ -71,13 +71,28 @@ namespace Signature.Process.Dispatching
         }
 
     }
+
+    [SerializationVersion(0)]
     public class Notification<T> : ObservableObject
     {
         public Notification( T body )
         {
             Body = body;
         }
+
+        public Notification( IBinaryDeserializerContext d )
+        {
+            var r = d.StartReading();
+            Body = (T)r.ReadObject();
+        }
+
+        void Write( BinarySerializer w )
+        {
+            w.WriteObject( Body );
+        }
+
         public string Id { get; } = Guid.NewGuid().ToString( "N" );
+
         public T Body { get; }
     }
 
@@ -167,35 +182,52 @@ namespace Signature.Process.Dispatching
         }
 
     }
-        public class DispatchProductResult
-        {
-            public DispatchProductResultType DispatchProductResultType { get; }
-            public string ProductId { get; }
-            public ObservableList<string> OrdersWithProduct { get; }
 
-            public DispatchProductResult( DispatchProductResultType dispatchProductResultType, string productId = null, IEnumerable<string> ordersWithProduct = null )
+    [SerializationVersion(0)]
+    public class DispatchProductResult
+    {
+        public DispatchProductResultType DispatchProductResultType { get; }
+        public string ProductId { get; }
+        public ObservableList<string> OrdersWithProduct { get; }
+
+        public DispatchProductResult( DispatchProductResultType dispatchProductResultType, string productId = null, IEnumerable<string> ordersWithProduct = null )
+        {
+            DispatchProductResultType = dispatchProductResultType;
+            ProductId = productId;
+            if( ordersWithProduct != null )
             {
-                DispatchProductResultType = dispatchProductResultType;
-                ProductId = productId;
-                if( ordersWithProduct != null )
-                {
-                    OrdersWithProduct = new ObservableList<string>();
-                    OrdersWithProduct.AddRange( ordersWithProduct );
-                }
+                OrdersWithProduct = new ObservableList<string>();
+                OrdersWithProduct.AddRange( ordersWithProduct );
             }
-
-            public bool Success
-                => DispatchProductResultType == DispatchProductResultType.Success;
         }
 
-        public enum DispatchProductResultType
+        public DispatchProductResult( IBinaryDeserializerContext d )
         {
-            Success = 0,
-            ProductNotFound = 1,
-            ProductNotAccepted = 2,
-            NoEligibleOrders = 3,
-            NoFreeBox = 4,
-            SelectedBoxInUse = 5,
+            var r = d.StartReading();
+            DispatchProductResultType = (DispatchProductResultType)r.ReadObject();
+            ProductId = r.ReadNullableString();
+            OrdersWithProduct = (ObservableList<string>)r.ReadObject();
         }
+
+        void Write( BinarySerializer w )
+        {
+            w.WriteObject( DispatchProductResultType );
+            w.WriteNullableString( ProductId );
+            w.WriteObject( OrdersWithProduct );
+        }
+
+        public bool Success
+            => DispatchProductResultType == DispatchProductResultType.Success;
+    }
+
+    public enum DispatchProductResultType
+    {
+        Success = 0,
+        ProductNotFound = 1,
+        ProductNotAccepted = 2,
+        NoEligibleOrders = 3,
+        NoFreeBox = 4,
+        SelectedBoxInUse = 5,
+    }
 
 }

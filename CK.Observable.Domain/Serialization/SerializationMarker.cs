@@ -8,7 +8,8 @@ namespace CK.Observable
 {
     enum SerializationMarker : byte
     {
-        Null,
+        Null = 0,
+        Reference = 1,
         String,
         Int32,
         Double,
@@ -21,7 +22,6 @@ namespace CK.Observable
         TimeSpan,
         DateTimeOffset,
 
-        Reference = 250,
         EmptyObject = 251,
         StructBinaryFormatter = 252,
         ObjectBinaryFormatter = 253,

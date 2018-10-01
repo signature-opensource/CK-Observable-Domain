@@ -132,7 +132,7 @@ namespace CK.Observable
         /// Reads an object previously written by <see cref="BinarySerializer.WriteObject(object)"/>.
         /// </summary>
         /// <returns>The object read, possibly in an intermediate state.</returns>
-        public object ReadObject( int idxOffset = 0 )
+        public object ReadObject()
         {
             var b = (SerializationMarker)ReadByte();
             switch( b )
@@ -167,12 +167,7 @@ namespace CK.Observable
                 result = _binaryFormatter.Deserialize( BaseStream );
                 if( b == SerializationMarker.ObjectBinaryFormatter )
                 {
-                    if( idxOffset != 0 )
-                    {
-                        if( idxOffset < 0 ) throw new ArgumentException();
-                        _objects.Insert( _objects.Count - idxOffset, result );
-                    }
-                    else _objects.Add( result );
+                    _objects.Add( result );
                 }
             }
             else 
