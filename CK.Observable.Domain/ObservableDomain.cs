@@ -17,7 +17,7 @@ namespace CK.Observable
     {
         /// <summary>
         /// An artificial <see cref="CKExceptionData"/> that is added to
-        /// <see cref="IObservableTransaction.Errors"/> xhenever a tranasaction
+        /// <see cref="IObservableTransaction.Errors"/> whenever a transaction
         /// has not been committed.
         /// </summary>
         public static readonly CKExceptionData UncomittedTransaction = new CKExceptionData("Uncommitted transaction.", "Not.An.Exception", "Not.An.Exception, No.Assembly", null, null, null, null, null, null );

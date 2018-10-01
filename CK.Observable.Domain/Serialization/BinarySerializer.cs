@@ -244,6 +244,37 @@ namespace CK.Observable
             return info;
         }
 
+        public static bool IdempotenceCheck( object o, IServiceProvider services, bool throwOnFailure = true )
+        {
+            try
+            {
+                using( var s = new MemoryStream() )
+                using( var w = new BinarySerializer( s, null, true ) )
+                {
+                    w.WriteObject( o );
+                    var originalBytes = s.ToArray();
+                    s.Position = 0;
+                    using( var r = new BinaryDeserializer( s, services, null ) )
+                    {
+                        var o2 = r.ReadObject();
+                        s.Position = 0;
+                        w.WriteObject( o2 );
+                        var rewriteBytes = s.ToArray();
+                        if( !originalBytes.SequenceEqual( rewriteBytes ) )
+                        {
+                            throw new Exception( "Reserialized bytes differ from original serialized bytes." );
+                        }
+                    }
+                }
+                return true;
+            }
+            catch
+            {
+                if( throwOnFailure ) throw;
+            }
+            return false;
+        }
+
         // TODO: To be removed @next CK.Core version (transfered to CKBinaryWriter).
 
         /// <summary>

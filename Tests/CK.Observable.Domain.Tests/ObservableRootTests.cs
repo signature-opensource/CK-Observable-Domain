@@ -8,6 +8,7 @@ using CK.Observable.Domain.Tests.RootSample;
 using static CK.Testing.MonitorTestHelper;
 using FluentAssertions;
 using System.IO;
+using CK.Core;
 
 namespace CK.Observable.Domain.Tests
 {
@@ -44,6 +45,24 @@ namespace CK.Observable.Domain.Tests
             var d2 = SaveAndLoad( d );
             d.TransactionSerialNumber.Should().Be( 1 );
             d.Root.ToDoNumbers[0].Should().Be( 42 );
+        }
+
+        public void serialization_tests()
+        {
+            var d = new ObservableDomain<ApplicationState>();
+            d.Modify( () =>
+            {
+                d.Root.ToDoNumbers.AddRange( Enumerable.Range(10, 20) );
+                for( int i = 0; i < 30; ++i )
+                {
+                    var pInfo = new ProductInfo( $"Product Info n°{i}", i );
+                    var p = new Product( pInfo );
+                    d.Root.Products.Add( $"p{i}", pInfo );
+                }
+            } );
+            var services = new SimpleServiceContainer();
+            services.Add( new ObservableDomain<ApplicationState>() );
+            BinarySerializer.IdempotenceCheck( d.Root, services );
         }
 
         static ObservableDomain<T> SaveAndLoad<T>( ObservableDomain<T> domain ) where T : ObservableRootObject

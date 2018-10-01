@@ -13,15 +13,15 @@ namespace CK.Observable.Domain.Tests.RootSample
             : base( domain )
         {
             ToDoNumbers = new ObservableList<int>();
-            Products = new ObservableDictionary<string, Product>();
-            ProductStateList = new ObservableList<ProductState>();
+            Products = new ObservableDictionary<string, ProductInfo>();
+            ProductStateList = new ObservableList<Product>();
             // Creating products and disposing them in the ctor create holes
             // in the numbering.
             // This tests this edge case that must be handled properly.
             // Note that the current implicit domain is available.
-            var p1 = new ProductState( new Product("unused", 0 ) );
-            var p2 = new ProductState( new Product( "unused", 0 ) );
-            var p3 = new ProductState( new Product( "unused", 0 ) );
+            var p1 = new Product( new ProductInfo("unused", 0 ) );
+            var p2 = new Product( new ProductInfo( "unused", 0 ) );
+            var p3 = new Product( new ProductInfo( "unused", 0 ) );
             p1.Dispose();
             p2.Dispose();
             p3.Dispose();
@@ -32,9 +32,9 @@ namespace CK.Observable.Domain.Tests.RootSample
         {
             var r = d.StartReading();
             ToDoNumbers = (ObservableList<int>)r.ReadObject();
-            Products = (ObservableDictionary<string, Product>)r.ReadObject();
-            ProductStateList = (ObservableList<ProductState>)r.ReadObject();
-            CurrentProductState = (ProductState)r.ReadObject();
+            Products = (ObservableDictionary<string, ProductInfo>)r.ReadObject();
+            ProductStateList = (ObservableList<Product>)r.ReadObject();
+            CurrentProductState = (Product)r.ReadObject();
         }
 
         void Write( BinarySerializer s )
@@ -47,11 +47,11 @@ namespace CK.Observable.Domain.Tests.RootSample
 
         public ObservableList<int> ToDoNumbers { get; }
 
-        public ObservableDictionary<string,Product> Products { get; }
+        public ObservableDictionary<string,ProductInfo> Products { get; }
 
-        public ObservableList<ProductState> ProductStateList { get; }
+        public ObservableList<Product> ProductStateList { get; }
 
-        public ProductState CurrentProductState { get; set; }
+        public Product CurrentProductState { get; set; }
 
         public void SkipToNextProduct()
         {

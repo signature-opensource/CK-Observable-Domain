@@ -144,11 +144,11 @@ namespace CK.Observable.Domain.Tests
             var d = new ObservableDomain<RootSample.ApplicationState>( eventCollector );
             d.Modify( () =>
             {
-                var p1 = new RootSample.Product( "Name n°1", 12 );
+                var p1 = new RootSample.ProductInfo( "Name n°1", 12 );
                 p1.ExtraData.Add( "Toto", "TVal" );
                 p1.ExtraData.Add( "Tata", "TVal" );
                 d.Root.Products.Add( p1.Name, p1 );
-                d.Root.ProductStateList.Add( new RootSample.ProductState( p1 ) { Name = "Product n°1" } );
+                d.Root.ProductStateList.Add( new RootSample.Product( p1 ) { Name = "Product n°1" } );
                 d.Root.CurrentProductState = d.Root.ProductStateList[0];
             } );
             d.Root.ProductStateList[0].GetOId().Should().Be( 6, "Product n°1 OId is 6." );
@@ -160,10 +160,10 @@ namespace CK.Observable.Domain.Tests
             initial.Should().Contain( @"[""Tata"",""TVal""]" );
             d.Modify( () =>
             {
-                var p2 = new RootSample.Product( "Name n°2", 22 );
+                var p2 = new RootSample.ProductInfo( "Name n°2", 22 );
                 d.Root.Products.Add( p2.Name, p2 );
                 p2.ExtraData.Add( "Ex2", ">>Ex2" );
-                d.Root.ProductStateList.Add( new RootSample.ProductState( p2 ) { Name = "Product n°2" } );
+                d.Root.ProductStateList.Add( new RootSample.Product( p2 ) { Name = "Product n°2" } );
                 d.Root.CurrentProductState = d.Root.ProductStateList[1];
             } );
             d.Root.ProductStateList[1].GetOId().Should().Be( 5, "Product n°2 OId is 5." );

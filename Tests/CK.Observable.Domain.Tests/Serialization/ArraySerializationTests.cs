@@ -48,5 +48,6 @@ namespace CK.Serialization.Tests
                 }
             }
         }
+
     }
 }

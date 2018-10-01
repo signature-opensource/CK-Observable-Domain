@@ -7,30 +7,30 @@ using System.Threading.Tasks;
 namespace CK.Observable.Domain.Tests.RootSample
 {
     [SerializationVersion(0)]
-    public class ProductState : ObservableObject
+    public class Product : ObservableObject
     {
-        public ProductState( Product p )
+        public Product( ProductInfo p )
         {
-            Product = p;
+            ProductInfo = p;
         }
 
-        public ProductState( IBinaryDeserializerContext d )
+        public Product( IBinaryDeserializerContext d )
             : base( d )
         {
             var r = d.StartReading();
             ProductNumber = r.ReadInt32();
             Name = r.ReadNullableString();
-            Product = (Product)r.ReadObject();
+            ProductInfo = (ProductInfo)r.ReadObject();
         }
 
         void Write( BinarySerializer s )
         {
             s.Write( ProductNumber );
             s.WriteNullableString( Name );
-            s.WriteObject( Product );
+            s.WriteObject( ProductInfo );
         }
 
-        public Product Product { get; } 
+        public ProductInfo ProductInfo { get; } 
 
         public int ProductNumber { get; set; }
 
