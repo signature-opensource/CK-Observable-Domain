@@ -28,6 +28,13 @@ namespace CK.Observable.Domain.Tests
             var c = d2.AllObjects.OfType<Car>().Single();
             c.Name.Should().Be( "Hello" );
             c.Speed.Should().Be( 10 );
+
+            var events = d2.Modify( () =>
+            {
+                c.Speed = 10000;
+            } );
+            events.Should().HaveCount( 1 );
+
         }
 
         [Test]

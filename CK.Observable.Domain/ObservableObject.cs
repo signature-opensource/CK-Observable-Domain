@@ -36,6 +36,7 @@ namespace CK.Observable
             var r = d.StartReading();
             Debug.Assert( r.CurrentReadInfo.Version == 0 );
             Domain = r.Services.GetService<ObservableDomain>( throwOnNull: true );
+            _exporter = Domain._exporters.FindDriver( GetType() );
             _id = r.ReadInt32();
             Debug.Assert( _id >= 0 );
         }
