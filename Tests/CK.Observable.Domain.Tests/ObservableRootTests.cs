@@ -102,7 +102,7 @@ namespace CK.Observable.Domain.Tests
         }
 
 
-        static ObservableDomain<T> SaveAndLoad<T>( ObservableDomain<T> domain ) where T : ObservableRootObject
+        internal static ObservableDomain<T> SaveAndLoad<T>( ObservableDomain<T> domain ) where T : ObservableRootObject
         {
             using( var s = new MemoryStream() )
             {
