@@ -23,6 +23,11 @@ namespace CK.Observable
         {
         }
 
+        public void Export( int num, ObjectExporter exporter )
+        {
+            exporter.ExportList( num, Array.Empty<T>() );
+        }
+
         internal override ObjectExportedKind ExportedKind => ObjectExportedKind.List;
 
         public void Send( T item )
