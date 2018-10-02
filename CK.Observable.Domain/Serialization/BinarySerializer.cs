@@ -182,7 +182,11 @@ namespace CK.Observable
             SerializationMarker marker;
             Type t = o.GetType();
             int idxSeen = -1;
-            if( t.IsClass )
+            // This is awful. Drivers need to be the actual handler of the full
+            // serialization/deserialization process, including instance tracking,
+            // regardless of the struct/class kind of the objects.
+            // New object pools from CK.Core should definitly help for this.
+            if( t.IsClass && t != typeof(string) )
             {
                 if( _seen.TryGetValue( o, out var num ) )
                 {
