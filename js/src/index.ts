@@ -59,7 +59,7 @@ export class ObservableDomain {
         if (this._tranNum + 1 !== event.N) {
             throw new Error(`Invalid transaction number. Expected: ${this._tranNum + 1}, got ${event.N}.`);
         }
-
+        const deleted = new Set();
         const events = event.E;
         for (let i = 0; i < events.length; ++i) {
             const e = events[i];
@@ -75,13 +75,14 @@ export class ObservableDomain {
                             case "S": newOne = new Set(); break;
                             default: throw new Error(`Unexpected Object type; ${e[2]}. Must be A, M, S or empty string.`);
                         }
+                        deleted.delete(e[1]);
                         this._graph[e[1]] = newOne;
                         this._objCount++;
                         break;
                     }
                 case "D": // DisposedObject
                     {
-                        this._graph[e[1]] = null;
+                        deleted.add(e[1]);
                         this._objCount--;
                         break;
                     }
@@ -137,6 +138,7 @@ export class ObservableDomain {
                 default: throw new Error(`Unexpected Event code: '${e[0]}'.`);
             }
         }
+        deleted.forEach( id => this._graph[id] = null );
         this._tranNum = event.N;
     }
 
