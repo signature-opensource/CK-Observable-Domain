@@ -21,12 +21,13 @@ In your favorite TS script:
 
 ```ts
 import { ObservableDomain, ObservableDomainEvent, ObservableDomainState } from "@signature/ck-observable-domain";
+import { deserialize } from "@signature/json-graph-serializer";
 
 const initialState: ObservableDomainState = myStateRepository.getCurrentState();
 // initialState can also be a string; it will be deserialized using @signature/json-graph-serializer.
-const observableDomain: ObservableDomain = new ObservableDomain(initial);
+const observableDomain: ObservableDomain = new ObservableDomain(initialState);
 
-// Events can't be strings, however, but you can deserialize then using JSON.parse().
+// Events can be deserialized to ObservableDomainEvents using @signature/json-graph-serializer.
 myStateRepository.onStateEvent((evt: ObservableDomainEvent) => {
     observableDomain.applyEvent(evt);
     // If you're missing events (evt.N > (observableDomain.transactionNumber + 1)),
