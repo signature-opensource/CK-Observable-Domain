@@ -6,8 +6,12 @@ using Cake.Core.Diagnostics;
 using Cake.Core.IO;
 using Cake.Npm;
 using Cake.Npm.Publish;
+using CK.Text;
 using CodeCakeBuilder;
 using SimpleGitVersion;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 
 namespace CodeCake
@@ -88,8 +92,6 @@ namespace CodeCake
                      SignaturePushNuGetPackages( Cake.GetFiles( releasesDir.Path + "/*.nupkg" ), gitInfo );
                  } );
 
-
-
             Task( "Npm-Process" )
                 .IsDependentOn( "Check-Repository" )
                 .IsDependentOn( "Clean" )
@@ -126,13 +128,26 @@ namespace CodeCake
 
                         if( gitInfo.IsValid )
                         {
+                            string packageJsonContents = File.ReadAllText( Cake.File( "js/package.json" ) );
+                            StringMatcher sm = new StringMatcher( packageJsonContents, 0 );
+
+                            Trace.Assert( sm.MatchJSONObject( out object o ) );
+
+                            var l = (List<KeyValuePair<string, object>>)o;
+
+                            string packageName = (string)l.First( kvp => kvp.Key == "name" ).Value;
+                            string packageVersion = (string)l.First( kvp => kvp.Key == "version" ).Value;
+
+
                             string tag;
+                            bool makeLatest = false;
                             if( gitInfo.IsValidRelease )
                             {
                                 if( gitInfo.PreReleaseName.Length == 0 )
                                 {
                                     // 1.0.0
-                                    tag = "latest"; // This ensures NPM gives this package by default
+                                    tag = "stable";
+                                    makeLatest = true;
                                 }
                                 else if(
                                     gitInfo.PreReleaseName == "prerelease"
@@ -140,14 +155,14 @@ namespace CodeCake
                                 {
                                     // 1.0.0-prerelease
                                     // 1.0.0-rc
-                                    tag = "next";
+                                    tag = "latest"; // This ensures NPM gives this package by default
                                 }
                                 else
                                 {
                                     // 1.0.0-alpha
                                     // 1.0.0-beta
                                     // etc.
-                                    tag = "dev";
+                                    tag = "preview";
                                 }
                             }
                             else
@@ -157,7 +172,7 @@ namespace CodeCake
                             }
 
                             if( Cake.InteractiveMode() != InteractiveMode.Interactive
-                                || Cake.ReadInteractiveOption( "PublishNpmPackages", $"Publish to NPM repository with the NPM tag \"{tag}\"?", 'Y', 'N' ) == 'Y' )
+                                || Cake.ReadInteractiveOption( "PublishNpmPackages", $"Publish \"{packageName}@{packageVersion}\" to NPM repository with the NPM tag \"{tag}\"?", 'Y', 'N' ) == 'Y' )
                             {
                                 Cake.Information( "Publishing NPM package..." );
 
@@ -166,6 +181,11 @@ namespace CodeCake
                                         .WithTag( tag )
                                         .FromPath( Cake.Directory( "js" ) )
                                 );
+
+                                if( makeLatest )
+                                {
+                                    Cake.NpmDistTagAdd( packageName, packageVersion, "latest" );
+                                }
                             }
                         }
                         else
