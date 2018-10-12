@@ -6,6 +6,11 @@ queue:
   name: Self-hosted agent pool
 
 steps:
+- task: npmAuthenticate@0
+  displayName: 'npm Authenticate js/.npmrc'
+  inputs:
+    workingFile: js/.npmrc
+
 - task: DotNetCoreCLI@2
   inputs:
     command: restore
