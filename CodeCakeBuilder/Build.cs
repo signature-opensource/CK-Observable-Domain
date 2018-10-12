@@ -1,8 +1,12 @@
+using Cake.Common.Diagnostics;
 using Cake.Common.IO;
 using Cake.Common.Solution;
 using Cake.Core;
 using Cake.Core.Diagnostics;
 using Cake.Core.IO;
+using Cake.Npm;
+using Cake.Npm.Publish;
+using CodeCakeBuilder;
 using SimpleGitVersion;
 using System.Linq;
 
@@ -16,7 +20,7 @@ namespace CodeCake
         {
             Cake.Log.Verbosity = Verbosity.Diagnostic;
 
-            string solutionFilePath = Cake.GetFiles("*.sln").Single().FullPath;
+            string solutionFilePath = Cake.GetFiles( "*.sln" ).Single().FullPath;
 
             var releasesDir = Cake.Directory( "CodeCakeBuilder/Releases" );
             var projects = Cake.ParseSolution( solutionFilePath )
@@ -85,8 +89,96 @@ namespace CodeCake
                  } );
 
 
+
+            Task( "Npm-Process" )
+                .IsDependentOn( "Check-Repository" )
+                .IsDependentOn( "Clean" )
+                .Does( () =>
+                {
+
+                    // Provisional version management for NPM packages!
+                    using( var replacer = new PackageVersionReplacer(
+                        gitInfo,
+                        "0.0.0-version-replaced-in-CodeCakeBuilder",
+                        Cake.File( "js/package.json" ).Path.FullPath,
+                        Cake.File( "js/package-lock.json" ).Path.FullPath
+                    ) )
+                    {
+                        Cake.NpmInstall(
+                            s => s
+                                .WithLogLevel( NpmLogLevel.Warn )
+                                .FromPath( Cake.Directory( "js" ) )
+                            );
+
+                        Cake.NpmRunScript(
+                            "test",
+                            s => s
+                                .WithLogLevel( NpmLogLevel.Warn )
+                                .FromPath( Cake.Directory( "js" ) )
+                        );
+
+                        Cake.NpmRunScript(
+                            "build",
+                            s => s
+                                .WithLogLevel( NpmLogLevel.Warn )
+                                .FromPath( Cake.Directory( "js" ) )
+                        );
+
+                        if( gitInfo.IsValid )
+                        {
+                            string tag;
+                            if( gitInfo.IsValidRelease )
+                            {
+                                if( gitInfo.PreReleaseName.Length == 0 )
+                                {
+                                    // 1.0.0
+                                    tag = "latest"; // This ensures NPM gives this package by default
+                                }
+                                else if(
+                                    gitInfo.PreReleaseName == "prerelease"
+                                    || gitInfo.PreReleaseName == "rc" )
+                                {
+                                    // 1.0.0-prerelease
+                                    // 1.0.0-rc
+                                    tag = "next";
+                                }
+                                else
+                                {
+                                    // 1.0.0-alpha
+                                    // 1.0.0-beta
+                                    // etc.
+                                    tag = "dev";
+                                }
+                            }
+                            else
+                            {
+                                // CI build
+                                tag = "ci";
+                            }
+
+                            if( Cake.InteractiveMode() != InteractiveMode.Interactive
+                                || Cake.ReadInteractiveOption( "PublishNpmPackages", $"Publish to NPM repository with the NPM tag \"{tag}\"?", 'Y', 'N' ) == 'Y' )
+                            {
+                                Cake.Information( "Publishing NPM package..." );
+
+                                Cake.NpmPublish(
+                                    s => s
+                                        .WithTag( tag )
+                                        .FromPath( Cake.Directory( "js" ) )
+                                );
+                            }
+                        }
+                        else
+                        {
+                            Cake.Warning( "Skipping npm publish: No valid version" );
+                        }
+                    }
+                } );
+
+
             // The Default task for this script can be set here.
             Task( "Default" )
+                .IsDependentOn( "Npm-Process" )
                 .IsDependentOn( "Push-NuGet-Packages" );
         }
 
