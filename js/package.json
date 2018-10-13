@@ -2,15 +2,14 @@
   "name": "@signature/ck-observable-domain",
   "version": "0.0.0-version-replaced-in-CodeCakeBuilder",
   "description": "CK-Observable-Domain client implementation using json-graph-serializer",
-  "main": "dist/ck-observable-domain.js",
-  "module": "dist/ck-observable-domain.js",
-  "types": "src/index.d.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "files": [
     "dist/**/*"
   ],
   "scripts": {
     "test": "mocha -r ts-node/register test/**/*.ts",
-    "build": "webpack",
+    "build": "tsc",
     "preversion": "npm test",
     "version": "npm run build"
   },
@@ -32,14 +31,10 @@
     "@types/chai": "^4.1.4",
     "@types/mocha": "^5.2.5",
     "@types/node": "^10.9.4",
-    "awesome-typescript-loader": "^5.2.1",
-    "babel-loader": "^8.0.2",
     "chai": "^4.1.2",
     "mocha": "^5.2.0",
     "ts-node": "^7.0.1",
-    "typescript": "^3.0.3",
-    "webpack": "^4.17.2",
-    "webpack-cli": "^3.1.0"
+    "typescript": "^3.0.3"
   },
   "dependencies": {
     "@signature/json-graph-serializer": "0.0.3"
