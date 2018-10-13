@@ -5,6 +5,9 @@
   "main": "dist/ck-observable-domain.js",
   "module": "dist/ck-observable-domain.js",
   "types": "src/index.d.ts",
+  "files": [
+    "dist/**/*"
+  ],
   "scripts": {
     "test": "mocha -r ts-node/register test/**/*.ts",
     "build": "webpack",
