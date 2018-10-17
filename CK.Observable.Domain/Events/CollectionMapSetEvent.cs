@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace CK.Observable
 {
-    public class CollectionMapSetEvent : ObservableEvent
+    public class CollectionMapSetEvent : ObservableEvent, ICollectionEvent
     {
         public int ObjectId { get; }
 

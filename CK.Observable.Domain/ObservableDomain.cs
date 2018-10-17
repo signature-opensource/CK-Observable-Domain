@@ -143,6 +143,7 @@ namespace CK.Observable
 
             public IReadOnlyList<ObservableEvent> Commit( Func<string, PropInfo> ensurePropertInfo )
             {
+                _changeEvents.RemoveAll( e => e is ICollectionEvent c && c.Object.IsDisposed );
                 foreach( var p in _propChanged.Values )
                 {
                     if( !p.Object.IsDisposed )

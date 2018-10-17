@@ -1,3 +1,4 @@
+using FluentAssertions;
 using NUnit.Framework;
 
 namespace CK.Observable.Domain.Tests
@@ -23,11 +24,51 @@ namespace CK.Observable.Domain.Tests
             ObservableRootTests.SaveAndLoad( od );
         }
 
+        [Test]
+        public void created_then_disposed_event_test()
+        {
+            var od = new ObservableDomain<CustomRoot>();
+
+            // Prepare initial state
+            od.Modify( () =>
+            {
+                od.Root.CustomObservableList = new ObservableList<CustomObservable>();
+            } );
+
+            var initialState = od.ExportToString();
+
+            // Add some events for good measure
+            var events = od.Modify( () =>
+            {
+                // Create Observable and Immutables
+                var myImmutable = new CustomImmutable( "ABC000", "My object" );
+                var myCustomObservable = new CustomObservable();
+
+                // Set Immutable in Dictionary of Observable
+                myCustomObservable.ImmutablesById.Add( myImmutable.Id, myImmutable );
+
+                // Add observable to List of Root
+                od.Root.CustomObservableList.Add( myCustomObservable );
+
+                // Destroy Dictionary of Observable
+                myCustomObservable.ImmutablesById.Dispose();
+
+                // Destroy Observable
+                myCustomObservable.Dispose();
+
+                // Remove Observable from List of Root
+                bool removed = od.Root.CustomObservableList.Remove( myCustomObservable );
+                removed.Should().BeTrue();
+            } );
+
+        }
+
         [SerializationVersion( 0 )]
         public class CustomRoot : ObservableRootObject
         {
             public ObservableDictionary<string, CustomImmutable> ImmutablesById { get; set; }
             public ObservableList<string> SomeList { get; set; }
+            public ObservableList<CustomObservable> CustomObservableList { get; set; }
 
             protected CustomRoot( ObservableDomain domain ) : base( domain )
             {
@@ -38,12 +79,14 @@ namespace CK.Observable.Domain.Tests
                 var r = d.StartReading();
                 ImmutablesById = (ObservableDictionary<string, CustomImmutable>)r.ReadObject();
                 SomeList = (ObservableList<string>)r.ReadObject();
+                CustomObservableList = (ObservableList<CustomObservable>)r.ReadObject();
             }
 
             void Write( BinarySerializer w )
             {
                 w.WriteObject( ImmutablesById );
                 w.WriteObject( SomeList );
+                w.WriteObject( CustomObservableList );
             }
         }
 
@@ -71,6 +114,30 @@ namespace CK.Observable.Domain.Tests
             {
                 w.WriteNullableString( Id );
                 w.WriteNullableString( Title );
+            }
+
+        }
+
+        [SerializationVersion( 0 )]
+        public class CustomObservable : ObservableObject
+        {
+            public ObservableDictionary<string, CustomImmutable> ImmutablesById { get; }
+
+            public CustomObservable()
+            {
+                ImmutablesById = new ObservableDictionary<string, CustomImmutable>();
+            }
+
+            protected CustomObservable( IBinaryDeserializerContext d )
+            {
+                var r = d.StartReading();
+                ImmutablesById = (ObservableDictionary<string, CustomImmutable>)r.ReadObject();
+            }
+
+
+            void Write( BinarySerializer w )
+            {
+                w.WriteObject( ImmutablesById );
             }
 
         }
