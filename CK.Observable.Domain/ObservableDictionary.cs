@@ -1,13 +1,10 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CK.Observable
 {
-    [SerializationVersionAttribute(0)]
+    [SerializationVersionAttribute( 0 )]
     public class ObservableDictionary<TKey, TValue> : ObservableObject, IDictionary<TKey, TValue>, IReadOnlyDictionary<TKey, TValue>
     {
         readonly Dictionary<TKey, TValue> _map;
@@ -20,7 +17,7 @@ namespace CK.Observable
         protected ObservableDictionary( IBinaryDeserializerContext d ) : base( d )
         {
             var r = d.StartReading();
-            _map = (Dictionary<TKey,TValue>)r.ReadObject();
+            _map = (Dictionary<TKey, TValue>)r.ReadObject();
         }
 
         void Write( BinarySerializer s )
@@ -104,6 +101,6 @@ namespace CK.Observable
 
 
         IEnumerator IEnumerable.GetEnumerator() => _map.GetEnumerator();
-        
+
     }
 }

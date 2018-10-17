@@ -1,3 +1,4 @@
+using CK.Core;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -8,8 +9,6 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
-using CK.Core;
 
 namespace CK.Observable
 {
@@ -20,11 +19,11 @@ namespace CK.Observable
         /// <see cref="IObservableTransaction.Errors"/> whenever a transaction
         /// has not been committed.
         /// </summary>
-        public static readonly CKExceptionData UncomittedTransaction = new CKExceptionData("Uncommitted transaction.", "Not.An.Exception", "Not.An.Exception, No.Assembly", null, null, null, null, null, null );
+        public static readonly CKExceptionData UncomittedTransaction = new CKExceptionData( "Uncommitted transaction.", "Not.An.Exception", "Not.An.Exception, No.Assembly", null, null, null, null, null, null );
 
-        static readonly Type[] _observableRootCtorParameters = new Type[] { typeof(ObservableDomain) };
+        static readonly Type[] _observableRootCtorParameters = new Type[] { typeof( ObservableDomain ) };
 
-        class PropInfo 
+        class PropInfo
         {
             public readonly PropertyChangedEventArgs EventArg;
             public int PropertyId { get; }
@@ -132,7 +131,7 @@ namespace CK.Observable
             }
 
             readonly List<ObservableEvent> _changeEvents;
-            readonly Dictionary<ObservableObject,List<PropertyInfo>> _newObjects;
+            readonly Dictionary<ObservableObject, List<PropertyInfo>> _newObjects;
             readonly Dictionary<long, PropChanged> _propChanged;
 
             public ChangeTracker()
@@ -142,7 +141,7 @@ namespace CK.Observable
                 _propChanged = new Dictionary<long, PropChanged>();
             }
 
-            public IReadOnlyList<ObservableEvent> Commit( Func<string,PropInfo> ensurePropertInfo )
+            public IReadOnlyList<ObservableEvent> Commit( Func<string, PropInfo> ensurePropertInfo )
             {
                 foreach( var p in _propChanged.Values )
                 {
@@ -275,7 +274,7 @@ namespace CK.Observable
             {
                 Debug.Assert( d != null );
                 Array.Resize( ref _errors, _errors.Length + 1 );
-                _errors[_errors.Length-1] = d;
+                _errors[_errors.Length - 1] = d;
             }
 
             public IReadOnlyList<ObservableEvent> Commit()
@@ -305,7 +304,7 @@ namespace CK.Observable
         class ReetrancyHandler : IDisposable
         {
             readonly ObservableDomain _d;
-            public ReetrancyHandler(ObservableDomain d)
+            public ReetrancyHandler( ObservableDomain d )
             {
                 _d = d;
             }
@@ -404,7 +403,7 @@ namespace CK.Observable
             _deserializing = true;
             try
             {
-                var o = (T)typeof( T ).GetConstructor( BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic,
+                var o = (T)typeof( T ).GetConstructor( BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
                                                        null,
                                                        _observableRootCtorParameters,
                                                        null ).Invoke( new[] { this } );
@@ -658,7 +657,7 @@ namespace CK.Observable
 
         internal int Register( ObservableObject o )
         {
-            using( CheckTransactionAndReentrancy() )
+            using( CheckTransactionAndReentrancy( o ) )
             {
                 Debug.Assert( o != null && o.Domain == this );
                 int idx;
@@ -687,7 +686,7 @@ namespace CK.Observable
         internal void Unregister( ObservableObject o )
         {
             Debug.Assert( !o.IsDisposed );
-            using( CheckTransactionAndReentrancy() )
+            using( CheckTransactionAndReentrancy( o ) )
             {
                 if( !_deserializing ) _changeTracker.OnDisposeObject( o );
                 _objects[o.OId] = null;
@@ -704,7 +703,7 @@ namespace CK.Observable
             {
                 return null;
             }
-            using( CheckTransactionAndReentrancy() )
+            using( CheckTransactionAndReentrancy( o ) )
             {
                 PropInfo p = EnsurePropertyInfo( propertyName );
                 _changeTracker.OnPropertyChanged( o, p, before, after );
@@ -728,7 +727,7 @@ namespace CK.Observable
         internal void OnListRemoveAt( ObservableObject o, int index )
         {
             if( _deserializing ) return;
-            using( CheckTransactionAndReentrancy() )
+            using( CheckTransactionAndReentrancy( o ) )
             {
                 _changeTracker.OnListRemoveAt( o, index );
             }
@@ -737,7 +736,7 @@ namespace CK.Observable
         internal void OnListSetAt( ObservableObject o, int index, object value )
         {
             if( _deserializing ) return;
-            using( CheckTransactionAndReentrancy() )
+            using( CheckTransactionAndReentrancy( o ) )
             {
                 _changeTracker.OnListSetAt( o, index, value );
             }
@@ -746,7 +745,7 @@ namespace CK.Observable
         internal void OnCollectionClear( ObservableObject o )
         {
             if( _deserializing ) return;
-            using( CheckTransactionAndReentrancy() )
+            using( CheckTransactionAndReentrancy( o ) )
             {
                 _changeTracker.OnCollectionClear( o );
             }
@@ -755,7 +754,7 @@ namespace CK.Observable
         internal void OnListInsert( ObservableObject o, int index, object item )
         {
             if( _deserializing ) return;
-            using( CheckTransactionAndReentrancy() )
+            using( CheckTransactionAndReentrancy( o ) )
             {
                 _changeTracker.OnListInsert( o, index, item );
             }
@@ -764,7 +763,7 @@ namespace CK.Observable
         internal void OnCollectionMapSet( ObservableObject o, object key, object value )
         {
             if( _deserializing ) return;
-            using( CheckTransactionAndReentrancy() )
+            using( CheckTransactionAndReentrancy( o ) )
             {
                 _changeTracker.OnCollectionMapSet( o, key, value );
             }
@@ -773,14 +772,15 @@ namespace CK.Observable
         internal void OnCollectionRemoveKey( ObservableObject o, object key )
         {
             if( _deserializing ) return;
-            using( CheckTransactionAndReentrancy() )
+            using( CheckTransactionAndReentrancy( o ) )
             {
                 _changeTracker.OnCollectionRemoveKey( o, key );
             }
         }
 
-        IDisposable CheckTransactionAndReentrancy()
+        IDisposable CheckTransactionAndReentrancy( ObservableObject o )
         {
+            if( o.IsDisposed ) throw new ObjectDisposedException( o.GetType().FullName );
             if( _currentTran == null ) throw new InvalidOperationException( "A transaction is required." );
             if( Interlocked.CompareExchange( ref _reentrancyFlag, 1, 0 ) == 1 ) throw new InvalidOperationException( "Reentrancy detected." );
             return _reentrancyHandler;
