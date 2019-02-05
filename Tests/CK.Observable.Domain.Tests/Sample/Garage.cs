@@ -1,4 +1,3 @@
-using AutoProperties;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,7 +9,7 @@ namespace CK.Observable.Domain.Tests.Sample
     [SerializationVersionAttribute(0)]
     public class Garage : ObservableObject
     {
-        ObservableDictionary<Car, Car> _replacementCars;
+        readonly ObservableDictionary<Car, Car> _replacementCars;
 
         public Garage()
         {
@@ -19,14 +18,14 @@ namespace CK.Observable.Domain.Tests.Sample
             _replacementCars = new ObservableDictionary<Car, Car>();
         }
 
-        public Garage( BinaryDeserializer d )
+        public Garage( IBinaryDeserializerContext d )
             : base( d )
         {
             var r = d.StartReading();
             CompanyName = r.ReadNullableString();
-            r.ReadObject<ObservableList<Person>>( x => Employees = x );
-            r.ReadObject( x => Cars = (ObservableList<Car>)x );
-            r.ReadObject<ObservableDictionary<Car, Car>>( x => _replacementCars = x );
+            Employees = (ObservableList<Person>)r.ReadObject();
+            Cars = (ObservableList<Car>)r.ReadObject();
+            _replacementCars = (ObservableDictionary<Car, Car>)r.ReadObject();
         }
 
         void Write( BinarySerializer s )
@@ -39,9 +38,9 @@ namespace CK.Observable.Domain.Tests.Sample
 
         public string CompanyName { get; set; }
 
-        public IList<Person> Employees { get; private set; }
+        public IList<Person> Employees { get; }
 
-        public ObservableList<Car> Cars { get; private set; }
+        public ObservableList<Car> Cars { get; }
 
         public IDictionary<Car, Car> ReplacementCar => _replacementCars;
     }

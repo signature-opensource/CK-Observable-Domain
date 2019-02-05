@@ -17,12 +17,12 @@ namespace CK.Observable.Domain.Tests.Sample
             Name = name;
         }
 
-        public Car( BinaryDeserializer d ) : base( d )
+        public Car( IBinaryDeserializerContext d ) : base( d )
         {
             var r = d.StartReading();
             Name = r.ReadNullableString();
             Speed = r.ReadInt32();
-            r.ReadObject<Position>( x => Position = x );
+            Position = (Position)r.ReadObject();
         }
 
         void Write( BinarySerializer w )

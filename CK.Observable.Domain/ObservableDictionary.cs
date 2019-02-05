@@ -1,13 +1,10 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CK.Observable
 {
-    [SerializationVersionAttribute(0)]
+    [SerializationVersionAttribute( 0 )]
     public class ObservableDictionary<TKey, TValue> : ObservableObject, IDictionary<TKey, TValue>, IReadOnlyDictionary<TKey, TValue>
     {
         readonly Dictionary<TKey, TValue> _map;
@@ -17,34 +14,15 @@ namespace CK.Observable
             _map = new Dictionary<TKey, TValue>();
         }
 
-        protected ObservableDictionary( BinaryDeserializer d ) : base( d )
+        protected ObservableDictionary( IBinaryDeserializerContext d ) : base( d )
         {
             var r = d.StartReading();
-            int count = r.ReadNonNegativeSmallInt32();
-            _map = new Dictionary<TKey, TValue>( count );
-            while( --count >= 0 )
-            {
-                r.ReadObjects( (x1, x2) => _map.Add( (TKey)x1, (TValue)x2 ) );
-            }
+            _map = (Dictionary<TKey, TValue>)r.ReadObject();
         }
 
         void Write( BinarySerializer s )
         {
-            s.WriteNonNegativeSmallInt32( _map.Count );
-            foreach( var kv in _map )
-            {
-                s.WriteObject( kv.Key );
-                s.WriteObject( kv.Value );
-            }
-        }
-
-        void Export( int num, ObjectExporter e )
-        {
-            e.Target.EmitStartObject( -1, ObjectExportedKind.Object );
-            e.ExportNamedProperty( ExportContentOIdName, OId );
-            e.Target.EmitPropertyName( ExportContentPropName );
-            e.ExportMap( num, _map );
-            e.Target.EmitEndObject( -1, ObjectExportedKind.Object );
+            s.WriteObject( _map );
         }
 
         internal override ObjectExportedKind ExportedKind => ObjectExportedKind.Map;
@@ -59,9 +37,9 @@ namespace CK.Observable
             }
         }
 
-        public ICollection<TKey> Keys => _map.Keys;
+        public Dictionary<TKey, TValue>.KeyCollection Keys => _map.Keys;
 
-        public ICollection<TValue> Values => _map.Values;
+        public Dictionary<TKey, TValue>.ValueCollection Values => _map.Values;
 
         public int Count => _map.Count;
 
@@ -70,6 +48,10 @@ namespace CK.Observable
         IEnumerable<TKey> IReadOnlyDictionary<TKey, TValue>.Keys => _map.Keys;
 
         IEnumerable<TValue> IReadOnlyDictionary<TKey, TValue>.Values => _map.Values;
+
+        ICollection<TKey> IDictionary<TKey, TValue>.Keys => _map.Keys;
+
+        ICollection<TValue> IDictionary<TKey, TValue>.Values => _map.Values;
 
         public void Add( TKey key, TValue value )
         {
@@ -119,6 +101,6 @@ namespace CK.Observable
 
 
         IEnumerator IEnumerable.GetEnumerator() => _map.GetEnumerator();
-        
+
     }
 }

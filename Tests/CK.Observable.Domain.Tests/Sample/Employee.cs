@@ -1,4 +1,3 @@
-using AutoProperties;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,10 +15,10 @@ namespace CK.Observable.Domain.Tests.Sample
             Garage.Employees.Add( this );
         }
 
-        protected Employee( BinaryDeserializer d ) : base( d )
+        protected Employee( IBinaryDeserializerContext d ) : base( d )
         {
             var r = d.StartReading();
-            r.ReadObject<Garage>( x => Garage = x );
+            Garage = (Garage)r.ReadObject();
         }
 
         void Write( BinarySerializer s )

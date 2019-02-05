@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace CK.Observable
 {
-    public class ListRemoveAtEvent : ObservableEvent
+    public class ListRemoveAtEvent : ObservableEvent, ICollectionEvent
     {
         public int ObjectId { get; }
 

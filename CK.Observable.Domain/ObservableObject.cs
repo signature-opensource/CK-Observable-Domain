@@ -9,15 +9,13 @@ using System.Diagnostics;
 namespace CK.Observable
 {
     [SerializationVersionAttribute(0)]
-    public abstract class ObservableObject : INotifyPropertyChanged, IKnowSerializationDriver, IDisposable
+    public abstract class ObservableObject : INotifyPropertyChanged, IDisposable, IKnowMyExportDriver
     {
-        protected const string ExportContentOIdName = "$i";
-        protected const string ExportContentPropName = "$C";
         int _id;
-        ITypeSerializationDriver _serializationDriver;
         internal readonly ObservableDomain Domain;
         PropertyChangedEventHandler _handler;
         internal int OId => _id;
+        internal readonly IObjectExportTypeDriver _exporter;
 
         protected ObservableObject()
             : this( ObservableDomain.GetCurrentActiveDomain() )
@@ -27,30 +25,26 @@ namespace CK.Observable
         protected ObservableObject( ObservableDomain domain )
         {
             if( domain == null ) throw new ArgumentNullException( nameof(domain) );
-            _serializationDriver = SerializableTypes.FindDriver( GetType(), TypeSerializationKind.None );
             Domain = domain;
+            _exporter = Domain._exporters.FindDriver( GetType() );
             _id = Domain.Register( this );
             Debug.Assert( _id >= 0 );
         }
 
-        protected ObservableObject( BinaryDeserializer d )
+        protected ObservableObject( IBinaryDeserializerContext d )
         {
-            _serializationDriver = SerializableTypes.FindDriver( GetType(), TypeSerializationKind.None );
-            Domain = d.Domain;
             var r = d.StartReading();
             Debug.Assert( r.CurrentReadInfo.Version == 0 );
+            Domain = r.Services.GetService<ObservableDomain>( throwOnNull: true );
+            _exporter = Domain._exporters.FindDriver( GetType() );
             _id = r.ReadInt32();
+            Debug.Assert( _id >= 0 );
         }
 
         void Write( BinarySerializer w )
         {
             w.Write( _id );
         }
-
-        ITypeSerializationDriver IKnowSerializationDriver.SerializationDriver => _serializationDriver;
-
-        internal IObjectExportTypeDriver SerializationDriver => _serializationDriver;
-
 
         event PropertyChangedEventHandler INotifyPropertyChanged.PropertyChanged
         {
@@ -66,6 +60,8 @@ namespace CK.Observable
         protected bool IsDeserializing => Domain.IsDeserializing;
 
         internal virtual ObjectExportedKind ExportedKind => ObjectExportedKind.Object;
+
+        IObjectExportTypeDriver IKnowMyExportDriver.ExportDriver => _exporter;
 
         public void Dispose()
         {

@@ -18,6 +18,7 @@ namespace CK.Observable
         ListRemoveAt,
         ListSetAt,
         CollectionRemoveKey,
+        CollectionMapSet
     }
 
     public abstract class ObservableEvent
@@ -33,7 +34,8 @@ namespace CK.Observable
                 "CL", // CollectionClear
                 "R",  // ListRemoveAt
                 "S",  // ListSetAt
-                "K"   // CollectionRemoveKey
+                "K",  // CollectionRemoveKey
+                "M"   // CollectionMapSet
             };
 
         public ObservableEvent( ObservableEventType type )
@@ -56,7 +58,7 @@ namespace CK.Observable
             if( o is ObservableObject obs )
             {
                 e.Target.EmitStartObject( -1, ObjectExportedKind.Object );
-                e.Target.EmitPropertyName( ">" );
+                e.Target.EmitPropertyName( "=" );
                 e.Target.EmitInt32( obs.OId );
                 e.Target.EmitEndObject( -1, ObjectExportedKind.Object );
             }

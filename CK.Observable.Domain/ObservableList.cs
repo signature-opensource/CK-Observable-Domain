@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace CK.Observable
 {
-    [SerializationVersionAttribute(0)]
+    [SerializationVersion(0)]
     public class ObservableList<T> : ObservableObject, IList<T>, IReadOnlyList<T>
     {
         readonly List<T> _list;
@@ -17,30 +17,15 @@ namespace CK.Observable
             _list = new List<T>();
         }
 
-        protected ObservableList( BinaryDeserializer d ) : base( d )
+        protected ObservableList( IBinaryDeserializerContext d ) : base( d )
         {
             var r = d.StartReading();
-            int count = r.ReadNonNegativeSmallInt32();
-            _list = new List<T>( count );
-            while( --count >= 0 )
-            {
-                r.ReadObject<T>( x => _list.Add( x ) );
-            }
+            _list = (List<T>)r.ReadObject();
         }
 
         void Write( BinarySerializer s )
         {
-            s.WriteNonNegativeSmallInt32( _list.Count );
-            foreach( var o in _list ) s.WriteObject( o );
-        }
-
-        void Export( int num, ObjectExporter e )
-        {
-            e.Target.EmitStartObject( -1, ObjectExportedKind.Object );
-            e.ExportNamedProperty( ExportContentOIdName, OId );
-            e.Target.EmitPropertyName( ExportContentPropName );
-            e.ExportList( num, _list );
-            e.Target.EmitEndObject( -1, ObjectExportedKind.Object );
+            s.WriteObject( _list );
         }
 
         public T this[int index]

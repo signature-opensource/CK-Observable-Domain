@@ -71,11 +71,13 @@ namespace CK.Observable.Domain.Tests
             
             events = domain.Modify( () =>
             {
+                c.Position = new Position(1.0,2.0);
                 c.Speed = 1;
                 c.Speed = 2;
                 c.Speed = 3;
+                c.Position = new Position(3.0,4.0);
             } );
-            Check( events, "PropertyChanged 0.Speed = 3." );
+            Check( events, "PropertyChanged 0.Speed = 3.", "PropertyChanged 0.Position = (3,4)." );
         }
 
         [Test]
@@ -141,7 +143,7 @@ namespace CK.Observable.Domain.Tests
         static void Check( IReadOnlyList<ObservableEvent> events, params string[] e )
         {
             events.Should().HaveCount( e.Length );
-            events.Select( ev => ev.ToString() ).Should().ContainInOrder( e );
+            events.Select( ev => ev.ToString() ).Should().Contain( e );
         }
 
     }

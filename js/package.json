@@ -1,0 +1,43 @@
+{
+  "name": "@signature/ck-observable-domain",
+  "version": "0.0.0-version-replaced-in-CodeCakeBuilder",
+  "description": "CK-Observable-Domain client implementation using json-graph-serializer",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/**/*",
+    "src/**/*"
+  ],
+  "scripts": {
+    "test": "mocha -r ts-node/register test/**/*.ts",
+    "build": "tsc",
+    "preversion": "npm test",
+    "version": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://dev.azure.com/invenietis/DefaultCollection/CK/_git/CK-Observable-Domain"
+  },
+  "author": "Signature Code",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://dev.azure.com/invenietis/CK/_workitems/create/bug"
+  },
+  "homepage": "https://dev.azure.com/invenietis/CK/_git/CK-Observable-Domain",
+  "devDependencies": {
+    "@babel/cli": "^7.0.0",
+    "@babel/core": "^7.0.0",
+    "@babel/preset-env": "^7.0.0",
+    "@babel/register": "^7.0.0",
+    "@types/chai": "^4.1.4",
+    "@types/mocha": "^5.2.5",
+    "@types/node": "^10.9.4",
+    "chai": "^4.1.2",
+    "mocha": "^5.2.0",
+    "ts-node": "^7.0.1",
+    "typescript": "^3.0.3"
+  },
+  "dependencies": {
+    "@signature/json-graph-serializer": "0.0.3"
+  }
+}

@@ -58,7 +58,7 @@ namespace CK.Observable
                 throw new InvalidDataException( $"Incompatible stream. No root of type {typeof( T1 ).Name} and {typeof( T2 ).Name}. {AllRoots.Count} roots of type: {AllRoots.Select( t => t.GetType().Name ).Concatenate()}." );
             }
             Root1 = (T1)AllRoots[0];
-            Root2 = (T2)AllRoots[0];
+            Root2 = (T2)AllRoots[1];
         }
 
         /// <summary>

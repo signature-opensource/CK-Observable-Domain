@@ -82,7 +82,7 @@ namespace CK.Observable.Domain.Tests.Sample
             Position = new Position( Position.Latitude + delta, Position.Longitude + delta );
         }
 
-        public MultiPropertyType( BinaryDeserializer d ) : base( d )
+        public MultiPropertyType( IBinaryDeserializerContext d ) : base( d )
         {
             var r = d.StartReading();
             String = r.ReadNullableString();
@@ -104,12 +104,12 @@ namespace CK.Observable.Domain.Tests.Sample
             Boolean = r.ReadBoolean();
 
             // Enum can be serialized through their drivers:
-            r.ReadObject<MechanicLevel>( l => Enum = l );
+            Enum = (MechanicLevel)r.ReadObject();
             // Or directly (simpler and more efficient):
             var e = (MechanicLevel)r.ReadInt32();
             Debug.Assert( e == Enum );
 
-            r.ReadObject<Position>( x => Position = x );
+            Position = (Position)r.ReadObject();
         }
 
         void Write( BinarySerializer w )

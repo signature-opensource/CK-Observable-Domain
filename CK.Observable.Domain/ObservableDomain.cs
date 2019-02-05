@@ -1,3 +1,4 @@
+using CK.Core;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -8,14 +9,21 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
-using CK.Core;
 
 namespace CK.Observable
 {
     public class ObservableDomain
     {
-        class PropInfo 
+        /// <summary>
+        /// An artificial <see cref="CKExceptionData"/> that is added to
+        /// <see cref="IObservableTransaction.Errors"/> whenever a transaction
+        /// has not been committed.
+        /// </summary>
+        public static readonly CKExceptionData UncomittedTransaction = new CKExceptionData( "Uncommitted transaction.", "Not.An.Exception", "Not.An.Exception, No.Assembly", null, null, null, null, null, null );
+
+        static readonly Type[] _observableRootCtorParameters = new Type[] { typeof( ObservableDomain ) };
+
+        class PropInfo
         {
             public readonly PropertyChangedEventArgs EventArg;
             public int PropertyId { get; }
@@ -40,6 +48,10 @@ namespace CK.Observable
         [ThreadStatic]
         internal static ObservableDomain CurrentThreadDomain;
 
+        internal readonly IExporterResolver _exporters;
+        readonly ISerializerResolver _serializers;
+        readonly IDeserializerResolver _deserializers;
+
         /// <summary>
         /// Maps property names to PropInfo that contains the property index.
         /// </summary>
@@ -48,12 +60,6 @@ namespace CK.Observable
         /// Map property index to PropInfo that contains the property name.
         /// </summary>
         readonly List<PropInfo> _propertiesByIndex;
-
-        /// <summary>
-        /// The number of properties that are required by root objects.
-        /// Since root objects are always here, their properties must be preserved.
-        /// </summary>
-        int _propertiesLockCount;
 
         readonly ChangeTracker _changeTracker;
         readonly IDisposable _reentrancyHandler;
@@ -75,11 +81,6 @@ namespace CK.Observable
         /// This is greater or equal to _rootObjectCount.
         /// </summary>
         int _actualObjectCount;
-
-        /// <summary>
-        /// The number of objects that have been created by roots instanciation.
-        /// </summary>
-        int _rootObjectCount;
 
         /// <summary>
         /// The actual list of root objects.
@@ -117,8 +118,6 @@ namespace CK.Observable
                 public readonly PropInfo Info;
                 public readonly object InitialValue;
                 public object FinalValue;
-                public PropChanged Next;
-                public PropChanged Prev;
 
                 public long Key => Info.GetObjectPropertyId( Object );
 
@@ -129,53 +128,23 @@ namespace CK.Observable
                     InitialValue = initial;
                     FinalValue = final;
                 }
-
-                public void MoveToFirst( ref PropChanged first, ref PropChanged last )
-                {
-                    Debug.Assert( first != this );
-                    Debug.Assert( Prev != null );
-                    if( Next != null )
-                    {
-                        Next.Prev = Prev;
-                    }
-                    else
-                    {
-                        Debug.Assert( last == this );
-                        last = Prev;
-                    }
-                    Prev.Next = Next;
-                    Prev = null;
-                    Next = first;
-                    first = this;
-                }
             }
 
             readonly List<ObservableEvent> _changeEvents;
-            readonly Dictionary<ObservableObject,List<PropertyInfo>> _newObjects;
+            readonly Dictionary<ObservableObject, List<PropertyInfo>> _newObjects;
             readonly Dictionary<long, PropChanged> _propChanged;
-            PropChanged _firstPropChanged;
-            PropChanged _lastPropChanged;
-
-            class PureRefEquality : IEqualityComparer<ObservableObject>
-            {
-                public bool Equals( ObservableObject x, ObservableObject y ) => ReferenceEquals( x, y );
-
-                public int GetHashCode( ObservableObject obj ) => obj.GetHashCode();
-            }
-
-            static readonly PureRefEquality RefEquality = new PureRefEquality();
 
             public ChangeTracker()
             {
                 _changeEvents = new List<ObservableEvent>();
-                _newObjects = new Dictionary<ObservableObject, List<PropertyInfo>>( RefEquality );
+                _newObjects = new Dictionary<ObservableObject, List<PropertyInfo>>( PureObjectRefEqualityComparer<ObservableObject>.Default );
                 _propChanged = new Dictionary<long, PropChanged>();
             }
 
-            public IReadOnlyList<ObservableEvent> Commit( Func<string,PropInfo> ensurePropertInfo )
+            public IReadOnlyList<ObservableEvent> Commit( Func<string, PropInfo> ensurePropertInfo )
             {
-                PropChanged p = _lastPropChanged;
-                while( p != null )
+                _changeEvents.RemoveAll( e => e is ICollectionEvent c && c.Object.IsDisposed );
+                foreach( var p in _propChanged.Values )
                 {
                     if( !p.Object.IsDisposed )
                     {
@@ -187,7 +156,6 @@ namespace CK.Observable
                             if( idx >= 0 ) exportables.RemoveAt( idx );
                         }
                     }
-                    p = p.Prev;
                 }
                 foreach( var kv in _newObjects )
                 {
@@ -209,17 +177,16 @@ namespace CK.Observable
                 _changeEvents.Clear();
                 _newObjects.Clear();
                 _propChanged.Clear();
-                _firstPropChanged = _lastPropChanged = null;
             }
 
             internal bool IsNewObject( ObservableObject o ) => _newObjects.ContainsKey( o );
 
-            internal void OnNewObject( ObservableObject o, int objectId )
+            internal void OnNewObject( ObservableObject o, int objectId, IObjectExportTypeDriver exporter )
             {
                 _changeEvents.Add( new NewObjectEvent( o, objectId ) );
-                if( o.SerializationDriver != null && o.SerializationDriver.IsExportable )
+                if( exporter != null )
                 {
-                    _newObjects.Add( o, o.SerializationDriver.ExportableProperties.ToList() );
+                    _newObjects.Add( o, exporter.ExportableProperties.ToList() );
                 }
                 else _newObjects.Add( o, null );
             }
@@ -245,30 +212,15 @@ namespace CK.Observable
 
             internal void OnPropertyChanged( ObservableObject o, PropInfo p, object before, object after )
             {
-                if( _firstPropChanged == null )
+                PropChanged c;
+                if( _propChanged.TryGetValue( p.GetObjectPropertyId( o ), out c ) )
                 {
-                    var c = new PropChanged( o, p, before, after );
-                    _propChanged.Add( c.Key, c );
-                    _firstPropChanged = _lastPropChanged = c;
+                    c.FinalValue = after;
                 }
                 else
                 {
-                    if( _propChanged.TryGetValue( p.GetObjectPropertyId( o ), out var c ) )
-                    {
-                        c.FinalValue = after;
-                        if( _firstPropChanged != c )
-                        {
-                            c.MoveToFirst( ref _firstPropChanged, ref _lastPropChanged );
-                        }
-                    }
-                    else
-                    {
-                        c = new PropChanged( o, p, before, after );
-                        _firstPropChanged.Prev = c;
-                        c.Next = _firstPropChanged;
-                        _firstPropChanged = c;
-                        _propChanged.Add( c.Key, c );
-                    }
+                    c = new PropChanged( o, p, before, after );
+                    _propChanged.Add( c.Key, c );
                 }
             }
 
@@ -307,16 +259,28 @@ namespace CK.Observable
         {
             readonly ObservableDomain _previous;
             readonly ObservableDomain _domain;
+            CKExceptionData[] _errors;
 
             public Transaction( ObservableDomain d )
             {
                 _domain = d;
                 _previous = CurrentThreadDomain;
                 CurrentThreadDomain = d;
+                _errors = Array.Empty<CKExceptionData>();
+            }
+
+            public IReadOnlyList<CKExceptionData> Errors => _errors;
+
+            public void AddError( CKExceptionData d )
+            {
+                Debug.Assert( d != null );
+                Array.Resize( ref _errors, _errors.Length + 1 );
+                _errors[_errors.Length - 1] = d;
             }
 
             public IReadOnlyList<ObservableEvent> Commit()
             {
+                if( _errors.Length != 0 ) Dispose();
                 CurrentThreadDomain = _previous;
                 _domain._currentTran = null;
                 var events = _domain._changeTracker.Commit( _domain.EnsurePropertyInfo );
@@ -329,16 +293,11 @@ namespace CK.Observable
             {
                 if( _domain._currentTran != null )
                 {
-                    CurrentThreadDomain = null;
+                    if( _errors.Length == 0 ) AddError( UncomittedTransaction );
+                    CurrentThreadDomain = _previous;
                     _domain._currentTran = null;
                     _domain._changeTracker.Reset();
-                    // Edge case: very first transaction. We simply reset the
-                    // domain.
-                    if( _domain._transactionSerialNumber == 0 )
-                    {
-                        _domain.Reset();
-                    }
-                    else _domain.TransactionManager?.OnTransactionFailure( _domain );
+                    _domain.TransactionManager?.OnTransactionFailure( _domain, _errors );
                 }
             }
         }
@@ -346,7 +305,7 @@ namespace CK.Observable
         class ReetrancyHandler : IDisposable
         {
             readonly ObservableDomain _d;
-            public ReetrancyHandler(ObservableDomain d)
+            public ReetrancyHandler( ObservableDomain d )
             {
                 _d = d;
             }
@@ -372,10 +331,18 @@ namespace CK.Observable
         {
         }
 
-        public ObservableDomain( IObservableTransactionManager tm, IActivityMonitor monitor )
+        public ObservableDomain(
+            IObservableTransactionManager tm,
+            IActivityMonitor monitor,
+            IExporterResolver exporters = null,
+            ISerializerResolver serializers = null,
+            IDeserializerResolver deserializers = null )
         {
             DomainNumber = Interlocked.Increment( ref _domainNumber );
             Monitor = monitor ?? new ActivityMonitor( $"Observable Domain n°{DomainNumber}." );
+            _exporters = exporters ?? ExporterRegistry.Default;
+            _serializers = serializers ?? SerializerRegistry.Default;
+            _deserializers = deserializers ?? DeserializerRegistry.Default;
             TransactionManager = tm;
             _objects = new ObservableObject[512];
             _freeList = new Stack<int>();
@@ -406,22 +373,17 @@ namespace CK.Observable
             Load( s, leaveOpen, encoding );
         }
 
-        void Reset()
-        {
-            _freeList.Clear();
-            for( int i = _propertiesLockCount; i < _propertiesByIndex.Count; ++i )
-            {
-                _properties.Remove( _propertiesByIndex[i].Name );
-            }
-            _propertiesByIndex.RemoveRange( _propertiesLockCount, _properties.Count - _propertiesLockCount );
-            Array.Clear( _objects, _rootObjectCount, _objectsListCount - _rootObjectCount );
-            _objectsListCount = _actualObjectCount = _rootObjectCount;
-        }
-
         class NoTransaction : IObservableTransaction
         {
             public static readonly IObservableTransaction Default = new NoTransaction();
+
+            public void AddError( CKExceptionData d )
+            {
+            }
+
             IReadOnlyList<ObservableEvent> IObservableTransaction.Commit() => Array.Empty<ObservableEvent>();
+
+            public IReadOnlyList<CKExceptionData> Errors => Array.Empty<CKExceptionData>();
 
             void IDisposable.Dispose()
             {
@@ -442,11 +404,11 @@ namespace CK.Observable
             _deserializing = true;
             try
             {
-                var o = (T)typeof( T ).GetConstructor( new Type[] { typeof(ObservableDomain) } )
-                                                         .Invoke( new[] { this } );
+                var o = (T)typeof( T ).GetConstructor( BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+                                                       null,
+                                                       _observableRootCtorParameters,
+                                                       null ).Invoke( new[] { this } );
                 _roots.Add( o );
-                _rootObjectCount = _objectsListCount;
-                _propertiesLockCount = _propertiesByIndex.Count;
                 return o;
             }
             finally
@@ -503,6 +465,7 @@ namespace CK.Observable
         {
             if( _currentTran != null ) throw new InvalidOperationException( $"A transaction is already opened for this ObservableDomain n°{DomainNumber}." );
             _currentTran = new Transaction( this );
+            TransactionManager?.OnTransactionStart( this, DateTime.UtcNow );
             return _currentTran;
         }
 
@@ -524,6 +487,7 @@ namespace CK.Observable
                 catch( Exception ex )
                 {
                     Monitor.Error( ex );
+                    t.AddError( CKExceptionData.CreateFrom( ex ) );
                     return null;
                 }
             }
@@ -545,6 +509,8 @@ namespace CK.Observable
                 target.EmitStartObject( -1, ObjectExportedKind.Object );
                 target.EmitPropertyName( "N" );
                 target.EmitInt32( _transactionSerialNumber );
+                target.EmitPropertyName( "C" );
+                target.EmitInt32( _actualObjectCount );
                 target.EmitPropertyName( "P" );
                 target.EmitStartObject( -1, ObjectExportedKind.List );
                 foreach( var p in _properties )
@@ -554,7 +520,7 @@ namespace CK.Observable
                 target.EmitEndObject( -1, ObjectExportedKind.List );
 
                 target.EmitPropertyName( "O" );
-                ObjectExporter.ExportRootList( target, _objects.Take( _objectsListCount ) );
+                ObjectExporter.ExportRootList( target, _objects.Take( _objectsListCount ), _exporters );
 
                 target.EmitPropertyName( "R" );
                 target.EmitStartObject( -1, ObjectExportedKind.List );
@@ -584,20 +550,17 @@ namespace CK.Observable
         public void Save( Stream s, bool leaveOpen = false, Encoding encoding = null )
         {
             using( CheckReentrancyOnly() )
-            using( var w = new BinarySerializer( s, leaveOpen, encoding ) )
+            using( var w = new BinarySerializer( s, _serializers, leaveOpen, encoding ) )
             {
                 w.WriteSmallInt32( 0 ); // Version
                 w.Write( _transactionSerialNumber );
                 w.Write( _actualObjectCount );
-                w.WriteNonNegativeSmallInt32( _rootObjectCount );
-                w.WriteNonNegativeSmallInt32( _propertiesLockCount );
                 w.WriteNonNegativeSmallInt32( _freeList.Count );
                 foreach( var i in _freeList ) w.WriteNonNegativeSmallInt32( i );
                 w.WriteNonNegativeSmallInt32( _properties.Count );
                 foreach( var p in _propertiesByIndex )
                 {
                     w.Write( p.Name );
-                    w.WriteNonNegativeSmallInt32( p.PropertyId );
                 }
                 Debug.Assert( _objectsListCount == _actualObjectCount + _freeList.Count );
                 for( int i = 0; i < _objectsListCount; ++i )
@@ -619,23 +582,21 @@ namespace CK.Observable
         {
             using( Monitor.OpenInfo( $"Loading Domain n°{DomainNumber}." ) )
             using( CheckReentrancyOnly() )
-            using( var d = new BinaryDeserializer( this, s, leaveOpen, encoding ) )
+            using( var d = new BinaryDeserializer( s, null, _deserializers, leaveOpen, encoding ) )
             {
+                d.Services.Add( this );
                 DoLoad( d );
             }
         }
 
-        void DoLoad( BinaryDeserializer d )
+        void DoLoad( BinaryDeserializer r )
         {
             _deserializing = true;
             try
             {
-                var r = d.Reader;
                 int version = r.ReadSmallInt32();
                 _transactionSerialNumber = r.ReadInt32();
                 _actualObjectCount = r.ReadInt32();
-                _rootObjectCount = r.ReadNonNegativeSmallInt32();
-                _propertiesLockCount = r.ReadNonNegativeSmallInt32();
 
                 _freeList.Clear();
                 int count = r.ReadNonNegativeSmallInt32();
@@ -647,11 +608,10 @@ namespace CK.Observable
                 _properties.Clear();
                 _propertiesByIndex.Clear();
                 count = r.ReadNonNegativeSmallInt32();
-                while( --count >= 0 )
+                for( int iProp = 0; iProp < count; iProp++ )
                 {
                     string name = r.ReadString();
-                    int propertyId = r.ReadNonNegativeSmallInt32();
-                    var p = new PropInfo( propertyId, name );
+                    var p = new PropInfo( iProp, name );
                     _properties.Add( name, p );
                     _propertiesByIndex.Add( p );
                 }
@@ -662,21 +622,17 @@ namespace CK.Observable
                 {
                     Array.Resize( ref _objects, _objects.Length * 2 );
                 }
-                while( --count >= 0 )
+                for( int i = 0; i < count; ++i )
                 {
-                    r.ReadObject<ObservableObject>( x => _objects[x.OId] = x );
+                    _objects[i] = (ObservableObject)r.ReadObject();
                 }
-                r.ExecuteDeferredActions();
+                r.ImplementationServices.ExecutePostDeserializationActions();
                 _roots.Clear();
                 count = r.ReadNonNegativeSmallInt32();
                 while( --count >= 0 )
                 {
                     _roots.Add( _objects[r.ReadNonNegativeSmallInt32()] as ObservableRootObject );
                 }
-            }
-            catch( Exception ex )
-            {
-                Monitor.Fatal( $"While loading Domain n°{DomainNumber}", ex );
             }
             finally
             {
@@ -702,7 +658,7 @@ namespace CK.Observable
 
         internal int Register( ObservableObject o )
         {
-            using( CheckTransactionAndReentrancy() )
+            using( CheckTransactionAndReentrancy( o ) )
             {
                 Debug.Assert( o != null && o.Domain == this );
                 int idx;
@@ -721,7 +677,7 @@ namespace CK.Observable
                 _objects[idx] = o;
                 if( !_deserializing )
                 {
-                    _changeTracker.OnNewObject( o, idx );
+                    _changeTracker.OnNewObject( o, idx, o._exporter );
                 }
                 ++_actualObjectCount;
                 return idx;
@@ -731,7 +687,7 @@ namespace CK.Observable
         internal void Unregister( ObservableObject o )
         {
             Debug.Assert( !o.IsDisposed );
-            using( CheckTransactionAndReentrancy() )
+            using( CheckTransactionAndReentrancy( o ) )
             {
                 if( !_deserializing ) _changeTracker.OnDisposeObject( o );
                 _objects[o.OId] = null;
@@ -743,13 +699,12 @@ namespace CK.Observable
         internal PropertyChangedEventArgs OnPropertyChanged( ObservableObject o, string propertyName, object before, object after )
         {
             if( _deserializing
-                || o.SerializationDriver == null
-                || !o.SerializationDriver.IsExportable
-                || !o.SerializationDriver.ExportableProperties.Any( p => p.Name == propertyName ) )
+                || o._exporter == null
+                || !o._exporter.ExportableProperties.Any( p => p.Name == propertyName ) )
             {
                 return null;
             }
-            using( CheckTransactionAndReentrancy() )
+            using( CheckTransactionAndReentrancy( o ) )
             {
                 PropInfo p = EnsurePropertyInfo( propertyName );
                 _changeTracker.OnPropertyChanged( o, p, before, after );
@@ -773,7 +728,7 @@ namespace CK.Observable
         internal void OnListRemoveAt( ObservableObject o, int index )
         {
             if( _deserializing ) return;
-            using( CheckTransactionAndReentrancy() )
+            using( CheckTransactionAndReentrancy( o ) )
             {
                 _changeTracker.OnListRemoveAt( o, index );
             }
@@ -782,7 +737,7 @@ namespace CK.Observable
         internal void OnListSetAt( ObservableObject o, int index, object value )
         {
             if( _deserializing ) return;
-            using( CheckTransactionAndReentrancy() )
+            using( CheckTransactionAndReentrancy( o ) )
             {
                 _changeTracker.OnListSetAt( o, index, value );
             }
@@ -791,7 +746,7 @@ namespace CK.Observable
         internal void OnCollectionClear( ObservableObject o )
         {
             if( _deserializing ) return;
-            using( CheckTransactionAndReentrancy() )
+            using( CheckTransactionAndReentrancy( o ) )
             {
                 _changeTracker.OnCollectionClear( o );
             }
@@ -800,7 +755,7 @@ namespace CK.Observable
         internal void OnListInsert( ObservableObject o, int index, object item )
         {
             if( _deserializing ) return;
-            using( CheckTransactionAndReentrancy() )
+            using( CheckTransactionAndReentrancy( o ) )
             {
                 _changeTracker.OnListInsert( o, index, item );
             }
@@ -809,7 +764,7 @@ namespace CK.Observable
         internal void OnCollectionMapSet( ObservableObject o, object key, object value )
         {
             if( _deserializing ) return;
-            using( CheckTransactionAndReentrancy() )
+            using( CheckTransactionAndReentrancy( o ) )
             {
                 _changeTracker.OnCollectionMapSet( o, key, value );
             }
@@ -818,14 +773,15 @@ namespace CK.Observable
         internal void OnCollectionRemoveKey( ObservableObject o, object key )
         {
             if( _deserializing ) return;
-            using( CheckTransactionAndReentrancy() )
+            using( CheckTransactionAndReentrancy( o ) )
             {
                 _changeTracker.OnCollectionRemoveKey( o, key );
             }
         }
 
-        IDisposable CheckTransactionAndReentrancy()
+        IDisposable CheckTransactionAndReentrancy( ObservableObject o )
         {
+            if( o.IsDisposed ) throw new ObjectDisposedException( o.GetType().FullName );
             if( _currentTran == null ) throw new InvalidOperationException( "A transaction is required." );
             if( Interlocked.CompareExchange( ref _reentrancyFlag, 1, 0 ) == 1 ) throw new InvalidOperationException( "Reentrancy detected." );
             return _reentrancyHandler;
