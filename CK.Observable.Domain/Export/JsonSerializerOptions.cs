@@ -17,8 +17,8 @@ namespace CK.Observable
 
         public JsonSerializerOptions()
         {
-            DateTimeConverter = o => o.ToString( CultureInfo );
-            DateTimeOffsetConverter = o => o.ToString( CultureInfo );
+            DateTimeConverter = o => o.ToString( "o", CultureInfo );
+            DateTimeOffsetConverter = o => o.ToString( "o", CultureInfo );
             TimeSpanConverter = o => o.ToString();
         }
 
