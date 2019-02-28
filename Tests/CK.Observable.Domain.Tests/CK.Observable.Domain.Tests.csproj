@@ -8,15 +8,16 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="NUnit" Version="2.6.4" />
+    <PackageReference Include="AutoProperties.Fody" Version="1.20.0" />
+    <PackageReference Include="NUnit" Version="3.11.0" />
     <PackageReference Include="CK.Testing.Monitoring" Version="0.6.0" />
     
-    <PackageReference Include="Fody" Version="3.2.1">
+    <PackageReference Include="Fody" Version="4.0.2">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
    
-    <PackageReference Include="PropertyChanged.Fody" Version="2.5.9">
+    <PackageReference Include="PropertyChanged.Fody" Version="2.6.0">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     

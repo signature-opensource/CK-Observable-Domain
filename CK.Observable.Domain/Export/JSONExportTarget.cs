@@ -10,16 +10,19 @@ using System.Threading.Tasks;
 
 namespace CK.Observable
 {
+
     public class JSONExportTarget : IObjectExporterTarget
     {
         readonly JSONExportTargetOptions _options;
         readonly TextWriter _w;
+        private readonly JsonSerializerOptions _jsonSerializerOptions;
         readonly StringBuilder _buffer;
         bool _commaNeeded;
 
-        public JSONExportTarget( TextWriter w, JSONExportTargetOptions options = null )
+        public JSONExportTarget( TextWriter w, JSONExportTargetOptions options = null, JsonSerializerOptions jsonSerializerOptions = null )
         {
             _w = w;
+            _jsonSerializerOptions = jsonSerializerOptions ?? JsonSerializerOptions.Default;
             _options = options ?? JSONExportTargetOptions.EmptyPrefix;
             _buffer = new StringBuilder();
         }
@@ -92,7 +95,7 @@ namespace CK.Observable
         public void EmitEndObject( int num, ObjectExportedKind kind )
         {
             Debug.Assert( kind != ObjectExportedKind.None );
-            _w.Write( kind == ObjectExportedKind.Object ? '}': ']' );
+            _w.Write( kind == ObjectExportedKind.Object ? '}' : ']' );
             _commaNeeded = true;
         }
 
@@ -123,7 +126,7 @@ namespace CK.Observable
         public void EmitDouble( double o )
         {
             if( _commaNeeded ) _w.Write( ',' );
-            _w.Write( o.ToString( CultureInfo.InvariantCulture ) );
+            _w.Write( o.ToString( _jsonSerializerOptions.CultureInfo ) );
             _commaNeeded = true;
         }
 
@@ -151,17 +154,17 @@ namespace CK.Observable
             _commaNeeded = true;
         }
 
-        public void EmitChar( char o ) => EmitString( o.ToString() );
+        public void EmitChar( char o ) => EmitString( o.ToString( _jsonSerializerOptions.CultureInfo ) );
 
         public void EmitSingle( float o ) => EmitDouble( o );
 
-        public void EmitDateTime( DateTime o ) => EmitString( o.ToString() );
+        public void EmitDateTime( DateTime o ) => EmitString( _jsonSerializerOptions.DateTimeConverter( o ) );
 
-        public void EmitTimeSpan( TimeSpan o ) => EmitString( o.ToString() );
+        public void EmitTimeSpan( TimeSpan o ) => EmitString( _jsonSerializerOptions.TimeSpanConverter( o ) );
 
-        public void EmitDateTimeOffset( DateTimeOffset o ) => EmitString( o.ToString() );
+        public void EmitDateTimeOffset( DateTimeOffset o ) => EmitString( _jsonSerializerOptions.DateTimeOffsetConverter( o ) );
 
-        public void EmitGuid( Guid o ) => EmitString( o.ToString("N") );
+        public void EmitGuid( Guid o ) => EmitString( o.ToString( "N" ) );
 
         public void EmitByte( byte o ) => EmitDouble( o );
 
@@ -178,6 +181,5 @@ namespace CK.Observable
         public void EmitInt64( long o ) => EmitDouble( o );
 
         public void EmitUInt64( ulong o ) => EmitDouble( o );
-
     }
 }
