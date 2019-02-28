@@ -1,17 +1,9 @@
-using Cake.Common.Diagnostics;
 using Cake.Common.IO;
 using Cake.Common.Solution;
 using Cake.Core;
 using Cake.Core.Diagnostics;
 using Cake.Core.IO;
-using Cake.Npm;
-using Cake.Npm.Publish;
-using CK.Text;
-using CodeCakeBuilder;
 using SimpleGitVersion;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
 using System.Linq;
 
 namespace CodeCake
@@ -97,102 +89,12 @@ namespace CodeCake
                 .IsDependentOn( "Clean" )
                 .Does( () =>
                 {
-
-                    // Provisional version management for NPM packages!
-                    using( var replacer = new PackageVersionReplacer(
+                    var packageDir = Cake.Directory( "js" );
+                    CustomNpmBuild(
                         gitInfo,
-                        "0.0.0-version-replaced-in-CodeCakeBuilder",
-                        Cake.File( "js/package.json" ).Path.FullPath,
-                        Cake.File( "js/package-lock.json" ).Path.FullPath
-                    ) )
-                    {
-                        Cake.NpmInstall(
-                            s => s
-                                .WithLogLevel( NpmLogLevel.Warn )
-                                .FromPath( Cake.Directory( "js" ) )
-                            );
-
-                        Cake.NpmRunScript(
-                            "test",
-                            s => s
-                                .WithLogLevel( NpmLogLevel.Warn )
-                                .FromPath( Cake.Directory( "js" ) )
-                        );
-
-                        Cake.NpmRunScript(
-                            "build",
-                            s => s
-                                .WithLogLevel( NpmLogLevel.Warn )
-                                .FromPath( Cake.Directory( "js" ) )
-                        );
-
-                        if( gitInfo.IsValid )
-                        {
-                            string packageJsonContents = File.ReadAllText( Cake.File( "js/package.json" ) );
-                            StringMatcher sm = new StringMatcher( packageJsonContents, 0 );
-
-                            Trace.Assert( sm.MatchJSONObject( out object o ) );
-
-                            var l = (List<KeyValuePair<string, object>>)o;
-
-                            string packageName = (string)l.First( kvp => kvp.Key == "name" ).Value;
-                            string packageVersion = (string)l.First( kvp => kvp.Key == "version" ).Value;
-
-
-                            string tag;
-                            bool makeLatest = false;
-                            if( gitInfo.IsValidRelease )
-                            {
-                                if( gitInfo.PreReleaseName.Length == 0 )
-                                {
-                                    // 1.0.0
-                                    tag = "stable";
-                                    makeLatest = true;
-                                }
-                                else if(
-                                    gitInfo.PreReleaseName == "prerelease"
-                                    || gitInfo.PreReleaseName == "rc" )
-                                {
-                                    // 1.0.0-prerelease
-                                    // 1.0.0-rc
-                                    tag = "latest"; // This ensures NPM gives this package by default
-                                }
-                                else
-                                {
-                                    // 1.0.0-alpha
-                                    // 1.0.0-beta
-                                    // etc.
-                                    tag = "preview";
-                                }
-                            }
-                            else
-                            {
-                                // CI build
-                                tag = "ci";
-                            }
-
-                            if( Cake.InteractiveMode() != InteractiveMode.Interactive
-                                || Cake.ReadInteractiveOption( "PublishNpmPackages", $"Publish \"{packageName}@{packageVersion}\" to NPM repository with the NPM tag \"{tag}\"?", 'Y', 'N' ) == 'Y' )
-                            {
-                                Cake.Information( "Publishing NPM package..." );
-
-                                Cake.NpmPublish(
-                                    s => s
-                                        .WithTag( tag )
-                                        .FromPath( Cake.Directory( "js" ) )
-                                );
-
-                                if( makeLatest )
-                                {
-                                    Cake.NpmDistTagAdd( packageName, packageVersion, "latest" );
-                                }
-                            }
-                        }
-                        else
-                        {
-                            Cake.Warning( "Skipping npm publish: No valid version" );
-                        }
-                    }
+                        packageDir,
+                        releasesDir
+                    );
                 } );
 
 
