@@ -68,16 +68,37 @@ namespace CK.Observable.Domain.Tests
             {
                 c = new Car( "First Car" );
             } );
-            
+
             events = domain.Modify( () =>
             {
-                c.Position = new Position(1.0,2.0);
+                c.Position = new Position( 1.0, 2.0 );
                 c.Speed = 1;
                 c.Speed = 2;
                 c.Speed = 3;
-                c.Position = new Position(3.0,4.0);
+                c.Position = new Position( 3.0, 4.0 );
             } );
             Check( events, "PropertyChanged 0.Speed = 3.", "PropertyChanged 0.Position = (3,4)." );
+        }
+
+        [Test]
+        public void hard_coded_property_changed_events_are_automatically_triggered()
+        {
+            var domain = new ObservableDomain( TestHelper.Monitor );
+            int bang = 0;
+            domain.Modify( () =>
+            {
+                Car c = new Car( "First Car" );
+                EventHandler incBang = ( o, e ) => bang++;
+                c.PositionChanged += incBang;
+                bang.Should().Be( 0 );
+                c.Position = new Position( 1.0, 1.0 );
+                bang.Should().Be( 1 );
+                c.Position = new Position( 1.0, 2.0 );
+                bang.Should().Be( 2 );
+                c.PositionChanged -= incBang;
+                c.Position = new Position( 1.0, 3.0 );
+            } );
+            bang.Should().Be( 2 );
         }
 
         [Test]

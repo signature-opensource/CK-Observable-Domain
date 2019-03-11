@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Reflection;
 
 namespace CK.Observable
 {
@@ -85,7 +86,22 @@ namespace CK.Observable
             if( !IsDisposed )
             {
                 var ev = Domain.OnPropertyChanged( this, propertyName, before, after );
-                if( ev != null ) _handler?.Invoke( this, ev );
+                if( ev != null )
+                {
+                    // Handles public event EventHandler <<propertyName>>Changed;
+                    // See https://stackoverflow.com/questions/14885325/eventinfo-getraisemethod-always-null
+                    FieldInfo fNamedEv = GetType().GetField( propertyName + "Changed", BindingFlags.NonPublic | BindingFlags.Instance );
+                    if( fNamedEv != null )
+                    {
+                        if( fNamedEv.FieldType != typeof( EventHandler ) )
+                        {
+                            throw new Exception( $"Changed event must be typed as mere EventHandler (PropertyName = {propertyName})." );
+                        }
+                        ((EventHandler)fNamedEv.GetValue( this ))?.Invoke( this, EventArgs.Empty );
+                    }
+                    // OnPropertyChanged (by name).
+                    _handler?.Invoke( this, ev );
+                }
             }
         }
 

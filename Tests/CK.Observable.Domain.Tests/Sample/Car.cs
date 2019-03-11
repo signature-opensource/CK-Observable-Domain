@@ -36,6 +36,14 @@ namespace CK.Observable.Domain.Tests.Sample
 
         public int Speed { get; set; }
 
+        /// <summary>
+        /// Defining this event is enough: it will be automatically fired
+        /// whenever Position has changed.
+        /// Its type MUST be EventHandler.
+        /// This is fired before INotifyPropertyChanged.PropertyChanged named event.
+        /// </summary>
+        public event EventHandler PositionChanged;
+
         public Position Position { get; set; }
 
         public Mechanic CurrentMechanic { get; set; }
