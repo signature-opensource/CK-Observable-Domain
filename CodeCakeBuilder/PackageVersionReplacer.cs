@@ -61,4 +61,15 @@ namespace CodeCakeBuilder
             }
         }
     }
+
+    public class NpmRcAuthenticator : IDisposable
+    {
+        public NpmRcAuthenticator()
+        {
+            
+        }
+        public void Dispose()
+        {
+        }
+    }
 }

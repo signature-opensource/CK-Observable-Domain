@@ -10,7 +10,7 @@
   <ItemGroup>
     <PackageReference Include="AutoProperties.Fody" Version="1.20.0" />
     <PackageReference Include="NUnit" Version="2.6.4" />
-    <PackageReference Include="CK.Testing.Monitoring" Version="0.6.0" />
+    <PackageReference Include="CK.Testing.Monitoring" Version="0.8.1" />
     
     <PackageReference Include="Fody" Version="4.0.2">
       <PrivateAssets>all</PrivateAssets>
