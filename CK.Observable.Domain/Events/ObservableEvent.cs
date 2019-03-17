@@ -21,7 +21,7 @@ namespace CK.Observable
         CollectionMapSet
     }
 
-    public abstract class ObservableEvent
+    public abstract class ObservableEvent : EventArgs
     {
         static readonly string[] _exportCodes =
             {

@@ -224,34 +224,46 @@ namespace CK.Observable
                 }
             }
 
-            internal void OnListRemoveAt( ObservableObject o, int index )
+            internal ListRemoveAtEvent OnListRemoveAt( ObservableObject o, int index )
             {
-                _changeEvents.Add( new ListRemoveAtEvent( o, index ) );
+                var e = new ListRemoveAtEvent( o, index );
+                _changeEvents.Add( e );
+                return e;
             }
 
-            internal void OnListSetAt( ObservableObject o, int index, object value )
+            internal ListSetAtEvent OnListSetAt( ObservableObject o, int index, object value )
             {
-                _changeEvents.Add( new ListSetAtEvent( o, index, value ) );
+                var e = new ListSetAtEvent( o, index, value );
+                _changeEvents.Add( e );
+                return e;
             }
 
-            internal void OnCollectionClear( ObservableObject o )
+            internal CollectionClearEvent OnCollectionClear( ObservableObject o )
             {
-                _changeEvents.Add( new CollectionClearEvent( o ) );
+                var e = new CollectionClearEvent( o );
+                _changeEvents.Add( e );
+                return e;
             }
 
-            internal void OnListInsert( ObservableObject o, int index, object item )
+            internal ListInsertEvent OnListInsert( ObservableObject o, int index, object item )
             {
-                _changeEvents.Add( new ListInsertEvent( o, index, item ) );
+                var e = new ListInsertEvent( o, index, item );
+                _changeEvents.Add( e );
+                return e;
             }
 
-            internal void OnCollectionMapSet( ObservableObject o, object key, object value )
+            internal CollectionMapSetEvent OnCollectionMapSet( ObservableObject o, object key, object value )
             {
-                _changeEvents.Add( new CollectionMapSetEvent( o, key, value ) );
+                var e = new CollectionMapSetEvent( o, key, value );
+                _changeEvents.Add( e );
+                return e;
             }
 
-            internal void OnCollectionRemoveKey( ObservableObject o, object key )
+            internal CollectionRemoveKeyEvent OnCollectionRemoveKey( ObservableObject o, object key )
             {
-                _changeEvents.Add( new CollectionRemoveKeyEvent( o, key ) );
+                var e = new CollectionRemoveKeyEvent( o, key );
+                _changeEvents.Add( e );
+                return e;
             }
         }
 
@@ -725,57 +737,57 @@ namespace CK.Observable
             return p;
         }
 
-        internal void OnListRemoveAt( ObservableObject o, int index )
+        internal ListRemoveAtEvent OnListRemoveAt( ObservableObject o, int index )
         {
-            if( _deserializing ) return;
+            if( _deserializing ) return null;
             using( CheckTransactionAndReentrancy( o ) )
             {
-                _changeTracker.OnListRemoveAt( o, index );
+                return _changeTracker.OnListRemoveAt( o, index );
             }
         }
 
-        internal void OnListSetAt( ObservableObject o, int index, object value )
+        internal ListSetAtEvent OnListSetAt( ObservableObject o, int index, object value )
         {
-            if( _deserializing ) return;
+            if( _deserializing ) return null;
             using( CheckTransactionAndReentrancy( o ) )
             {
-                _changeTracker.OnListSetAt( o, index, value );
+                return _changeTracker.OnListSetAt( o, index, value );
             }
         }
 
-        internal void OnCollectionClear( ObservableObject o )
+        internal CollectionClearEvent OnCollectionClear( ObservableObject o )
         {
-            if( _deserializing ) return;
+            if( _deserializing ) return null;
             using( CheckTransactionAndReentrancy( o ) )
             {
-                _changeTracker.OnCollectionClear( o );
+                return _changeTracker.OnCollectionClear( o );
             }
         }
 
-        internal void OnListInsert( ObservableObject o, int index, object item )
+        internal ListInsertEvent OnListInsert( ObservableObject o, int index, object item )
         {
-            if( _deserializing ) return;
+            if( _deserializing ) return null;
             using( CheckTransactionAndReentrancy( o ) )
             {
-                _changeTracker.OnListInsert( o, index, item );
+                return _changeTracker.OnListInsert( o, index, item );
             }
         }
 
-        internal void OnCollectionMapSet( ObservableObject o, object key, object value )
+        internal CollectionMapSetEvent OnCollectionMapSet( ObservableObject o, object key, object value )
         {
-            if( _deserializing ) return;
+            if( _deserializing ) return null;
             using( CheckTransactionAndReentrancy( o ) )
             {
-                _changeTracker.OnCollectionMapSet( o, key, value );
+                return _changeTracker.OnCollectionMapSet( o, key, value );
             }
         }
 
-        internal void OnCollectionRemoveKey( ObservableObject o, object key )
+        internal CollectionRemoveKeyEvent OnCollectionRemoveKey( ObservableObject o, object key )
         {
-            if( _deserializing ) return;
+            if( _deserializing ) return null;
             using( CheckTransactionAndReentrancy( o ) )
             {
-                _changeTracker.OnCollectionRemoveKey( o, key );
+                return _changeTracker.OnCollectionRemoveKey( o, key );
             }
         }
 

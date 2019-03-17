@@ -9,6 +9,22 @@ namespace CK.Observable
     {
         readonly Dictionary<TKey, TValue> _map;
 
+        /// <summary>
+        /// Raised when an item has been set by <see cref="this[TKey]"/> or <see cref="Add(TKey, TValue)"/>.
+        /// </summary>
+        public event EventHandler<CollectionMapSetEvent> ItemSet;
+
+        /// <summary>
+        /// Raised by <see cref="Clear"/>.
+        /// </summary>
+        public event EventHandler<CollectionClearEvent> CollectionCleared;
+
+        /// <summary>
+        /// Raised by <see cref="Remove(TKey)"/>.
+        /// </summary>
+        public event EventHandler<CollectionRemoveKeyEvent> ItemRemoved;
+
+
         public ObservableDictionary()
         {
             _map = new Dictionary<TKey, TValue>();
@@ -33,7 +49,8 @@ namespace CK.Observable
             set
             {
                 _map[key] = value;
-                Domain.OnCollectionMapSet( this, key, value );
+                CollectionMapSetEvent e = Domain.OnCollectionMapSet( this, key, value );
+                if( e != null && ItemSet != null ) ItemSet( this, e );
             }
         }
 
@@ -56,7 +73,8 @@ namespace CK.Observable
         public void Add( TKey key, TValue value )
         {
             _map.Add( key, value );
-            Domain.OnCollectionMapSet( this, key, value );
+            CollectionMapSetEvent e = Domain.OnCollectionMapSet( this, key, value );
+            if( e != null && ItemSet != null ) ItemSet( this, e );
         }
 
         void ICollection<KeyValuePair<TKey, TValue>>.Add( KeyValuePair<TKey, TValue> item ) => Add( item.Key, item.Value );
@@ -64,14 +82,16 @@ namespace CK.Observable
         public void Clear()
         {
             _map.Clear();
-            Domain.OnCollectionClear( this );
+            CollectionClearEvent e = Domain.OnCollectionClear( this );
+            if( e != null && CollectionCleared != null ) CollectionCleared( this, e ); 
         }
 
         public bool Remove( TKey key )
         {
             if( _map.Remove( key ) )
             {
-                Domain.OnCollectionRemoveKey( this, key );
+                CollectionRemoveKeyEvent e = Domain.OnCollectionRemoveKey( this, key );
+                if( e != null && ItemRemoved != null ) ItemRemoved( this, e );
                 return true;
             }
             return false;
@@ -82,7 +102,8 @@ namespace CK.Observable
             // Removing a pair from a dictionary also checks the value equality.
             if( ((IDictionary<TKey, TValue>)_map).Remove( item ) )
             {
-                Domain.OnCollectionRemoveKey( this, item.Key );
+                CollectionRemoveKeyEvent e = Domain.OnCollectionRemoveKey( this, item.Key );
+                if( e != null && ItemRemoved != null ) ItemRemoved( this, e );
                 return true;
             }
             return false;
@@ -96,9 +117,7 @@ namespace CK.Observable
 
         public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator() => _map.GetEnumerator();
 
-
         public bool TryGetValue( TKey key, out TValue value ) => _map.TryGetValue( key, out value );
-
 
         IEnumerator IEnumerable.GetEnumerator() => _map.GetEnumerator();
 
