@@ -10,9 +10,14 @@ namespace CK.Observable
         readonly Dictionary<TKey, TValue> _map;
 
         /// <summary>
-        /// Raised when an item has been set by <see cref="this[TKey]"/> or <see cref="Add(TKey, TValue)"/>.
+        /// Raised when an existing item has been updated by <see cref="this[TKey]"/> to a different value.
         /// </summary>
         public event EventHandler<CollectionMapSetEvent> ItemSet;
+
+        /// <summary>
+        /// Raised when a new item has been added by <see cref="this[TKey]"/> or <see cref="Add(TKey, TValue)"/>.
+        /// </summary>
+        public event EventHandler<CollectionMapSetEvent> ItemAdded;
 
         /// <summary>
         /// Raised by <see cref="Clear"/>.
@@ -83,7 +88,7 @@ namespace CK.Observable
         {
             _map.Add( key, value );
             CollectionMapSetEvent e = Domain.OnCollectionMapSet( this, key, value );
-            if( e != null && ItemSet != null ) ItemSet( this, e );
+            if( e != null && ItemAdded != null ) ItemAdded( this, e );
         }
 
         void ICollection<KeyValuePair<TKey, TValue>>.Add( KeyValuePair<TKey, TValue> item ) => Add( item.Key, item.Value );

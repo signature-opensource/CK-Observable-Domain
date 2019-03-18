@@ -18,7 +18,7 @@ namespace CK.Observable
         readonly List<T> _list;
 
         /// <summary>
-        /// Raised when an item has been set by <see cref="this[int]"/>.
+        /// Raised when an existing item has been updated by <see cref="this[int]"/> to a different value.
         /// </summary>
         public event EventHandler<ListSetAtEvent> ItemSet;
 

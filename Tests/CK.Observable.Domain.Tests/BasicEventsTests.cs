@@ -102,7 +102,7 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
-        public void ObservableList_exposes_4_events_instead_of_INotifyCollectionChanged()
+        public void ObservableList_is_observable_thanks_to_Item_Inserted_Set_RemovedAt_and_CollectionCleared_events()
         {
             var domain = new ObservableDomain( TestHelper.Monitor );
             domain.Modify( () =>
@@ -118,9 +118,10 @@ namespace CK.Observable.Domain.Tests
                 }
                 using( var gS = g.Cars.Monitor() )
                 {
-                    // Equality check: set is skipped.
+                    // Equality check: set is skipped, we detect the no-change.
                     g.Cars[0] = c;
                     gS.Should().NotRaise( "ItemInserted" );
+                    gS.Should().NotRaise( "ItemSet" );
                 }
                 using( var gS = g.Cars.Monitor() )
                 {
@@ -215,7 +216,7 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
-        public void dictionary_are_observable_thanks_to_3_events()
+        public void ObservableDictionary_is_observable_thanks_to_Item_Added_Set_Removed_and_CollectionCleared_events()
         {
             var domain = new ObservableDomain( TestHelper.Monitor );
             domain.Modify( () =>
@@ -224,7 +225,7 @@ namespace CK.Observable.Domain.Tests
                 using( var dM = d.Monitor() )
                 {
                     d.Add( "One", 1 );
-                    dM.Should().Raise( "ItemSet" )
+                    dM.Should().Raise( "ItemAdded" )
                         .WithSender( d )
                         .WithArgs<CollectionMapSetEvent>( ev => ev.Key.Equals( "One" )
                                                                 && ev.Value.Equals( 1 )
@@ -232,8 +233,18 @@ namespace CK.Observable.Domain.Tests
                 }
                 using( var dM = d.Monitor() )
                 {
+                    d["This is added"] = 3712;
+                    dM.Should().Raise( "ItemAdded" )
+                        .WithSender( d )
+                        .WithArgs<CollectionMapSetEvent>( ev => ev.Key.Equals( "This is added" )
+                                                                && ev.Value.Equals( 3712 )
+                                                                && ev.Object == d );
+                }
+                using( var dM = d.Monitor() )
+                {
                     // Equality check: set is skipped.
                     d["One"] = 1;
+                    dM.Should().NotRaise( "ItemAdded" );
                     dM.Should().NotRaise( "ItemSet" );
                 }
                 using( var dM = d.Monitor() )
@@ -251,6 +262,11 @@ namespace CK.Observable.Domain.Tests
                     dM.Should().Raise( "ItemRemoved" )
                         .WithSender( d )
                         .WithArgs<CollectionRemoveKeyEvent>( ev => ev.Key.Equals( "One" ) && ev.Object == d );
+                }
+                using( var dM = d.Monitor() )
+                {
+                    d.Remove( "One" ).Should().BeFalse( "No more 'One' item." );
+                    dM.Should().NotRaise( "ItemRemoved" );
                 }
                 d.Add( "Two", 2 );
                 d.Add( "Three", 3 );
