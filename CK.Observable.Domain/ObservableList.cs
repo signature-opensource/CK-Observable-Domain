@@ -67,17 +67,27 @@ namespace CK.Observable
         /// <summary>
         /// Gets or sets an item at a given position.
         /// Note that <paramref name="index"/> can be equal to <see cref="Count"/>: the item is added.
+        /// If the setting is actually a no-change (the new value is the same as the current one
+        /// according to <see cref="EqualityComparer{T}.Default"/>), then no event is raised.
         /// </summary>
-        /// <param name="index">The target index.</param>
+        /// <param name="index">The target index. Must be greater than 0 and at most equal to <see cref="Count"/>.</param>
         /// <returns>The get or set item.</returns>
         public T this[int index]
         {
             get => _list[index];
             set
             {
-                var e = Domain.OnListSetAt( this, index, value );
-                _list[index] = value;
-                if( e != null && ItemSet != null ) ItemSet( this, e );
+                if( index == _list.Count ) Add( value );
+                else
+                {
+                    var current = _list[index];
+                    if( !EqualityComparer<T>.Default.Equals( current, value ) )
+                    {
+                        var e = Domain.OnListSetAt( this, index, value );
+                        _list[index] = value;
+                        if( e != null && ItemSet != null ) ItemSet( this, e );
+                    }
+                }
             }
         }
 

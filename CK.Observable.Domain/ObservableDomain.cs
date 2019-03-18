@@ -78,12 +78,11 @@ namespace CK.Observable
 
         /// <summary>
         /// This is the actual number of objects, null cells of _objects are NOT included.
-        /// This is greater or equal to _rootObjectCount.
         /// </summary>
         int _actualObjectCount;
 
         /// <summary>
-        /// The actual list of root objects.
+        /// The root objects among all _objects.
         /// </summary>
         List<ObservableRootObject> _roots;
 
@@ -92,6 +91,9 @@ namespace CK.Observable
         int _reentrancyFlag;
         bool _deserializing;
 
+        /// <summary>
+        /// Exposes the non null objects in _objects as a collection.
+        /// </summary>
         class AllCollection : IReadOnlyCollection<ObservableObject>
         {
             readonly ObservableDomain _d;
@@ -110,6 +112,10 @@ namespace CK.Observable
             IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
         }
 
+        /// <summary>
+        /// The change tracker handles the transfomation of actual changes into events that are
+        /// optimized and serialized by the <see cref="Commit(Func{string, PropInfo})"/> method.
+        /// </summary>
         class ChangeTracker
         {
             class PropChanged
@@ -172,6 +178,9 @@ namespace CK.Observable
                 return result;
             }
 
+            /// <summary>
+            /// Clears all events collected so far from the 3 internal lists.
+            /// </summary>
             public void Reset()
             {
                 _changeEvents.Clear();
@@ -267,6 +276,9 @@ namespace CK.Observable
             }
         }
 
+        /// <summary>
+        /// Implements <see cref="IObservableTransaction"/>: this is in charge 
+        /// </summary>
         class Transaction : IObservableTransaction
         {
             readonly ObservableDomain _previous;
@@ -314,13 +326,18 @@ namespace CK.Observable
             }
         }
 
+        /// <summary>
+        /// Simple disposable reentrancy detector.
+        /// </summary>
         class ReetrancyHandler : IDisposable
         {
             readonly ObservableDomain _d;
+
             public ReetrancyHandler( ObservableDomain d )
             {
                 _d = d;
             }
+
             public void Dispose()
             {
                 Debug.Assert( _d._reentrancyFlag == 1 );
@@ -328,21 +345,44 @@ namespace CK.Observable
             }
         }
 
+        /// <summary>
+        /// Initializes a new <see cref="ObservableDomain"/> with an autonomous <see cref="Monitor"/>
+        /// and no <see cref="TransactionManager"/>.
+        /// </summary>
         public ObservableDomain()
             : this( null, null )
         {
         }
 
+        /// <summary>
+        /// Initializes a new <see cref="ObservableDomain"/> bound to a <see cref="Monitor"/> but without
+        /// any <see cref="TransactionManager"/>.
+        /// </summary>
+        /// <param name="monitor">The monitor to use. Can be null: a new monitor is created.</param>
         public ObservableDomain( IActivityMonitor monitor )
             : this( null, monitor )
         {
         }
 
+        /// <summary>
+        /// Initializes a new <see cref="ObservableDomain"/> with a <see cref="TransactionManager"/>.
+        /// </summary>
+        /// <param name="tm">The associated transaction manager to use. Can be null.</param>
         public ObservableDomain( IObservableTransactionManager tm )
             : this( tm, null )
         {
         }
 
+        /// <summary>
+        /// Initializes a new <see cref="ObservableDomain"/> with a <see cref="Monitor"/>,
+        /// a <see cref="TransactionManager"/> an optionals explicit exporter, serializer
+        /// and deserializer handlers.
+        /// </summary>
+        /// <param name="tm">The transaction manager to use. Can be null.</param>
+        /// <param name="monitor">The monitor to use. Can be null.</param>
+        /// <param name="exporters">Optional exporters handler.</param>
+        /// <param name="serializers">Optional serializers handler.</param>
+        /// <param name="deserializers">Optional deserializers handler.</param>
         public ObservableDomain(
             IObservableTransactionManager tm,
             IActivityMonitor monitor,
@@ -385,6 +425,9 @@ namespace CK.Observable
             Load( s, leaveOpen, encoding );
         }
 
+        /// <summary>
+        /// Empty transaction object: internally used during initialization (when <see cref="AddRoot{T}"/> are called).
+        /// </summary>
         class NoTransaction : IObservableTransaction
         {
             public static readonly IObservableTransaction Default = new NoTransaction();
@@ -472,7 +515,7 @@ namespace CK.Observable
         /// This must not be called twice (without disposing or committing the existing one) otherwise
         /// an <see cref="InvalidOperationException"/> is thrown.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>The transaction object.</returns>
         public IObservableTransaction BeginTransaction()
         {
             if( _currentTran != null ) throw new InvalidOperationException( $"A transaction is already opened for this ObservableDomain n°{DomainNumber}." );
@@ -546,6 +589,10 @@ namespace CK.Observable
             }
         }
 
+        /// <summary>
+        /// Exports the whole domain state as a JSON object (simple helper that calls <see cref="Export(TextWriter)"/>).
+        /// </summary>
+        /// <returns>The state as a string.</returns>
         public string ExportToString()
         {
             var w = new StringWriter();

@@ -24,7 +24,9 @@ namespace CK.Observable
         /// </summary>
         public event EventHandler<CollectionRemoveKeyEvent> ItemRemoved;
 
-
+        /// <summary>
+        /// Initializes a new <see cref="ObservableDictionary{TKey, TValue}"/>.
+        /// </summary>
         public ObservableDictionary()
         {
             _map = new Dictionary<TKey, TValue>();
@@ -48,10 +50,17 @@ namespace CK.Observable
             get => _map[key];
             set
             {
-                _map[key] = value;
-                CollectionMapSetEvent e = Domain.OnCollectionMapSet( this, key, value );
-                if( e != null && ItemSet != null ) ItemSet( this, e );
-            }
+                if( _map.TryGetValue( key, out var exists ) )
+                {
+                    if( !EqualityComparer<TValue>.Default.Equals( value, exists ) )
+                    {
+                        _map[key] = value;
+                        CollectionMapSetEvent e = Domain.OnCollectionMapSet( this, key, value );
+                        if( e != null && ItemSet != null ) ItemSet( this, e );
+                    }
+                }
+                else Add( key, value );
+           }
         }
 
         public Dictionary<TKey, TValue>.KeyCollection Keys => _map.Keys;
@@ -81,9 +90,12 @@ namespace CK.Observable
 
         public void Clear()
         {
-            _map.Clear();
-            CollectionClearEvent e = Domain.OnCollectionClear( this );
-            if( e != null && CollectionCleared != null ) CollectionCleared( this, e ); 
+            if( _map.Count > 0 )
+            {
+                _map.Clear();
+                CollectionClearEvent e = Domain.OnCollectionClear( this );
+                if( e != null && CollectionCleared != null ) CollectionCleared( this, e );
+            }
         }
 
         public bool Remove( TKey key )

@@ -102,6 +102,59 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
+        public void ObservableList_exposes_4_events_instead_of_INotifyCollectionChanged()
+        {
+            var domain = new ObservableDomain( TestHelper.Monitor );
+            domain.Modify( () =>
+            {
+                Car c = new Car( "First Car" );
+                Garage g = new Garage();
+                using( var gS = g.Cars.Monitor() )
+                {
+                    g.Cars.Add( c );
+                    gS.Should().Raise( "ItemInserted" )
+                        .WithSender( g.Cars )
+                        .WithArgs<ListInsertEvent>( ev => ev.Index == 0 && ev.Item == c && ev.Object == g.Cars );
+                }
+                using( var gS = g.Cars.Monitor() )
+                {
+                    // Equality check: set is skipped.
+                    g.Cars[0] = c;
+                    gS.Should().NotRaise( "ItemInserted" );
+                }
+                using( var gS = g.Cars.Monitor() )
+                {
+                    g.Cars[0] = null;
+                    gS.Should().Raise( "ItemSet" )
+                        .WithSender( g.Cars )
+                        .WithArgs<ListSetAtEvent>( ev => ev.Index == 0 && ev.Value == null && ev.Object == g.Cars );
+                }
+                using( var gS = g.Cars.Monitor() )
+                {
+                    g.Cars.Remove( null );
+                    gS.Should().Raise( "ItemRemovedAt" )
+                        .WithSender( g.Cars )
+                        .WithArgs<ListRemoveAtEvent>( ev => ev.Index == 0 && ev.Object == g.Cars );
+                }
+                g.Cars.Add( c );
+                g.Cars.Add( null );
+                using( var gS = g.Cars.Monitor() )
+                {
+                    g.Cars.Clear();
+                    gS.Should().Raise( "CollectionCleared" )
+                        .WithSender( g.Cars );
+                }
+                g.Cars.Should().BeEmpty();
+                using( var gS = g.Cars.Monitor() )
+                {
+                    g.Cars.Clear();
+                    gS.Should().NotRaise( "CollectionCleared" );
+                }
+
+            } ).Should().NotBeNull();
+        }
+
+        [Test]
         public void list_changed_events()
         {
             var domain = new ObservableDomain( TestHelper.Monitor );
@@ -159,6 +212,61 @@ namespace CK.Observable.Domain.Tests
             Check( events, "PropertyChanged 5.CurrentCar = 'Car C'.",
                            "PropertyChanged 4.CurrentMechanic = 'Mechanic Jon Doe'." );
 
+        }
+
+        [Test]
+        public void dictionary_are_observable_thanks_to_3_events()
+        {
+            var domain = new ObservableDomain( TestHelper.Monitor );
+            domain.Modify( () =>
+            {
+                var d = new ObservableDictionary<string, int>();
+                using( var dM = d.Monitor() )
+                {
+                    d.Add( "One", 1 );
+                    dM.Should().Raise( "ItemSet" )
+                        .WithSender( d )
+                        .WithArgs<CollectionMapSetEvent>( ev => ev.Key.Equals( "One" )
+                                                                && ev.Value.Equals( 1 )
+                                                                && ev.Object == d );
+                }
+                using( var dM = d.Monitor() )
+                {
+                    // Equality check: set is skipped.
+                    d["One"] = 1;
+                    dM.Should().NotRaise( "ItemSet" );
+                }
+                using( var dM = d.Monitor() )
+                {
+                    d["One"] = 0;
+                    dM.Should().Raise( "ItemSet" )
+                        .WithSender( d )
+                        .WithArgs<CollectionMapSetEvent>( ev => ev.Key.Equals( "One" )
+                                                                && ev.Value.Equals( 0 )
+                                                                && ev.Object == d );
+                }
+                using( var dM = d.Monitor() )
+                {
+                    d.Remove( "One" );
+                    dM.Should().Raise( "ItemRemoved" )
+                        .WithSender( d )
+                        .WithArgs<CollectionRemoveKeyEvent>( ev => ev.Key.Equals( "One" ) && ev.Object == d );
+                }
+                d.Add( "Two", 2 );
+                d.Add( "Three", 3 );
+                using( var dM = d.Monitor() )
+                {
+                    d.Clear();
+                    dM.Should().Raise( "CollectionCleared" ).WithSender( d );
+                }
+                d.Should().BeEmpty();
+                using( var dM = d.Monitor() )
+                {
+                    d.Clear();
+                    dM.Should().NotRaise( "CollectionCleared" );
+                }
+
+            } ).Should().NotBeNull();
         }
 
         static void Check( IReadOnlyList<ObservableEvent> events, params string[] e )

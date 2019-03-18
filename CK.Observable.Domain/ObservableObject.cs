@@ -9,6 +9,11 @@ using System.Reflection;
 
 namespace CK.Observable
 {
+    /// <summary>
+    /// Base class for all observable object.
+    /// Observable objects are reference types that belong to a <see cref="ObservableDomain"/> and for
+    /// which properties changes and <see cref="Dispose"/> are tracked.
+    /// </summary>
     [SerializationVersionAttribute(0)]
     public abstract class ObservableObject : INotifyPropertyChanged, IDisposable, IKnowMyExportDriver
     {
@@ -18,11 +23,20 @@ namespace CK.Observable
         internal int OId => _id;
         internal readonly IObjectExportTypeDriver _exporter;
 
+        /// <summary>
+        /// Constructor for specialized instance.
+        /// The current domain is retrieved automatically: it is the last one on the current thread
+        /// that has started a transaction (see <see cref="ObservableDomain.BeginTransaction"/>).
+        /// </summary>
         protected ObservableObject()
             : this( ObservableDomain.GetCurrentActiveDomain() )
         {
         }
 
+        /// <summary>
+        /// Constructor for specialized instance with an explicit <see cref="ObservableDomain"/>.
+        /// </summary>
+        /// <param name="domain">The domain to which this object belong.</param>
         protected ObservableObject( ObservableDomain domain )
         {
             if( domain == null ) throw new ArgumentNullException( nameof(domain) );
@@ -32,6 +46,10 @@ namespace CK.Observable
             Debug.Assert( _id >= 0 );
         }
 
+        /// <summary>
+        /// Deserialization constructor.
+        /// </summary>
+        /// <param name="d">The deserialization context.</param>
         protected ObservableObject( IBinaryDeserializerContext d )
         {
             var r = d.StartReading();
@@ -53,6 +71,9 @@ namespace CK.Observable
             remove { _handler -= value; }
         }
 
+        /// <summary>
+        /// Gives access to the 
+        /// </summary>
         protected IActivityMonitor DomainMonitor => Domain.Monitor;
 
         [NotExportable]
