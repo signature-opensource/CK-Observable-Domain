@@ -188,6 +188,12 @@ namespace CK.Observable
                 _propChanged.Clear();
             }
 
+            /// <summary>
+            /// Gets whether the object has been created in the current transaction:
+            /// it belongs to the _newObjects dictionary.
+            /// </summary>
+            /// <param name="o">The potential new object.</param>
+            /// <returns>True if this is a new object. False if the object has been created earlier.</returns>
             internal bool IsNewObject( ObservableObject o ) => _newObjects.ContainsKey( o );
 
             internal void OnNewObject( ObservableObject o, int objectId, IObjectExportTypeDriver exporter )

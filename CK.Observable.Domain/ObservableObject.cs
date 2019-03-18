@@ -14,7 +14,7 @@ namespace CK.Observable
     /// Observable objects are reference types that belong to a <see cref="ObservableDomain"/> and for
     /// which properties changes and <see cref="Dispose"/> are tracked.
     /// </summary>
-    [SerializationVersionAttribute(0)]
+    [SerializationVersion(0)]
     public abstract class ObservableObject : INotifyPropertyChanged, IDisposable, IKnowMyExportDriver
     {
         int _id;
@@ -22,6 +22,11 @@ namespace CK.Observable
         PropertyChangedEventHandler _handler;
         internal int OId => _id;
         internal readonly IObjectExportTypeDriver _exporter;
+
+        /// <summary>
+        /// Raised when this object is <see cref="Dispose"/>d by <see cref="OnDisposed"/>.
+        /// </summary>
+        public event EventHandler Disposed;
 
         /// <summary>
         /// Constructor for specialized instance.
@@ -76,15 +81,24 @@ namespace CK.Observable
         /// </summary>
         protected IActivityMonitor DomainMonitor => Domain.Monitor;
 
+        /// <summary>
+        /// Gets whether this object has been disposed.
+        /// </summary>
         [NotExportable]
         public bool IsDisposed => _id < 0;
 
+        /// <summary>
+        /// Gets whether the odomain is being deserialized.
+        /// </summary>
         protected bool IsDeserializing => Domain.IsDeserializing;
 
         internal virtual ObjectExportedKind ExportedKind => ObjectExportedKind.Object;
 
         IObjectExportTypeDriver IKnowMyExportDriver.ExportDriver => _exporter;
 
+        /// <summary>
+        /// Disposes this object (if not already disposed).
+        /// </summary>
         public void Dispose()
         {
             if( _id >= 0 )
@@ -97,11 +111,21 @@ namespace CK.Observable
 
         /// <summary>
         /// Called before this object is disposed.
+        /// Implementation at this level raises the <see cref="Disposed"/> event: it must be called
+        /// by overrides.
         /// </summary>
         protected virtual void OnDisposed()
         {
+            Disposed?.Invoke( this, EventArgs.Empty );
         }
 
+        /// <summary>
+        /// Automatically called by (currently) Fody.
+        /// This method captures the change and routes it to the domain. 
+        /// </summary>
+        /// <param name="propertyName">The name of the changed property.</param>
+        /// <param name="before">The property previous value.</param>
+        /// <param name="after">The new property value.</param>
         public virtual void OnPropertyChanged( string propertyName, object before, object after )
         {
             if( !IsDisposed )

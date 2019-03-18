@@ -76,5 +76,23 @@ namespace CK.Observable.Domain.Tests
             }
         }
 
+        [Test]
+        public void ObservableObject_exposes_Disposed_event()
+        {
+            var d = new ObservableDomain();
+            d.Modify( () =>
+            {
+                var c = new Car( "Titine" );
+                d.AllObjects.Should().ContainSingle( x => x == c );
+                using( var cM = c.Monitor() )
+                {
+                    c.Dispose();
+                    cM.Should().Raise( "Disposed" ).WithSender( c ).WithArgs<EventArgs>( a => a == EventArgs.Empty );
+                }
+                d.AllObjects.Should().BeEmpty();
+            } ).Should().NotBeNull();
+
+        }
+
     }
 }
