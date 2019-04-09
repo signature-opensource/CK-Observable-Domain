@@ -15,6 +15,7 @@ namespace CK.Observable.Domain.Tests.RootSample
             ToDoNumbers = new ObservableList<int>();
             Products = new ObservableDictionary<string, ProductInfo>();
             ProductStateList = new ObservableList<Product>();
+            ProductInfos = new ObservableList<ProductInfo>();
             // Creating products and disposing them in the ctor create holes
             // in the numbering.
             // This tests this edge case that must be handled properly.
@@ -35,6 +36,7 @@ namespace CK.Observable.Domain.Tests.RootSample
             Products = (ObservableDictionary<string, ProductInfo>)r.ReadObject();
             ProductStateList = (ObservableList<Product>)r.ReadObject();
             CurrentProductState = (Product)r.ReadObject();
+            ProductInfos = (ObservableList<ProductInfo>)r.ReadObject();
         }
 
         void Write( BinarySerializer s )
@@ -43,11 +45,14 @@ namespace CK.Observable.Domain.Tests.RootSample
             s.WriteObject( Products );
             s.WriteObject( ProductStateList );
             s.WriteObject( CurrentProductState );
+            s.WriteObject( ProductInfos );
         }
 
         public ObservableList<int> ToDoNumbers { get; }
 
-        public ObservableDictionary<string,ProductInfo> Products { get; }
+        public ObservableDictionary<string, ProductInfo> Products { get; }
+
+        public ObservableList<ProductInfo> ProductInfos { get; }
 
         public ObservableList<Product> ProductStateList { get; }
 

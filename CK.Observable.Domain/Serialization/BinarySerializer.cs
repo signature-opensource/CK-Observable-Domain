@@ -261,6 +261,7 @@ namespace CK.Observable
                     using( var r = new BinaryDeserializer( s, services, null ) )
                     {
                         var o2 = r.ReadObject();
+                        r.ImplementationServices.ExecutePostDeserializationActions();
                         using( var s2 = new MemoryStream() )
                         using( var w2 = new BinarySerializer( s2, null, true ) )
                         {

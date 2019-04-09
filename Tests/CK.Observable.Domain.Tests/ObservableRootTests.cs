@@ -47,6 +47,7 @@ namespace CK.Observable.Domain.Tests
             d.Root.ToDoNumbers[0].Should().Be( 42 );
         }
 
+        [Test]
         public void serialization_tests()
         {
             var d = new ObservableDomain<ApplicationState>();
@@ -58,6 +59,7 @@ namespace CK.Observable.Domain.Tests
                     var pInfo = new ProductInfo( $"Product Info n°{i}", i );
                     var p = new Product( pInfo );
                     d.Root.Products.Add( $"p{i}", pInfo );
+                    //d.Root.ProductInfos.Add( pInfo );
                 }
             } );
             var services = new SimpleServiceContainer();
