@@ -137,7 +137,7 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
-        public void exporting_and_altering_ApplicatinState()
+        public void exporting_and_altering_ApplicationState()
         {
             var eventCollector = new TransactionEventCollector( new SecureInMemoryTransactionManager() );
 
@@ -151,7 +151,7 @@ namespace CK.Observable.Domain.Tests
                 d.Root.ProductStateList.Add( new RootSample.Product( p1 ) { Name = "Product n°1" } );
                 d.Root.CurrentProductState = d.Root.ProductStateList[0];
             } );
-            d.Root.ProductStateList[0].GetOId().Should().Be( 6, "Product n°1 OId is 6." );
+            d.Root.ProductStateList[0].GetOId().Should().Be( 7, "Product n°1 OId is 7." );
             d.TransactionSerialNumber.Should().Be( 1 );
 
             string initial = d.ExportToString();
@@ -166,15 +166,15 @@ namespace CK.Observable.Domain.Tests
                 d.Root.ProductStateList.Add( new RootSample.Product( p2 ) { Name = "Product n°2" } );
                 d.Root.CurrentProductState = d.Root.ProductStateList[1];
             } );
-            d.Root.ProductStateList[1].GetOId().Should().Be( 5, "Product n°2 OId is 5." );
+            d.Root.ProductStateList[1].GetOId().Should().Be( 6, "Product n°2 OId is 6." );
 
             string t1 = eventCollector.WriteEventsFrom( 1 );
             // p2 is the object n°5.
-            t1.Should().Contain( @"[""N"",5,""""]" );
+            t1.Should().Contain( @"[""N"",6,""""]" );
             // p2.ExtraData is exported as a Map.
             t1.Should().Contain( @"[""Ex2"","">>Ex2""]" );
             // ApplicationState.CurrentProduct is p2:
-            t1.Should().Contain( @"[""C"",0,1,{""="":5}]" );
+            t1.Should().Contain( @"[""C"",0,1,{""="":6}]" );
 
             d.Modify( () =>
             {
@@ -183,8 +183,8 @@ namespace CK.Observable.Domain.Tests
                 d.Root.CurrentProductState.Name.Should().Be( "Product n°1" );
             } );
             string t2 = eventCollector.WriteEventsFrom( 2 );
-            // Switch to Product n°1 (OId is 4).
-            t2.Should().Contain( @"[""C"",0,1,{""="":6}]" );
+            // Switch to Product n°1 (OId is 7).
+            t2.Should().Contain( @"[""C"",0,1,{""="":7}]" );
         }
 
     }

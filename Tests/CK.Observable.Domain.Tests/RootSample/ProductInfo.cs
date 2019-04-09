@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace CK.Observable.Domain.Tests.RootSample
 {
     [SerializationVersion(0)]
-    public class ProductInfo
+    public struct ProductInfo
     {
         public ProductInfo( string n, int p )
         {

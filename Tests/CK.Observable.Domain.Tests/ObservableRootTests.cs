@@ -59,11 +59,11 @@ namespace CK.Observable.Domain.Tests
                     var pInfo = new ProductInfo( $"Product Info n°{i}", i );
                     var p = new Product( pInfo );
                     d.Root.Products.Add( $"p{i}", pInfo );
-                    //d.Root.ProductInfos.Add( pInfo );
+                    d.Root.ProductInfos.Add( pInfo );
                 }
             } );
             var services = new SimpleServiceContainer();
-            services.Add( new ObservableDomain<ApplicationState>() );
+            services.Add<ObservableDomain>( new ObservableDomain<ApplicationState>() );
             BinarySerializer.IdempotenceCheck( d.Root, services );
         }
 

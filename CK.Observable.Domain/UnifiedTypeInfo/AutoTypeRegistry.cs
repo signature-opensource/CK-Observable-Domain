@@ -83,7 +83,7 @@ namespace CK.Observable
 
             protected object DoReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo )
             {
-                var o = r.ImplementationServices.CreateUninitializedInstance( Type, readInfo.IsTrackedObject );
+                var o = r.ImplementationServices.CreateUninitializedInstance( Type, readInfo?.IsTrackedObject ?? false );
                 var ctx = r.ImplementationServices.PushConstructorContext( readInfo );
                 _ctor.Invoke( o, new object[] { ctx } );
                 r.ImplementationServices.PopConstructorContext();
