@@ -16,7 +16,7 @@ namespace Cake.Npm
 
         public void RunDistTags( NpmDistTagSettings settings )
         {
-            this.RunCore( settings );
+            RunCore( settings );
         }
     }
 

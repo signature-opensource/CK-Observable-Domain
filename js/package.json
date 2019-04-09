@@ -1,6 +1,6 @@
 {
   "name": "@signature/ck-observable-domain",
-  "version": "0.0.0-version-replaced-in-CodeCakeBuilder",
+  "version": "0.0.0-0",
   "description": "CK-Observable-Domain client implementation using json-graph-serializer",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
