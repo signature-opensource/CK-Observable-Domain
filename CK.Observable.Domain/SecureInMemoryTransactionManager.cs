@@ -20,6 +20,10 @@ namespace CK.Observable
         readonly IObservableTransactionManager _next;
         readonly List<Snapshot> _snapshots;
 
+        /// <summary>
+        /// Captures the whole domain by serializing it into a <see cref="MemoryStream"/>
+        /// after a successful transaction.
+        /// </summary>
         public struct Snapshot
         {
             internal Snapshot( int serialNumber, MemoryStream c, DateTime timeUtc )
@@ -30,18 +34,35 @@ namespace CK.Observable
                 Capture = c;
             }
 
+            /// <summary>
+            /// Gets the transaction serial number.
+            /// </summary>
             public int SerialNumber { get; }
 
+            /// <summary>
+            /// Gets the date and time of the transaction.
+            /// </summary>
             public DateTime TimeUtc { get; }
 
+            /// <summary>
+            /// Gets the serialized domain.
+            /// </summary>
             public MemoryStream Capture { get; }
 
+            /// <summary>
+            /// Overridden to return the <see cref="SerialNumber"/> and <see cref="TimeUtc"/>.
+            /// </summary>
+            /// <returns>A readable string.</returns>
             public override string ToString()
             {
                 return $"Snapshot {SerialNumber} - {TimeUtc}.";
             }
         }
 
+        /// <summary>
+        /// Initializes a new <see cref="SecureInMemoryTransactionManager"/>.
+        /// </summary>
+        /// <param name="next">The next manager (can be null).</param>
         public SecureInMemoryTransactionManager( IObservableTransactionManager next = null )
         {
             _next = next;
@@ -86,7 +107,7 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Does nothing except calling the next <see cref="IObservableTransactionManager"/> in the chain of respnsibility
+        /// Does nothing except calling the next <see cref="IObservableTransactionManager"/> in the chain of responsibility
         /// except for the very first transaction where a snapshot is created.
         /// </summary>
         /// <param name="d">The associated domain.</param>
@@ -130,7 +151,7 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Creates and add a snapshot to <see cref="Snapshots"/>.
+        /// Creates and adds a snapshot to <see cref="Snapshots"/>.
         /// </summary>
         /// <param name="d">The associated domain.</param>
         /// <param name="timeUtc">Time of the operation.</param>

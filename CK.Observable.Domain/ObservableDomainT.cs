@@ -9,23 +9,52 @@ using System.Threading.Tasks;
 
 namespace CK.Observable
 {
+    /// <summary>
+    /// <see cref="ObservableDomain"/> with a strongly typed <see cref="Root"/>.
+    /// </summary>
+    /// <typeparam name="T">Type of the root object.</typeparam>
     public class ObservableDomain<T> : ObservableDomain where T : ObservableRootObject
     {
+        /// <summary>
+        /// Initializes a new <see cref="ObservableDomain{T}"/> with an
+        /// automous <see cref="ObservableDomain.Monitor"/> and no <see cref="ObservableDomain.TransactionManager"/>.
+        /// The <see cref="Root"/> is a new <typeparamref name="T"/> (obtained by calling a constructor
+        /// that accepts a ObservableDomain).
+        /// </summary>
         public ObservableDomain()
             : this( null, null )
         {
         }
 
+        /// <summary>
+        /// Initializes a new <see cref="ObservableDomain{T}"/> without any <see cref="ObservableDomain.TransactionManager"/>.
+        /// The <see cref="Root"/> is a new <typeparamref name="T"/> (obtained by calling the constructor
+        /// that accepts a ObservableDomain).
+        /// </summary>
+        /// <param name="monitor">Monitor to use (when null, an automous monitor is automatically created).</param>
         public ObservableDomain( IActivityMonitor monitor )
             : this( null, monitor )
         {
         }
 
+        /// <summary>
+        /// Initializes a new <see cref="ObservableDomain{T}"/> with an autonomous <see cref="ObservableDomain.Monitor"/>.
+        /// The <see cref="Root"/> is a new <typeparamref name="T"/> (obtained by calling the constructor
+        /// that accepts a ObservableDomain).
+        /// </summary>
+        /// <param name="tm">The transaction manager. Can be null.</param>
         public ObservableDomain( IObservableTransactionManager tm )
             : this( tm, null )
         {
         }
 
+        /// <summary>
+        /// Initializes a new <see cref="ObservableDomain{T}"/>.
+        /// The <see cref="Root"/> is a new <typeparamref name="T"/> (obtained by calling the constructor
+        /// that accepts a ObservableDomain).
+        /// </summary>
+        /// <param name="tm">The transaction manager. Can be null.</param>
+        /// <param name="monitor">Monitor to use (when null, an automous monitor is automatically created).</param>
         public ObservableDomain( IObservableTransactionManager tm, IActivityMonitor monitor )
             : base( tm, monitor )
         {
@@ -33,7 +62,7 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Initializes a previously <see cref="Save"/>d domain.
+        /// Initializes a previously <see cref="ObservableDomain.Save"/>d domain.
         /// </summary>
         /// <param name="tm">The transaction manager to use. Can be null.</param>
         /// <param name="monitor">The monitor associated to the domain. Can be null (a dedicated one will be created).</param>

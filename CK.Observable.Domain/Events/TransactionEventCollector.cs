@@ -8,21 +8,46 @@ using System.Threading.Tasks;
 
 namespace CK.Observable
 {
+    /// <summary>
+    /// Implements a <see cref="IObservableTransactionManager"/> that collects
+    /// transcation events and exposes <see cref="TransactionEvent"/> that captures,
+    /// for each transaction, all the transaction <see cref="ObservableEvent"/> as well
+    /// as a JSON object that describes them.
+    /// </summary>
     public class TransactionEventCollector : IObservableTransactionManager
     {
         readonly IObservableTransactionManager _next;
-        readonly List<Event> _events;
+        readonly List<TransactionEvent> _events;
         readonly StringWriter _buffer;
         readonly ObjectExporter _exporter;
 
-        public struct Event
+        /// <summary>
+        /// Representation of a successful transaction.
+        /// </summary>
+        public readonly struct TransactionEvent
         {
+            /// <summary>
+            /// The transaction number.
+            /// </summary>
             public readonly int TransactionNumber;
+
+            /// <summary>
+            /// The list of <see cref="ObservableEvent"/> objects that have been emitted during
+            /// the transaction.
+            /// </summary>
             public readonly IReadOnlyList<ObservableEvent> Events;
+
+            /// <summary>
+            /// The date and time of the transaction.
+            /// </summary>
             public readonly DateTime TimeUtc;
+
+            /// <summary>
+            /// The JSON description of the <see cref="Events"/>.
+            /// </summary>
             public readonly string ExportedEvents;
 
-            internal Event( int t, DateTime timeUtc, IReadOnlyList<ObservableEvent> e, string exported )
+            internal TransactionEvent( int t, DateTime timeUtc, IReadOnlyList<ObservableEvent> e, string exported )
             {
                 TransactionNumber = t;
                 Events = e;
@@ -31,10 +56,14 @@ namespace CK.Observable
             }
         }
 
+        /// <summary>
+        /// Initializes a new <see cref="TransactionEventCollector"/>.
+        /// </summary>
+        /// <param name="next">The next manager (can be null).</param>
         public TransactionEventCollector( IObservableTransactionManager next = null )
         {
             _next = next;
-            _events = new List<Event>();
+            _events = new List<TransactionEvent>();
             _buffer = new StringWriter();
             _exporter = new ObjectExporter( new JSONExportTarget( _buffer ) );
             KeepDuration = TimeSpan.FromHours( 1 );
@@ -44,7 +73,7 @@ namespace CK.Observable
         /// <summary>
         /// Gets the current transaction events.
         /// </summary>
-        public IReadOnlyList<Event> TransactionEvents => _events;
+        public IReadOnlyList<TransactionEvent> TransactionEvents => _events;
 
         /// <summary>
         /// Gets or sets the maximum time during which events are kept.
@@ -110,7 +139,7 @@ namespace CK.Observable
             _buffer.GetStringBuilder().Clear();
             _exporter.Reset();
             foreach( var e in events ) e.Export( _exporter );
-            _events.Add( new Event( d.TransactionSerialNumber, timeUtc, events, _buffer.ToString() ) );
+            _events.Add( new TransactionEvent( d.TransactionSerialNumber, timeUtc, events, _buffer.ToString() ) );
             ApplyKeepDuration();
             _next?.OnTransactionCommit( d, timeUtc, events );
         }

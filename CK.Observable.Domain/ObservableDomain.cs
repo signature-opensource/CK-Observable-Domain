@@ -12,6 +12,11 @@ using System.Threading;
 
 namespace CK.Observable
 {
+    /// <summary>
+    /// Base class for any observable domain where <see cref="AllRoots"/> are not strongly typed.
+    /// You may use specialized <see cref="ObservableChannel{T}"/> or <see cref="ObservableDomain{T1, T2, T3, T4}"/>
+    /// for strongly typed roots.
+    /// </summary>
     public class ObservableDomain
     {
         /// <summary>
@@ -70,7 +75,7 @@ namespace CK.Observable
 
         /// <summary>
         /// Since we manage the array directly, this is
-        /// the equivalent of a List<ObservableObject>.Count (and _objects.Length
+        /// the equivalent of a List{ObservableObject}.Count (and _objects.Length
         /// is the capacity):
         /// the null cells (the ones registered in _freeList) are included.
         /// </summary>
@@ -507,11 +512,14 @@ namespace CK.Observable
 
         /// <summary>
         /// Gets the monitor that is bound to this domain.
+        /// This is never null: an autonomous monitor is automatically created if none is
+        /// provided to constructors.
         /// </summary>
         public IActivityMonitor Monitor { get; }
 
         /// <summary>
         /// Gets the associated transaction manager.
+        /// Can be null.
         /// </summary>
         public IObservableTransactionManager TransactionManager { get; }
 

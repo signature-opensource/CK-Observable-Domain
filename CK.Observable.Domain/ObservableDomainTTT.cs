@@ -10,20 +10,21 @@ using System.Threading.Tasks;
 namespace CK.Observable
 {
     /// <summary>
-    /// <see cref="ObservableDomain"/> with strongly typed <see cref="Root1"/> and <see cref="Root2"/>
-    /// observable roots.
+    /// <see cref="ObservableDomain"/> with strongly typed <see cref="Root1"/>, <see cref="Root2"/>
+    /// and <see cref="Root3"/> observable roots.
     /// </summary>
     /// <typeparam name="T1">Type of the first root object.</typeparam>
     /// <typeparam name="T2">Type of the second root object.</typeparam>
-    public class ObservableDomain<T1,T2> : ObservableDomain
+    /// <typeparam name="T3">Type of the third root object.</typeparam>
+    public class ObservableDomain<T1,T2,T3> : ObservableDomain
         where T1 : ObservableRootObject
         where T2 : ObservableRootObject
+        where T3 : ObservableRootObject
     {
         /// <summary>
-        /// Initializes a new <see cref="ObservableDomain{T1,T2}"/> with an
+        /// Initializes a new <see cref="ObservableDomain{T1,T2,T3}"/> with an
         /// automous <see cref="ObservableDomain.Monitor"/> and no <see cref="ObservableDomain.TransactionManager"/>.
-        /// The <see cref="Root1"/> is a new <typeparamref name="T1"/> and the <see cref="Root2"/> is a new <typeparamref name="T2"/>
-        /// (obtained by calling the constructor that accepts a ObservableDomain).
+        /// The roots are initialized with new instances of their respective type (obtained by calling the constructor that accepts a ObservableDomain).
         /// </summary>
         public ObservableDomain()
             : this( null, null )
@@ -31,9 +32,8 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Initializes a new <see cref="ObservableDomain{T1,T2}"/> without any <see cref="ObservableDomain.TransactionManager"/>.
-        /// The <see cref="Root1"/> is a new <typeparamref name="T1"/> and the <see cref="Root2"/> is a new <typeparamref name="T2"/>
-        /// (obtained by calling the constructor that accepts a ObservableDomain).
+        /// Initializes a new <see cref="ObservableDomain{T1,T2,T3}"/> without any <see cref="ObservableDomain.TransactionManager"/>.
+        /// The roots are initialized with new instances of their respective type (obtained by calling the constructor that accepts a ObservableDomain).
         /// </summary>
         /// <param name="monitor">Monitor to use (when null, an automous monitor is automatically created).</param>
         public ObservableDomain( IActivityMonitor monitor )
@@ -42,9 +42,8 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Initializes a new <see cref="ObservableDomain{T1,T2}"/> with an autonomous <see cref="ObservableDomain.Monitor"/>.
-        /// The <see cref="Root1"/> is a new <typeparamref name="T1"/> and the <see cref="Root2"/> is a new <typeparamref name="T2"/>
-        /// (obtained by calling the constructor that accepts a ObservableDomain).
+        /// Initializes a new <see cref="ObservableDomain{T1,T2,T3}"/> with an autonomous <see cref="ObservableDomain.Monitor"/>.
+        /// The roots are initialized with new instances of their respective type (obtained by calling the constructor that accepts a ObservableDomain).
         /// </summary>
         /// <param name="tm">The transaction manager. Can be null.</param>
         public ObservableDomain( IObservableTransactionManager tm )
@@ -53,9 +52,8 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Initializes a new <see cref="ObservableDomain{T1,T2}"/>.
-        /// The <see cref="Root1"/> is a new <typeparamref name="T1"/> and the <see cref="Root2"/> is a new <typeparamref name="T2"/>
-        /// (obtained by calling the constructor that accepts a ObservableDomain).
+        /// Initializes a new <see cref="ObservableDomain{T1,T2,T3}"/>.
+        /// The roots are initialized with new instances of their respective type (obtained by calling the constructor that accepts a ObservableDomain).
         /// </summary>
         /// <param name="tm">The transaction manager. Can be null.</param>
         /// <param name="monitor">Monitor to use (when null, an automous monitor is automatically created).</param>
@@ -64,6 +62,7 @@ namespace CK.Observable
         {
             Root1 = AddRoot<T1>();
             Root2 = AddRoot<T2>();
+            Root3 = AddRoot<T3>();
         }
 
         /// <summary>
@@ -82,14 +81,16 @@ namespace CK.Observable
             Encoding encoding = null )
             : base( tm, monitor, s, leaveOpen, encoding )
         {
-            if( AllRoots.Count != 2
+            if( AllRoots.Count != 3
                 || !(AllRoots[0] is T1)
-                || !(AllRoots[1] is T2) )
+                || !(AllRoots[1] is T2) 
+                || !(AllRoots[2] is T3) )
             {
-                throw new InvalidDataException( $"Incompatible stream. No root of type {typeof( T1 ).Name} and {typeof( T2 ).Name}. {AllRoots.Count} roots of type: {AllRoots.Select( t => t.GetType().Name ).Concatenate()}." );
+                throw new InvalidDataException( $"Incompatible stream. No root of type {typeof( T1 ).Name}, {typeof( T2 ).Name} and {typeof( T3 ).Name}. {AllRoots.Count} roots of type: {AllRoots.Select( t => t.GetType().Name ).Concatenate()}." );
             }
             Root1 = (T1)AllRoots[0];
             Root2 = (T2)AllRoots[1];
+            Root3 = (T3)AllRoots[2];
         }
 
         /// <summary>
@@ -102,6 +103,11 @@ namespace CK.Observable
         /// Gets the second typed root object.
         /// </summary>
         public T2 Root2 { get; }
+
+        /// <summary>
+        /// Gets the third typed root object.
+        /// </summary>
+        public T3 Root3 { get; }
 
     }
 }

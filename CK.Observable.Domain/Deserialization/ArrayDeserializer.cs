@@ -39,7 +39,7 @@ namespace CK.Observable
 
         /// <summary>
         /// Reads an array of <typeparamref name="T"/> that have been previously written
-        /// by <see cref="ArraySerializer.WriteObjects{T}(int, IEnumerable{T}, ITypeSerializationDriver{T}).
+        /// by <see cref="ArraySerializer.WriteObjects" />.
         /// </summary>
         /// <typeparam name="T">Type of the item.</typeparam>
         /// <param name="itemDeserialization">Item deserializer. Must not be null.</param>
