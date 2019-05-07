@@ -110,6 +110,17 @@ namespace CK.Observable
         }
 
         /// <summary>
+        /// Sends a command to the external world. Commands are enlisted
+        /// into <see cref="TransactionResult.Commands"/> (when the transaction succeeds)
+        /// and can be processed by any <see cref="IObservableTransactionManager"/>.
+        /// </summary>
+        /// <param name="command">Any command description.</param>
+        public void SendCommand( object command )
+        {
+            Domain.SendCommand( this, command );
+        }
+
+        /// <summary>
         /// Called before this object is disposed.
         /// Implementation at this level raises the <see cref="Disposed"/> event: it must be called
         /// by overrides.

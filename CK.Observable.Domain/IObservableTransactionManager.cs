@@ -7,7 +7,14 @@ using System.Threading.Tasks;
 
 namespace CK.Observable
 {
-
+    /// <summary>
+    /// Primary interface to implement actual behavior behind an observable domain.
+    /// This is is intented to be implemented as a a chain of responsibility: Start,
+    /// Commit and Failure should be propagated through a linked list (or tree structure)
+    /// of such managers.
+    /// See <see cref="TransactionEventCollector"/> or <see cref="SecureInMemoryTransactionManager"/>
+    /// for concrete impleentations of transaction manager.
+    /// </summary>
     public interface IObservableTransactionManager
     {
         /// <summary>
@@ -23,7 +30,8 @@ namespace CK.Observable
         /// <param name="d">The associated domain.</param>
         /// <param name="timeUtc">The date time utc of the commit.</param>
         /// <param name="events">The events of the transaction. Can be empty.</param>
-        void OnTransactionCommit( ObservableDomain d, DateTime timeUtc, IReadOnlyList<ObservableEvent> events );
+        /// <param name="commands">The commands emitted by the transaction and that should be handled. Can be empty.</param>
+        void OnTransactionCommit( ObservableDomain d, DateTime timeUtc, IReadOnlyList<ObservableEvent> events, IReadOnlyList<object> commands );
 
         /// <summary>
         /// Called when an error occurred in a transaction.

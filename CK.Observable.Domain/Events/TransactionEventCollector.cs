@@ -134,14 +134,14 @@ namespace CK.Observable
             }
         }
 
-        void IObservableTransactionManager.OnTransactionCommit( ObservableDomain d, DateTime timeUtc, IReadOnlyList<ObservableEvent> events )
+        void IObservableTransactionManager.OnTransactionCommit( ObservableDomain d, DateTime timeUtc, IReadOnlyList<ObservableEvent> events, IReadOnlyList<object> commands )
         {
             _buffer.GetStringBuilder().Clear();
             _exporter.Reset();
             foreach( var e in events ) e.Export( _exporter );
             _events.Add( new TransactionEvent( d.TransactionSerialNumber, timeUtc, events, _buffer.ToString() ) );
             ApplyKeepDuration();
-            _next?.OnTransactionCommit( d, timeUtc, events );
+            _next?.OnTransactionCommit( d, timeUtc, events, commands );
         }
 
         void IObservableTransactionManager.OnTransactionFailure( ObservableDomain d, IReadOnlyList<CKExceptionData> errors )

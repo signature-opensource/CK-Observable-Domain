@@ -144,15 +144,17 @@ namespace CK.Observable
             readonly List<ObservableEvent> _changeEvents;
             readonly Dictionary<ObservableObject, List<PropertyInfo>> _newObjects;
             readonly Dictionary<long, PropChanged> _propChanged;
+            readonly List<object> _commands;
 
             public ChangeTracker()
             {
                 _changeEvents = new List<ObservableEvent>();
                 _newObjects = new Dictionary<ObservableObject, List<PropertyInfo>>( PureObjectRefEqualityComparer<ObservableObject>.Default );
                 _propChanged = new Dictionary<long, PropChanged>();
+                _commands = new List<object>();
             }
 
-            public IReadOnlyList<ObservableEvent> Commit( Func<string, PropInfo> ensurePropertInfo )
+            public KeyValuePair<IReadOnlyList<ObservableEvent>, IReadOnlyList<object>> Commit( Func<string, PropInfo> ensurePropertInfo )
             {
                 _changeEvents.RemoveAll( e => e is ICollectionEvent c && c.Object.IsDisposed );
                 foreach( var p in _propChanged.Values )
@@ -178,7 +180,9 @@ namespace CK.Observable
                         _changeEvents.Add( new PropertyChangedEvent( kv.Key, pInfo.PropertyId, pInfo.Name, propValue ) );
                     }
                 }
-                var result = _changeEvents.ToArray();
+                var result = new KeyValuePair<IReadOnlyList<ObservableEvent>, IReadOnlyList<object>>(
+                                    _changeEvents.ToArray(),
+                                    _commands.ToArray() );
                 Reset();
                 return result;
             }
@@ -191,6 +195,7 @@ namespace CK.Observable
                 _changeEvents.Clear();
                 _newObjects.Clear();
                 _propChanged.Clear();
+                _commands.Clear();
             }
 
             /// <summary>
@@ -285,16 +290,22 @@ namespace CK.Observable
                 _changeEvents.Add( e );
                 return e;
             }
+
+            internal void OnSendCommand( object command )
+            {
+                _commands.Add( command );
+            }
         }
 
         /// <summary>
-        /// Implements <see cref="IObservableTransaction"/>: this is in charge 
+        /// Implements <see cref="IObservableTransaction"/>.
         /// </summary>
         class Transaction : IObservableTransaction
         {
             readonly ObservableDomain _previous;
             readonly ObservableDomain _domain;
             CKExceptionData[] _errors;
+            TransactionResult _result;
 
             public Transaction( ObservableDomain d )
             {
@@ -313,15 +324,24 @@ namespace CK.Observable
                 _errors[_errors.Length - 1] = d;
             }
 
-            public IReadOnlyList<ObservableEvent> Commit()
+            public TransactionResult Commit()
             {
-                if( _errors.Length != 0 ) Dispose();
-                CurrentThreadDomain = _previous;
-                _domain._currentTran = null;
-                var events = _domain._changeTracker.Commit( _domain.EnsurePropertyInfo );
-                ++_domain._transactionSerialNumber;
-                _domain.TransactionManager?.OnTransactionCommit( _domain, DateTime.UtcNow, events );
-                return events;
+                if( _result.Errors != null ) return _result;
+                if( _errors.Length != 0 )
+                {
+                    Dispose();
+                    _result = new TransactionResult( _errors );
+                }
+                else
+                {
+                    CurrentThreadDomain = _previous;
+                    _domain._currentTran = null;
+                    var eventsAndCommands = _domain._changeTracker.Commit( _domain.EnsurePropertyInfo );
+                    ++_domain._transactionSerialNumber;
+                    _domain.TransactionManager?.OnTransactionCommit( _domain, DateTime.UtcNow, eventsAndCommands.Key, eventsAndCommands.Value );
+                    _result = new TransactionResult( eventsAndCommands.Key, eventsAndCommands.Value );
+                }
+                return _result;
             }
 
             public void Dispose()
@@ -447,7 +467,7 @@ namespace CK.Observable
             {
             }
 
-            IReadOnlyList<ObservableEvent> IObservableTransaction.Commit() => Array.Empty<ObservableEvent>();
+            TransactionResult IObservableTransaction.Commit() => TransactionResult.Empty;
 
             public IReadOnlyList<CKExceptionData> Errors => Array.Empty<CKExceptionData>();
 
@@ -540,11 +560,10 @@ namespace CK.Observable
 
         /// <summary>
         /// Enables modifications to be done inside a transaction and a try/catch block.
-        /// On success, the event list is returned (that may be empty) and on error returns null.
         /// </summary>
         /// <param name="actions">Any action that can alter the objects of this domain.</param>
-        /// <returns>Null on error, a possibly empty list of events on success.</returns>
-        public IReadOnlyList<ObservableEvent> Modify( Action actions )
+        /// <returns>The transaction result.</returns>
+        public TransactionResult Modify( Action actions )
         {
             using( var t = BeginTransaction() )
             {
@@ -557,7 +576,7 @@ namespace CK.Observable
                 {
                     Monitor.Error( ex );
                     t.AddError( CKExceptionData.CreateFrom( ex ) );
-                    return null;
+                    return t.Commit();
                 }
             }
         }
@@ -766,6 +785,14 @@ namespace CK.Observable
                 _objects[o.OId] = null;
                 _freeList.Push( o.OId );
                 --_actualObjectCount;
+            }
+        }
+
+        internal void SendCommand( ObservableObject o, object command )
+        {
+            using( CheckTransactionAndReentrancy( o ) )
+            {
+                _changeTracker.OnSendCommand( command );
             }
         }
 

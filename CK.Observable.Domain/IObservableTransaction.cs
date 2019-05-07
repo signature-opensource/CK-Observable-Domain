@@ -13,10 +13,12 @@ namespace CK.Observable
     public interface IObservableTransaction : IDisposable
     {
         /// <summary>
-        /// Commits all changes and retrieves the event list.
+        /// Commits all changes and retrieves the events and commands on success.
+        /// If errors have been added, the <see cref="TransactionResult"/> contains
+        /// the errors but no events nor commands.
         /// </summary>
-        /// <returns>The event list.</returns>
-        IReadOnlyList<ObservableEvent> Commit();
+        /// <returns>The transaction result.</returns>
+        TransactionResult Commit();
 
         /// <summary>
         /// Gets any errors that have been added by <see cref="AddError"/>.
@@ -26,7 +28,8 @@ namespace CK.Observable
         /// <summary>
         /// Adds an error to this transaction.
         /// This prevents this transaction to be successfully committed; calling <see cref="Commit"/>
-        /// will be the same as disposing this transaction without committing.
+        /// will be the same as disposing this transaction without committing: a <see cref="TransactionResult"/>
+        /// with only <see cref="Errors"/> will be obtained.
         /// </summary>
         /// <param name="d">An exception data.</param>
         void AddError( CKExceptionData d );
