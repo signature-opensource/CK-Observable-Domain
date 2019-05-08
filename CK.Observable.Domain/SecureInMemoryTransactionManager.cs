@@ -24,7 +24,7 @@ namespace CK.Observable
         /// Captures the whole domain by serializing it into a <see cref="MemoryStream"/>
         /// after a successful transaction.
         /// </summary>
-        public struct Snapshot
+        public readonly struct Snapshot
         {
             internal Snapshot( int serialNumber, MemoryStream c, DateTime timeUtc )
             {

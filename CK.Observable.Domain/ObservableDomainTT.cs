@@ -62,8 +62,11 @@ namespace CK.Observable
         public ObservableDomain( IObservableTransactionManager tm, IActivityMonitor monitor )
             : base( tm, monitor )
         {
-            Root1 = AddRoot<T1>();
-            Root2 = AddRoot<T2>();
+            using( var initialization = new InitializationTransaction( this ) )
+            {
+                Root1 = AddRoot<T1>( initialization );
+                Root2 = AddRoot<T2>( initialization );
+            }
         }
 
         /// <summary>

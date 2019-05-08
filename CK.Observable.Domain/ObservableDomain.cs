@@ -69,6 +69,7 @@ namespace CK.Observable
         readonly ChangeTracker _changeTracker;
         readonly IDisposable _reentrancyHandler;
         readonly AllCollection _exposedObjects;
+        readonly ReaderWriterLockSlim _lock;
         Stack<int> _freeList;
 
         ObservableObject[] _objects;
@@ -93,7 +94,6 @@ namespace CK.Observable
 
         IObservableTransaction _currentTran;
         int _transactionSerialNumber;
-        int _reentrancyFlag;
         bool _deserializing;
 
         /// <summary>
@@ -154,7 +154,7 @@ namespace CK.Observable
                 _commands = new List<ObservableCommand>();
             }
 
-            public KeyValuePair<IReadOnlyList<ObservableEvent>, IReadOnlyList<ObservableCommand>> Commit( Func<string, PropInfo> ensurePropertInfo )
+            public TransactionResult Commit( Func<string, PropInfo> ensurePropertInfo )
             {
                 _changeEvents.RemoveAll( e => e is ICollectionEvent c && c.Object.IsDisposed );
                 foreach( var p in _propChanged.Values )
@@ -180,9 +180,7 @@ namespace CK.Observable
                         _changeEvents.Add( new PropertyChangedEvent( kv.Key, pInfo.PropertyId, pInfo.Name, propValue ) );
                     }
                 }
-                var result = new KeyValuePair<IReadOnlyList<ObservableEvent>, IReadOnlyList<ObservableCommand>>(
-                                    _changeEvents.ToArray(),
-                                    _commands.ToArray() );
+                var result = new TransactionResult( _changeEvents.ToArray(), _commands.ToArray() );
                 Reset();
                 return result;
             }
@@ -326,53 +324,55 @@ namespace CK.Observable
 
             public TransactionResult Commit()
             {
+                // If result has already been initialized, we exit immediately.
                 if( _result.Errors != null ) return _result;
+
+                Debug.Assert( _domain._currentTran == this );
+                Debug.Assert( _domain._lock.IsWriteLockHeld );
+                CurrentThreadDomain = _previous;
+                _domain._currentTran = null;
                 if( _errors.Length != 0 )
                 {
-                    Dispose();
+                    // On errors, resets the change tracker, sends the errors to the managers
+                    // and creates an error TransactionResult. 
+                    _domain._changeTracker.Reset();
+                    try
+                    {
+                        _domain.TransactionManager?.OnTransactionFailure( _domain, _errors );
+                    }
+                    catch( Exception ex )
+                    {
+                        _domain.Monitor.Error( "While sending errors to IObservableTransactionManager.OnTransactionFailure.", ex );
+                        AddError( CKExceptionData.CreateFrom( ex ) );
+                    }
                     _result = new TransactionResult( _errors );
                 }
                 else
                 {
-                    CurrentThreadDomain = _previous;
-                    _domain._currentTran = null;
-                    var eventsAndCommands = _domain._changeTracker.Commit( _domain.EnsurePropertyInfo );
+                    _result = _domain._changeTracker.Commit( _domain.EnsurePropertyInfo );
                     ++_domain._transactionSerialNumber;
-                    _domain.TransactionManager?.OnTransactionCommit( _domain, DateTime.UtcNow, eventsAndCommands.Key, eventsAndCommands.Value );
-                    _result = new TransactionResult( eventsAndCommands.Key, eventsAndCommands.Value );
+                    try
+                    {
+                        _domain.TransactionManager?.OnTransactionCommit( _domain, DateTime.UtcNow, _result.Events, _result.Commands );
+                    }
+                    catch( Exception ex )
+                    {
+                        _domain.Monitor.Fatal( "Error in IObservableTransactionManager.OnTransactionCommit. Exception is propagated above.", ex );
+                        _domain._lock.ExitWriteLock();
+                        throw;
+                    }
                 }
+                _domain._lock.ExitWriteLock();
                 return _result;
             }
 
             public void Dispose()
             {
-                if( _domain._currentTran != null )
+                if( _domain._currentTran == this )
                 {
-                    if( _errors.Length == 0 ) AddError( UncomittedTransaction );
-                    CurrentThreadDomain = _previous;
-                    _domain._currentTran = null;
-                    _domain._changeTracker.Reset();
-                    _domain.TransactionManager?.OnTransactionFailure( _domain, _errors );
+                    AddError( UncomittedTransaction );
+                    Commit();
                 }
-            }
-        }
-
-        /// <summary>
-        /// Simple disposable reentrancy detector.
-        /// </summary>
-        class ReetrancyHandler : IDisposable
-        {
-            readonly ObservableDomain _d;
-
-            public ReetrancyHandler( ObservableDomain d )
-            {
-                _d = d;
-            }
-
-            public void Dispose()
-            {
-                Debug.Assert( _d._reentrancyFlag == 1 );
-                Interlocked.Exchange( ref _d._reentrancyFlag, 0 );
             }
         }
 
@@ -432,9 +432,10 @@ namespace CK.Observable
             _properties = new Dictionary<string, PropInfo>();
             _propertiesByIndex = new List<PropInfo>();
             _changeTracker = new ChangeTracker();
-            _reentrancyHandler = new ReetrancyHandler( this );
             _exposedObjects = new AllCollection( this );
             _roots = new List<ObservableRootObject>();
+            // LockRecursionPolicy.NoRecursion: reentrancy must NOT be allowed.
+            _lock = new ReaderWriterLockSlim( LockRecursionPolicy.NoRecursion );
         }
 
         /// <summary>
@@ -445,64 +446,79 @@ namespace CK.Observable
         /// <param name="s">The input stream.</param>
         /// <param name="leaveOpen">True to leave the stream opened.</param>
         /// <param name="encoding">Optional encoding for characters. Defaults to UTF-8.</param>
+        /// <param name="exporters">Optional exporters handler.</param>
+        /// <param name="serializers">Optional serializers handler.</param>
+        /// <param name="deserializers">Optional deserializers handler.</param>
         public ObservableDomain(
             IObservableTransactionManager tm,
             IActivityMonitor monitor,
             Stream s,
             bool leaveOpen = false,
-            Encoding encoding = null )
-            : this( tm, monitor )
+            Encoding encoding = null,
+            IExporterResolver exporters = null,
+            ISerializerResolver serializers = null,
+            IDeserializerResolver deserializers = null )
+            : this( tm, monitor, exporters, serializers, deserializers )
         {
             Load( s, leaveOpen, encoding );
         }
 
         /// <summary>
-        /// Empty transaction object: internally used during initialization (when <see cref="AddRoot{T}"/> are called).
+        /// Empty transaction object: must be used during initialization (for <see cref="AddRoot{T}(InitializationTransaction)"/>
+        /// to be called).
         /// </summary>
-        class NoTransaction : IObservableTransaction
+        protected class InitializationTransaction : IObservableTransaction
         {
-            public static readonly IObservableTransaction Default = new NoTransaction();
+            readonly ObservableDomain _d;
+            readonly ObservableDomain _previous;
 
-            public void AddError( CKExceptionData d )
+            /// <summary>
+            /// INitializes a new <see cref="InitializationTransaction"/> required
+            /// to call <see cref="AddRoot{T}(InitializationTransaction)"/>.
+            /// </summary>
+            /// <param name="d">The observable domain.</param>
+            public InitializationTransaction( ObservableDomain d )
             {
+                _d = d;
+                d._lock.EnterWriteLock();
+                d._currentTran = this;
+                _previous = CurrentThreadDomain;
+                CurrentThreadDomain = d;
+                d._deserializing = true;
             }
+
+            void IObservableTransaction.AddError( CKExceptionData d ) { }
 
             TransactionResult IObservableTransaction.Commit() => TransactionResult.Empty;
 
-            public IReadOnlyList<CKExceptionData> Errors => Array.Empty<CKExceptionData>();
+            IReadOnlyList<CKExceptionData> IObservableTransaction.Errors => Array.Empty<CKExceptionData>();
 
-            void IDisposable.Dispose()
+            /// <summary>
+            /// Releases locks and restores intialization context.
+            /// </summary>
+            public void Dispose()
             {
+                _d._deserializing = false;
+                CurrentThreadDomain = _previous;
+                _d._currentTran = null;
+                _d._lock.ExitWriteLock();
             }
         }
 
         /// <summary>
-        /// This must be called only from <see cref="ObservableDomain{T}"/> constructors.
+        /// This must be called only from <see cref="ObservableDomain{T}"/> (and other ObservableDomain generics) constructors.
         /// No event are collected: this is the initial state of the domain.
         /// </summary>
         /// <typeparam name="T">The root type.</typeparam>
         /// <returns>The instance.</returns>
-        protected T AddRoot<T>() where T : ObservableRootObject
+        protected T AddRoot<T>( InitializationTransaction initializationContext ) where T : ObservableRootObject
         {
-            _currentTran = NoTransaction.Default;
-            var previous = CurrentThreadDomain;
-            CurrentThreadDomain = this;
-            _deserializing = true;
-            try
-            {
-                var o = (T)typeof( T ).GetConstructor( BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-                                                       null,
-                                                       _observableRootCtorParameters,
-                                                       null ).Invoke( new[] { this } );
-                _roots.Add( o );
-                return o;
-            }
-            finally
-            {
-                _deserializing = false;
-                CurrentThreadDomain = previous;
-                _currentTran = null;
-            }
+            var o = (T)typeof( T ).GetConstructor( BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+                                                    null,
+                                                    _observableRootCtorParameters,
+                                                    null ).Invoke( new[] { this } );
+            _roots.Add( o );
+            return o;
         }
 
         /// <summary>
@@ -544,18 +560,61 @@ namespace CK.Observable
         public IObservableTransactionManager TransactionManager { get; }
 
         /// <summary>
+        /// Acquires a read lock: until the returned disposable is disposed
+        /// objects can safely be read and any attempt to <see cref="BeginTransaction"/> (from
+        /// other threads) wiil  be blocked.
+        /// Any attenmpt to call <see cref="BeginTransaction"/> from this thread will
+        /// throw a <see cref="LockRecursionException"/>
+        /// </summary>
+        /// <param name="millisecondsTimeout">
+        /// The maximum number of milliseconds to wait for a read access before giving up.
+        /// Wait indefinitely by default.
+        /// </param>
+        /// <returns>The disposable to release the read lock or null if timeout occurred.</returns>
+        public IDisposable AcquireReadLock( int millisecondsTimeout = -1 )
+        {
+            if( !_lock.TryEnterReadLock( millisecondsTimeout ) ) return null;
+            return Util.CreateDisposableAction( () => _lock.ExitReadLock() );
+        }
+
+        /// <summary>
         /// Starts a new transaction that must be <see cref="IObservableTransaction.Commit"/>, otherwise
         /// all changes are cancelled.
         /// This must not be called twice (without disposing or committing the existing one) otherwise
         /// an <see cref="InvalidOperationException"/> is thrown.
         /// </summary>
-        /// <returns>The transaction object.</returns>
-        public IObservableTransaction BeginTransaction()
+        /// <param name="millisecondsTimeout">
+        /// The maximum number of milliseconds to wait for a read access before giving up.
+        /// Wait indefinitely by default.
+        /// </param>
+        /// <returns>The transaction object or null if a timeout occurred.</returns>
+        /// <remarks>
+        /// <para>
+        /// Only "Read" or "Write" modes are supported thanks to a <see cref="ReaderWriterLockSlim"/>.
+        /// We may support the upgradeable lock with an "ExplicitWrite" mode that would require
+        /// to call a method like EnsureWriteMode() before actually modifying the objects (this call will ensure that
+        /// the lock is in writer mode or upgrade it).
+        /// </para>
+        /// <para>
+        /// This would enable the calls to Modify() that don't modify anything to not block any reader at all (how
+        /// much of these are there?). Even if this can be done, this is definitely dangerous: any domain method that
+        /// forgets to call this EnsureWriteMode() before any modification will quickly enter the concurrency hell...
+        /// </para>
+        /// </remarks>
+        public IObservableTransaction BeginTransaction( int millisecondsTimeout = -1 )
         {
-            if( _currentTran != null ) throw new InvalidOperationException( $"A transaction is already opened for this ObservableDomain n°{DomainNumber}." );
-            _currentTran = new Transaction( this );
-            TransactionManager?.OnTransactionStart( this, DateTime.UtcNow );
-            return _currentTran;
+            if( !_lock.TryEnterWriteLock( millisecondsTimeout ) ) return null;
+            try
+            {
+                TransactionManager?.OnTransactionStart( this, DateTime.UtcNow );
+                return _currentTran = new Transaction( this );
+            }
+            catch( Exception ex )
+            {
+                Monitor.Error( "While calling IObservableTransactionManager.OnTransactionStart().", ex );
+                _lock.ExitWriteLock();
+                throw;
+            }
         }
 
         /// <summary>
@@ -584,16 +643,21 @@ namespace CK.Observable
         /// <summary>
         /// Exports this domain as a JSON object with the <see cref="TransactionSerialNumber"/>,
         /// the property name mappings, and the object graph itself that is compatible
-        /// with @Signature/json-graph-serialization package and requires a post processing to lift
+        /// with @signature/json-graph-serialization package and requires a post processing to lift
         /// container (map, list and set) contents.
         /// </summary>
         /// <param name="w">The text writer.</param>
-        public void Export( TextWriter w )
+        /// <param name="millisecondsTimeout">
+        /// The maximum number of milliseconds to wait for a read access before giving up.
+        /// Wait indefinitely by default.
+        /// </param>
+        /// <returns>True on success, false if timeout occurred.</returns>
+        public bool Export( TextWriter w, int millisecondsTimeout = -1 )
         {
-            using( CheckReentrancyOnly() )
+            if( !_lock.TryEnterReadLock( millisecondsTimeout ) ) return false;
+            try
             {
                 var target = new JSONExportTarget( w );
-
                 target.EmitStartObject( -1, ObjectExportedKind.Object );
                 target.EmitPropertyName( "N" );
                 target.EmitInt32( _transactionSerialNumber );
@@ -619,18 +683,26 @@ namespace CK.Observable
                 target.EmitEndObject( -1, ObjectExportedKind.List );
 
                 target.EmitEndObject( -1, ObjectExportedKind.Object );
+                return true;
+            }
+            finally
+            {
+                _lock.ExitReadLock();
             }
         }
 
         /// <summary>
-        /// Exports the whole domain state as a JSON object (simple helper that calls <see cref="Export(TextWriter)"/>).
+        /// Exports the whole domain state as a JSON object (simple helper that calls <see cref="Export(TextWriter,int)"/>).
         /// </summary>
-        /// <returns>The state as a string.</returns>
-        public string ExportToString()
+        /// <param name="millisecondsTimeout">
+        /// The maximum number of milliseconds to wait for a read access before giving up.
+        /// Wait indefinitely by default.
+        /// </param>
+        /// <returns>The state as a string or null if timeout occurred.</returns>
+        public string ExportToString( int millisecondsTimeout = -1 )
         {
             var w = new StringWriter();
-            Export( w );
-            return w.ToString();
+            return Export( w, millisecondsTimeout ) ? w.ToString() : null;
         }
 
         /// <summary>
@@ -639,28 +711,45 @@ namespace CK.Observable
         /// <param name="s">The output stream.</param>
         /// <param name="leaveOpen">True to leave the stream opened.</param>
         /// <param name="encoding">Optional encoding for characters. Defaults to UTF-8.</param>
-        public void Save( Stream s, bool leaveOpen = false, Encoding encoding = null )
+        /// <param name="millisecondsTimeout">
+        /// The maximum number of milliseconds to wait for a read access before giving up.
+        /// Wait indefinitely by default.
+        /// </param>
+        /// <returns>True on success, false if timeout occurred.</returns>
+        public bool Save( Stream s, bool leaveOpen = false, Encoding encoding = null, int millisecondsTimeout = -1 )
         {
-            using( CheckReentrancyOnly() )
             using( var w = new BinarySerializer( s, _serializers, leaveOpen, encoding ) )
             {
-                w.WriteSmallInt32( 0 ); // Version
-                w.Write( _transactionSerialNumber );
-                w.Write( _actualObjectCount );
-                w.WriteNonNegativeSmallInt32( _freeList.Count );
-                foreach( var i in _freeList ) w.WriteNonNegativeSmallInt32( i );
-                w.WriteNonNegativeSmallInt32( _properties.Count );
-                foreach( var p in _propertiesByIndex )
+                bool isWrite = _lock.IsWriteLockHeld;
+                if( !isWrite && !_lock.TryEnterReadLock( millisecondsTimeout ) ) return false;
+                try
                 {
-                    w.Write( p.Name );
+                    using( isWrite ? Monitor.OpenInfo( $"Transacted saving domain ({_actualObjectCount} objects)." ) : null )
+                    {
+                        w.WriteSmallInt32( 0 ); // Version
+                        w.Write( _transactionSerialNumber );
+                        w.Write( _actualObjectCount );
+                        w.WriteNonNegativeSmallInt32( _freeList.Count );
+                        foreach( var i in _freeList ) w.WriteNonNegativeSmallInt32( i );
+                        w.WriteNonNegativeSmallInt32( _properties.Count );
+                        foreach( var p in _propertiesByIndex )
+                        {
+                            w.Write( p.Name );
+                        }
+                        Debug.Assert( _objectsListCount == _actualObjectCount + _freeList.Count );
+                        for( int i = 0; i < _objectsListCount; ++i )
+                        {
+                            w.WriteObject( _objects[i] );
+                        }
+                        w.WriteNonNegativeSmallInt32( _roots.Count );
+                        foreach( var r in _roots ) w.WriteNonNegativeSmallInt32( r.OId );
+                        return true;
+                    }
                 }
-                Debug.Assert( _objectsListCount == _actualObjectCount + _freeList.Count );
-                for( int i = 0; i < _objectsListCount; ++i )
+                finally
                 {
-                    w.WriteObject( _objects[i] );
+                    if( !isWrite ) _lock.ExitReadLock();
                 }
-                w.WriteNonNegativeSmallInt32( _roots.Count );
-                foreach( var r in _roots ) w.WriteNonNegativeSmallInt32( r.OId );
             }
         }
 
@@ -670,19 +759,34 @@ namespace CK.Observable
         /// <param name="s">The input stream.</param>
         /// <param name="leaveOpen">True to leave the stream opened.</param>
         /// <param name="encoding">Optional encoding for characters. Defaults to UTF-8.</param>
-        public void Load( Stream s, bool leaveOpen = false, Encoding encoding = null )
+        /// <param name="millisecondsTimeout">
+        /// The maximum number of milliseconds to wait for a read access before giving up.
+        /// Wait indefinitely by default.
+        /// </param>
+        /// <returns>True on success, false if timeout occurred.</returns>
+        public bool Load( Stream s, bool leaveOpen = false, Encoding encoding = null, int millisecondsTimeout = -1 )
         {
-            using( Monitor.OpenInfo( $"Loading Domain n°{DomainNumber}." ) )
-            using( CheckReentrancyOnly() )
-            using( var d = new BinaryDeserializer( s, null, _deserializers, leaveOpen, encoding ) )
+            bool isWrite = _lock.IsWriteLockHeld;
+            if( !isWrite && !_lock.TryEnterWriteLock( millisecondsTimeout ) ) return false;
+            try
             {
-                d.Services.Add( this );
-                DoLoad( d );
+                using( Monitor.OpenInfo( $"Transacted loading domain." ) )
+                using( var d = new BinaryDeserializer( s, null, _deserializers, leaveOpen, encoding ) )
+                {
+                    d.Services.Add( this );
+                    DoLoad( d );
+                    return true;
+                }
+            }
+            finally
+            {
+                if( !isWrite ) _lock.ExitWriteLock();
             }
         }
 
         void DoLoad( BinaryDeserializer r )
         {
+            Debug.Assert( _lock.IsWriteLockHeld );
             _deserializing = true;
             try
             {
@@ -750,66 +854,58 @@ namespace CK.Observable
 
         internal int Register( ObservableObject o )
         {
-            using( CheckTransactionAndReentrancy( o ) )
+            CheckWriteLockAndObjectDisposed( o );
+            Debug.Assert( o != null && o.Domain == this );
+            int idx;
+            if( _freeList.Count > 0 )
             {
-                Debug.Assert( o != null && o.Domain == this );
-                int idx;
-                if( _freeList.Count > 0 )
-                {
-                    idx = _freeList.Pop();
-                }
-                else
-                {
-                    idx = _objectsListCount++;
-                    if( idx == _objects.Length )
-                    {
-                        Array.Resize( ref _objects, idx * 2 );
-                    }
-                }
-                _objects[idx] = o;
-                if( !_deserializing )
-                {
-                    _changeTracker.OnNewObject( o, idx, o._exporter );
-                }
-                ++_actualObjectCount;
-                return idx;
+                idx = _freeList.Pop();
             }
+            else
+            {
+                idx = _objectsListCount++;
+                if( idx == _objects.Length )
+                {
+                    Array.Resize( ref _objects, idx * 2 );
+                }
+            }
+            _objects[idx] = o;
+            if( !_deserializing )
+            {
+                _changeTracker.OnNewObject( o, idx, o._exporter );
+            }
+            ++_actualObjectCount;
+            return idx;
         }
 
         internal void Unregister( ObservableObject o )
         {
             Debug.Assert( !o.IsDisposed );
-            using( CheckTransactionAndReentrancy( o ) )
-            {
-                if( !_deserializing ) _changeTracker.OnDisposeObject( o );
-                _objects[o.OId] = null;
-                _freeList.Push( o.OId );
-                --_actualObjectCount;
-            }
+            CheckWriteLockAndObjectDisposed( o );
+            if( !_deserializing ) _changeTracker.OnDisposeObject( o );
+            _objects[o.OId] = null;
+            _freeList.Push( o.OId );
+            --_actualObjectCount;
         }
 
         internal void SendCommand( ObservableObject o, object command )
         {
-            using( CheckTransactionAndReentrancy( o ) )
-            {
-                _changeTracker.OnSendCommand( new ObservableCommand( o, command ) );
-            }
+            CheckWriteLockAndObjectDisposed( o );
+            _changeTracker.OnSendCommand( new ObservableCommand( o, command ) );
         }
 
         internal PropertyChangedEventArgs OnPropertyChanged( ObservableObject o, string propertyName, object before, object after )
         {
             if( _deserializing
                 || o._exporter == null
-                || !o._exporter.ExportableProperties.Any( p => p.Name == propertyName ) )
+                || !o._exporter.ExportableProperties.Any( prop => prop.Name == propertyName ) )
             {
                 return null;
             }
-            using( CheckTransactionAndReentrancy( o ) )
-            {
-                PropInfo p = EnsurePropertyInfo( propertyName );
-                _changeTracker.OnPropertyChanged( o, p, before, after );
-                return p.EventArg;
-            }
+            CheckWriteLockAndObjectDisposed( o );
+            PropInfo p = EnsurePropertyInfo( propertyName );
+            _changeTracker.OnPropertyChanged( o, p, before, after );
+            return p.EventArg;
         }
 
         PropInfo EnsurePropertyInfo( string propertyName )
@@ -828,69 +924,55 @@ namespace CK.Observable
         internal ListRemoveAtEvent OnListRemoveAt( ObservableObject o, int index )
         {
             if( _deserializing ) return null;
-            using( CheckTransactionAndReentrancy( o ) )
-            {
-                return _changeTracker.OnListRemoveAt( o, index );
-            }
+            CheckWriteLockAndObjectDisposed( o );
+            return _changeTracker.OnListRemoveAt( o, index );
         }
 
         internal ListSetAtEvent OnListSetAt( ObservableObject o, int index, object value )
         {
             if( _deserializing ) return null;
-            using( CheckTransactionAndReentrancy( o ) )
-            {
-                return _changeTracker.OnListSetAt( o, index, value );
-            }
+            CheckWriteLockAndObjectDisposed( o );
+            return _changeTracker.OnListSetAt( o, index, value );
         }
 
         internal CollectionClearEvent OnCollectionClear( ObservableObject o )
         {
             if( _deserializing ) return null;
-            using( CheckTransactionAndReentrancy( o ) )
-            {
-                return _changeTracker.OnCollectionClear( o );
-            }
+            CheckWriteLockAndObjectDisposed( o );
+            return _changeTracker.OnCollectionClear( o );
         }
 
         internal ListInsertEvent OnListInsert( ObservableObject o, int index, object item )
         {
             if( _deserializing ) return null;
-            using( CheckTransactionAndReentrancy( o ) )
-            {
-                return _changeTracker.OnListInsert( o, index, item );
-            }
+            CheckWriteLockAndObjectDisposed( o );
+            return _changeTracker.OnListInsert( o, index, item );
         }
 
         internal CollectionMapSetEvent OnCollectionMapSet( ObservableObject o, object key, object value )
         {
             if( _deserializing ) return null;
-            using( CheckTransactionAndReentrancy( o ) )
-            {
-                return _changeTracker.OnCollectionMapSet( o, key, value );
-            }
+            CheckWriteLockAndObjectDisposed( o );
+            return _changeTracker.OnCollectionMapSet( o, key, value );
         }
 
         internal CollectionRemoveKeyEvent OnCollectionRemoveKey( ObservableObject o, object key )
         {
             if( _deserializing ) return null;
-            using( CheckTransactionAndReentrancy( o ) )
+            CheckWriteLockAndObjectDisposed( o );
+            return _changeTracker.OnCollectionRemoveKey( o, key );
+        }
+
+        void CheckWriteLockAndObjectDisposed( ObservableObject o )
+        {
+            if( !_lock.IsWriteLockHeld )
             {
-                return _changeTracker.OnCollectionRemoveKey( o, key );
+                if( _currentTran == null ) throw new InvalidOperationException( "A transaction is required." );
+                if( _lock.IsReadLockHeld ) throw new InvalidOperationException( "Concurrent access: only Read lock has been acquired." );
+                throw new InvalidOperationException( "Concurrent access: no lock has been acquired." );
             }
-        }
-
-        IDisposable CheckTransactionAndReentrancy( ObservableObject o )
-        {
             if( o.IsDisposed ) throw new ObjectDisposedException( o.GetType().FullName );
-            if( _currentTran == null ) throw new InvalidOperationException( "A transaction is required." );
-            if( Interlocked.CompareExchange( ref _reentrancyFlag, 1, 0 ) == 1 ) throw new InvalidOperationException( "Reentrancy detected." );
-            return _reentrancyHandler;
         }
 
-        IDisposable CheckReentrancyOnly()
-        {
-            if( Interlocked.CompareExchange( ref _reentrancyFlag, 1, 0 ) == 1 ) throw new InvalidOperationException( "Reentrancy detected." );
-            return _reentrancyHandler;
-        }
     }
 }

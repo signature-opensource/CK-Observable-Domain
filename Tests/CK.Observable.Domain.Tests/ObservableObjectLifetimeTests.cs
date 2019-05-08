@@ -2,6 +2,7 @@ using CK.Observable.Domain.Tests.Sample;
 using FluentAssertions;
 using NUnit.Framework;
 using System;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
@@ -17,7 +18,7 @@ namespace CK.Observable.Domain.Tests
         {
             var d = new ObservableDomain();
             Action outOfTran = () => new Car( "" );
-            outOfTran.Should().Throw<InvalidOperationException>().WithMessage( "*transaction*" );
+            outOfTran.Should().Throw<InvalidOperationException>().WithMessage( "A transaction is required." );
         }
 
         [Test]
@@ -27,15 +28,18 @@ namespace CK.Observable.Domain.Tests
             using( var t = d.BeginTransaction() )
             {
                 new Car( "Hello" );
-                t.Commit();
+                var result = t.Commit();
+                result.Errors.Should().BeEmpty();
+                result.Events.Should().HaveCount( 9 );
+                result.Commands.Should().BeEmpty();
             }
             d.Invoking( sut => sut.AllObjects.OfType<Car>().Single().Speed = 3 )
-             .Should().Throw<InvalidOperationException>().WithMessage( "*transaction*" );
+             .Should().Throw<InvalidOperationException>().WithMessage( "A transaction is required." );
         }
 
-        class FakeReentrancy : ObservableObject
+        class JustAnObservableObject : ObservableObject
         {
-            public FakeReentrancy( ObservableDomain d )
+            public JustAnObservableObject( ObservableDomain d )
                 : base( d )
             {
             }
@@ -53,26 +57,81 @@ namespace CK.Observable.Domain.Tests
             var d = new ObservableDomain();
             using( d.BeginTransaction() )
             {
-                Action reentrancies = () => Parallel.For( 0, 20, i =>
+                Action concurrent = () => Parallel.For( 0, 20, i =>
                 {
-                    var c = new FakeReentrancy( d );
+                    var c = new JustAnObservableObject( d );
                     System.Threading.Thread.Sleep( 2 );
                 } );
-                reentrancies.Should()
+                concurrent.Should()
                             .Throw<AggregateException>()
-                            .WithInnerException<InvalidOperationException>().WithMessage( "*reentrancy*" );
+                            .WithInnerException<InvalidOperationException>().WithMessage( "Concurrent access: no lock has been acquired." );
             }
         }
 
         [Test]
-        public void reentrant_calls_are_detected()
+        public void Export_can_NOT_be_called_within_a_transaction_because_of_LockRecursionPolicy_NoRecursion()
         {
             var d = new ObservableDomain();
             using( d.BeginTransaction() )
             {
+                d.Invoking( sut => sut.ExportToString() )
+                 .Should().Throw<System.Threading.LockRecursionException>();
+            }
+        }
+
+        [Test]
+        public void Save_can_be_called_from_inside_a_transaction()
+        {
+            var d = new ObservableDomain();
+            using( d.BeginTransaction() )
+            {
+                d.Invoking( sut => sut.Save( new MemoryStream() ) )
+                 .Should().NotThrow();
+            }
+        }
+
+        [Test]
+        public void Load_and_Save_can_be_called_from_inside_a_transaction_or_outside_any_transaction()
+        {
+            using( var s = new MemoryStream() )
+            {
+                var d = new ObservableDomain();
+                using( d.BeginTransaction() )
+                {
+                    d.Invoking( sut => sut.Save( s, leaveOpen: true ) ).Should().NotThrow();
+                    s.Position = 0;
+                    d.Invoking( sut => sut.Load( s, leaveOpen: true ) ).Should().NotThrow();
+                }
+                s.Position = 0;
+                d.Invoking( sut => sut.Load( s, leaveOpen: true ) ).Should().NotThrow();
+                s.Position = 0;
+                d.Invoking( sut => sut.Save( s, leaveOpen: true ) ).Should().NotThrow();
+            }
+        }
+
+        [Test]
+        public void BeginTransaction_and_AcquireReadLock_reentrant_calls_are_detected_by_the_LockRecursionPolicy_NoRecursion()
+        {
+            var d = new ObservableDomain();
+            using( d.BeginTransaction() )
+            {
+                d.Invoking( sut => sut.AcquireReadLock() )
+                 .Should().Throw<System.Threading.LockRecursionException>();
+            }
+            using( d.AcquireReadLock() )
+            {
                 d.Invoking( sut => sut.BeginTransaction() )
-                 .Should().Throw<InvalidOperationException>()
-                            .WithMessage( "*transaction*" );
+                 .Should().Throw<System.Threading.LockRecursionException>();
+            }
+            using( d.BeginTransaction() )
+            {
+                d.Invoking( sut => sut.BeginTransaction() )
+                 .Should().Throw<System.Threading.LockRecursionException>();
+            }
+            using( d.AcquireReadLock() )
+            {
+                d.Invoking( sut => sut.AcquireReadLock() )
+                 .Should().Throw<System.Threading.LockRecursionException>();
             }
         }
 
