@@ -21,7 +21,7 @@ namespace CK.Observable.Domain.Tests
             var domain = new ObservableDomain( TestHelper.Monitor );
             Car c0 = null;
             Car c1 = null;
-            IReadOnlyList<ObservableEvent> events;
+            TransactionResult events;
 
             events = domain.Modify( () =>
             {
@@ -62,14 +62,14 @@ namespace CK.Observable.Domain.Tests
         {
             var domain = new ObservableDomain( TestHelper.Monitor );
             Car c = null;
-            IReadOnlyList<ObservableEvent> events;
+            TransactionResult result;
 
-            events = domain.Modify( () =>
+            result = domain.Modify( () =>
             {
                 c = new Car( "First Car" );
             } );
 
-            events = domain.Modify( () =>
+            result = domain.Modify( () =>
             {
                 c.Position = new Position( 1.0, 2.0 );
                 c.Speed = 1;
@@ -77,7 +77,7 @@ namespace CK.Observable.Domain.Tests
                 c.Speed = 3;
                 c.Position = new Position( 3.0, 4.0 );
             } );
-            Check( events, "PropertyChanged 0.Speed = 3.", "PropertyChanged 0.Position = (3,4)." );
+            Check( result, "PropertyChanged 0.Speed = 3.", "PropertyChanged 0.Position = (3,4)." );
         }
 
         [Test]
@@ -162,21 +162,21 @@ namespace CK.Observable.Domain.Tests
             Car c0 = null;
             Car c1 = null;
             Garage g = null;
-            IReadOnlyList<ObservableEvent> events;
+            TransactionResult result;
 
-            events = domain.Modify( () =>
+            result = domain.Modify( () =>
             {
                 c0 = new Car( "C1" );
                 c1 = new Car( "C2" );
                 g = new Garage();
             } );
-            events = domain.Modify( () =>
+            result = domain.Modify( () =>
             {
                 g.Cars.Add( c0 );
                 g.Cars.Insert( 0, c1 );
                 g.Cars.Clear();
             } );
-            Check( events, "ListInsert 4[0] = 'Car C1'.", "ListInsert 4[0] = 'Car C2'.", "CollectionClear 4." );
+            Check( result, "ListInsert 4[0] = 'Car C1'.", "ListInsert 4[0] = 'Car C2'.", "CollectionClear 4." );
         }
 
         [Test]
@@ -186,31 +186,31 @@ namespace CK.Observable.Domain.Tests
             Car c = null;
             Mechanic m = null;
             Garage g = null;
-            IReadOnlyList<ObservableEvent> events;
-            events = domain.Modify( () =>
+            TransactionResult result;
+            result = domain.Modify( () =>
             {
                 g = new Garage();
                 c = new Car( "C" );
                 m = new Mechanic( g ) { FirstName = "Jon", LastName = "Doe" };
             } );
-            events = domain.Modify( () =>
+            result = domain.Modify( () =>
             {
                 m.CurrentCar = c;
             } );
-            Check( events, "PropertyChanged 4.CurrentMechanic = 'Mechanic Jon Doe'.",
+            Check( result, "PropertyChanged 4.CurrentMechanic = 'Mechanic Jon Doe'.",
                            "PropertyChanged 5.CurrentCar = 'Car C'." );
-            events = domain.Modify( () =>
+            result = domain.Modify( () =>
             {
                 m.CurrentCar = null;
             } );
-            Check( events, "PropertyChanged 4.CurrentMechanic = null.",
+            Check( result, "PropertyChanged 4.CurrentMechanic = null.",
                            "PropertyChanged 5.CurrentCar = null." );
 
-            events = domain.Modify( () =>
+            result = domain.Modify( () =>
             {
                 c.CurrentMechanic = m;
             } );
-            Check( events, "PropertyChanged 5.CurrentCar = 'Car C'.",
+            Check( result, "PropertyChanged 5.CurrentCar = 'Car C'.",
                            "PropertyChanged 4.CurrentMechanic = 'Mechanic Jon Doe'." );
 
         }
@@ -285,10 +285,10 @@ namespace CK.Observable.Domain.Tests
             } ).Should().NotBeNull();
         }
 
-        static void Check( IReadOnlyList<ObservableEvent> events, params string[] e )
+        static void Check( TransactionResult events, params string[] e )
         {
-            events.Should().HaveCount( e.Length );
-            events.Select( ev => ev.ToString() ).Should().Contain( e );
+            events.Events.Should().HaveCount( e.Length );
+            events.Events.Select( ev => ev.ToString() ).Should().Contain( e );
         }
 
     }

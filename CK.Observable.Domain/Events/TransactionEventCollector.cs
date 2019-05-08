@@ -87,6 +87,11 @@ namespace CK.Observable
         /// </summary>
         public int KeepLimit { get; set; }
 
+        /// <summary>
+        /// Generates a JSON object that contains all the events from a specified transaction number.
+        /// </summary>
+        /// <param name="transactionNumber">The transaction number.</param>
+        /// <returns>The JSON object.</returns>
         public string WriteEventsFrom( int transactionNumber )
         {
             if( _events.Count == 0 ) throw new InvalidOperationException( "OnTransactionCommit has not been called yet." );
@@ -134,7 +139,7 @@ namespace CK.Observable
             }
         }
 
-        void IObservableTransactionManager.OnTransactionCommit( ObservableDomain d, DateTime timeUtc, IReadOnlyList<ObservableEvent> events, IReadOnlyList<object> commands )
+        void IObservableTransactionManager.OnTransactionCommit( ObservableDomain d, DateTime timeUtc, IReadOnlyList<ObservableEvent> events, IReadOnlyList<ObservableCommand> commands )
         {
             _buffer.GetStringBuilder().Clear();
             _exporter.Reset();

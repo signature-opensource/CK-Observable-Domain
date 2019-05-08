@@ -144,17 +144,17 @@ namespace CK.Observable
             readonly List<ObservableEvent> _changeEvents;
             readonly Dictionary<ObservableObject, List<PropertyInfo>> _newObjects;
             readonly Dictionary<long, PropChanged> _propChanged;
-            readonly List<object> _commands;
+            readonly List<ObservableCommand> _commands;
 
             public ChangeTracker()
             {
                 _changeEvents = new List<ObservableEvent>();
                 _newObjects = new Dictionary<ObservableObject, List<PropertyInfo>>( PureObjectRefEqualityComparer<ObservableObject>.Default );
                 _propChanged = new Dictionary<long, PropChanged>();
-                _commands = new List<object>();
+                _commands = new List<ObservableCommand>();
             }
 
-            public KeyValuePair<IReadOnlyList<ObservableEvent>, IReadOnlyList<object>> Commit( Func<string, PropInfo> ensurePropertInfo )
+            public KeyValuePair<IReadOnlyList<ObservableEvent>, IReadOnlyList<ObservableCommand>> Commit( Func<string, PropInfo> ensurePropertInfo )
             {
                 _changeEvents.RemoveAll( e => e is ICollectionEvent c && c.Object.IsDisposed );
                 foreach( var p in _propChanged.Values )
@@ -180,7 +180,7 @@ namespace CK.Observable
                         _changeEvents.Add( new PropertyChangedEvent( kv.Key, pInfo.PropertyId, pInfo.Name, propValue ) );
                     }
                 }
-                var result = new KeyValuePair<IReadOnlyList<ObservableEvent>, IReadOnlyList<object>>(
+                var result = new KeyValuePair<IReadOnlyList<ObservableEvent>, IReadOnlyList<ObservableCommand>>(
                                     _changeEvents.ToArray(),
                                     _commands.ToArray() );
                 Reset();
@@ -291,7 +291,7 @@ namespace CK.Observable
                 return e;
             }
 
-            internal void OnSendCommand( object command )
+            internal void OnSendCommand( in ObservableCommand command )
             {
                 _commands.Add( command );
             }
@@ -792,7 +792,7 @@ namespace CK.Observable
         {
             using( CheckTransactionAndReentrancy( o ) )
             {
-                _changeTracker.OnSendCommand( command );
+                _changeTracker.OnSendCommand( new ObservableCommand( o, command ) );
             }
         }
 

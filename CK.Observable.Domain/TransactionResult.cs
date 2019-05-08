@@ -29,7 +29,7 @@ namespace CK.Observable
         /// sent via <see cref="ObservableObject.SendCommand"/>.
         /// Can be empty (and always empty if there are <see cref="Errors"/>).
         /// </summary>
-        public readonly IReadOnlyList<object> Commands;
+        public readonly IReadOnlyList<ObservableCommand> Commands;
 
         /// <summary>
         /// Gets the errors that actually aborted the transaction.
@@ -37,7 +37,7 @@ namespace CK.Observable
         /// </summary>
         public readonly IReadOnlyList<CKExceptionData> Errors;
 
-        internal TransactionResult( IReadOnlyList<ObservableEvent> e, IReadOnlyList<object> c )
+        internal TransactionResult( IReadOnlyList<ObservableEvent> e, IReadOnlyList<ObservableCommand> c )
         {
             Events = e;
             Commands = c;
@@ -48,7 +48,7 @@ namespace CK.Observable
         {
             Errors = errors;
             Events = Array.Empty<ObservableEvent>();
-            Commands = Array.Empty<object>();
+            Commands = Array.Empty<ObservableCommand>();
         }
 
     }

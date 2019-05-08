@@ -36,12 +36,12 @@ namespace CK.Observable.Domain.Tests.Sample
             return d;
         }
 
-        public static IReadOnlyList<ObservableEvent> TransactedSetPaulMincLastName( ObservableDomain d, string newLastName, bool throwException = false )
+        public static TransactionResult TransactedSetPaulMincLastName( ObservableDomain d, string newLastName, bool throwException = false )
         {
             return d.Modify( () =>
             {
                 d.AllObjects.OfType<Person>().Single( x => x.FirstName == "Paul" ).LastName = newLastName;
-                if( throwException ) throw new Exception( $"After Paul minc renaled to {newLastName}." );
+                if( throwException ) throw new Exception( $"After Paul minc renamed to {newLastName}." );
             } );
         }
 

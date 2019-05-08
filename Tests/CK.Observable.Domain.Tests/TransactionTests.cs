@@ -18,14 +18,14 @@ namespace CK.Observable.Domain.Tests
         {
             var d = new ObservableDomain( new SecureInMemoryTransactionManager() );
             d.TransactionSerialNumber.Should().Be( 0 );
-            var events = d.Modify( () =>
+            var result = d.Modify( () =>
             {
                 new Car( "V1" );
                 new Car( "V2" );
                 d.AllObjects.Should().HaveCount( 2 );
                 throw new Exception( "Failure." );
             } );
-            events.Should().BeNull();
+            result.Errors.Should().NotBeEmpty();
             d.TransactionSerialNumber.Should().Be( 0 );
             d.AllObjects.Should().HaveCount( 0 );
             d.GetFreeList().Should().BeEmpty();
@@ -36,18 +36,18 @@ namespace CK.Observable.Domain.Tests
         {
             var d = SampleDomain.CreateSample( new SecureInMemoryTransactionManager() );
             d.TransactionSerialNumber.Should().Be( 1 );
-            var events = SampleDomain.TransactedSetPaulMincLastName( d, "No-More-Minc" );
-            events.Should().NotBeNull();
+            TransactionResult result = SampleDomain.TransactedSetPaulMincLastName( d, "No-More-Minc" );
+            result.Errors.Should().BeEmpty();
             d.TransactionSerialNumber.Should().Be( 2 );
             d.AllObjects.OfType<Person>().Single( x => x.FirstName == "Paul" ).LastName.Should().Be( "No-More-Minc" );
 
-            events = SampleDomain.TransactedSetPaulMincLastName( d, "Minc" );
-            events.Should().NotBeNull();
+            result = SampleDomain.TransactedSetPaulMincLastName( d, "Minc" );
+            result.Errors.Should().BeEmpty();
             d.TransactionSerialNumber.Should().Be( 3 );
             SampleDomain.CheckSampleGarage1( d );
 
-            events = SampleDomain.TransactedSetPaulMincLastName( d, "No-More-Minc", throwException: true );
-            events.Should().BeNull();
+            result = SampleDomain.TransactedSetPaulMincLastName( d, "No-More-Minc", throwException: true );
+            result.Errors.Should().NotBeEmpty();
             d.TransactionSerialNumber.Should().Be( 3 );
             SampleDomain.CheckSampleGarage1( d );
         }

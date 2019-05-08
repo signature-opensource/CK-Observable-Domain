@@ -29,11 +29,11 @@ namespace CK.Observable.Domain.Tests
             c.Name.Should().Be( "Hello" );
             c.Speed.Should().Be( 10 );
 
-            var events = d2.Modify( () =>
+            var r = d2.Modify( () =>
             {
                 c.Speed = 10000;
             } );
-            events.Should().HaveCount( 1 );
+            r.Events.Should().HaveCount( 1 );
 
         }
 

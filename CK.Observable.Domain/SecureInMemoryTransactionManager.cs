@@ -86,7 +86,7 @@ namespace CK.Observable
         /// <param name="timeUtc">The date time utc of the commit.</param>
         /// <param name="events">The events.</param>
         /// <param name="commands">The commands emitted by the transaction and that should be handled. Can be empty.</param>
-        public virtual void OnTransactionCommit( ObservableDomain d, DateTime timeUtc, IReadOnlyList<ObservableEvent> events, IReadOnlyList<object> commands )
+        public virtual void OnTransactionCommit( ObservableDomain d, DateTime timeUtc, IReadOnlyList<ObservableEvent> events, IReadOnlyList<ObservableCommand> commands )
         {
             _next?.OnTransactionCommit( d, timeUtc, events, commands );
             CreateSnapshot( d, timeUtc );
@@ -112,6 +112,7 @@ namespace CK.Observable
         /// except for the very first transaction where a snapshot is created.
         /// </summary>
         /// <param name="d">The associated domain.</param>
+        /// <param name="timeUtc">The Utc time associated to the transaction.</param>
         public virtual void OnTransactionStart( ObservableDomain d, DateTime timeUtc )
         {
             _next?.OnTransactionStart( d, timeUtc );
