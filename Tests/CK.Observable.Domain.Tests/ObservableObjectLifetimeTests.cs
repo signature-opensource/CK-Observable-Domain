@@ -18,7 +18,7 @@ namespace CK.Observable.Domain.Tests
         {
             var d = new ObservableDomain();
             Action outOfTran = () => new Car( "" );
-            outOfTran.Should().Throw<InvalidOperationException>().WithMessage( "A transaction is required." );
+            outOfTran.Should().Throw<InvalidOperationException>().WithMessage( "A transaction is required*" );
         }
 
         [Test]

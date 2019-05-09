@@ -845,7 +845,7 @@ namespace CK.Observable
         {
             if( CurrentThreadDomain == null )
             {
-                throw new InvalidOperationException( "ObservableObject can be created only inside a ObservableDomain transaction." );
+                throw new InvalidOperationException( "A transaction is required (ObservableObject can be created only inside a transaction)." );
             }
             return CurrentThreadDomain;
         }
