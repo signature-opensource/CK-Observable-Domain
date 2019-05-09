@@ -1,0 +1,5 @@
+codecakebuilder:
+  tags:
+    - windows
+  script:
+    - dotnet run --project CodeCakeBuilder -nointeraction
