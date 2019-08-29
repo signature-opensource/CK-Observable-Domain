@@ -67,7 +67,6 @@ namespace CK.Observable
         readonly List<PropInfo> _propertiesByIndex;
 
         readonly ChangeTracker _changeTracker;
-        readonly IDisposable _reentrancyHandler;
         readonly AllCollection _exposedObjects;
         readonly ReaderWriterLockSlim _lock;
         Stack<int> _freeList;
@@ -338,7 +337,7 @@ namespace CK.Observable
                     _domain._changeTracker.Reset();
                     try
                     {
-                        _domain.TransactionManager?.OnTransactionFailure( _domain, _errors );
+                        _domain.DomainClient?.OnTransactionFailure( _domain, _errors );
                     }
                     catch( Exception ex )
                     {
@@ -353,7 +352,7 @@ namespace CK.Observable
                     ++_domain._transactionSerialNumber;
                     try
                     {
-                        _domain.TransactionManager?.OnTransactionCommit( _domain, DateTime.UtcNow, _result.Events, _result.Commands );
+                        _domain.DomainClient?.OnTransactionCommit( _domain, DateTime.UtcNow, _result.Events, _result.Commands );
                     }
                     catch( Exception ex )
                     {
@@ -378,7 +377,7 @@ namespace CK.Observable
 
         /// <summary>
         /// Initializes a new <see cref="ObservableDomain"/> with an autonomous <see cref="Monitor"/>
-        /// and no <see cref="TransactionManager"/>.
+        /// and no <see cref="DomainClient"/>.
         /// </summary>
         public ObservableDomain()
             : this( null, null )
@@ -387,7 +386,7 @@ namespace CK.Observable
 
         /// <summary>
         /// Initializes a new <see cref="ObservableDomain"/> bound to a <see cref="Monitor"/> but without
-        /// any <see cref="TransactionManager"/>.
+        /// any <see cref="DomainClient"/>.
         /// </summary>
         /// <param name="monitor">The monitor to use. Can be null: a new monitor is created.</param>
         public ObservableDomain( IActivityMonitor monitor )
@@ -396,17 +395,17 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Initializes a new <see cref="ObservableDomain"/> with a <see cref="TransactionManager"/>.
+        /// Initializes a new <see cref="ObservableDomain"/> with a <see cref="DomainClient"/>.
         /// </summary>
         /// <param name="tm">The associated transaction manager to use. Can be null.</param>
-        public ObservableDomain( IObservableTransactionManager tm )
+        public ObservableDomain( IObservableDomainClient tm )
             : this( tm, null )
         {
         }
 
         /// <summary>
         /// Initializes a new <see cref="ObservableDomain"/> with a <see cref="Monitor"/>,
-        /// a <see cref="TransactionManager"/> an optionals explicit exporter, serializer
+        /// a <see cref="DomainClient"/> an optionals explicit exporter, serializer
         /// and deserializer handlers.
         /// </summary>
         /// <param name="tm">The transaction manager to use. Can be null.</param>
@@ -415,18 +414,29 @@ namespace CK.Observable
         /// <param name="serializers">Optional serializers handler.</param>
         /// <param name="deserializers">Optional deserializers handler.</param>
         public ObservableDomain(
-            IObservableTransactionManager tm,
+            IObservableDomainClient tm,
             IActivityMonitor monitor,
             IExporterResolver exporters = null,
             ISerializerResolver serializers = null,
             IDeserializerResolver deserializers = null )
+            : this( true, tm, monitor, exporters, serializers, deserializers )
+        {
+        }
+
+        ObservableDomain(
+            bool callTransactionManagerOnCreate,
+            IObservableDomainClient tm,
+            IActivityMonitor monitor,
+            IExporterResolver exporters,
+            ISerializerResolver serializers,
+            IDeserializerResolver deserializers )
         {
             DomainNumber = Interlocked.Increment( ref _domainNumber );
             Monitor = monitor ?? new ActivityMonitor( $"Observable Domain n°{DomainNumber}." );
             _exporters = exporters ?? ExporterRegistry.Default;
             _serializers = serializers ?? SerializerRegistry.Default;
             _deserializers = deserializers ?? DeserializerRegistry.Default;
-            TransactionManager = tm;
+            DomainClient = tm;
             _objects = new ObservableObject[512];
             _freeList = new Stack<int>();
             _properties = new Dictionary<string, PropInfo>();
@@ -436,6 +446,7 @@ namespace CK.Observable
             _roots = new List<ObservableRootObject>();
             // LockRecursionPolicy.NoRecursion: reentrancy must NOT be allowed.
             _lock = new ReaderWriterLockSlim( LockRecursionPolicy.NoRecursion );
+            if( callTransactionManagerOnCreate ) tm?.OnDomainCreated( this, DateTime.UtcNow );
         }
 
         /// <summary>
@@ -450,7 +461,7 @@ namespace CK.Observable
         /// <param name="serializers">Optional serializers handler.</param>
         /// <param name="deserializers">Optional deserializers handler.</param>
         public ObservableDomain(
-            IObservableTransactionManager tm,
+            IObservableDomainClient tm,
             IActivityMonitor monitor,
             Stream s,
             bool leaveOpen = false,
@@ -458,9 +469,10 @@ namespace CK.Observable
             IExporterResolver exporters = null,
             ISerializerResolver serializers = null,
             IDeserializerResolver deserializers = null )
-            : this( tm, monitor, exporters, serializers, deserializers )
+            : this( false, tm, monitor, exporters, serializers, deserializers )
         {
             Load( s, leaveOpen, encoding );
+            tm?.OnDomainCreated( this, DateTime.UtcNow );
         }
 
         /// <summary>
@@ -473,7 +485,7 @@ namespace CK.Observable
             readonly ObservableDomain _previous;
 
             /// <summary>
-            /// INitializes a new <see cref="InitializationTransaction"/> required
+            /// Initializes a new <see cref="InitializationTransaction"/> required
             /// to call <see cref="AddRoot{T}(InitializationTransaction)"/>.
             /// </summary>
             /// <param name="d">The observable domain.</param>
@@ -554,16 +566,16 @@ namespace CK.Observable
         public IActivityMonitor Monitor { get; }
 
         /// <summary>
-        /// Gets the associated transaction manager.
+        /// Gets the associated client (head of the Chain of Responsibility).
         /// Can be null.
         /// </summary>
-        public IObservableTransactionManager TransactionManager { get; }
+        public IObservableDomainClient DomainClient { get; }
 
         /// <summary>
         /// Acquires a read lock: until the returned disposable is disposed
         /// objects can safely be read and any attempt to <see cref="BeginTransaction"/> (from
         /// other threads) wiil  be blocked.
-        /// Any attenmpt to call <see cref="BeginTransaction"/> from this thread will
+        /// Any attempt to call <see cref="BeginTransaction"/> from this thread will
         /// throw a <see cref="LockRecursionException"/>
         /// </summary>
         /// <param name="millisecondsTimeout">
@@ -606,7 +618,7 @@ namespace CK.Observable
             if( !_lock.TryEnterWriteLock( millisecondsTimeout ) ) return null;
             try
             {
-                TransactionManager?.OnTransactionStart( this, DateTime.UtcNow );
+                DomainClient?.OnTransactionStart( this, DateTime.UtcNow );
                 return _currentTran = new Transaction( this );
             }
             catch( Exception ex )
@@ -811,7 +823,15 @@ namespace CK.Observable
                     _properties.Add( name, p );
                     _propertiesByIndex.Add( p );
                 }
-
+                for( int i = 0; i < _objectsListCount; ++i )
+                {
+                    var o = _objects[i];
+                    if( o != null && !(o is ObservableRootObject) )
+                    {
+                        Debug.Assert( !o.IsDisposed );
+                        o.OnDisposed( true );
+                    }
+                }
                 Array.Clear( _objects, 0, _objectsListCount );
                 _objectsListCount = count = _actualObjectCount + _freeList.Count;
                 while( _objectsListCount > _objects.Length )

@@ -39,7 +39,8 @@ namespace CK.Observable
         /// <summary>
         /// Overridden to throw <see cref="InvalidOperationException"/>.
         /// </summary>
-        protected override void OnDisposed()
+        /// <param name="isReloading">Unused (this is never called for root objects).</param>
+        internal protected override void OnDisposed( bool isReloading )
         {
             throw new InvalidOperationException( "ObservableRootObject can not be disposed." );
         }

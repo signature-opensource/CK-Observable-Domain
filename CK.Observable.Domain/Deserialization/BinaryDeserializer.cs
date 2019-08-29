@@ -294,43 +294,5 @@ namespace CK.Observable
             }
         }
 
-        // TODO: To be removed @next CK.Core version (transfered to CKBinaryReader).
-
-        /// <summary>
-        /// Reads a DateTime value.
-        /// </summary>
-        /// <returns>The DateTime read.</returns>
-        public DateTime ReadDateTime()
-        {
-            return DateTime.FromBinary( ReadInt64() );
-        }
-
-        /// <summary>
-        /// Reads a TimeSpan value.
-        /// </summary>
-        /// <returns>The TimeSpan read.</returns>
-        public TimeSpan ReadTimeSpan()
-        {
-            return TimeSpan.FromTicks( ReadInt64() );
-        }
-
-        /// <summary>
-        /// Reads a DateTimeOffset value.
-        /// </summary>
-        /// <returns>The DateTimeOffset read.</returns>
-        public DateTimeOffset ReadDateTimeOffset()
-        {
-            return new DateTimeOffset( ReadDateTime(), TimeSpan.FromMinutes( ReadInt16() ) );
-        }
-
-        /// <summary>
-        /// Reads a Guid value.
-        /// </summary>
-        /// <returns>The Guid read.</returns>
-        public Guid ReadGuid()
-        {
-            return new Guid( ReadBytes( 16 ) );
-        }
-
     }
 }

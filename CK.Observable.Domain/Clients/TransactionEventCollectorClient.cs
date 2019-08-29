@@ -9,14 +9,14 @@ using System.Threading.Tasks;
 namespace CK.Observable
 {
     /// <summary>
-    /// Implements a <see cref="IObservableTransactionManager"/> that collects
-    /// transcation events and exposes <see cref="TransactionEvent"/> that captures,
+    /// Implements a <see cref="IObservableDomainClient"/> that collects
+    /// transaction events and exposes <see cref="TransactionEvent"/> that captures,
     /// for each transaction, all the transaction <see cref="ObservableEvent"/> as well
     /// as a JSON object that describes them.
     /// </summary>
-    public class TransactionEventCollector : IObservableTransactionManager
+    public class TransactionEventCollectorClient : IObservableDomainClient
     {
-        readonly IObservableTransactionManager _next;
+        readonly IObservableDomainClient _next;
         readonly List<TransactionEvent> _events;
         readonly StringWriter _buffer;
         readonly ObjectExporter _exporter;
@@ -57,10 +57,10 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Initializes a new <see cref="TransactionEventCollector"/>.
+        /// Initializes a new <see cref="TransactionEventCollectorClient"/>.
         /// </summary>
         /// <param name="next">The next manager (can be null).</param>
-        public TransactionEventCollector( IObservableTransactionManager next = null )
+        public TransactionEventCollectorClient( IObservableDomainClient next = null )
         {
             _next = next;
             _events = new List<TransactionEvent>();
@@ -139,7 +139,9 @@ namespace CK.Observable
             }
         }
 
-        void IObservableTransactionManager.OnTransactionCommit( ObservableDomain d, DateTime timeUtc, IReadOnlyList<ObservableEvent> events, IReadOnlyList<ObservableCommand> commands )
+        void IObservableDomainClient.OnDomainCreated( ObservableDomain d, DateTime timeUtc ) => _next?.OnDomainCreated( d, timeUtc );
+
+        void IObservableDomainClient.OnTransactionCommit( ObservableDomain d, DateTime timeUtc, IReadOnlyList<ObservableEvent> events, IReadOnlyList<ObservableCommand> commands )
         {
             _buffer.GetStringBuilder().Clear();
             _exporter.Reset();
@@ -149,12 +151,12 @@ namespace CK.Observable
             _next?.OnTransactionCommit( d, timeUtc, events, commands );
         }
 
-        void IObservableTransactionManager.OnTransactionFailure( ObservableDomain d, IReadOnlyList<CKExceptionData> errors )
+        void IObservableDomainClient.OnTransactionFailure( ObservableDomain d, IReadOnlyList<CKExceptionData> errors )
         {
             _next?.OnTransactionFailure( d, errors );
         }
 
-        void IObservableTransactionManager.OnTransactionStart( ObservableDomain d, DateTime timeUtc )
+        void IObservableDomainClient.OnTransactionStart( ObservableDomain d, DateTime timeUtc )
         {
             _next?.OnTransactionStart( d, timeUtc );
         }

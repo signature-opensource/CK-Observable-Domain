@@ -10,7 +10,7 @@ namespace CK.Observable.Domain.Tests.Sample
 {
     public static class SampleDomain
     {
-        public static ObservableDomain CreateSample( IObservableTransactionManager tm = null )
+        public static ObservableDomain CreateSample( IObservableDomainClient tm = null )
         {
             var d = new ObservableDomain( tm, TestHelper.Monitor );
             d.Modify( () =>

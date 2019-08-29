@@ -16,7 +16,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void transaction_works_for_the_very_first_one()
         {
-            var d = new ObservableDomain( new SecureInMemoryTransactionManager() );
+            var d = new ObservableDomain( new MemoryTransactionProviderClient() );
             d.TransactionSerialNumber.Should().Be( 0 );
             var result = d.Modify( () =>
             {
@@ -34,7 +34,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void transaction_manager_with_rollbacks()
         {
-            var d = SampleDomain.CreateSample( new SecureInMemoryTransactionManager() );
+            var d = SampleDomain.CreateSample( new MemoryTransactionProviderClient() );
             d.TransactionSerialNumber.Should().Be( 1 );
             TransactionResult result = SampleDomain.TransactedSetPaulMincLastName( d, "No-More-Minc" );
             result.Errors.Should().BeEmpty();

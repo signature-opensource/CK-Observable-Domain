@@ -17,7 +17,7 @@ namespace CK.Observable
     {
         /// <summary>
         /// Initializes a new <see cref="ObservableDomain{T}"/> with an
-        /// automous <see cref="ObservableDomain.Monitor"/> and no <see cref="ObservableDomain.TransactionManager"/>.
+        /// automous <see cref="ObservableDomain.Monitor"/> and no <see cref="ObservableDomain.DomainClient"/>.
         /// The <see cref="Root"/> is a new <typeparamref name="T"/> (obtained by calling a constructor
         /// that accepts a ObservableDomain).
         /// </summary>
@@ -27,7 +27,7 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Initializes a new <see cref="ObservableDomain{T}"/> without any <see cref="ObservableDomain.TransactionManager"/>.
+        /// Initializes a new <see cref="ObservableDomain{T}"/> without any <see cref="ObservableDomain.DomainClient"/>.
         /// The <see cref="Root"/> is a new <typeparamref name="T"/> (obtained by calling the constructor
         /// that accepts a ObservableDomain).
         /// </summary>
@@ -43,7 +43,7 @@ namespace CK.Observable
         /// that accepts a ObservableDomain).
         /// </summary>
         /// <param name="tm">The transaction manager. Can be null.</param>
-        public ObservableDomain( IObservableTransactionManager tm )
+        public ObservableDomain( IObservableDomainClient tm )
             : this( tm, null )
         {
         }
@@ -55,10 +55,15 @@ namespace CK.Observable
         /// </summary>
         /// <param name="tm">The transaction manager. Can be null.</param>
         /// <param name="monitor">Monitor to use (when null, an automous monitor is automatically created).</param>
-        public ObservableDomain( IObservableTransactionManager tm, IActivityMonitor monitor )
+        public ObservableDomain( IObservableDomainClient tm, IActivityMonitor monitor )
             : base( tm, monitor )
         {
-            using( var initialization = new InitializationTransaction( this ) )
+            if( AllRoots.Count != 0 )
+            {
+                CheckRoot();
+                Root = (T)AllRoots[0];
+            }
+            else using( var initialization = new InitializationTransaction( this ) )
             {
                 Root = AddRoot<T>( initialization );
             }
@@ -73,18 +78,23 @@ namespace CK.Observable
         /// <param name="leaveOpen">True to leave the stream opened.</param>
         /// <param name="encoding">Optional encoding for characters. Defaults to UTF-8.</param>
         public ObservableDomain(
-            IObservableTransactionManager tm,
+            IObservableDomainClient tm,
             IActivityMonitor monitor,
             Stream s,
             bool leaveOpen = false,
             Encoding encoding = null )
             : base( tm, monitor, s, leaveOpen, encoding )
         {
+            CheckRoot();
+            Root = (T)AllRoots[0];
+        }
+
+        void CheckRoot()
+        {
             if( AllRoots.Count != 1 || !(AllRoots[0] is T) )
             {
-                throw new InvalidDataException( $"Incompatible stream. No root of type {typeof(T).FullName}. {AllRoots.Count} roots of type: {AllRoots.Select( t => t.GetType().Name ).Concatenate()}." );
+                throw new InvalidDataException( $"Incompatible stream. No root of type {typeof( T ).FullName}. {AllRoots.Count} roots of type: {AllRoots.Select( t => t.GetType().Name ).Concatenate()}." );
             }
-            Root = (T)AllRoots[0];
         }
 
         /// <summary>

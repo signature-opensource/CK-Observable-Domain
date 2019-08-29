@@ -28,7 +28,7 @@ namespace CK.Observable.Domain.Tests.Sample
 
         public Garage Garage { get; set; }
 
-        protected override void OnDisposed()
+        protected override void OnDisposed( bool isReloading )
         {
             Garage.Employees.Remove( this );
         }

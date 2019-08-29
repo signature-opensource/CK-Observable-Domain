@@ -30,7 +30,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void initializing_and_persisting_domain()
         {
-            var eventCollector = new TransactionEventCollector();
+            var eventCollector = new TransactionEventCollectorClient();
 
             var d = new ObservableDomain<ApplicationState>( eventCollector );
             d.Root.ToDoNumbers.Should().BeEmpty();

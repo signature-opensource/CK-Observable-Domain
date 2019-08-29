@@ -25,6 +25,9 @@ namespace CK.Observable
 
         /// <summary>
         /// Raised when this object is <see cref="Dispose"/>d by <see cref="OnDisposed"/>.
+        /// Note that when the call to dispose is made by <see cref="ObservableDomain.Load"/>, this event is not
+        /// triggered to avoid a useless (and potentialy dangerous) snowball effect: eventually ALL <see cref="ObservableObject.OnDisposed(bool)"/>
+        /// will be called during a reload.
         /// </summary>
         public event EventHandler Disposed;
 
@@ -103,7 +106,7 @@ namespace CK.Observable
         {
             if( _id >= 0 )
             {
-                OnDisposed();
+                OnDisposed( false );
                 Domain.Unregister( this );
                 _id = -1;
             }
@@ -112,7 +115,7 @@ namespace CK.Observable
         /// <summary>
         /// Sends a command to the external world. Commands are enlisted
         /// into <see cref="TransactionResult.Commands"/> (when the transaction succeeds)
-        /// and can be processed by any <see cref="IObservableTransactionManager"/>.
+        /// and can be processed by any <see cref="IObservableDomainClient"/>.
         /// </summary>
         /// <param name="command">Any command description.</param>
         public void SendCommand( object command )
@@ -125,9 +128,10 @@ namespace CK.Observable
         /// Implementation at this level raises the <see cref="Disposed"/> event: it must be called
         /// by overrides.
         /// </summary>
-        protected virtual void OnDisposed()
+        /// <param name="isReloading">True when this dispose is due to a domain reload.</param>
+        internal protected virtual void OnDisposed( bool isReloading )
         {
-            Disposed?.Invoke( this, EventArgs.Empty );
+            if( !isReloading ) Disposed?.Invoke( this, EventArgs.Empty );
         }
 
         /// <summary>

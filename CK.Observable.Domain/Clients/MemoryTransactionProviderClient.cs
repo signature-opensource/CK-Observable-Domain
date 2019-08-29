@@ -1,0 +1,195 @@
+using CK.Core;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace CK.Observable
+{
+
+    /// <summary>
+    /// This is a simple, yet useful, participant that implements transaction in memory.
+    /// It is open to extensions and can be used as a base class: the <see cref="FileTransactionProviderClient"/> extends this.
+    /// The protected <see cref="LoadAndInitializeSnapshot"/> and <see cref="WriteSnapshotTo"/> methods offers access to
+    /// the internal memory.
+    /// </summary>
+    public class MemoryTransactionProviderClient : IObservableDomainClient
+    {
+        readonly IObservableDomainClient _next;
+        readonly MemoryStream _memory;
+        int _snapshotSerialNumber;
+        DateTime _snapshotTimeUtc;
+
+        /// <summary>
+        /// Initializes a new <see cref="MemoryTransactionProviderClient"/>.
+        /// </summary>
+        /// <param name="next">The next manager (can be null).</param>
+        public MemoryTransactionProviderClient( IObservableDomainClient next = null )
+        {
+            _next = next;
+            _memory = new MemoryStream( 16 * 1024 );
+            _snapshotSerialNumber = -1;
+            _snapshotTimeUtc = Util.UtcMinValue;
+        }
+
+        /// <summary>
+        /// Gets the current, snapshot, serial number.
+        /// Defaults to -1 when there is no snapshot.
+        /// </summary>
+        public int CurrentSerialNumber => _snapshotSerialNumber;
+
+        /// <summary>
+        /// Gets the time of the current snapshot.
+        /// Defaults to <see cref="Util.UtcMinValue"/> when there is no snapshot.
+        /// </summary>
+        public DateTime CurrentTimeUtc => _snapshotTimeUtc;
+
+        /// <summary>
+        /// Gets whether a snapshot is available.
+        /// </summary>
+        public bool HasSnapshot => _snapshotSerialNumber >= 0;
+
+        /// <summary>
+        /// Called when the domain instance is created.
+        /// By default, does nothing.
+        /// </summary>
+        /// <param name="timeUtc">The date time utc of the creation.</param>
+        /// <param name="d">The newly created domain.</param>
+        public virtual void OnDomainCreated( ObservableDomain d, DateTime timeUtc )
+        {
+            _next?.OnDomainCreated( d, timeUtc );
+        }
+
+        /// <summary>
+        /// Default behavior is to create a snapshot (simply calls <see cref="CreateSnapshot"/> protected method).
+        /// </summary>
+        /// <param name="d">The associated domain.</param>
+        /// <param name="timeUtc">The date time utc of the commit.</param>
+        /// <param name="events">The events.</param>
+        /// <param name="commands">The commands emitted by the transaction and that should be handled. Can be empty.</param>
+        public virtual void OnTransactionCommit( ObservableDomain d, DateTime timeUtc, IReadOnlyList<ObservableEvent> events, IReadOnlyList<ObservableCommand> commands )
+        {
+            _next?.OnTransactionCommit( d, timeUtc, events, commands );
+            CreateSnapshot( d, timeUtc );
+        }
+
+        /// <summary>
+        /// Default behavior is to call <see cref="RestoreSnapshot"/> and throws an <see cref="Exception"/>
+        /// if no snapshot was available or if an error occured.
+        /// </summary>
+        /// <param name="d">The associated domain.</param>
+        /// <param name="errors">A necessarily non null list of errors with at least one error.</param>
+        public virtual void OnTransactionFailure( ObservableDomain d, IReadOnlyList<CKExceptionData> errors )
+        {
+            _next?.OnTransactionFailure( d, errors );
+            if( !RestoreSnapshot( d ) )
+            {
+                throw new Exception( "No snapshot available or error while restoring the last snapshot." );
+            }
+        }
+
+        /// <summary>
+        /// Simply calls the next <see cref="IObservableDomainClient"/> in the chain of responsibility
+        /// and if there is no snapshot an initial snapshot is created.
+        /// </summary>
+        /// <param name="d">The associated domain.</param>
+        /// <param name="timeUtc">The Utc time associated to the transaction.</param>
+        public virtual void OnTransactionStart( ObservableDomain d, DateTime timeUtc )
+        {
+            _next?.OnTransactionStart( d, timeUtc );
+            if( !HasSnapshot ) CreateSnapshot( d, timeUtc );
+        }
+
+        /// <summary>
+        /// Loads the domain and initializes the current snapshot.
+        /// </summary>
+        /// <param name="d">The domain.</param>
+        /// <param name="timeUtc">A utc time (typically the creation time).</param>
+        /// <param name="s">The readable stream (will be copied into the memory).</param>
+        protected void LoadAndInitializeSnapshot( ObservableDomain d, DateTime timeUtc, Stream s )
+        {
+            _memory.Position = 0;
+            s.CopyTo( _memory );
+            DoLoadMemory( d );
+            if( _snapshotSerialNumber == -1 )
+            {
+                _snapshotSerialNumber = Int32.MaxValue;
+                _snapshotTimeUtc = timeUtc;
+            }
+        }
+
+        /// <summary>
+        /// Writes the current snapshot to the provided stream.
+        /// </summary>
+        /// <param name="s">The target stream.</param>
+        protected void WriteSnapshotTo( Stream s )
+        {
+            s.Write( _memory.GetBuffer(), 0, (int)_memory.Position );
+        }
+
+
+        /// <summary>
+        /// Restores the last snapshot. Returns false if there is no snapshot or if an error occurred.
+        /// </summary>
+        /// <param name="d">The associated domain.</param>
+        /// <returns>False if no snapshot is available or if the restoration failed. True otherwise.</returns>
+        protected bool RestoreSnapshot( ObservableDomain d )
+        {
+            if( !HasSnapshot )
+            {
+                Debug.Assert( ToString() == "No snapshot." );
+                d.Monitor.Warn( "No snapshot." );
+                return false;
+            }
+            using( d.Monitor.OpenInfo( $"Restoring snapshot: {ToString()}" ) )
+            {
+                try
+                {
+                    DoLoadMemory( d );
+                    d.Monitor.CloseGroup( "Success." );
+                    return true;
+                }
+                catch( Exception ex )
+                {
+                    d.Monitor.Error( ex );
+                    return false;
+                }
+            }
+        }
+
+        void DoLoadMemory( ObservableDomain d )
+        {
+            long p = _memory.Position;
+            _memory.Position = 0;
+            d.Load( _memory, leaveOpen: true );
+            if( _memory.Position != p ) throw new Exception( $"Internal error: stream position should be {p} but was {_memory.Position} after reload." );
+        }
+
+        /// <summary>
+        /// Creates and adds a snapshot to <see cref="Snapshots"/>.
+        /// </summary>
+        /// <param name="d">The associated domain.</param>
+        /// <param name="timeUtc">Time of the operation.</param>
+        protected void CreateSnapshot( ObservableDomain d, DateTime timeUtc )
+        {
+            using( d.Monitor.OpenTrace( $"Creating snapshot." ) )
+            {
+                _memory.Position = 0;
+                d.Save( _memory, true );
+                _snapshotSerialNumber = d.TransactionSerialNumber;
+                _snapshotTimeUtc = timeUtc;
+                d.Monitor.CloseGroup( ToString() );
+            }
+        }
+
+        /// <summary>
+        /// Returns the number of bytes, the transaction number and the time or "No snapshot.".
+        /// </summary>
+        /// <returns>A readable string.</returns>
+        public override string ToString() => HasSnapshot ? $"Snapshot {_memory.Position} bytes, n°{_snapshotSerialNumber} - {_snapshotTimeUtc}." : "No snapshot.";
+
+    }
+}

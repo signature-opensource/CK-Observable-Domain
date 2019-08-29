@@ -18,7 +18,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void exporting_and_altering_simple()
         {
-            var eventCollector = new TransactionEventCollector();
+            var eventCollector = new TransactionEventCollectorClient();
 
             var d = new ObservableDomain( eventCollector, TestHelper.Monitor );
             d.TransactionSerialNumber.Should().Be( 0, "Nothing happened yet." );
@@ -96,7 +96,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void exporting_and_altering_sample()
         {
-            var eventCollector = new TransactionEventCollector();
+            var eventCollector = new TransactionEventCollectorClient();
 
             var d = SampleDomain.CreateSample( eventCollector );
 
@@ -139,7 +139,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void exporting_and_altering_ApplicationState()
         {
-            var eventCollector = new TransactionEventCollector( new SecureInMemoryTransactionManager() );
+            var eventCollector = new TransactionEventCollectorClient( new MemoryTransactionProviderClient() );
 
             var d = new ObservableDomain<RootSample.ApplicationState>( eventCollector );
             d.Modify( () =>

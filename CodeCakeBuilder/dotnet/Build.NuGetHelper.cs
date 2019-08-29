@@ -242,7 +242,7 @@ namespace CodeCake
             static async Task<IEnumerable<ICredentialProvider>> GetCredentialProvidersAsync( ILogger logger )
             {
                 var providers = new List<ICredentialProvider>();
-                var securePluginProviders = await new SecurePluginCredentialProviderBuilder( pluginManager: PluginManager.Instance, canShowDialog: false, logger: logger ).BuildAllAsync();
+                var securePluginProviders = await new SecurePluginCredentialProviderBuilder( pluginManager: NuGet.Protocol.Plugins.PluginManager.Instance, canShowDialog: false, logger: logger ).BuildAllAsync();
                 providers.AddRange( securePluginProviders );
                 return providers;
             }

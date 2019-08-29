@@ -283,44 +283,5 @@ namespace CK.Observable
             return false;
         }
 
-        // TODO: To be removed @next CK.Core version (transfered to CKBinaryWriter).
-
-        /// <summary>
-        /// Writes a DateTime value.
-        /// </summary>
-        /// <param name="d">The value to write.</param>
-        public void Write( DateTime d )
-        {
-            Write( d.ToBinary() );
-        }
-
-        /// <summary>
-        /// Writes a TimeSpan value.
-        /// </summary>
-        /// <param name="t">The value to write.</param>
-        public void Write( TimeSpan t )
-        {
-            Write( t.Ticks );
-        }
-
-        /// <summary>
-        /// Writes a DateTimeOffset value.
-        /// </summary>
-        /// <param name="ds">The value to write.</param>
-        public void Write( DateTimeOffset ds )
-        {
-            Write( ds.DateTime );
-            Write( (short)ds.Offset.TotalMinutes );
-        }
-
-        /// <summary>
-        /// Writes a DateTimeOffset value.
-        /// </summary>
-        /// <param name="g">The value to write.</param>
-        public void Write( Guid g )
-        {
-            Write( g.ToByteArray() );
-        }
-
     }
 }
