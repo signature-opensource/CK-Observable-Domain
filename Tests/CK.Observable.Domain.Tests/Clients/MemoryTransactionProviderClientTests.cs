@@ -1,4 +1,7 @@
 using System;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using FluentAssertions;
 using NUnit.Framework;
 using static CK.Testing.MonitorTestHelper;
@@ -11,8 +14,7 @@ namespace CK.Observable.Domain.Tests.Clients
         public void Modify_creates_snapshot()
         {
             var client = new MemoryTransactionProviderClient();
-            ObservableDomain<TestObservableRootObject> d
-                = new ObservableDomain<TestObservableRootObject>( client, TestHelper.Monitor );
+            var d = new ObservableDomain<TestObservableRootObject>( client, TestHelper.Monitor );
 
             var transactionResult = d.Modify( () =>
             {
@@ -85,7 +87,151 @@ namespace CK.Observable.Domain.Tests.Clients
             {
                 d.Root.Prop1.Should().Be( "Hello" );
                 d.Root.Prop2.Should().Be( "World" );
+                d.AllObjects.Count.Should().Be( 1 );
+                d.AllRoots.Count.Should().Be( 1 );
+                d.Root.Should().Be( (TestObservableRootObject)d.AllObjects.First() );
+                d.Root.Should().Be( (TestObservableRootObject)d.AllRoots.First() );
             }
+        }
+
+        [Test]
+        public void WriteSnapshotTo_creates_valid_stream_for_ObservableDomain_ctor()
+        {
+            var client1 = new TestMemoryTransactionProviderClient();
+            var d1 = new ObservableDomain<TestObservableRootObject>( client1, TestHelper.Monitor );
+            // Initial successful Modify
+            d1.Modify( () =>
+            {
+                d1.Root.Prop1 = "Hello";
+                d1.Root.Prop2 = "World";
+            } );
+            // Get snapshot stream
+            using( var domainStream = client1.CreateStreamFromSnapshot() )
+            {
+                // Create domain from that snapshot
+                var d2 = new ObservableDomain<TestObservableRootObject>(
+                    new MemoryTransactionProviderClient(),
+                    TestHelper.Monitor,
+                    domainStream
+                    );
+
+                using( d2.AcquireReadLock() )
+                {
+                    d2.Root.Prop1.Should().Be( "Hello" );
+                    d2.Root.Prop2.Should().Be( "World" );
+                    d2.AllObjects.Count.Should().Be( 1 );
+                    d2.AllRoots.Count.Should().Be( 1 );
+                }
+            }
+        }
+
+        [Test]
+        public void WriteSnapshotTo_creates_valid_stream_for_Client_OnDomainCreated()
+        {
+            var client1 = new TestMemoryTransactionProviderClient();
+            var d1 = new ObservableDomain<TestObservableRootObject>( client1, TestHelper.Monitor );
+            // Initial successful Modify
+            d1.Modify( () =>
+            {
+                d1.Root.Prop1 = "Hello";
+                d1.Root.Prop2 = "World";
+            } );
+            // Get snapshot stream
+            using( var domainStream = client1.CreateStreamFromSnapshot() )
+            {
+                // Create domain using a client with this snapshot
+                var d2 = new ObservableDomain<TestObservableRootObject>(
+                    new TestMemoryTransactionProviderClient( domainStream ),
+                    TestHelper.Monitor
+                );
+
+                using( d2.AcquireReadLock() )
+                {
+                    d2.Root.Prop1.Should().Be( "Hello" );
+                    d2.Root.Prop2.Should().Be( "World" );
+                    d2.AllObjects.Count.Should().Be( 1 );
+                    d2.AllRoots.Count.Should().Be( 1 );
+                }
+            }
+        }
+
+        [Test]
+        public void ObservableDomain_loads_from_Client_when_given_both_Client_and_ctor_Stream()
+        {
+            var client1 = new TestMemoryTransactionProviderClient();
+            var d1 = new ObservableDomain<TestObservableRootObject>( client1, TestHelper.Monitor );
+            // Initial successful Modify
+            d1.Modify( () =>
+            {
+                d1.Root.Prop1 = "Hello";
+                d1.Root.Prop2 = "World";
+            } );
+            // Get snapshot stream
+            using( var domainStream1 = client1.CreateStreamFromSnapshot() )
+            {
+                // Change domain a bit and get second stream
+                d1.Modify( () =>
+                {
+                    d1.Root.Prop1 = "Hello 2";
+                    d1.Root.Prop2 = "World 2";
+                } );
+                using( var domainStream2 = client1.CreateStreamFromSnapshot() )
+                {
+                    // Create domain using BOTH ctor Stream (domainStream1)
+                    // AND custom load from OnDomainCreated (domainStream2)
+                    var d2 = new ObservableDomain<TestObservableRootObject>(
+                        new TestMemoryTransactionProviderClient( domainStream2 ),
+                        TestHelper.Monitor,
+                        domainStream1
+                    );
+
+                    using( d2.AcquireReadLock() )
+                    {
+                        d2.Root.Prop1.Should().Be( "Hello 2" );
+                        d2.Root.Prop2.Should().Be( "World 2" );
+                        d2.AllObjects.Count.Should().Be( 1 );
+                        d2.AllRoots.Count.Should().Be( 1 );
+                    }
+                }
+            }
+        }
+
+
+        [Test]
+        public void Rollback_disposes_replaced_ObservableObjects()
+        {
+            var d = new ObservableDomain<TestObservableRootObject>( new MemoryTransactionProviderClient(), TestHelper.Monitor );
+            // Initial successful Modify
+            TestObservableRootObject initialObservableObject = null;
+            TestObservableRootObject restoredObservableObject = null;
+            d.Modify( () =>
+            {
+                initialObservableObject = d.Root;
+                d.Root.Prop1 = "Hello";
+                d.Root.Prop2 = "World";
+            } );
+            Debug.Assert( initialObservableObject != null );
+
+            // Raise exception during Write()
+            d.Modify( () =>
+            {
+                d.Root.Prop1 = "This will";
+                d.Root.Prop2 = "never be set";
+                d.Root.Invoking( x => x.Dispose() )
+                    .Should().Throw<InvalidOperationException>( "Roots can't be disposed during regular operation" );
+                throw new Exception( "Exception during Modify(). This is a test exception." );
+            } );
+
+            using( d.AcquireReadLock() )
+            {
+                restoredObservableObject = d.Root;
+                d.Root.Prop1.Should().Be( "Hello" );
+                d.Root.Prop2.Should().Be( "World" );
+            }
+
+            restoredObservableObject.Should().NotBe( initialObservableObject );
+            initialObservableObject.IsDisposed.Should().BeTrue();
+            restoredObservableObject.IsDisposed.Should().BeFalse();
         }
 
         [SerializationVersion( 0 )]
@@ -114,6 +260,33 @@ namespace CK.Observable.Domain.Tests.Clients
                 s.WriteNullableString( Prop2 );
 
                 if( TestBehavior__ThrowOnWrite ) throw new Exception( $"{nameof( TestBehavior__ThrowOnWrite )} is set. This is a test exception." );
+            }
+        }
+
+        public class TestMemoryTransactionProviderClient : MemoryTransactionProviderClient
+        {
+            private readonly Stream _domainCreatedStream;
+
+            public TestMemoryTransactionProviderClient( Stream domainCreatedStream = null )
+            {
+                _domainCreatedStream = domainCreatedStream;
+            }
+
+            public override void OnDomainCreated( ObservableDomain d, DateTime timeUtc )
+            {
+                if( _domainCreatedStream != null )
+                {
+                    d.Load( _domainCreatedStream );
+                }
+                base.OnDomainCreated( d, timeUtc );
+            }
+
+            public MemoryStream CreateStreamFromSnapshot()
+            {
+                MemoryStream ms = new MemoryStream();
+                WriteSnapshotTo( ms );
+                ms.Position = 0;
+                return ms;
             }
         }
     }

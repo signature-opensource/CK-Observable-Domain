@@ -13,7 +13,7 @@ namespace CK.Observable
     /// Observable objects are reference types that belong to a <see cref="ObservableDomain"/> and for
     /// which properties changes and <see cref="Dispose"/> are tracked.
     /// </summary>
-    [SerializationVersion(0)]
+    [SerializationVersion( 0 )]
     public abstract class ObservableObject : INotifyPropertyChanged, IDisposable, IKnowMyExportDriver
     {
         int _id;
@@ -46,7 +46,7 @@ namespace CK.Observable
         /// <param name="domain">The domain to which this object belong.</param>
         protected ObservableObject( ObservableDomain domain )
         {
-            if( domain == null ) throw new ArgumentNullException( nameof(domain) );
+            if( domain == null ) throw new ArgumentNullException( nameof( domain ) );
             Domain = domain;
             _exporter = Domain._exporters.FindDriver( GetType() );
             _id = Domain.Register( this );
@@ -130,7 +130,14 @@ namespace CK.Observable
         /// <param name="isReloading">True when this dispose is due to a domain reload.</param>
         protected internal virtual void OnDisposed( bool isReloading )
         {
-            if( !isReloading ) Disposed?.Invoke( this, EventArgs.Empty );
+            if( isReloading )
+            {
+                _id = -1;
+            }
+            else
+            {
+                Disposed?.Invoke( this, EventArgs.Empty );
+            }
         }
 
         /// <summary>

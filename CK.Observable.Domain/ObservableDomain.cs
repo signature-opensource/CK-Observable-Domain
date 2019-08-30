@@ -826,7 +826,7 @@ namespace CK.Observable
                 for( int i = 0; i < _objectsListCount; ++i )
                 {
                     var o = _objects[i];
-                    if( o != null && !(o is ObservableRootObject) )
+                    if( o != null )
                     {
                         Debug.Assert( !o.IsDisposed );
                         o.OnDisposed( true );

@@ -6,7 +6,7 @@ namespace CK.Observable
     /// Defines a root <see cref="ObservableObject"/>.
     /// This object is not disposable and is initialized with its holding domain.
     /// </summary>
-    [SerializationVersion(0)]
+    [SerializationVersion( 0 )]
     public class ObservableRootObject : ObservableObject
     {
         /// <summary>
@@ -38,7 +38,8 @@ namespace CK.Observable
         /// <param name="isReloading">Unused (this is never called for root objects).</param>
         protected internal override void OnDisposed( bool isReloading )
         {
-            throw new InvalidOperationException( "ObservableRootObject can not be disposed." );
+            if( isReloading ) base.OnDisposed( isReloading );
+            else throw new InvalidOperationException( "ObservableRootObject can not be disposed." );
         }
     }
 }
