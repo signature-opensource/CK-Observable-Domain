@@ -1,6 +1,5 @@
 using System;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using FluentAssertions;
 using NUnit.Framework;
@@ -232,62 +231,6 @@ namespace CK.Observable.Domain.Tests.Clients
             restoredObservableObject.Should().NotBe( initialObservableObject );
             initialObservableObject.IsDisposed.Should().BeTrue( "Root was disposed following a reload" );
             restoredObservableObject.IsDisposed.Should().BeFalse();
-        }
-    }
-
-    [SerializationVersion( 0 )]
-    public class TestObservableRootObject : ObservableRootObject
-    {
-        public string Prop1 { get; set; }
-        public string Prop2 { get; set; }
-
-        public bool TestBehavior__ThrowOnWrite { get; set; }
-
-        public TestObservableRootObject( ObservableDomain domain ) : base( domain )
-        {
-        }
-
-        public TestObservableRootObject( IBinaryDeserializerContext d ) : base( d )
-        {
-            var r = d.StartReading();
-
-            Prop1 = r.ReadNullableString();
-            Prop2 = r.ReadNullableString();
-        }
-
-        void Write( BinarySerializer s )
-        {
-            s.WriteNullableString( Prop1 );
-            s.WriteNullableString( Prop2 );
-
-            if( TestBehavior__ThrowOnWrite ) throw new Exception( $"{nameof( TestBehavior__ThrowOnWrite )} is set. This is a test exception." );
-        }
-    }
-
-    public class TestMemoryTransactionProviderClient : MemoryTransactionProviderClient
-    {
-        private readonly Stream _domainCreatedStream;
-
-        public TestMemoryTransactionProviderClient( Stream domainCreatedStream = null )
-        {
-            _domainCreatedStream = domainCreatedStream;
-        }
-
-        public override void OnDomainCreated( ObservableDomain d, DateTime timeUtc )
-        {
-            if( _domainCreatedStream != null )
-            {
-                d.Load( _domainCreatedStream );
-            }
-            base.OnDomainCreated( d, timeUtc );
-        }
-
-        public MemoryStream CreateStreamFromSnapshot()
-        {
-            MemoryStream ms = new MemoryStream();
-            WriteSnapshotTo( ms );
-            ms.Position = 0;
-            return ms;
         }
     }
 }
