@@ -1,8 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CK.Observable
 {
@@ -40,7 +36,7 @@ namespace CK.Observable
         /// Overridden to throw <see cref="InvalidOperationException"/>.
         /// </summary>
         /// <param name="isReloading">Unused (this is never called for root objects).</param>
-        internal protected override void OnDisposed( bool isReloading )
+        protected internal override void OnDisposed( bool isReloading )
         {
             throw new InvalidOperationException( "ObservableRootObject can not be disposed." );
         }

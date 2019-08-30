@@ -4,7 +4,6 @@ using Cake.Common.Solution;
 using Cake.Common.Tools.DotNetCore;
 using Cake.Common.Tools.DotNetCore.Test;
 using Cake.Common.Tools.NUnit;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Xml.Linq;

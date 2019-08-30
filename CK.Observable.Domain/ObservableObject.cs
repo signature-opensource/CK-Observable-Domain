@@ -2,7 +2,6 @@
 
 using CK.Core;
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Reflection;
@@ -129,7 +128,7 @@ namespace CK.Observable
         /// by overrides.
         /// </summary>
         /// <param name="isReloading">True when this dispose is due to a domain reload.</param>
-        internal protected virtual void OnDisposed( bool isReloading )
+        protected internal virtual void OnDisposed( bool isReloading )
         {
             if( !isReloading ) Disposed?.Invoke( this, EventArgs.Empty );
         }

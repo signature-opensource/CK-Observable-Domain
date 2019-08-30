@@ -1,9 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using FluentAssertions;
 using NUnit.Framework;
 using static CK.Testing.MonitorTestHelper;
@@ -35,7 +30,7 @@ namespace CK.Observable.Domain.Tests.Clients
 
 
         [Test]
-        public void Exception_during_serialization_adds_ClientError()
+        public void Exception_during_Write_adds_ClientError()
         {
             var d = new ObservableDomain<TestObservableRootObject>( new MemoryTransactionProviderClient(), TestHelper.Monitor );
             // Initial successful Modify
@@ -60,6 +55,36 @@ namespace CK.Observable.Domain.Tests.Clients
             {
                 d.Root.Prop1.Should().Be( "This will" );
                 d.Root.Prop2.Should().Be( "be set even when Write fails" );
+            }
+        }
+
+
+        [Test]
+        public void Exception_during_Modify_rolls_ObservableDomain_back()
+        {
+            var d = new ObservableDomain<TestObservableRootObject>( new MemoryTransactionProviderClient(), TestHelper.Monitor );
+            // Initial successful Modify
+            d.Modify( () =>
+            {
+                d.Root.Prop1 = "Hello";
+                d.Root.Prop2 = "World";
+            } );
+
+            // Raise exception during Write()
+            var transactionResult = d.Modify( () =>
+            {
+                d.Root.Prop1 = "This will";
+                d.Root.Prop2 = "never be set";
+                throw new Exception( "Exception during Modify(). This is a test exception." );
+            } );
+
+            transactionResult.Errors.Should().NotBeEmpty( $"Errors happened during Modify()" );
+            transactionResult.Events.Should().BeEmpty();
+            transactionResult.ClientError.Should().BeNull( "No client errors happened" );
+            using( d.AcquireReadLock() )
+            {
+                d.Root.Prop1.Should().Be( "Hello" );
+                d.Root.Prop2.Should().Be( "World" );
             }
         }
 

@@ -861,7 +861,7 @@ namespace CK.Observable
         /// Called after a <see cref="Load"/>.
         /// Does nothing at this level.
         /// </summary>
-        internal protected virtual void OnLoaded()
+        protected internal virtual void OnLoaded()
         {
         }
 

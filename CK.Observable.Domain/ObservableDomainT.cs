@@ -1,11 +1,8 @@
 using CK.Core;
 using CK.Text;
-using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace CK.Observable
 {
@@ -17,7 +14,7 @@ namespace CK.Observable
     {
         /// <summary>
         /// Initializes a new <see cref="ObservableDomain{T}"/> with an
-        /// automous <see cref="ObservableDomain.Monitor"/> and no <see cref="ObservableDomain.DomainClient"/>.
+        /// autonomous <see cref="ObservableDomain.Monitor"/> and no <see cref="ObservableDomain.DomainClient"/>.
         /// The <see cref="Root"/> is a new <typeparamref name="T"/> (obtained by calling a constructor
         /// that accepts a ObservableDomain).
         /// </summary>
@@ -31,7 +28,7 @@ namespace CK.Observable
         /// The <see cref="Root"/> is a new <typeparamref name="T"/> (obtained by calling the constructor
         /// that accepts a ObservableDomain).
         /// </summary>
-        /// <param name="monitor">Monitor to use (when null, an automous monitor is automatically created).</param>
+        /// <param name="monitor">Monitor to use (when null, an autonomous monitor is automatically created).</param>
         public ObservableDomain( IActivityMonitor monitor )
             : this( null, monitor )
         {
@@ -54,7 +51,7 @@ namespace CK.Observable
         /// that accepts a ObservableDomain).
         /// </summary>
         /// <param name="tm">The transaction manager. Can be null.</param>
-        /// <param name="monitor">Monitor to use (when null, an automous monitor is automatically created).</param>
+        /// <param name="monitor">Monitor to use (when null, an autonomous monitor is automatically created).</param>
         public ObservableDomain( IObservableDomainClient tm, IActivityMonitor monitor )
             : base( tm, monitor )
         {
@@ -63,20 +60,6 @@ namespace CK.Observable
             {
                 Root = AddRoot<T>( initialization );
             }
-        }
-
-        /// <summary>
-        /// Overridden to bind our typed root.
-        /// </summary>
-        internal protected override void OnLoaded() => BindRoots();
-
-        void BindRoots()
-        {
-            if( AllRoots.Count != 1 || !(AllRoots[0] is T) )
-            {
-                throw new InvalidDataException( $"Incompatible stream. No root of type {typeof( T ).FullName}. {AllRoots.Count} roots of type: {AllRoots.Select( t => t.GetType().Name ).Concatenate()}." );
-            }
-            Root = (T)AllRoots[0];
         }
 
         /// <summary>
@@ -102,6 +85,20 @@ namespace CK.Observable
         /// Gets the typed root object.
         /// </summary>
         public T Root { get; private set; }
+
+        /// <summary>
+        /// Overridden to bind our typed root.
+        /// </summary>
+        protected internal override void OnLoaded() => BindRoots();
+
+        void BindRoots()
+        {
+            if( AllRoots.Count != 1 || !(AllRoots[0] is T) )
+            {
+                throw new InvalidDataException( $"Incompatible stream. No root of type {typeof( T ).FullName}. {AllRoots.Count} roots of type: {AllRoots.Select( t => t.GetType().Name ).Concatenate()}." );
+            }
+            Root = (T)AllRoots[0];
+        }
 
     }
 }

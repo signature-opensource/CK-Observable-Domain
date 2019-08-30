@@ -1,5 +1,3 @@
-using System;
-
 namespace CK.Observable
 {
     public interface ICtorBinaryDeserializer : IBinaryDeserializer

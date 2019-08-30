@@ -1,8 +1,5 @@
-using Cake.Common.Build;
 using Cake.Common.Diagnostics;
 using Cake.Common.IO;
-using Cake.Common.Tools.NuGet;
-using Cake.Common.Tools.NuGet.Push;
 using Cake.Core.IO;
 using SimpleGitVersion;
 using System;

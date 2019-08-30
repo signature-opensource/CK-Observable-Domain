@@ -1,11 +1,8 @@
 using CK.Core;
 using CK.Text;
-using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace CK.Observable
 {
@@ -24,7 +21,7 @@ namespace CK.Observable
     {
         /// <summary>
         /// Initializes a new <see cref="ObservableDomain{T1,T2,T3,T4}"/> with an
-        /// automous <see cref="ObservableDomain.Monitor"/> and no <see cref="ObservableDomain.DomainClient"/>.
+        /// autonomous <see cref="ObservableDomain.Monitor"/> and no <see cref="ObservableDomain.DomainClient"/>.
         /// The roots are initialized with new instances of their respective type (obtained by calling the constructor that accepts a ObservableDomain).
         /// </summary>
         public ObservableDomain()
@@ -36,7 +33,7 @@ namespace CK.Observable
         /// Initializes a new <see cref="ObservableDomain{T1,T2,T3,T4}"/> without any <see cref="ObservableDomain.DomainClient"/>.
         /// The roots are initialized with new instances of their respective type (obtained by calling the constructor that accepts a ObservableDomain).
         /// </summary>
-        /// <param name="monitor">Monitor to use (when null, an automous monitor is automatically created).</param>
+        /// <param name="monitor">Monitor to use (when null, an autonomous monitor is automatically created).</param>
         public ObservableDomain( IActivityMonitor monitor )
             : this( null, monitor )
         {
@@ -57,21 +54,13 @@ namespace CK.Observable
         /// The roots are initialized with new instances of their respective type (obtained by calling the constructor that accepts a ObservableDomain).
         /// </summary>
         /// <param name="tm">The transaction manager. Can be null.</param>
-        /// <param name="monitor">Monitor to use (when null, an automous monitor is automatically created).</param>
+        /// <param name="monitor">Monitor to use (when null, an autonomous monitor is automatically created).</param>
         public ObservableDomain( IObservableDomainClient tm, IActivityMonitor monitor )
             : base( tm, monitor )
         {
-            if( AllRoots.Count != 0 )
-            {
-                CheckRoot();
-                Root1 = (T1)AllRoots[0];
-                Root2 = (T2)AllRoots[1];
-                Root3 = (T3)AllRoots[2];
-                Root4 = (T4)AllRoots[3];
-            }
+            if( AllRoots.Count != 0 ) BindRoots();
             else using( var initialization = new InitializationTransaction( this ) )
             {
-
                 Root1 = AddRoot<T1>( initialization );
                 Root2 = AddRoot<T2>( initialization );
                 Root3 = AddRoot<T3>( initialization );
@@ -95,14 +84,35 @@ namespace CK.Observable
             Encoding encoding = null )
             : base( tm, monitor, s, leaveOpen, encoding )
         {
-            CheckRoot();
-            Root1 = (T1)AllRoots[0];
-            Root2 = (T2)AllRoots[1];
-            Root3 = (T3)AllRoots[2];
-            Root4 = (T4)AllRoots[3];
+            BindRoots();
         }
 
-        private void CheckRoot()
+        /// <summary>
+        /// Gets the first typed root object.
+        /// </summary>
+        public T1 Root1 { get; private set; }
+
+        /// <summary>
+        /// Gets the second typed root object.
+        /// </summary>
+        public T2 Root2 { get; private set; }
+
+        /// <summary>
+        /// Gets the third typed root object.
+        /// </summary>
+        public T3 Root3 { get; private set; }
+
+        /// <summary>
+        /// Gets the fourth typed root object.
+        /// </summary>
+        public T4 Root4 { get; private set; }
+
+        /// <summary>
+        /// Overridden to bind our typed roots.
+        /// </summary>
+        protected internal override void OnLoaded() => BindRoots();
+
+        void BindRoots()
         {
             if( AllRoots.Count != 4
                 || !(AllRoots[0] is T1)
@@ -112,28 +122,11 @@ namespace CK.Observable
             {
                 throw new InvalidDataException( $"Incompatible stream. No root of type {typeof( T1 ).Name}, {typeof( T2 ).Name} , {typeof( T3 ).Name} and {typeof( T4 ).Name}. {AllRoots.Count} roots of type: {AllRoots.Select( t => t.GetType().Name ).Concatenate()}." );
             }
+            Root1 = (T1)AllRoots[0];
+            Root2 = (T2)AllRoots[1];
+            Root3 = (T3)AllRoots[2];
+            Root4 = (T4)AllRoots[3];
         }
-
-        /// <summary>
-        /// Gets the first typed root object.
-        /// </summary>
-        public T1 Root1 { get; }
-
-
-        /// <summary>
-        /// Gets the second typed root object.
-        /// </summary>
-        public T2 Root2 { get; }
-
-        /// <summary>
-        /// Gets the third typed root object.
-        /// </summary>
-        public T3 Root3 { get; }
-
-        /// <summary>
-        /// Gets the fourth typed root object.
-        /// </summary>
-        public T4 Root4 { get; }
 
     }
 }

@@ -1,11 +1,8 @@
 using Cake.Common.Diagnostics;
-using Cake.Core.Diagnostics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-
-using static CodeCake.Build;
 
 namespace CodeCake.Abstractions
 {
