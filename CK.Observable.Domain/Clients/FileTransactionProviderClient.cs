@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
+using CK.Core;
 
 namespace CK.Observable
 {
@@ -12,13 +13,14 @@ namespace CK.Observable
     /// Loads the <see cref="ObservableDomain"/> from the given file path,
     /// and stores it at regular intervals - or when calling <see cref="Flush"/>.
     /// </summary>
-    public class FileTransactionProviderClient : MemoryTransactionProviderClient, IDisposable
+    public class FileTransactionProviderClient : MemoryTransactionProviderClient
     {
         readonly NormalizedPath _path;
-        readonly int _timerPeriodMs;
+        readonly int _minimumDueTimeMs;
+        readonly TimeSpan _minimumDueTimeSpan;
         readonly object _fileLock;
         int _fileTransactionNumber;
-        Timer _timer;
+        DateTime _nextDueTimeUtc;
 
         /// <summary>
         /// Initializes a new <see cref="MemoryTransactionProviderClient"/>.
@@ -27,19 +29,28 @@ namespace CK.Observable
         /// The path to the persistent file to load the domain from.
         /// This file may not exist.
         /// </param>
-        /// <param name="timerPeriodMs">
-        /// Number of milliseconds between each file save.
+        /// <param name="minimumDueTimeMs">
+        /// Minimum number of milliseconds between each file save, checked on every <see cref="OnTransactionCommit"/>.
         /// If -1: The file will not be saved automatically. <see cref="Flush"/> must be manually called.
         /// If 0: Every transaction will write the file.
         /// </param>
         /// <param name="next">The next manager (can be null).</param>
-        public FileTransactionProviderClient( NormalizedPath path, int timerPeriodMs, IObservableDomainClient next = null )
+        public FileTransactionProviderClient( NormalizedPath path, int minimumDueTimeMs, IObservableDomainClient next = null )
             : base( next )
         {
-            if( timerPeriodMs < -1 ) throw new ArgumentException( $"{timerPeriodMs} is not a valid value. Valid values are -1, 0, or above.", nameof( timerPeriodMs ) );
+            if( minimumDueTimeMs < -1 ) throw new ArgumentException( $"{minimumDueTimeMs} is not a valid value. Valid values are -1, 0, or above.", nameof( minimumDueTimeMs ) );
             _path = path;
-            _timerPeriodMs = timerPeriodMs;
+            _minimumDueTimeMs = minimumDueTimeMs;
             _fileLock = new object();
+            _nextDueTimeUtc = DateTime.UtcNow; // This is re-scheduled in OnDomainCreated
+            if( minimumDueTimeMs > 0 )
+            {
+                _minimumDueTimeSpan = TimeSpan.FromMilliseconds( minimumDueTimeMs );
+            }
+            else
+            {
+                _minimumDueTimeSpan = TimeSpan.Zero;
+            }
         }
 
         /// <summary>
@@ -66,11 +77,9 @@ namespace CK.Observable
                     }
                 }
             }
+            RescheduleDueTime( timeUtc );
 
             base.OnDomainCreated( d, timeUtc );
-
-            _timer?.Dispose();
-            _timer = new Timer( TimerCallback, null, _timerPeriodMs, _timerPeriodMs );
         }
 
         /// <inheritdoc />
@@ -78,9 +87,16 @@ namespace CK.Observable
         {
             base.OnTransactionCommit( d, timeUtc, events, commands );
 
-            if( _timerPeriodMs == 0 )
+            if( _minimumDueTimeMs == 0 )
             {
+                // Write every snapshot
                 DoWriteFile();
+            }
+            else if( _minimumDueTimeMs > 0 && timeUtc > _nextDueTimeUtc )
+            {
+                // Write snapshot if due, then reschedule it.
+                DoWriteFile();
+                RescheduleDueTime( timeUtc );
             }
         }
 
@@ -89,14 +105,32 @@ namespace CK.Observable
         /// Writes any pending snapshot to the disk,
         /// without waiting for the next timer tick.
         /// </summary>
-        public void Flush()
+        /// <param name="m">The monitor to use</param>
+        /// <returns>
+        /// True when the file was written, or when nothing has to be written.
+        /// False when an error occured while writing. This error was logged to <paramref name="m"/>.
+        /// </returns>
+        public bool Flush( IActivityMonitor m )
         {
-            DoWriteFile();
+            try
+            {
+                DoWriteFile();
+                if( _minimumDueTimeMs > 0 )
+                {
+                    RescheduleDueTime( DateTime.UtcNow );
+                }
+                return true;
+            }
+            catch( Exception e )
+            {
+                m.Error( "Caught when writing ObservableDomain file", e );
+                return false;
+            }
         }
 
-        private void TimerCallback( object state )
+        private void RescheduleDueTime( DateTime relativeTimeUtc )
         {
-            DoWriteFile();
+            _nextDueTimeUtc = relativeTimeUtc + _minimumDueTimeSpan;
         }
 
         private void DoWriteFile()
@@ -113,11 +147,6 @@ namespace CK.Observable
                     _fileTransactionNumber = CurrentSerialNumber;
                 }
             }
-        }
-
-        public void Dispose()
-        {
-            _timer?.Dispose();
         }
     }
 }

@@ -12,118 +12,165 @@ namespace CK.Observable.Domain.Tests.Clients
     public class FileTransactionProviderClientTests
     {
         [Test]
-        public void File_can_be_written_manually_with_timerMs_minus_1()
+        public void File_can_be_written_manually_with_minimumDueTime_minus_1()
         {
-            using( var client = CreateClient( -1 ) )
+            var client = CreateClient( -1 );
+            FileInfo fi = new FileInfo( client.Path );
+            var d = new ObservableDomain<TestObservableRootObject>( client, TestHelper.Monitor );
+
+            d.Modify( () =>
             {
-                FileInfo fi = new FileInfo( client.Path );
-                var d = new ObservableDomain<TestObservableRootObject>( client, TestHelper.Monitor );
+                d.Root.Prop1 = "Hello";
+                d.Root.Prop2 = "World";
+            } );
+            fi.Refresh();
+            fi.Exists.Should().BeFalse( "File is flushed manually, and should not exist yet" );
 
-                d.Modify( () =>
-                {
-                    d.Root.Prop1 = "Hello";
-                    d.Root.Prop2 = "World";
-                } );
-                fi.Refresh();
-                fi.Exists.Should().BeFalse( "File is flushed manually, and should not exist yet" );
+            client.Flush( TestHelper.Monitor );
+            fi.Refresh();
+            fi.Exists.Should().BeTrue( "File was flushed manually, and should now exist" );
 
-                client.Flush();
-                fi.Refresh();
-                fi.Exists.Should().BeTrue( "File was flushed manually, and should now exist" );
-
-                fi.Delete();
-            }
+            fi.Delete();
         }
 
         [Test]
-        public void File_is_written_on_every_snapshot_with_timerMs_0()
+        public void File_is_written_on_every_snapshot_with_minimumDueTime_0()
         {
-            using( var client = CreateClient( 0 ) )
+            var client = CreateClient( 0 );
+            FileInfo fi = new FileInfo( client.Path );
+            var d = new ObservableDomain<TestObservableRootObject>( client, TestHelper.Monitor );
+
+            d.Modify( () =>
             {
-                FileInfo fi = new FileInfo( client.Path );
-                var d = new ObservableDomain<TestObservableRootObject>( client, TestHelper.Monitor );
+                d.Root.Prop1 = "Hello";
+                d.Root.Prop2 = "World";
+            } );
+            fi.Refresh();
+            fi.Exists.Should().BeTrue( "File is flushed on every snapshot, and should exist" );
 
-                d.Modify( () =>
-                {
-                    d.Root.Prop1 = "Hello";
-                    d.Root.Prop2 = "World";
-                } );
-                fi.Refresh();
-                fi.Exists.Should().BeTrue( "File is flushed on every snapshot, and should exist" );
-
-                fi.Delete();
-            }
+            fi.Delete();
         }
 
         [Test]
-        public void File_is_written_automatically_with_positive_timerMs()
+        public void File_is_written_after_minimumDueTime_with_positive_minimumDueTime()
         {
-            int timerMs = 300;
-            using( var client = CreateClient( timerMs ) )
+            int dueTimeMs = 300;
+            var client = CreateClient( dueTimeMs );
+            FileInfo fi = new FileInfo( client.Path );
+            var d = new ObservableDomain<TestObservableRootObject>( client, TestHelper.Monitor );
+
+            // Call once - doesn't trigger the DoWrite yet
+            d.Modify( () =>
             {
-                FileInfo fi = new FileInfo( client.Path );
-                var d = new ObservableDomain<TestObservableRootObject>( client, TestHelper.Monitor );
+                d.Root.Prop1 = "Hello";
+                d.Root.Prop2 = "World";
+            } );
+            fi.Refresh();
+            fi.Exists.Should().BeFalse( "File is flushed before dueTime, and should not exist yet" );
 
-                d.Modify( () =>
-                {
-                    d.Root.Prop1 = "Hello";
-                    d.Root.Prop2 = "World";
-                } );
-                fi.Refresh();
-                fi.Exists.Should().BeFalse( "File is flushed on timer tick, and should not exist yet" );
-
-                Thread.Sleep( 2 * timerMs );
-                fi.Refresh();
-                fi.Exists.Should().BeTrue( "File was flushed on timer tick, and should exist" );
+            Thread.Sleep( 2 * dueTimeMs );
+            // Call again - triggers the DoWrite
+            d.Modify( () =>
+            {
+            } );
+            fi.Refresh();
+            fi.Exists.Should().BeTrue( "File was flushed after dueTime, and should exist" );
 
 
-                fi.Delete();
+            fi.Delete();
+        }
+
+        [Test]
+        public void File_due_time_is_properly_rescheduled()
+        {
+            int dueTimeMs = 300;
+            int waitTimeMs = dueTimeMs + 150;
+
+            var client1 = CreateClient( dueTimeMs );
+            FileInfo fi = new FileInfo( client1.Path );
+            var d1 = new ObservableDomain<TestObservableRootObject>( client1, TestHelper.Monitor );
+
+            // Call once - doesn't trigger the DoWrite yet
+            d1.Modify( () =>
+            {
+                d1.Root.Prop1 = "Hello";
+                d1.Root.Prop2 = "World";
+            } );
+            fi.Refresh();
+            fi.Exists.Should().BeFalse( "File is flushed before dueTime, and should not exist yet" );
+
+            Thread.Sleep( waitTimeMs );
+
+            // Call again - triggers the DoWrite
+            d1.Modify( () =>
+            {
+            } );
+            fi.Refresh();
+            fi.Exists.Should().BeTrue( "File was flushed after dueTime, and should exist" );
+
+            Thread.Sleep( waitTimeMs );
+
+            fi.Refresh();
+
+            // Call again - change properties and trigger DoWrite
+            d1.Modify( () =>
+            {
+                d1.Root.Prop1 = "This should";
+                d1.Root.Prop2 = "Have been saved to file";
+            } );
+
+            // Load file with another client and domain to ensure it has the new values
+
+            var client2 = CreateClient( -1, client1.Path );
+            var d2 = new ObservableDomain<TestObservableRootObject>( client2, TestHelper.Monitor );
+            using( d2.AcquireReadLock() )
+            {
+                d2.Root.Prop1.Should().Be( "This should" );
+                d2.Root.Prop2.Should().Be( "Have been saved to file" );
             }
+
+            fi.Delete();
         }
 
         [Test]
         public void Load_throws_on_invalid_file()
         {
-            using( var client = CreateClient( 0 ) )
+            var client = CreateClient( 0 );
+            File.WriteAllText( client.Path, "(INVALID FILE CONTENTS)" );
+            FileInfo fi = new FileInfo( client.Path );
+
+            Action act = () =>
             {
-                File.WriteAllText( client.Path, "(INVALID FILE CONTENTS)" );
-                FileInfo fi = new FileInfo( client.Path );
+                var d = new ObservableDomain<TestObservableRootObject>( client, TestHelper.Monitor );
+            };
 
-                Action act = () =>
-                {
-                    var d = new ObservableDomain<TestObservableRootObject>( client, TestHelper.Monitor );
-                };
+            // EndOfStreamException is an IOException.
+            act.Should().Throw<IOException>( "ObservableDomain can't be created when given an invalid file" );
 
-                // EndOfStreamException is an IOException.
-                act.Should().Throw<IOException>( "ObservableDomain can't be created when given an invalid file" );
 
-            }
         }
 
         [Test]
-        public void Flush_throws_when_file_directory_does_not_exist()
+        public void Flush_returns_false_when_file_directory_does_not_exist()
         {
             NormalizedPath path = Path.Combine(
                 Path.GetTempPath(),
                 "this-directory-definitely-shouldnt-exist",
                 "ObservableDomain.bin"
             );
-            using( var client = CreateClient( -1, path ) )
-            {
-                var d = new ObservableDomain<TestObservableRootObject>( client, TestHelper.Monitor );
-                d.Modify( () =>
-                {
-                    d.Root.Prop1 = "Hello";
-                    d.Root.Prop2 = "World"
-                        ;
-                } );
-                Action act = () =>
-                {
-                    client.Flush();
-                };
+            var client = CreateClient( -1, path );
 
-                act.Should().Throw<IOException>( "ObservableDomain can't be flushed when target path does not exist" );
-            }
+
+            var d = new ObservableDomain<TestObservableRootObject>( client, TestHelper.Monitor );
+            d.Modify( () =>
+            {
+                d.Root.Prop1 = "Hello";
+                d.Root.Prop2 = "World";
+            } );
+            bool isSuccess = client.Flush( TestHelper.Monitor );
+
+            isSuccess.Should().BeFalse( "ObservableDomain can't be flushed when target path does not exist" );
+
         }
 
         [Test]
@@ -134,18 +181,17 @@ namespace CK.Observable.Domain.Tests.Clients
                 "this-directory-definitely-shouldnt-exist",
                 "ObservableDomain.bin"
             );
-            using( var client = CreateClient( 0, path ) )
+            var client = CreateClient( 0, path );
+            var d = new ObservableDomain<TestObservableRootObject>( client, TestHelper.Monitor );
+
+            var transactionResult = d.Modify( () =>
             {
-                var d = new ObservableDomain<TestObservableRootObject>( client, TestHelper.Monitor );
+                d.Root.Prop1 = "Hello";
+                d.Root.Prop2 = "World";
+            } );
 
-                var transactionResult = d.Modify( () =>
-                {
-                    d.Root.Prop1 = "Hello";
-                    d.Root.Prop2 = "World";
-                } );
+            transactionResult.ClientError.Should().NotBeNull( "ObservableDomain can't be flushed when target path does not exist" );
 
-                transactionResult.ClientError.Should().NotBeNull( "ObservableDomain can't be flushed when target path does not exist" );
-            }
         }
 
         [Test]
@@ -154,8 +200,8 @@ namespace CK.Observable.Domain.Tests.Clients
             NormalizedPath path;
 
             // Create test file
-            using( var client = CreateClient( 0 ) )
             {
+                var client = CreateClient( 0 );
                 path = client.Path;
                 var d1 = new ObservableDomain<TestObservableRootObject>( client, TestHelper.Monitor );
                 d1.Modify( () =>
@@ -165,9 +211,11 @@ namespace CK.Observable.Domain.Tests.Clients
                 } );
             }
 
+
             // Read test file
-            using( var client = CreateClient( 0, path ) )
             {
+                var client = CreateClient( 0, path );
+
                 var d2 = new ObservableDomain<TestObservableRootObject>( client, TestHelper.Monitor );
 
                 using( d2.AcquireReadLock() )
