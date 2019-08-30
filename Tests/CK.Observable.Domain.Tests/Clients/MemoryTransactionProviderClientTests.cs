@@ -218,7 +218,7 @@ namespace CK.Observable.Domain.Tests.Clients
                 d.Root.Prop1 = "This will";
                 d.Root.Prop2 = "never be set";
                 d.Root.Invoking( x => x.Dispose() )
-                    .Should().Throw<InvalidOperationException>( "Roots can't be disposed during regular operation" );
+                    .Should().Throw<InvalidOperationException>( "Roots still can't be disposed during regular operation" );
                 throw new Exception( "Exception during Modify(). This is a test exception." );
             } );
 
@@ -230,64 +230,64 @@ namespace CK.Observable.Domain.Tests.Clients
             }
 
             restoredObservableObject.Should().NotBe( initialObservableObject );
-            initialObservableObject.IsDisposed.Should().BeTrue();
+            initialObservableObject.IsDisposed.Should().BeTrue( "Root was disposed following a reload" );
             restoredObservableObject.IsDisposed.Should().BeFalse();
         }
+    }
 
-        [SerializationVersion( 0 )]
-        public class TestObservableRootObject : ObservableRootObject
+    [SerializationVersion( 0 )]
+    public class TestObservableRootObject : ObservableRootObject
+    {
+        public string Prop1 { get; set; }
+        public string Prop2 { get; set; }
+
+        public bool TestBehavior__ThrowOnWrite { get; set; }
+
+        public TestObservableRootObject( ObservableDomain domain ) : base( domain )
         {
-            public string Prop1 { get; set; }
-            public string Prop2 { get; set; }
-
-            public bool TestBehavior__ThrowOnWrite { get; set; }
-
-            public TestObservableRootObject( ObservableDomain domain ) : base( domain )
-            {
-            }
-
-            public TestObservableRootObject( IBinaryDeserializerContext d ) : base( d )
-            {
-                var r = d.StartReading();
-
-                Prop1 = r.ReadNullableString();
-                Prop2 = r.ReadNullableString();
-            }
-
-            void Write( BinarySerializer s )
-            {
-                s.WriteNullableString( Prop1 );
-                s.WriteNullableString( Prop2 );
-
-                if( TestBehavior__ThrowOnWrite ) throw new Exception( $"{nameof( TestBehavior__ThrowOnWrite )} is set. This is a test exception." );
-            }
         }
 
-        public class TestMemoryTransactionProviderClient : MemoryTransactionProviderClient
+        public TestObservableRootObject( IBinaryDeserializerContext d ) : base( d )
         {
-            private readonly Stream _domainCreatedStream;
+            var r = d.StartReading();
 
-            public TestMemoryTransactionProviderClient( Stream domainCreatedStream = null )
-            {
-                _domainCreatedStream = domainCreatedStream;
-            }
+            Prop1 = r.ReadNullableString();
+            Prop2 = r.ReadNullableString();
+        }
 
-            public override void OnDomainCreated( ObservableDomain d, DateTime timeUtc )
-            {
-                if( _domainCreatedStream != null )
-                {
-                    d.Load( _domainCreatedStream );
-                }
-                base.OnDomainCreated( d, timeUtc );
-            }
+        void Write( BinarySerializer s )
+        {
+            s.WriteNullableString( Prop1 );
+            s.WriteNullableString( Prop2 );
 
-            public MemoryStream CreateStreamFromSnapshot()
+            if( TestBehavior__ThrowOnWrite ) throw new Exception( $"{nameof( TestBehavior__ThrowOnWrite )} is set. This is a test exception." );
+        }
+    }
+
+    public class TestMemoryTransactionProviderClient : MemoryTransactionProviderClient
+    {
+        private readonly Stream _domainCreatedStream;
+
+        public TestMemoryTransactionProviderClient( Stream domainCreatedStream = null )
+        {
+            _domainCreatedStream = domainCreatedStream;
+        }
+
+        public override void OnDomainCreated( ObservableDomain d, DateTime timeUtc )
+        {
+            if( _domainCreatedStream != null )
             {
-                MemoryStream ms = new MemoryStream();
-                WriteSnapshotTo( ms );
-                ms.Position = 0;
-                return ms;
+                d.Load( _domainCreatedStream );
             }
+            base.OnDomainCreated( d, timeUtc );
+        }
+
+        public MemoryStream CreateStreamFromSnapshot()
+        {
+            MemoryStream ms = new MemoryStream();
+            WriteSnapshotTo( ms );
+            ms.Position = 0;
+            return ms;
         }
     }
 }
