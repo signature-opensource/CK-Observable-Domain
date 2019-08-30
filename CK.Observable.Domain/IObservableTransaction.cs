@@ -16,6 +16,10 @@ namespace CK.Observable
         /// Commits all changes and retrieves the events and commands on success.
         /// If errors have been added, the <see cref="TransactionResult"/> contains
         /// the errors but no events nor commands.
+        /// This method calls <see cref="IObservableDomainClient.OnTransactionFailure"/>
+        /// or <see cref="IObservableDomainClient.OnTransactionCommit"/>, and may set
+        /// <see cref="TransactionResult.ClientError"/> if an Exception is thrown
+        /// when calling them.
         /// </summary>
         /// <returns>The transaction result.</returns>
         TransactionResult Commit();

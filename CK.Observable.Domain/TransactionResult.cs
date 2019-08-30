@@ -1,6 +1,7 @@
 using CK.Core;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -37,11 +38,18 @@ namespace CK.Observable
         /// </summary>
         public readonly IReadOnlyList<CKExceptionData> Errors;
 
+        /// <summary>
+        /// Gets the error that occured during the call to <see cref="IObservableDomainClient.OnTransactionCommit"/> (when <see cref="Errors"/>
+        /// is empty) or <see cref="IObservableDomainClient.OnTransactionFailure"/> (when <see cref="Errors"/> is NOT empty).
+        /// </summary>
+        public readonly CKExceptionData ClientError;
+
         internal TransactionResult( IReadOnlyList<ObservableEvent> e, IReadOnlyList<ObservableCommand> c )
         {
             Events = e;
             Commands = c;
             Errors = Array.Empty<CKExceptionData>();
+            ClientError = null;
         }
 
         internal TransactionResult( IReadOnlyList<CKExceptionData> errors )
@@ -49,7 +57,18 @@ namespace CK.Observable
             Errors = errors;
             Events = Array.Empty<ObservableEvent>();
             Commands = Array.Empty<ObservableCommand>();
+            ClientError = null;
         }
 
+        public TransactionResult( in TransactionResult r, CKExceptionData data )
+        {
+            Debug.Assert( r.ClientError == null, "ClientError occur at most once." );
+            Events = r.Events;
+            Commands = r.Commands;
+            Errors = r.Errors;
+            ClientError = data;
+        }
+
+        internal TransactionResult WithClientError( Exception ex ) => new TransactionResult(this, CKExceptionData.CreateFrom( ex ) );
     }
 }

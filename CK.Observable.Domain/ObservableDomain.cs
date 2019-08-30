@@ -303,6 +303,7 @@ namespace CK.Observable
             readonly ObservableDomain _domain;
             CKExceptionData[] _errors;
             TransactionResult _result;
+            bool _resultInitialized;
 
             public Transaction( ObservableDomain d )
             {
@@ -324,8 +325,9 @@ namespace CK.Observable
             public TransactionResult Commit()
             {
                 // If result has already been initialized, we exit immediately.
-                if( _result.Errors != null ) return _result;
+                if( _resultInitialized ) return _result;
 
+                _resultInitialized = true;
                 Debug.Assert( _domain._currentTran == this );
                 Debug.Assert( _domain._lock.IsWriteLockHeld );
                 CurrentThreadDomain = _previous;
@@ -334,6 +336,7 @@ namespace CK.Observable
                 {
                     // On errors, resets the change tracker, sends the errors to the managers
                     // and creates an error TransactionResult. 
+                    _result = new TransactionResult( _errors );
                     _domain._changeTracker.Reset();
                     try
                     {
@@ -341,10 +344,9 @@ namespace CK.Observable
                     }
                     catch( Exception ex )
                     {
-                        _domain.Monitor.Error( "While sending errors to IObservableTransactionManager.OnTransactionFailure.", ex );
-                        AddError( CKExceptionData.CreateFrom( ex ) );
+                        _domain.Monitor.Error( "Error in IObservableTransactionManager.OnTransactionFailure.", ex );
+                        _result = _result.WithClientError( ex );
                     }
-                    _result = new TransactionResult( _errors );
                 }
                 else
                 {
@@ -356,9 +358,8 @@ namespace CK.Observable
                     }
                     catch( Exception ex )
                     {
-                        _domain.Monitor.Fatal( "Error in IObservableTransactionManager.OnTransactionCommit. Exception is propagated above.", ex );
-                        _domain._lock.ExitWriteLock();
-                        throw;
+                        _domain.Monitor.Fatal( "Error in IObservableTransactionManager.OnTransactionCommit.", ex );
+                        _result = _result.WithClientError( ex );
                     }
                 }
                 _domain._lock.ExitWriteLock();
@@ -641,14 +642,13 @@ namespace CK.Observable
                 try
                 {
                     actions();
-                    return t.Commit();
                 }
                 catch( Exception ex )
                 {
                     Monitor.Error( ex );
                     t.AddError( CKExceptionData.CreateFrom( ex ) );
-                    return t.Commit();
                 }
+                return t.Commit();
             }
         }
 
