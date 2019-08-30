@@ -849,11 +849,20 @@ namespace CK.Observable
                 {
                     _roots.Add( _objects[r.ReadNonNegativeSmallInt32()] as ObservableRootObject );
                 }
+                OnLoaded();
             }
             finally
             {
                 _deserializing = false;
             }
+        }
+
+        /// <summary>
+        /// Called after a <see cref="Load"/>.
+        /// Does nothing at this level.
+        /// </summary>
+        internal protected virtual void OnLoaded()
+        {
         }
 
         /// <summary>

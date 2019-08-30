@@ -58,15 +58,25 @@ namespace CK.Observable
         public ObservableDomain( IObservableDomainClient tm, IActivityMonitor monitor )
             : base( tm, monitor )
         {
-            if( AllRoots.Count != 0 )
-            {
-                CheckRoot();
-                Root = (T)AllRoots[0];
-            }
+            if( AllRoots.Count != 0 ) BindRoots();
             else using( var initialization = new InitializationTransaction( this ) )
             {
                 Root = AddRoot<T>( initialization );
             }
+        }
+
+        /// <summary>
+        /// Overridden to bind our typed root.
+        /// </summary>
+        internal protected override void OnLoaded() => BindRoots();
+
+        void BindRoots()
+        {
+            if( AllRoots.Count != 1 || !(AllRoots[0] is T) )
+            {
+                throw new InvalidDataException( $"Incompatible stream. No root of type {typeof( T ).FullName}. {AllRoots.Count} roots of type: {AllRoots.Select( t => t.GetType().Name ).Concatenate()}." );
+            }
+            Root = (T)AllRoots[0];
         }
 
         /// <summary>
@@ -85,22 +95,13 @@ namespace CK.Observable
             Encoding encoding = null )
             : base( tm, monitor, s, leaveOpen, encoding )
         {
-            CheckRoot();
-            Root = (T)AllRoots[0];
-        }
-
-        void CheckRoot()
-        {
-            if( AllRoots.Count != 1 || !(AllRoots[0] is T) )
-            {
-                throw new InvalidDataException( $"Incompatible stream. No root of type {typeof( T ).FullName}. {AllRoots.Count} roots of type: {AllRoots.Select( t => t.GetType().Name ).Concatenate()}." );
-            }
+            BindRoots();
         }
 
         /// <summary>
         /// Gets the typed root object.
         /// </summary>
-        public T Root { get; }
+        public T Root { get; private set; }
 
     }
 }
