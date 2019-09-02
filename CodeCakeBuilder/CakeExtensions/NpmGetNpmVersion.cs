@@ -9,11 +9,11 @@ using Cake.Core.Tooling;
 namespace Cake.Npm
 {
     /// <summary>
-    /// Almost no options are supported.
+    /// Get the npm version
     /// </summary>
-    public class NpmViewSettings : NpmSettings
+    public class NpmGetNpmVersion : NpmSettings
     {
-        public NpmViewSettings() : base( "view" )
+        public NpmGetNpmVersion() : base( "-v" )
         {
             RedirectStandardOutput = true;
         }
@@ -22,15 +22,12 @@ namespace Cake.Npm
 
         protected override void EvaluateCore( ProcessArgumentBuilder args )
         {
-            base.EvaluateCore( args );
-            args.Append( "--json" );
-            args.Append( PackageName );
         }
     }
 
-    public class NpmViewTools : NpmTool<NpmSettings>
+    public class NpmGetNpmVersionTools : NpmTool<NpmSettings>
     {
-        public NpmViewTools(
+        public NpmGetNpmVersionTools(
             IFileSystem fileSystem,
             ICakeEnvironment environment,
             IProcessRunner processRunner,
@@ -40,21 +37,21 @@ namespace Cake.Npm
         {
         }
 
-        public string View( NpmViewSettings settings )
+        public string GetNpmVersion()
         {
-            IEnumerable<string> output = new List<string>();
             try
             {
-                RunCore( settings, new ProcessSettings(), process =>
+                string output = null;
+                RunCore( new NpmGetNpmVersion() {}, new ProcessSettings(), process =>
                 {
-                    output = process.GetStandardOutput();
+                    output = process.GetStandardOutput().Single();
                 } );
-                return string.Join( "\n", output );
+                return output;
 
             }
             catch( CakeException ex )
             {
-                CakeLog.Information( "Error while calling npm view: " + ex.Message );
+                CakeLog.Information( "Error while calling npm -v: " + ex.Message );
                 return "";
             }
 
@@ -63,7 +60,7 @@ namespace Cake.Npm
 
     [CakeAliasCategory( "Npm" )]
     [CakeNamespaceImport( "Cake.Npm" )]
-    public static class NpmViewAliases
+    public static class NpmGetNpmVersionAliases
     {
         /// <summary>
         /// Call npm view with --json attribute.
@@ -74,15 +71,9 @@ namespace Cake.Npm
         /// <returns>An empty string if the package was not found on the repository</returns>
         [CakeMethodAlias]
         [CakeAliasCategory( "Get" )]
-        public static string NpmView( this ICakeContext context, string packageName = null, string workingDirectory = null )
+        public static string NpmGetNpmVersion( this ICakeContext context )
         {
-            NpmViewSettings settings = new NpmViewSettings()
-            {
-                LogLevel = NpmLogLevel.Info,
-                PackageName = packageName,
-                WorkingDirectory = workingDirectory
-            };
-            return new NpmViewTools( context.FileSystem, context.Environment, context.ProcessRunner, context.Tools, context.Log ).View( settings );
+            return new NpmGetNpmVersionTools( context.FileSystem, context.Environment, context.ProcessRunner, context.Tools, context.Log ).GetNpmVersion();
         }
     }
 

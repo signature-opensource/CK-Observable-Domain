@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp22</TargetFramework>
     <LangVersion>7.2</LangVersion>
+    <IsPackable>False</IsPackable>
   </PropertyGroup>
   <ItemGroup>
 

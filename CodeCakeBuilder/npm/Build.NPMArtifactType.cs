@@ -1,46 +1,32 @@
 using CodeCake.Abstractions;
 using System.Collections.Generic;
 using System.Linq;
+using Cake.Npm;
+using Cake.Common.Diagnostics;
+using CSemVer;
+using static CodeCake.Build;
+using CodeCake;
 
 namespace CodeCake
 {
 
-    public static class StandardGlobalInfoNPMExtension
+    public partial class NPMSolution : ISolutionProducingArtifact
     {
-        /// <summary>
-        /// Adds the <see cref="Build.NPMArtifactType"/> for NPM artifacts.
-        /// </summary>
-        /// <param name="this">This global info.</param>
-        /// <param name="solution">The NPM solution.</param>
-        /// <returns>This info.</returns>
-        public static StandardGlobalInfo AddNPM( this StandardGlobalInfo globalInfo, NPMSolution solution )
+        private ArtifactType _artifactType;
+
+        public ArtifactType ArtifactType
         {
-            new Build.NPMArtifactType( globalInfo, solution );
-            return globalInfo;
+            get
+            {
+                if( _artifactType == null ) _artifactType = new NPMArtifactType(_globalInfo, this);
+                return _artifactType;
+            }
         }
 
-        /// <summary>
-        /// Adds the <see cref="Build.NPMArtifactType"/> for NPM based on <see cref="NPMSolution.ReadFromNPMSolutionFile"/>
-        /// (projects are defined by "CodeCakeBuilder/NPMSolution.xml" file).
-        /// </summary>
-        /// <param name="this">This global info.</param>
-        /// <returns>This info.</returns>
-        public static StandardGlobalInfo AddNPM( this StandardGlobalInfo @this )
-        {
-            return AddNPM( @this, NPMSolution.ReadFromNPMSolutionFile( @this.Version ) );
-        }
-
-        /// <summary>
-        /// Gets the NPM solution handled by the single <see cref="Build.NPMArtifactType"/>.
-        /// </summary>
-        /// <param name="this">This global info.</param>
-        /// <returns>The NPM solution.</returns>
-        public static NPMSolution GetNPMSolution( this StandardGlobalInfo @this )
-        {
-            return @this.ArtifactTypes.OfType<Build.NPMArtifactType>().Single().Solution;
-        }
+        public void Pack() => RunPack();
     }
 
+    
     public partial class Build
     {
         /// <summary>
@@ -58,22 +44,19 @@ namespace CodeCake
 
             protected override IEnumerable<ILocalArtifact> GetLocalArtifacts() => Solution.PublishedProjects;
 
+
+            protected override IEnumerable<ArtifactFeed> GetRemoteFeeds()
+            {
+                yield return new AzureNPMFeed( this, "Signature-Code", "Default" );
+
+            }
+
             protected override IEnumerable<ArtifactFeed> GetLocalFeeds()
             {
                 return new ArtifactFeed[] {
                     new NPMLocalFeed( this, GlobalInfo.LocalFeedPath )
                 };
             }
-
-            protected override IEnumerable<ArtifactFeed> GetRemoteFeeds()
-            {
-                return new NPMRemoteFeedBase[]{
-
-new AzureNPMFeed( this, "Signature-Code", "Default" )
-};
-            }
-
         }
-
     }
 }
