@@ -3,6 +3,7 @@ using NUnit.Framework;
 using System;
 using System.IO;
 using System.Linq;
+using static CK.Testing.MonitorTestHelper;
 
 namespace CK.Observable.Domain.Tests
 {
@@ -18,7 +19,7 @@ namespace CK.Observable.Domain.Tests
         public void exportable_but_not_serializable()
         {
             var d = new ObservableDomain();
-            d.Modify( () =>
+            d.Modify( TestHelper.Monitor, () =>
             {
                 new ExportableOnly() { Name = "Albert" };
             } );
@@ -55,7 +56,7 @@ namespace CK.Observable.Domain.Tests
         public void serializable_but_not_exportable()
         {
             var d = new ObservableDomain();
-            d.Modify( () =>
+            d.Modify( TestHelper.Monitor, () =>
             {
                 new SerializableOnly() { Name = "Albert" };
             } );

@@ -309,6 +309,7 @@ namespace CK.Observable
             public Transaction( ObservableDomain d, IActivityMonitor previousMonitor )
             {
                 _domain = d;
+                _previousMonitor = previousMonitor;
                 _previous = CurrentThreadDomain;
                 CurrentThreadDomain = d;
                 _errors = Array.Empty<CKExceptionData>();

@@ -15,7 +15,7 @@ namespace CK.Observable.Domain.Tests.Clients
             var client = new MemoryTransactionProviderClient();
             var d = new ObservableDomain<TestObservableRootObject>( client, TestHelper.Monitor );
 
-            var transactionResult = d.Modify( () =>
+            var transactionResult = d.Modify( TestHelper.Monitor, () =>
             {
                 d.Root.Prop1 = "Hello";
                 d.Root.Prop2 = "World";
@@ -35,14 +35,14 @@ namespace CK.Observable.Domain.Tests.Clients
         {
             var d = new ObservableDomain<TestObservableRootObject>( new MemoryTransactionProviderClient(), TestHelper.Monitor );
             // Initial successful Modify
-            d.Modify( () =>
+            d.Modify( TestHelper.Monitor, () =>
             {
                 d.Root.Prop1 = "Hello";
                 d.Root.Prop2 = "World";
             } );
 
             // Raise exception during Write()
-            var transactionResult = d.Modify( () =>
+            var transactionResult = d.Modify( TestHelper.Monitor, () =>
             {
                 d.Root.Prop1 = "This will";
                 d.Root.Prop2 = "be set even when Write fails";
@@ -65,14 +65,14 @@ namespace CK.Observable.Domain.Tests.Clients
         {
             var d = new ObservableDomain<TestObservableRootObject>( new MemoryTransactionProviderClient(), TestHelper.Monitor );
             // Initial successful Modify
-            d.Modify( () =>
+            d.Modify( TestHelper.Monitor, () =>
             {
                 d.Root.Prop1 = "Hello";
                 d.Root.Prop2 = "World";
             } );
 
             // Raise exception during Write()
-            var transactionResult = d.Modify( () =>
+            var transactionResult = d.Modify( TestHelper.Monitor, () =>
             {
                 d.Root.Prop1 = "This will";
                 d.Root.Prop2 = "never be set";
@@ -99,7 +99,7 @@ namespace CK.Observable.Domain.Tests.Clients
             var client1 = new TestMemoryTransactionProviderClient();
             var d1 = new ObservableDomain<TestObservableRootObject>( client1, TestHelper.Monitor );
             // Initial successful Modify
-            d1.Modify( () =>
+            d1.Modify( TestHelper.Monitor, () =>
             {
                 d1.Root.Prop1 = "Hello";
                 d1.Root.Prop2 = "World";
@@ -130,7 +130,7 @@ namespace CK.Observable.Domain.Tests.Clients
             var client1 = new TestMemoryTransactionProviderClient();
             var d1 = new ObservableDomain<TestObservableRootObject>( client1, TestHelper.Monitor );
             // Initial successful Modify
-            d1.Modify( () =>
+            d1.Modify( TestHelper.Monitor, () =>
             {
                 d1.Root.Prop1 = "Hello";
                 d1.Root.Prop2 = "World";
@@ -160,7 +160,7 @@ namespace CK.Observable.Domain.Tests.Clients
             var client1 = new TestMemoryTransactionProviderClient();
             var d1 = new ObservableDomain<TestObservableRootObject>( client1, TestHelper.Monitor );
             // Initial successful Modify
-            d1.Modify( () =>
+            d1.Modify( TestHelper.Monitor, () =>
             {
                 d1.Root.Prop1 = "Hello";
                 d1.Root.Prop2 = "World";
@@ -169,7 +169,7 @@ namespace CK.Observable.Domain.Tests.Clients
             using( var domainStream1 = client1.CreateStreamFromSnapshot() )
             {
                 // Change domain a bit and get second stream
-                d1.Modify( () =>
+                d1.Modify( TestHelper.Monitor, () =>
                 {
                     d1.Root.Prop1 = "Hello 2";
                     d1.Root.Prop2 = "World 2";
@@ -203,7 +203,7 @@ namespace CK.Observable.Domain.Tests.Clients
             // Initial successful Modify
             TestObservableRootObject initialObservableObject = null;
             TestObservableRootObject restoredObservableObject = null;
-            d.Modify( () =>
+            d.Modify( TestHelper.Monitor, () =>
             {
                 initialObservableObject = d.Root;
                 d.Root.Prop1 = "Hello";
@@ -212,7 +212,7 @@ namespace CK.Observable.Domain.Tests.Clients
             Debug.Assert( initialObservableObject != null );
 
             // Raise exception during Write()
-            d.Modify( () =>
+            d.Modify( TestHelper.Monitor, () =>
             {
                 d.Root.Prop1 = "This will";
                 d.Root.Prop2 = "never be set";

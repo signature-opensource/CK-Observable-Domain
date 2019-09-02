@@ -18,7 +18,7 @@ namespace CK.Observable.Domain.Tests.Clients
             FileInfo fi = new FileInfo( client.Path );
             var d = new ObservableDomain<TestObservableRootObject>( client, TestHelper.Monitor );
 
-            d.Modify( () =>
+            d.Modify( TestHelper.Monitor, () =>
             {
                 d.Root.Prop1 = "Hello";
                 d.Root.Prop2 = "World";
@@ -40,7 +40,7 @@ namespace CK.Observable.Domain.Tests.Clients
             FileInfo fi = new FileInfo( client.Path );
             var d = new ObservableDomain<TestObservableRootObject>( client, TestHelper.Monitor );
 
-            d.Modify( () =>
+            d.Modify( TestHelper.Monitor, () =>
             {
                 d.Root.Prop1 = "Hello";
                 d.Root.Prop2 = "World";
@@ -60,7 +60,7 @@ namespace CK.Observable.Domain.Tests.Clients
             var d = new ObservableDomain<TestObservableRootObject>( client, TestHelper.Monitor );
 
             // Call once - doesn't trigger the DoWrite yet
-            d.Modify( () =>
+            d.Modify( TestHelper.Monitor, () =>
             {
                 d.Root.Prop1 = "Hello";
                 d.Root.Prop2 = "World";
@@ -70,7 +70,7 @@ namespace CK.Observable.Domain.Tests.Clients
 
             Thread.Sleep( 2 * dueTimeMs );
             // Call again - triggers the DoWrite
-            d.Modify( () =>
+            d.Modify( TestHelper.Monitor, () =>
             {
             } );
             fi.Refresh();
@@ -91,7 +91,7 @@ namespace CK.Observable.Domain.Tests.Clients
             var d1 = new ObservableDomain<TestObservableRootObject>( client1, TestHelper.Monitor );
 
             // Call once - doesn't trigger the DoWrite yet
-            d1.Modify( () =>
+            d1.Modify( TestHelper.Monitor, () =>
             {
                 d1.Root.Prop1 = "Hello";
                 d1.Root.Prop2 = "World";
@@ -102,7 +102,7 @@ namespace CK.Observable.Domain.Tests.Clients
             Thread.Sleep( waitTimeMs );
 
             // Call again - triggers the DoWrite
-            d1.Modify( () =>
+            d1.Modify( TestHelper.Monitor, () =>
             {
             } );
             fi.Refresh();
@@ -113,7 +113,7 @@ namespace CK.Observable.Domain.Tests.Clients
             fi.Refresh();
 
             // Call again - change properties and trigger DoWrite
-            d1.Modify( () =>
+            d1.Modify( TestHelper.Monitor, () =>
             {
                 d1.Root.Prop1 = "This should";
                 d1.Root.Prop2 = "Have been saved to file";
@@ -162,7 +162,7 @@ namespace CK.Observable.Domain.Tests.Clients
 
 
             var d = new ObservableDomain<TestObservableRootObject>( client, TestHelper.Monitor );
-            d.Modify( () =>
+            d.Modify( TestHelper.Monitor, () =>
             {
                 d.Root.Prop1 = "Hello";
                 d.Root.Prop2 = "World";
@@ -184,7 +184,7 @@ namespace CK.Observable.Domain.Tests.Clients
             var client = CreateClient( 0, path );
             var d = new ObservableDomain<TestObservableRootObject>( client, TestHelper.Monitor );
 
-            var transactionResult = d.Modify( () =>
+            var transactionResult = d.Modify( TestHelper.Monitor, () =>
             {
                 d.Root.Prop1 = "Hello";
                 d.Root.Prop2 = "World";
@@ -204,7 +204,7 @@ namespace CK.Observable.Domain.Tests.Clients
                 var client = CreateClient( 0 );
                 path = client.Path;
                 var d1 = new ObservableDomain<TestObservableRootObject>( client, TestHelper.Monitor );
-                d1.Modify( () =>
+                d1.Modify( TestHelper.Monitor, () =>
                 {
                     d1.Root.Prop1 = "Hello";
                     d1.Root.Prop2 = "World";

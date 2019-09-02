@@ -4,6 +4,7 @@ using CK.Observable.Domain.Tests.RootSample;
 using FluentAssertions;
 using System.IO;
 using CK.Core;
+using static CK.Testing.MonitorTestHelper;
 
 namespace CK.Observable.Domain.Tests
 {
@@ -30,7 +31,7 @@ namespace CK.Observable.Domain.Tests
             var d = new ObservableDomain<ApplicationState>( eventCollector );
             d.Root.ToDoNumbers.Should().BeEmpty();
 
-            d.Modify( () =>
+            d.Modify( TestHelper.Monitor, () =>
             {
                 d.Root.ToDoNumbers.Add( 42 );
             } );
@@ -46,7 +47,7 @@ namespace CK.Observable.Domain.Tests
         public void serialization_tests()
         {
             var d = new ObservableDomain<ApplicationState>();
-            d.Modify( () =>
+            d.Modify( TestHelper.Monitor, () =>
             {
                 d.Root.ToDoNumbers.AddRange( Enumerable.Range(10, 20) );
                 for( int i = 0; i < 30; ++i )

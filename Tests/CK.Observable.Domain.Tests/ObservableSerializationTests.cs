@@ -1,5 +1,6 @@
 using FluentAssertions;
 using NUnit.Framework;
+using static CK.Testing.MonitorTestHelper;
 
 namespace CK.Observable.Domain.Tests
 {
@@ -11,7 +12,7 @@ namespace CK.Observable.Domain.Tests
         {
             var od = new ObservableDomain<CustomRoot>();
 
-            od.Modify( () =>
+            od.Modify( TestHelper.Monitor, () =>
             {
                 od.Root.ImmutablesById = new ObservableDictionary<string, CustomImmutable>();
 
@@ -30,7 +31,7 @@ namespace CK.Observable.Domain.Tests
             var od = new ObservableDomain<CustomRoot>();
 
             // Prepare initial state
-            od.Modify( () =>
+            od.Modify( TestHelper.Monitor, () =>
             {
                 od.Root.CustomObservableList = new ObservableList<CustomObservable>();
             } );
@@ -38,7 +39,7 @@ namespace CK.Observable.Domain.Tests
             var initialState = od.ExportToString();
 
             // Add some events for good measure
-            var events = od.Modify( () =>
+            var events = od.Modify( TestHelper.Monitor, () =>
             {
                 // Create Observable and Immutables
                 var myImmutable = new CustomImmutable( "ABC000", "My object" );

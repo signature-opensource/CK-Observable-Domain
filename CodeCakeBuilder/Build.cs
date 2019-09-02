@@ -16,23 +16,11 @@ namespace CodeCake
         public Build()
         {
             Cake.Log.Verbosity = Verbosity.Diagnostic;
-
-            var solutionFileName = Cake.Environment.WorkingDirectory.GetDirectoryName() + ".sln";
-
-            var projects = Cake.ParseSolution( solutionFileName )
-                                       .Projects
-                                       .Where( p => !(p is SolutionFolder) && p.Name != "CodeCakeBuilder" );
-
-            // We do not generate NuGet packages for /Tests projects for this solution.
-            var projectsToPublish = projects
-                                        .Where( p => !p.Path.Segments.Contains( "Tests" ) );
-
             SimpleRepositoryInfo gitInfo = Cake.GetSimpleRepositoryInfo();
             StandardGlobalInfo globalInfo = CreateStandardGlobalInfo( gitInfo )
-                                                .AddNuGet( projectsToPublish )
+                                                .AddDotnet()
                                                 .AddNPM()
                                                 .SetCIBuildTag();
-
             Task( "Check-Repository" )
                 .Does( () =>
                 {
@@ -43,11 +31,8 @@ namespace CodeCake
                 .IsDependentOn( "Check-Repository" )
                 .Does( () =>
                 {
-                    Cake.CleanDirectories( projects.Select( p => p.Path.GetDirectory().Combine( "bin" ) ) );
-                    Cake.CleanDirectories( projects.Select( p => p.Path.GetDirectory().Combine( "obj" ) ) );
-                    Cake.CleanDirectories( globalInfo.ReleasesFolder );
-                    Cake.DeleteFiles( "Tests/**/TestResult*.xml" );
-                    globalInfo.GetNPMSolution().RunInstallAndClean( globalInfo, scriptMustExist: false );
+                    globalInfo.GetDotnetSolution().Clean();
+                    globalInfo.GetNPMSolution().RunInstallAndClean( scriptMustExist: false );
                 } );
 
 
@@ -56,8 +41,8 @@ namespace CodeCake
                 .IsDependentOn( "Clean" )
                 .Does( () =>
                 {
-                    StandardSolutionBuild( globalInfo, solutionFileName );
-                    globalInfo.GetNPMSolution().RunBuild( globalInfo );
+                    globalInfo.GetDotnetSolution().Build();
+                    globalInfo.GetNPMSolution().RunBuild();
                 } );
 
             Task( "Unit-Testing" )
@@ -66,10 +51,10 @@ namespace CodeCake
                                      || Cake.ReadInteractiveOption( "RunUnitTests", "Run Unit Tests?", 'Y', 'N' ) == 'Y' )
                .Does( () =>
                {
-                   var testProjects = projects.Where( p => p.Name.EndsWith( ".Tests" )
-                                                           && !p.Path.Segments.Contains( "Integration" ) );
-                   StandardUnitTests( globalInfo, testProjects );
-                   globalInfo.GetNPMSolution().RunTest( globalInfo );
+                   var testProjects = globalInfo.GetDotnetSolution().Projects.Where( p => p.Name.EndsWith( ".Tests" )
+                                                                                          && !p.Path.Segments.Contains( "Integration" ) );
+                   globalInfo.GetDotnetSolution().Test( testProjects );
+                   globalInfo.GetNPMSolution().RunTest();
                } );
 
             Task( "Create-Packages" )
@@ -77,8 +62,8 @@ namespace CodeCake
                 .IsDependentOn( "Unit-Testing" )
                 .Does( () =>
                 {
-                    StandardCreateNuGetPackages( globalInfo );
-                    globalInfo.GetNPMSolution().RunPack( globalInfo );
+                    globalInfo.GetDotnetSolution().Pack();
+                    globalInfo.GetNPMSolution().RunPack();
                 } );
 
             Task( "Push-Packages" )

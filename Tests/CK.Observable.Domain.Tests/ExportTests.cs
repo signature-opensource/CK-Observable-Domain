@@ -21,28 +21,28 @@ namespace CK.Observable.Domain.Tests
 
             string initial = d.ExportToString();
 
-            d.Modify( () =>
+            d.Modify( TestHelper.Monitor, () =>
             {
             } ).Should().NotBeNull( "A null list of events is because an error occurred." );
 
             d.TransactionSerialNumber.Should().Be( 1, "Even if nothing changed, TransactionNumber is incremented." );
             eventCollector.WriteEventsFrom( 0 ).Should().Be( @"{""N"":1,""E"":[]}", "No event occured." );
 
-            d.Modify( () =>
+            d.Modify( TestHelper.Monitor, () =>
             {
                 new Car( "Hello!" );
             } ).Should().NotBeNull( "A null list of events is because an error occurred." );
 
             string t2 = eventCollector.WriteEventsFrom( 0 );
 
-            d.Modify( () =>
+            d.Modify( TestHelper.Monitor, () =>
             {
                 d.AllObjects.Single().Dispose();
             } ).Should().NotBeNull();
 
             string t3 = eventCollector.WriteEventsFrom( 2 );
 
-            d.Modify( () =>
+            d.Modify( TestHelper.Monitor, () =>
             {
                 new MultiPropertyType();
 
@@ -50,7 +50,7 @@ namespace CK.Observable.Domain.Tests
 
             string t4 = eventCollector.WriteEventsFrom( 3 );
 
-            d.Modify( () =>
+            d.Modify( TestHelper.Monitor, () =>
             {
                 var m = d.AllObjects.OfType<MultiPropertyType>().Single();
                 m.ChangeAll( "Pouf", 3, new Guid( "{B681AD83-A276-4A5C-A11A-4A22469B6A0D}" ) );
@@ -59,7 +59,7 @@ namespace CK.Observable.Domain.Tests
 
             string t5 = eventCollector.WriteEventsFrom( 4 );
 
-            d.Modify( () =>
+            d.Modify( TestHelper.Monitor, () =>
             {
                 var m = d.AllObjects.OfType<MultiPropertyType>().Single();
                 m.SetDefaults();
@@ -68,7 +68,7 @@ namespace CK.Observable.Domain.Tests
 
             string t6 = eventCollector.WriteEventsFrom( 5 );
 
-            d.Modify( () =>
+            d.Modify( TestHelper.Monitor, () =>
             {
                 d.AllObjects.OfType<MultiPropertyType>().Single().Dispose();
                 var l = new ObservableList<string>();
@@ -79,7 +79,7 @@ namespace CK.Observable.Domain.Tests
 
             string t7 = eventCollector.WriteEventsFrom( 6 );
 
-            d.Modify( () =>
+            d.Modify( TestHelper.Monitor, () =>
             {
                 var l = d.AllObjects.OfType<ObservableList<string>>().Single();
                 l[0] = "Three";
@@ -101,14 +101,14 @@ namespace CK.Observable.Domain.Tests
             string initial = d.ExportToString();
 
             TestHelper.Monitor.Info( initial );
-            d.Modify( () =>
+            d.Modify( TestHelper.Monitor, () =>
             {
                 var g2 = d.AllObjects.OfType<Garage>().Single( g => g.CompanyName == null );
                 g2.CompanyName = "Signature Code";
             } );
             string t1 = eventCollector.WriteEventsFrom( 1 );
 
-            d.Modify( () =>
+            d.Modify( TestHelper.Monitor, () =>
             {
                 var g2 = d.AllObjects.OfType<Garage>().Single( g => g.CompanyName == "Signature Code" );
                 g2.Cars.Clear();
@@ -116,14 +116,14 @@ namespace CK.Observable.Domain.Tests
             } );
             string t2 = eventCollector.WriteEventsFrom( 2 );
 
-            d.Modify( () =>
+            d.Modify( TestHelper.Monitor, () =>
             {
                 var spi = d.AllObjects.OfType<Mechanic>().Single( m => m.LastName == "Spinelli" );
                 spi.Dispose();
             } );
             string t3 = eventCollector.WriteEventsFrom( 3 );
 
-            d.Modify( () =>
+            d.Modify( TestHelper.Monitor, () =>
             {
                 var g1 = d.AllObjects.OfType<Garage>().Single( g => g.CompanyName == "Boite" );
                 g1.ReplacementCar.Remove( g1.Cars[0] );
@@ -138,7 +138,7 @@ namespace CK.Observable.Domain.Tests
             var eventCollector = new TransactionEventCollectorClient( new MemoryTransactionProviderClient() );
 
             var d = new ObservableDomain<RootSample.ApplicationState>( eventCollector );
-            d.Modify( () =>
+            d.Modify( TestHelper.Monitor, () =>
             {
                 var p1 = new RootSample.ProductInfo( "Name n°1", 12 );
                 p1.ExtraData.Add( "Toto", "TVal" );
@@ -154,7 +154,7 @@ namespace CK.Observable.Domain.Tests
             initial.Should().ContainAll( "Name n°1", "Product n°1", @"""CurrentProductState"":{"">"":7}" );
             initial.Should().Contain( @"[""Toto"",""TVal""]" );
             initial.Should().Contain( @"[""Tata"",""TVal""]" );
-            d.Modify( () =>
+            d.Modify( TestHelper.Monitor, () =>
             {
                 var p2 = new RootSample.ProductInfo( "Name n°2", 22 );
                 d.Root.Products.Add( p2.Name, p2 );
@@ -172,7 +172,7 @@ namespace CK.Observable.Domain.Tests
             // ApplicationState.CurrentProduct is p2:
             t1.Should().Contain( @"[""C"",0,1,{""="":6}]" );
 
-            d.Modify( () =>
+            d.Modify( TestHelper.Monitor, () =>
             {
                 d.Root.CurrentProductState.Name.Should().Be( "Product n°2" );
                 d.Root.SkipToNextProduct();

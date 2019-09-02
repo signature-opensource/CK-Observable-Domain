@@ -18,7 +18,7 @@ namespace CK.Observable.Domain.Tests
             Car c1 = null;
             TransactionResult events;
 
-            events = domain.Modify( () =>
+            events = domain.Modify( TestHelper.Monitor, () =>
             {
                 c0 = new Car( "First Car" );
                 c1 = new Car( "Second Car" );
@@ -38,13 +38,13 @@ namespace CK.Observable.Domain.Tests
                            "PropertyChanged 1.Position = (0,0).",
                            "PropertyChanged 1.CurrentMechanic = null." );
 
-            events = domain.Modify( () =>
+            events = domain.Modify( TestHelper.Monitor, () =>
             {
                 c0.Speed = 1;
             } );
             Check( events, "PropertyChanged 0.Speed = 1." );
 
-            events = domain.Modify( () =>
+            events = domain.Modify( TestHelper.Monitor, () =>
             {
                 c0.Speed = 78;
                 c1.Position = new Position( 1.5, 2.3 );
@@ -59,12 +59,12 @@ namespace CK.Observable.Domain.Tests
             Car c = null;
             TransactionResult result;
 
-            result = domain.Modify( () =>
+            result = domain.Modify( TestHelper.Monitor, () =>
             {
                 c = new Car( "First Car" );
             } );
 
-            result = domain.Modify( () =>
+            result = domain.Modify( TestHelper.Monitor, () =>
             {
                 c.Position = new Position( 1.0, 2.0 );
                 c.Speed = 1;
@@ -80,7 +80,7 @@ namespace CK.Observable.Domain.Tests
         {
             var domain = new ObservableDomain( TestHelper.Monitor );
             int bang = 0;
-            domain.Modify( () =>
+            domain.Modify( TestHelper.Monitor, () =>
             {
                 Car c = new Car( "First Car" );
                 EventHandler incBang = ( o, e ) => bang++;
@@ -100,7 +100,7 @@ namespace CK.Observable.Domain.Tests
         public void ObservableList_is_observable_thanks_to_Item_Inserted_Set_RemovedAt_and_CollectionCleared_events()
         {
             var domain = new ObservableDomain( TestHelper.Monitor );
-            domain.Modify( () =>
+            domain.Modify( TestHelper.Monitor, () =>
             {
                 Car c = new Car( "First Car" );
                 Garage g = new Garage();
@@ -159,13 +159,13 @@ namespace CK.Observable.Domain.Tests
             Garage g = null;
             TransactionResult result;
 
-            result = domain.Modify( () =>
+            result = domain.Modify( TestHelper.Monitor, () =>
             {
                 c0 = new Car( "C1" );
                 c1 = new Car( "C2" );
                 g = new Garage();
             } );
-            result = domain.Modify( () =>
+            result = domain.Modify( TestHelper.Monitor, () =>
             {
                 g.Cars.Add( c0 );
                 g.Cars.Insert( 0, c1 );
@@ -182,26 +182,26 @@ namespace CK.Observable.Domain.Tests
             Mechanic m = null;
             Garage g = null;
             TransactionResult result;
-            result = domain.Modify( () =>
+            result = domain.Modify( TestHelper.Monitor, () =>
             {
                 g = new Garage();
                 c = new Car( "C" );
                 m = new Mechanic( g ) { FirstName = "Jon", LastName = "Doe" };
             } );
-            result = domain.Modify( () =>
+            result = domain.Modify( TestHelper.Monitor, () =>
             {
                 m.CurrentCar = c;
             } );
             Check( result, "PropertyChanged 4.CurrentMechanic = 'Mechanic Jon Doe'.",
                            "PropertyChanged 5.CurrentCar = 'Car C'." );
-            result = domain.Modify( () =>
+            result = domain.Modify( TestHelper.Monitor, () =>
             {
                 m.CurrentCar = null;
             } );
             Check( result, "PropertyChanged 4.CurrentMechanic = null.",
                            "PropertyChanged 5.CurrentCar = null." );
 
-            result = domain.Modify( () =>
+            result = domain.Modify( TestHelper.Monitor, () =>
             {
                 c.CurrentMechanic = m;
             } );
@@ -214,7 +214,7 @@ namespace CK.Observable.Domain.Tests
         public void ObservableDictionary_is_observable_thanks_to_Item_Added_Set_Removed_and_CollectionCleared_events()
         {
             var domain = new ObservableDomain( TestHelper.Monitor );
-            domain.Modify( () =>
+            domain.Modify( TestHelper.Monitor, () =>
             {
                 var d = new ObservableDictionary<string, int>();
                 using( var dM = d.Monitor() )

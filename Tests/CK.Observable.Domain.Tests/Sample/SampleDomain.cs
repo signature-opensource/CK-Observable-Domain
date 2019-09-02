@@ -10,7 +10,7 @@ namespace CK.Observable.Domain.Tests.Sample
         public static ObservableDomain CreateSample( IObservableDomainClient tm = null )
         {
             var d = new ObservableDomain( tm, TestHelper.Monitor );
-            d.Modify( () =>
+            d.Modify( TestHelper.Monitor, () =>
             {
                 var g1 = new Garage() { CompanyName = "Boite" };
                 g1.Cars.AddRange( Enumerable.Range( 0, 10 ).Select( i => new Car( $"Renault n°{i}" ) ) );
@@ -35,7 +35,7 @@ namespace CK.Observable.Domain.Tests.Sample
 
         public static TransactionResult TransactedSetPaulMincLastName( ObservableDomain d, string newLastName, bool throwException = false )
         {
-            return d.Modify( () =>
+            return d.Modify( TestHelper.Monitor, () =>
             {
                 d.AllObjects.OfType<Person>().Single( x => x.FirstName == "Paul" ).LastName = newLastName;
                 if( throwException ) throw new Exception( $"After Paul minc renamed to {newLastName}." );

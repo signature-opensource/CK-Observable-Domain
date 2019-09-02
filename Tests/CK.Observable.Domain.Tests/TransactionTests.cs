@@ -4,6 +4,7 @@ using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using static CK.Testing.MonitorTestHelper;
 
 namespace CK.Observable.Domain.Tests
 {
@@ -15,7 +16,7 @@ namespace CK.Observable.Domain.Tests
         {
             var d = new ObservableDomain( new MemoryTransactionProviderClient() );
             d.TransactionSerialNumber.Should().Be( 0 );
-            var result = d.Modify( () =>
+            var result = d.Modify( TestHelper.Monitor, () =>
             {
                 new Car( "V1" );
                 new Car( "V2" );
