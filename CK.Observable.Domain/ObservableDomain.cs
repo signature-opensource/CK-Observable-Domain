@@ -301,11 +301,12 @@ namespace CK.Observable
         {
             readonly ObservableDomain _previous;
             readonly ObservableDomain _domain;
+            readonly IActivityMonitor _previousMonitor;
             CKExceptionData[] _errors;
             TransactionResult _result;
             bool _resultInitialized;
 
-            public Transaction( ObservableDomain d )
+            public Transaction( ObservableDomain d, IActivityMonitor previousMonitor )
             {
                 _domain = d;
                 _previous = CurrentThreadDomain;
@@ -354,7 +355,7 @@ namespace CK.Observable
                     ++_domain._transactionSerialNumber;
                     try
                     {
-                        _domain.DomainClient?.OnTransactionCommit( _domain, DateTime.UtcNow, _result.Events, _result.Commands );
+                        _domain.DomainClient?.OnTransactionCommit( _domain, DateTime.UtcNow, _result.Events, _result.Commands, _result.Collector );
                     }
                     catch( Exception ex )
                     {
@@ -362,6 +363,7 @@ namespace CK.Observable
                         _result = _result.WithClientError( ex );
                     }
                 }
+                _domain.Monitor = _previousMonitor;
                 _domain._lock.ExitWriteLock();
                 return _result;
             }
@@ -564,7 +566,7 @@ namespace CK.Observable
         /// This is never null: an autonomous monitor is automatically created if none is
         /// provided to constructors.
         /// </summary>
-        public IActivityMonitor Monitor { get; }
+        public IActivityMonitor Monitor { get; private set; }
 
         /// <summary>
         /// Gets the associated client (head of the Chain of Responsibility).
@@ -596,6 +598,10 @@ namespace CK.Observable
         /// This must not be called twice (without disposing or committing the existing one) otherwise
         /// an <see cref="InvalidOperationException"/> is thrown.
         /// </summary>
+        /// <param name="monitor">
+        /// Monitor to use. Must not be null.
+        /// It will be substituted to this <see cref="Monitor"/> during the transaction execution.
+        /// </param>
         /// <param name="millisecondsTimeout">
         /// The maximum number of milliseconds to wait for a read access before giving up.
         /// Wait indefinitely by default.
@@ -614,17 +620,25 @@ namespace CK.Observable
         /// forgets to call this EnsureWriteMode() before any modification will quickly enter the concurrency hell...
         /// </para>
         /// </remarks>
-        public IObservableTransaction BeginTransaction( int millisecondsTimeout = -1 )
+        public IObservableTransaction BeginTransaction( IActivityMonitor monitor, int millisecondsTimeout = -1 )
         {
-            if( !_lock.TryEnterWriteLock( millisecondsTimeout ) ) return null;
+            if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
+            if( !_lock.TryEnterWriteLock( millisecondsTimeout ) )
+            {
+                monitor.Warn( $"Write lock not obtained in less than {millisecondsTimeout} ms." );
+                return null;
+            }
+            var prevMonitor = Monitor;
+            Monitor = monitor;
             try
             {
                 DomainClient?.OnTransactionStart( this, DateTime.UtcNow );
-                return _currentTran = new Transaction( this );
+                return _currentTran = new Transaction( this, prevMonitor );
             }
             catch( Exception ex )
             {
                 Monitor.Error( "While calling IObservableTransactionManager.OnTransactionStart().", ex );
+                Monitor = prevMonitor;
                 _lock.ExitWriteLock();
                 throw;
             }
@@ -633,11 +647,15 @@ namespace CK.Observable
         /// <summary>
         /// Enables modifications to be done inside a transaction and a try/catch block.
         /// </summary>
+        /// <param name="monitor">
+        /// Monitor to use. Must not be null.
+        /// It will be substituted to this <see cref="Monitor"/> during the transaction execution.
+        /// </param>
         /// <param name="actions">Any action that can alter the objects of this domain.</param>
         /// <returns>The transaction result.</returns>
-        public TransactionResult Modify( Action actions )
+        public TransactionResult Modify( IActivityMonitor monitor, Action actions )
         {
-            using( var t = BeginTransaction() )
+            using( var t = BeginTransaction( monitor ) )
             {
                 try
                 {

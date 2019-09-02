@@ -1,6 +1,7 @@
 using CK.Core;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace CK.Observable
 {
@@ -35,7 +36,8 @@ namespace CK.Observable
         /// <param name="timeUtc">The date time utc of the commit.</param>
         /// <param name="events">The events of the transaction. Can be empty.</param>
         /// <param name="commands">The commands emitted by the transaction and that should be handled. Can be empty.</param>
-        void OnTransactionCommit( ObservableDomain d, DateTime timeUtc, IReadOnlyList<ObservableEvent> events, IReadOnlyList<ObservableCommand> commands );
+        /// <param name="postActionsCollector">Collector for asynchronous actions to execute.</param>
+        void OnTransactionCommit( ObservableDomain d, DateTime timeUtc, IReadOnlyList<ObservableEvent> events, IReadOnlyList<ObservableCommand> commands, Action<Func<IActivityMonitor,Task>> postActionsCollector );
 
         /// <summary>
         /// Called when an error occurred in a transaction.

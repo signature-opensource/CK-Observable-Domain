@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace CK.Observable
 {
@@ -67,9 +68,14 @@ namespace CK.Observable
         /// <param name="timeUtc">The date time utc of the commit.</param>
         /// <param name="events">The events.</param>
         /// <param name="commands">The commands emitted by the transaction and that should be handled. Can be empty.</param>
-        public virtual void OnTransactionCommit( ObservableDomain d, DateTime timeUtc, IReadOnlyList<ObservableEvent> events, IReadOnlyList<ObservableCommand> commands )
+        public virtual void OnTransactionCommit(
+            ObservableDomain d,
+            DateTime timeUtc,
+            IReadOnlyList<ObservableEvent> events,
+            IReadOnlyList<ObservableCommand> commands,
+            Action<Func<IActivityMonitor, Task>> postActionsCollector )
         {
-            _next?.OnTransactionCommit( d, timeUtc, events, commands );
+            _next?.OnTransactionCommit( d, timeUtc, events, commands, postActionsCollector );
             CreateSnapshot( d, timeUtc );
         }
 

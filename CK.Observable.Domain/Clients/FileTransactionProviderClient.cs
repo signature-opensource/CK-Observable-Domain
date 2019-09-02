@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using CK.Core;
+using System.Threading.Tasks;
 
 namespace CK.Observable
 {
@@ -83,9 +84,14 @@ namespace CK.Observable
         }
 
         /// <inheritdoc />
-        public override void OnTransactionCommit( ObservableDomain d, DateTime timeUtc, IReadOnlyList<ObservableEvent> events, IReadOnlyList<ObservableCommand> commands )
+        public override void OnTransactionCommit(
+            ObservableDomain d,
+            DateTime timeUtc,
+            IReadOnlyList<ObservableEvent> events,
+            IReadOnlyList<ObservableCommand> commands,
+            Action<Func<IActivityMonitor, Task>> postActionsCollector )
         {
-            base.OnTransactionCommit( d, timeUtc, events, commands );
+            base.OnTransactionCommit( d, timeUtc, events, commands, postActionsCollector );
 
             if( _minimumDueTimeMs == 0 )
             {

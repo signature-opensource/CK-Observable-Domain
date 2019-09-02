@@ -2,6 +2,7 @@ using CK.Core;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace CK.Observable
 {
@@ -138,14 +139,19 @@ namespace CK.Observable
 
         void IObservableDomainClient.OnDomainCreated( ObservableDomain d, DateTime timeUtc ) => _next?.OnDomainCreated( d, timeUtc );
 
-        void IObservableDomainClient.OnTransactionCommit( ObservableDomain d, DateTime timeUtc, IReadOnlyList<ObservableEvent> events, IReadOnlyList<ObservableCommand> commands )
+        void IObservableDomainClient.OnTransactionCommit(
+            ObservableDomain d,
+            DateTime timeUtc,
+            IReadOnlyList<ObservableEvent> events,
+            IReadOnlyList<ObservableCommand> commands,
+            Action<Func<IActivityMonitor, Task>> postActionsCollector )
         {
             _buffer.GetStringBuilder().Clear();
             _exporter.Reset();
             foreach( var e in events ) e.Export( _exporter );
             _events.Add( new TransactionEvent( d.TransactionSerialNumber, timeUtc, events, _buffer.ToString() ) );
             ApplyKeepDuration();
-            _next?.OnTransactionCommit( d, timeUtc, events, commands );
+            _next?.OnTransactionCommit( d, timeUtc, events, commands, postActionsCollector );
         }
 
         void IObservableDomainClient.OnTransactionFailure( ObservableDomain d, IReadOnlyList<CKExceptionData> errors )

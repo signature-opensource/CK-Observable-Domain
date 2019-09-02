@@ -2,6 +2,7 @@ using CK.Core;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace CK.Observable
 {
@@ -41,12 +42,18 @@ namespace CK.Observable
         /// </summary>
         public readonly CKExceptionData ClientError;
 
+        /// <summary>
+        /// Exposes all post actions that must be executed.
+        /// </summary>
+        public IReadOnlyList<Func<IActivityMonitor, Task>> PostActions { get; }
+
         internal TransactionResult( IReadOnlyList<ObservableEvent> e, IReadOnlyList<ObservableCommand> c )
         {
             Events = e;
             Commands = c;
             Errors = Array.Empty<CKExceptionData>();
             ClientError = null;
+            PostActions = new List<Func<IActivityMonitor, Task>>();
         }
 
         internal TransactionResult( IReadOnlyList<CKExceptionData> errors )
@@ -55,6 +62,7 @@ namespace CK.Observable
             Events = Array.Empty<ObservableEvent>();
             Commands = Array.Empty<ObservableCommand>();
             ClientError = null;
+            PostActions = Array.Empty<Func<IActivityMonitor, Task>>();
         }
 
         public TransactionResult( in TransactionResult r, CKExceptionData data )
@@ -63,9 +71,13 @@ namespace CK.Observable
             Events = r.Events;
             Commands = r.Commands;
             Errors = r.Errors;
+            PostActions = r.PostActions;
             ClientError = data;
         }
 
         internal TransactionResult WithClientError( Exception ex ) => new TransactionResult(this, CKExceptionData.CreateFrom( ex ) );
+
+        internal Action<Func<IActivityMonitor, Task>> Collector => ((List<Func<IActivityMonitor, Task>>)PostActions).Add;
+
     }
 }
