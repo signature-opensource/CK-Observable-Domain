@@ -13,7 +13,7 @@ namespace CK.Observable.Domain.Tests.Clients
         public void Modify_creates_snapshot()
         {
             var client = new MemoryTransactionProviderClient();
-            var d = new ObservableDomain<TestObservableRootObject>( client, TestHelper.Monitor );
+            var d = new ObservableDomain<TestObservableRootObject>( "TEST", client, TestHelper.Monitor );
 
             var transactionResult = d.Modify( TestHelper.Monitor, () =>
             {
@@ -33,7 +33,7 @@ namespace CK.Observable.Domain.Tests.Clients
         [Test]
         public void Exception_during_Write_adds_ClientError()
         {
-            var d = new ObservableDomain<TestObservableRootObject>( new MemoryTransactionProviderClient(), TestHelper.Monitor );
+            var d = new ObservableDomain<TestObservableRootObject>( "TEST", new MemoryTransactionProviderClient(), TestHelper.Monitor );
             // Initial successful Modify
             d.Modify( TestHelper.Monitor, () =>
             {
@@ -63,7 +63,7 @@ namespace CK.Observable.Domain.Tests.Clients
         [Test]
         public void Exception_during_Modify_rolls_ObservableDomain_back()
         {
-            var d = new ObservableDomain<TestObservableRootObject>( new MemoryTransactionProviderClient(), TestHelper.Monitor );
+            var d = new ObservableDomain<TestObservableRootObject>( "TEST", new MemoryTransactionProviderClient(), TestHelper.Monitor );
             // Initial successful Modify
             d.Modify( TestHelper.Monitor, () =>
             {
@@ -97,7 +97,7 @@ namespace CK.Observable.Domain.Tests.Clients
         public void WriteSnapshotTo_creates_valid_stream_for_ObservableDomain_ctor()
         {
             var client1 = new TestMemoryTransactionProviderClient();
-            var d1 = new ObservableDomain<TestObservableRootObject>( client1, TestHelper.Monitor );
+            var d1 = new ObservableDomain<TestObservableRootObject>( "TEST", client1, TestHelper.Monitor );
             // Initial successful Modify
             d1.Modify( TestHelper.Monitor, () =>
             {
@@ -109,6 +109,7 @@ namespace CK.Observable.Domain.Tests.Clients
             {
                 // Create domain from that snapshot
                 var d2 = new ObservableDomain<TestObservableRootObject>(
+                    "TEST",
                     new MemoryTransactionProviderClient(),
                     TestHelper.Monitor,
                     domainStream
@@ -128,7 +129,7 @@ namespace CK.Observable.Domain.Tests.Clients
         public void WriteSnapshotTo_creates_valid_stream_for_Client_OnDomainCreated()
         {
             var client1 = new TestMemoryTransactionProviderClient();
-            var d1 = new ObservableDomain<TestObservableRootObject>( client1, TestHelper.Monitor );
+            var d1 = new ObservableDomain<TestObservableRootObject>( "TEST", client1, TestHelper.Monitor );
             // Initial successful Modify
             d1.Modify( TestHelper.Monitor, () =>
             {
@@ -140,6 +141,7 @@ namespace CK.Observable.Domain.Tests.Clients
             {
                 // Create domain using a client with this snapshot
                 var d2 = new ObservableDomain<TestObservableRootObject>(
+                    "TEST",
                     new TestMemoryTransactionProviderClient( domainStream ),
                     TestHelper.Monitor
                 );
@@ -158,7 +160,7 @@ namespace CK.Observable.Domain.Tests.Clients
         public void ObservableDomain_loads_from_Client_when_given_both_Client_and_ctor_Stream()
         {
             var client1 = new TestMemoryTransactionProviderClient();
-            var d1 = new ObservableDomain<TestObservableRootObject>( client1, TestHelper.Monitor );
+            var d1 = new ObservableDomain<TestObservableRootObject>( "TEST", client1, TestHelper.Monitor );
             // Initial successful Modify
             d1.Modify( TestHelper.Monitor, () =>
             {
@@ -179,6 +181,7 @@ namespace CK.Observable.Domain.Tests.Clients
                     // Create domain using BOTH ctor Stream (domainStream1)
                     // AND custom load from OnDomainCreated (domainStream2)
                     var d2 = new ObservableDomain<TestObservableRootObject>(
+                        "TEST",
                         new TestMemoryTransactionProviderClient( domainStream2 ),
                         TestHelper.Monitor,
                         domainStream1
@@ -199,7 +202,7 @@ namespace CK.Observable.Domain.Tests.Clients
         [Test]
         public void Rollback_disposes_replaced_ObservableObjects()
         {
-            var d = new ObservableDomain<TestObservableRootObject>( new MemoryTransactionProviderClient(), TestHelper.Monitor );
+            var d = new ObservableDomain<TestObservableRootObject>( "TEST", new MemoryTransactionProviderClient(), TestHelper.Monitor );
             // Initial successful Modify
             TestObservableRootObject initialObservableObject = null;
             TestObservableRootObject restoredObservableObject = null;

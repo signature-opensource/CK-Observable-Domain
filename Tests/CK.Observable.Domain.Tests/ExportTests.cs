@@ -16,7 +16,7 @@ namespace CK.Observable.Domain.Tests
         {
             var eventCollector = new TransactionEventCollectorClient();
 
-            var d = new ObservableDomain( eventCollector, TestHelper.Monitor );
+            var d = new ObservableDomain( "TEST", eventCollector, TestHelper.Monitor );
             d.TransactionSerialNumber.Should().Be( 0, "Nothing happened yet." );
 
             string initial = d.ExportToString();
@@ -137,7 +137,7 @@ namespace CK.Observable.Domain.Tests
         {
             var eventCollector = new TransactionEventCollectorClient( new MemoryTransactionProviderClient() );
 
-            var d = new ObservableDomain<RootSample.ApplicationState>( eventCollector );
+            var d = new ObservableDomain<RootSample.ApplicationState>( "TEST", eventCollector );
             d.Modify( TestHelper.Monitor, () =>
             {
                 var p1 = new RootSample.ProductInfo( "Name n°1", 12 );

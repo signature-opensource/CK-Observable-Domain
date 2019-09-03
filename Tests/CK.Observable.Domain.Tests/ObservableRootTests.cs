@@ -14,7 +14,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void initializing_and_persisting_new_empty_domain()
         {
-            var d = new ObservableDomain<ApplicationState>();
+            var d = new ObservableDomain<ApplicationState>( "TEST" );
             d.Root.Should().NotBeNull();
             d.TransactionSerialNumber.Should().Be( 0 );
 
@@ -28,7 +28,7 @@ namespace CK.Observable.Domain.Tests
         {
             var eventCollector = new TransactionEventCollectorClient();
 
-            var d = new ObservableDomain<ApplicationState>( eventCollector );
+            var d = new ObservableDomain<ApplicationState>( "TEST", eventCollector );
             d.Root.ToDoNumbers.Should().BeEmpty();
 
             d.Modify( TestHelper.Monitor, () =>
@@ -46,10 +46,10 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void serialization_tests()
         {
-            var d = new ObservableDomain<ApplicationState>();
+            var d = new ObservableDomain<ApplicationState>( "TEST" );
             d.Modify( TestHelper.Monitor, () =>
             {
-                d.Root.ToDoNumbers.AddRange( Enumerable.Range(10, 20) );
+                d.Root.ToDoNumbers.AddRange( Enumerable.Range( 10, 20 ) );
                 for( int i = 0; i < 30; ++i )
                 {
                     var pInfo = new ProductInfo( $"Product Info n°{i}", i );
@@ -59,7 +59,7 @@ namespace CK.Observable.Domain.Tests
                 }
             } );
             var services = new SimpleServiceContainer();
-            services.Add<ObservableDomain>( new ObservableDomain<ApplicationState>() );
+            services.Add<ObservableDomain>( new ObservableDomain<ApplicationState>( "TEST" ) );
             BinarySerializer.IdempotenceCheck( d.Root, services );
         }
 
@@ -69,7 +69,7 @@ namespace CK.Observable.Domain.Tests
             {
                 domain.Save( s, leaveOpen: true );
                 s.Position = 0;
-                return new ObservableDomain<T>( null, null, s );
+                return new ObservableDomain<T>( "TEST", null, null, s );
             }
         }
     }

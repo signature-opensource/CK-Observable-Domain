@@ -384,8 +384,8 @@ namespace CK.Observable
         /// Initializes a new <see cref="ObservableDomain"/> with an autonomous <see cref="Monitor"/>
         /// and no <see cref="DomainClient"/>.
         /// </summary>
-        public ObservableDomain()
-            : this( null, null )
+        public ObservableDomain( string domainName )
+            : this( domainName, null, null )
         {
         }
 
@@ -394,17 +394,17 @@ namespace CK.Observable
         /// any <see cref="DomainClient"/>.
         /// </summary>
         /// <param name="monitor">The monitor to use. Can be null: a new monitor is created.</param>
-        public ObservableDomain( IActivityMonitor monitor )
-            : this( null, monitor )
+        public ObservableDomain( string domainName, IActivityMonitor monitor )
+            : this( domainName, null, monitor )
         {
         }
 
         /// <summary>
         /// Initializes a new <see cref="ObservableDomain"/> with a <see cref="DomainClient"/>.
         /// </summary>
-        /// <param name="tm">The associated transaction manager to use. Can be null.</param>
-        public ObservableDomain( IObservableDomainClient tm )
-            : this( tm, null )
+        /// <param name="client">The associated transaction manager to use. Can be null.</param>
+        public ObservableDomain( string domainName, IObservableDomainClient client )
+            : this( domainName, client, null )
         {
         }
 
@@ -413,35 +413,37 @@ namespace CK.Observable
         /// a <see cref="DomainClient"/> an optionals explicit exporter, serializer
         /// and deserializer handlers.
         /// </summary>
-        /// <param name="tm">The transaction manager to use. Can be null.</param>
+        /// <param name="client">The transaction manager to use. Can be null.</param>
         /// <param name="monitor">The monitor to use. Can be null.</param>
         /// <param name="exporters">Optional exporters handler.</param>
         /// <param name="serializers">Optional serializers handler.</param>
         /// <param name="deserializers">Optional deserializers handler.</param>
         public ObservableDomain(
-            IObservableDomainClient tm,
+            string domainName,
+            IObservableDomainClient client,
             IActivityMonitor monitor,
             IExporterResolver exporters = null,
             ISerializerResolver serializers = null,
             IDeserializerResolver deserializers = null )
-            : this( true, tm, monitor, exporters, serializers, deserializers )
+            : this( domainName, true, client, monitor, exporters, serializers, deserializers )
         {
         }
 
         ObservableDomain(
-            bool callTransactionManagerOnCreate,
-            IObservableDomainClient tm,
+            string domainName,
+            bool callClientOnCreate,
+            IObservableDomainClient client,
             IActivityMonitor monitor,
             IExporterResolver exporters,
             ISerializerResolver serializers,
             IDeserializerResolver deserializers )
         {
-            DomainNumber = Interlocked.Increment( ref _domainNumber );
-            Monitor = monitor ?? new ActivityMonitor( $"Observable Domain n°{DomainNumber}." );
+            DomainName = domainName ?? throw new ArgumentNullException( nameof( domainName ) );
+            Monitor = monitor ?? new ActivityMonitor( $"Observable Domain {DomainName}." );
             _exporters = exporters ?? ExporterRegistry.Default;
             _serializers = serializers ?? SerializerRegistry.Default;
             _deserializers = deserializers ?? DeserializerRegistry.Default;
-            DomainClient = tm;
+            DomainClient = client;
             _objects = new ObservableObject[512];
             _freeList = new Stack<int>();
             _properties = new Dictionary<string, PropInfo>();
@@ -451,13 +453,13 @@ namespace CK.Observable
             _roots = new List<ObservableRootObject>();
             // LockRecursionPolicy.NoRecursion: reentrancy must NOT be allowed.
             _lock = new ReaderWriterLockSlim( LockRecursionPolicy.NoRecursion );
-            if( callTransactionManagerOnCreate ) tm?.OnDomainCreated( this, DateTime.UtcNow );
+            if( callClientOnCreate ) client.OnDomainCreated( this, DateTime.UtcNow );
         }
 
         /// <summary>
         /// Initializes a previously <see cref="Save"/>d domain.
         /// </summary>
-        /// <param name="tm">The transaction manager to use. Can be null.</param>
+        /// <param name="client">The transaction manager to use. Can be null.</param>
         /// <param name="monitor">The monitor associated to the domain. Can be null (a dedicated one will be created).</param>
         /// <param name="s">The input stream.</param>
         /// <param name="leaveOpen">True to leave the stream opened.</param>
@@ -466,7 +468,8 @@ namespace CK.Observable
         /// <param name="serializers">Optional serializers handler.</param>
         /// <param name="deserializers">Optional deserializers handler.</param>
         public ObservableDomain(
-            IObservableDomainClient tm,
+            string domainName,
+            IObservableDomainClient client,
             IActivityMonitor monitor,
             Stream s,
             bool leaveOpen = false,
@@ -474,10 +477,10 @@ namespace CK.Observable
             IExporterResolver exporters = null,
             ISerializerResolver serializers = null,
             IDeserializerResolver deserializers = null )
-            : this( false, tm, monitor, exporters, serializers, deserializers )
+            : this( domainName, false, client, monitor, exporters, serializers, deserializers )
         {
             Load( s, leaveOpen, encoding );
-            tm?.OnDomainCreated( this, DateTime.UtcNow );
+            client?.OnDomainCreated( this, DateTime.UtcNow );
         }
 
         /// <summary>
@@ -559,16 +562,13 @@ namespace CK.Observable
         public int TransactionSerialNumber => _transactionSerialNumber;
 
         /// <summary>
-        /// Unique incrmental number for each domain in the AppDomain.
-        /// </summary>
-        public int DomainNumber { get; }
-
-        /// <summary>
         /// Gets the monitor that is bound to this domain.
         /// This is never null: an autonomous monitor is automatically created if none is
         /// provided to constructors.
         /// </summary>
         public IActivityMonitor Monitor { get; private set; }
+
+        public string DomainName { get; }
 
         /// <summary>
         /// Gets the associated client (head of the Chain of Responsibility).
@@ -758,7 +758,8 @@ namespace CK.Observable
                 {
                     using( isWrite ? Monitor.OpenInfo( $"Transacted saving domain ({_actualObjectCount} objects)." ) : null )
                     {
-                        w.WriteSmallInt32( 0 ); // Version
+                        w.WriteSmallInt32( 1 ); // Version
+                        w.Write( DomainName );
                         w.Write( _transactionSerialNumber );
                         w.Write( _actualObjectCount );
                         w.WriteNonNegativeSmallInt32( _freeList.Count );
@@ -823,6 +824,11 @@ namespace CK.Observable
             try
             {
                 int version = r.ReadSmallInt32();
+                if( version > 0 )
+                {
+                    var check = r.ReadString();
+                    if( DomainName != check ) throw new InvalidDataException( $"Domain name mismatch: reading '{check}' into domain named '{DomainName}'." );
+                }
                 _transactionSerialNumber = r.ReadInt32();
                 _actualObjectCount = r.ReadInt32();
 

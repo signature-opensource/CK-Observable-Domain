@@ -18,7 +18,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void exportable_but_not_serializable()
         {
-            var d = new ObservableDomain();
+            var d = new ObservableDomain( "TEST" );
             d.Modify( TestHelper.Monitor, () =>
             {
                 new ExportableOnly() { Name = "Albert" };
@@ -30,7 +30,7 @@ namespace CK.Observable.Domain.Tests
         }
 
         [NotExportable]
-        [SerializationVersion(0)]
+        [SerializationVersion( 0 )]
         public class SerializableOnly : ObservableObject
         {
             public SerializableOnly()
@@ -55,7 +55,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void serializable_but_not_exportable()
         {
-            var d = new ObservableDomain();
+            var d = new ObservableDomain( "TEST" );
             d.Modify( TestHelper.Monitor, () =>
             {
                 new SerializableOnly() { Name = "Albert" };
@@ -64,7 +64,7 @@ namespace CK.Observable.Domain.Tests
             d2.AllObjects.OfType<SerializableOnly>().Single().Name.Should().Be( "Albert" );
 
             d.Invoking( sut => sut.ExportToString() )
-                .Should().Throw<InvalidOperationException>().WithMessage( "*is not exportable*" ); 
+                .Should().Throw<InvalidOperationException>().WithMessage( "*is not exportable*" );
         }
 
     }

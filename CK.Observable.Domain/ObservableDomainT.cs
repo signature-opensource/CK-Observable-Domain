@@ -18,8 +18,8 @@ namespace CK.Observable
         /// The <see cref="Root"/> is a new <typeparamref name="T"/> (obtained by calling a constructor
         /// that accepts a ObservableDomain).
         /// </summary>
-        public ObservableDomain()
-            : this( null, null )
+        public ObservableDomain( string domainName )
+            : this( domainName, null, null )
         {
         }
 
@@ -29,8 +29,8 @@ namespace CK.Observable
         /// that accepts a ObservableDomain).
         /// </summary>
         /// <param name="monitor">Monitor to use (when null, an autonomous monitor is automatically created).</param>
-        public ObservableDomain( IActivityMonitor monitor )
-            : this( null, monitor )
+        public ObservableDomain( string domainName, IActivityMonitor monitor )
+            : this( domainName, null, monitor )
         {
         }
 
@@ -39,9 +39,9 @@ namespace CK.Observable
         /// The <see cref="Root"/> is a new <typeparamref name="T"/> (obtained by calling the constructor
         /// that accepts a ObservableDomain).
         /// </summary>
-        /// <param name="tm">The transaction manager. Can be null.</param>
-        public ObservableDomain( IObservableDomainClient tm )
-            : this( tm, null )
+        /// <param name="client">The transaction manager. Can be null.</param>
+        public ObservableDomain( string domainName, IObservableDomainClient client )
+            : this( domainName, client, null )
         {
         }
 
@@ -50,33 +50,34 @@ namespace CK.Observable
         /// The <see cref="Root"/> is a new <typeparamref name="T"/> (obtained by calling the constructor
         /// that accepts a ObservableDomain).
         /// </summary>
-        /// <param name="tm">The transaction manager. Can be null.</param>
+        /// <param name="client">The transaction manager. Can be null.</param>
         /// <param name="monitor">Monitor to use (when null, an autonomous monitor is automatically created).</param>
-        public ObservableDomain( IObservableDomainClient tm, IActivityMonitor monitor )
-            : base( tm, monitor )
+        public ObservableDomain( string domainName, IObservableDomainClient client, IActivityMonitor monitor )
+            : base( domainName, client, monitor )
         {
             if( AllRoots.Count != 0 ) BindRoots();
             else using( var initialization = new InitializationTransaction( this ) )
-            {
-                Root = AddRoot<T>( initialization );
-            }
+                {
+                    Root = AddRoot<T>( initialization );
+                }
         }
 
         /// <summary>
         /// Initializes a previously <see cref="ObservableDomain.Save"/>d domain.
         /// </summary>
-        /// <param name="tm">The transaction manager to use. Can be null.</param>
+        /// <param name="client">The transaction manager to use. Can be null.</param>
         /// <param name="monitor">The monitor associated to the domain. Can be null (a dedicated one will be created).</param>
         /// <param name="s">The input stream.</param>
         /// <param name="leaveOpen">True to leave the stream opened.</param>
         /// <param name="encoding">Optional encoding for characters. Defaults to UTF-8.</param>
         public ObservableDomain(
-            IObservableDomainClient tm,
+            string domainName,
+            IObservableDomainClient client,
             IActivityMonitor monitor,
             Stream s,
             bool leaveOpen = false,
             Encoding encoding = null )
-            : base( tm, monitor, s, leaveOpen, encoding )
+            : base( domainName, client, monitor, s, leaveOpen, encoding )
         {
             BindRoots();
         }

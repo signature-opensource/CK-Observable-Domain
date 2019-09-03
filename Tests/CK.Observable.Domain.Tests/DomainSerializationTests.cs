@@ -14,7 +14,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void simple_serialization()
         {
-            var domain = new ObservableDomain( TestHelper.Monitor );
+            var domain = new ObservableDomain( "TEST", TestHelper.Monitor );
             domain.Modify( TestHelper.Monitor, () =>
             {
                 var car = new Car( "Hello" );
@@ -36,14 +36,14 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void serialization_with_mutiple_types()
         {
-            var domain = new ObservableDomain( TestHelper.Monitor );
+            var domain = new ObservableDomain( "TEST", TestHelper.Monitor );
             MultiPropertyType defValue = null;
             domain.Modify( TestHelper.Monitor, () =>
             {
                 defValue = new MultiPropertyType();
                 var other = new MultiPropertyType();
                 domain.AllObjects.First().Should().BeSameAs( defValue );
-                domain.AllObjects.ElementAt(1).Should().BeSameAs( other );
+                domain.AllObjects.ElementAt( 1 ).Should().BeSameAs( other );
             } );
 
             var d2 = SaveAndLoad( domain );
@@ -65,7 +65,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void with_cycle_serialization()
         {
-            var domain = new ObservableDomain( TestHelper.Monitor );
+            var domain = new ObservableDomain( "TEST", TestHelper.Monitor );
             domain.Modify( TestHelper.Monitor, () =>
             {
                 var g = new Garage();
@@ -86,7 +86,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void with_cycle_serialization_between_2_objects()
         {
-            var domain = new ObservableDomain( TestHelper.Monitor );
+            var domain = new ObservableDomain( "TEST", TestHelper.Monitor );
             domain.Modify( TestHelper.Monitor, () =>
             {
                 var p1 = new Person() { FirstName = "A" };
@@ -111,7 +111,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void ultimate_cycle_serialization()
         {
-            var domain = new ObservableDomain( TestHelper.Monitor );
+            var domain = new ObservableDomain( "TEST", TestHelper.Monitor );
             domain.Modify( TestHelper.Monitor, () =>
             {
                 var p = new Person() { FirstName = "P" };
@@ -139,7 +139,7 @@ namespace CK.Observable.Domain.Tests
             using( var s = new MemoryStream() )
             {
                 domain.Save( s, leaveOpen: true );
-                var d = new ObservableDomain( TestHelper.Monitor );
+                var d = new ObservableDomain( "TEST", TestHelper.Monitor );
                 s.Position = 0;
                 d.Load( s, leaveOpen: true );
                 return d;

@@ -10,7 +10,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void immutable_string_serialization_test()
         {
-            var od = new ObservableDomain<CustomRoot>();
+            var od = new ObservableDomain<CustomRoot>( "TEST" );
 
             od.Modify( TestHelper.Monitor, () =>
             {
@@ -28,7 +28,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void created_then_disposed_event_test()
         {
-            var od = new ObservableDomain<CustomRoot>();
+            var od = new ObservableDomain<CustomRoot>( "TEST" );
 
             // Prepare initial state
             od.Modify( TestHelper.Monitor, () =>

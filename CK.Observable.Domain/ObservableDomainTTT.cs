@@ -13,7 +13,7 @@ namespace CK.Observable
     /// <typeparam name="T1">Type of the first root object.</typeparam>
     /// <typeparam name="T2">Type of the second root object.</typeparam>
     /// <typeparam name="T3">Type of the third root object.</typeparam>
-    public class ObservableDomain<T1,T2,T3> : ObservableDomain
+    public class ObservableDomain<T1, T2, T3> : ObservableDomain
         where T1 : ObservableRootObject
         where T2 : ObservableRootObject
         where T3 : ObservableRootObject
@@ -23,8 +23,8 @@ namespace CK.Observable
         /// autonomous <see cref="ObservableDomain.Monitor"/> and no <see cref="ObservableDomain.DomainClient"/>.
         /// The roots are initialized with new instances of their respective type (obtained by calling the constructor that accepts a ObservableDomain).
         /// </summary>
-        public ObservableDomain()
-            : this( null, null )
+        public ObservableDomain( string domainName )
+            : this( domainName, null, null )
         {
         }
 
@@ -33,8 +33,8 @@ namespace CK.Observable
         /// The roots are initialized with new instances of their respective type (obtained by calling the constructor that accepts a ObservableDomain).
         /// </summary>
         /// <param name="monitor">Monitor to use (when null, an autonomous monitor is automatically created).</param>
-        public ObservableDomain( IActivityMonitor monitor )
-            : this( null, monitor )
+        public ObservableDomain( string domainName, IActivityMonitor monitor )
+            : this( domainName, null, monitor )
         {
         }
 
@@ -42,9 +42,9 @@ namespace CK.Observable
         /// Initializes a new <see cref="ObservableDomain{T1,T2,T3}"/> with an autonomous <see cref="ObservableDomain.Monitor"/>.
         /// The roots are initialized with new instances of their respective type (obtained by calling the constructor that accepts a ObservableDomain).
         /// </summary>
-        /// <param name="tm">The transaction manager. Can be null.</param>
-        public ObservableDomain( IObservableDomainClient tm )
-            : this( tm, null )
+        /// <param name="client">The transaction manager. Can be null.</param>
+        public ObservableDomain( string domainName, IObservableDomainClient client )
+            : this( domainName, client, null )
         {
         }
 
@@ -52,35 +52,36 @@ namespace CK.Observable
         /// Initializes a new <see cref="ObservableDomain{T1,T2,T3}"/>.
         /// The roots are initialized with new instances of their respective type (obtained by calling the constructor that accepts a ObservableDomain).
         /// </summary>
-        /// <param name="tm">The transaction manager. Can be null.</param>
+        /// <param name="client">The transaction manager. Can be null.</param>
         /// <param name="monitor">Monitor to use (when null, an autonomous monitor is automatically created).</param>
-        public ObservableDomain( IObservableDomainClient tm, IActivityMonitor monitor )
-            : base( tm, monitor )
+        public ObservableDomain( string domainName, IObservableDomainClient client, IActivityMonitor monitor )
+            : base( domainName, client, monitor )
         {
             if( AllRoots.Count != 0 ) BindRoots();
             else using( var initialization = new InitializationTransaction( this ) )
-            {
-                Root1 = AddRoot<T1>( initialization );
-                Root2 = AddRoot<T2>( initialization );
-                Root3 = AddRoot<T3>( initialization );
-            }
+                {
+                    Root1 = AddRoot<T1>( initialization );
+                    Root2 = AddRoot<T2>( initialization );
+                    Root3 = AddRoot<T3>( initialization );
+                }
         }
 
         /// <summary>
         /// Initializes a previously <see cref="ObservableDomain.Save"/>d domain.
         /// </summary>
-        /// <param name="tm">The transaction manager to use. Can be null.</param>
+        /// <param name="client">The transaction manager to use. Can be null.</param>
         /// <param name="monitor">The monitor associated to the domain. Can be null (a dedicated one will be created).</param>
         /// <param name="s">The input stream.</param>
         /// <param name="leaveOpen">True to leave the stream opened.</param>
         /// <param name="encoding">Optional encoding for characters. Defaults to UTF-8.</param>
         public ObservableDomain(
-            IObservableDomainClient tm,
+            string domainName,
+            IObservableDomainClient client,
             IActivityMonitor monitor,
             Stream s,
             bool leaveOpen = false,
             Encoding encoding = null )
-            : base( tm, monitor, s, leaveOpen, encoding )
+            : base( domainName, client, monitor, s, leaveOpen, encoding )
         {
             BindRoots();
         }
