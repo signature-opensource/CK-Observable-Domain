@@ -12,6 +12,8 @@ namespace CK.Observable
     /// </summary>
     public class TransactionResult
     {
+        List<Func<IActivityMonitor, Task>> _rawPostActions;
+
         /// <summary>
         /// The empty transaction result with no events and no commands: both lists are empty.
         /// </summary>
@@ -50,7 +52,31 @@ namespace CK.Observable
         /// <summary>
         /// Exposes all post actions that must be executed.
         /// </summary>
-        public IReadOnlyList<Func<IActivityMonitor, Task>> PostActions { get; }
+        public IReadOnlyList<Func<IActivityMonitor, Task>> PostActions => (IReadOnlyList<Func<IActivityMonitor, Task>>)_rawPostActions
+                                                                            ?? Array.Empty<Func<IActivityMonitor, Task>>();
+
+        /// <summary>
+        /// Attempts to executes all registered <see cref="PostActions"/> if any.
+        /// On error, nothing is done (except logging the error) and the culprit is let as the first next action to execute.
+        /// </summary>
+        /// <param name="m">The monitor to use.</param>
+        /// <returns>The awaitable.</returns>
+        public async Task ExecutePostActionsAsync( IActivityMonitor m )
+        {
+            try
+            {
+                while( _rawPostActions.Count > 0 )
+                {
+                    await _rawPostActions[0].Invoke( m );
+                    _rawPostActions.RemoveAt( 0 );
+                }
+            }
+            catch( Exception ex )
+            {
+                m.Error( ex );
+                throw;
+            }
+        }
 
         internal TransactionResult( SuccessfulTransactionContext c )
         {
@@ -58,7 +84,7 @@ namespace CK.Observable
             Events = c.Events;
             Commands = c.Commands;
             Errors = Array.Empty<CKExceptionData>();
-            PostActions = c.PostActions;
+            _rawPostActions = c.RawPostActions;
         }
 
         internal TransactionResult( IReadOnlyList<CKExceptionData> errors )
@@ -67,7 +93,6 @@ namespace CK.Observable
             Errors = errors;
             Events = Array.Empty<ObservableEvent>();
             Commands = Array.Empty<ObservableCommand>();
-            PostActions = Array.Empty<Func<IActivityMonitor, Task>>();
         }
 
         TransactionResult( in TransactionResult r, CKExceptionData data )
@@ -77,7 +102,7 @@ namespace CK.Observable
             Events = r.Events;
             Commands = r.Commands;
             Errors = r.Errors;
-            PostActions = r.PostActions;
+            _rawPostActions = r._rawPostActions;
             ClientError = data;
         }
 

@@ -40,6 +40,8 @@ namespace CK.Observable
         /// </summary>
         public IReadOnlyList<Func<IActivityMonitor, Task>> PostActions => _postActions;
 
+        internal List<Func<IActivityMonitor, Task>> RawPostActions => _postActions;
+
         /// <summary>
         /// Registers a new action that must be executed.
         /// </summary>
