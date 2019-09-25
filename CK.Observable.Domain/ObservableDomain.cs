@@ -153,7 +153,7 @@ namespace CK.Observable
                 _commands = new List<ObservableCommand>();
             }
 
-            public TransactionResult Commit( Func<string, PropInfo> ensurePropertInfo )
+            public SuccessfulTransactionContext Commit( ObservableDomain domain, Func<string, PropInfo> ensurePropertInfo )
             {
                 _changeEvents.RemoveAll( e => e is ICollectionEvent c && c.Object.IsDisposed );
                 foreach( var p in _propChanged.Values )
@@ -179,7 +179,7 @@ namespace CK.Observable
                         _changeEvents.Add( new PropertyChangedEvent( kv.Key, pInfo.PropertyId, pInfo.Name, propValue ) );
                     }
                 }
-                var result = new TransactionResult( _changeEvents.ToArray(), _commands.ToArray() );
+                var result = new SuccessfulTransactionContext( domain, _changeEvents.ToArray(), _commands.ToArray() );
                 Reset();
                 return result;
             }
@@ -352,16 +352,17 @@ namespace CK.Observable
                 }
                 else
                 {
-                    _result = _domain._changeTracker.Commit( _domain.EnsurePropertyInfo );
+                    SuccessfulTransactionContext ctx = _domain._changeTracker.Commit( _domain, _domain.EnsurePropertyInfo );
                     ++_domain._transactionSerialNumber;
                     try
                     {
-                        _domain.DomainClient?.OnTransactionCommit( _domain, DateTime.UtcNow, _result.Events, _result.Commands, _result.Collector );
+                        _domain.DomainClient?.OnTransactionCommit( ctx );
+                        _result = new TransactionResult( ctx );
                     }
                     catch( Exception ex )
                     {
                         _domain.Monitor.Fatal( "Error in IObservableTransactionManager.OnTransactionCommit.", ex );
-                        _result = _result.WithClientError( ex );
+                        _result = new TransactionResult( ctx ).WithClientError( ex );
                     }
                 }
                 _domain.Monitor = _previousMonitor;

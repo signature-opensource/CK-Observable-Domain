@@ -139,19 +139,14 @@ namespace CK.Observable
 
         void IObservableDomainClient.OnDomainCreated( ObservableDomain d, DateTime timeUtc ) => _next?.OnDomainCreated( d, timeUtc );
 
-        void IObservableDomainClient.OnTransactionCommit(
-            ObservableDomain d,
-            DateTime timeUtc,
-            IReadOnlyList<ObservableEvent> events,
-            IReadOnlyList<ObservableCommand> commands,
-            Action<Func<IActivityMonitor, Task>> postActionsCollector )
+        void IObservableDomainClient.OnTransactionCommit( in SuccessfulTransactionContext c )
         {
             _buffer.GetStringBuilder().Clear();
             _exporter.Reset();
-            foreach( var e in events ) e.Export( _exporter );
-            _events.Add( new TransactionEvent( d.TransactionSerialNumber, timeUtc, events, _buffer.ToString() ) );
+            foreach( var e in c.Events ) e.Export( _exporter );
+            _events.Add( new TransactionEvent( c.ObservableDomain.TransactionSerialNumber, c.TimeUtc, c.Events, _buffer.ToString() ) );
             ApplyKeepDuration();
-            _next?.OnTransactionCommit( d, timeUtc, events, commands, postActionsCollector );
+            _next?.OnTransactionCommit( c );
         }
 
         void IObservableDomainClient.OnTransactionFailure( ObservableDomain d, IReadOnlyList<CKExceptionData> errors )

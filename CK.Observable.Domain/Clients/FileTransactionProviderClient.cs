@@ -89,25 +89,19 @@ namespace CK.Observable
         }
 
         /// <inheritdoc />
-        public override void OnTransactionCommit(
-            ObservableDomain d,
-            DateTime timeUtc,
-            IReadOnlyList<ObservableEvent> events,
-            IReadOnlyList<ObservableCommand> commands,
-            Action<Func<IActivityMonitor, Task>> postActionsCollector )
+        public override void OnTransactionCommit( in SuccessfulTransactionContext c )
         {
-            base.OnTransactionCommit( d, timeUtc, events, commands, postActionsCollector );
-
+            base.OnTransactionCommit( c );
             if( _minimumDueTimeMs == 0 )
             {
                 // Write every snapshot
                 DoWriteFile();
             }
-            else if( _minimumDueTimeMs > 0 && timeUtc > _nextDueTimeUtc )
+            else if( _minimumDueTimeMs > 0 && c.TimeUtc > _nextDueTimeUtc )
             {
                 // Write snapshot if due, then reschedule it.
                 DoWriteFile();
-                RescheduleDueTime( timeUtc );
+                RescheduleDueTime( c.TimeUtc );
             }
         }
 

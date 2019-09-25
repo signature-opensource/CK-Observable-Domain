@@ -32,12 +32,8 @@ namespace CK.Observable
         /// <summary>
         /// Called when a transaction ends successfully.
         /// </summary>
-        /// <param name="d">The associated domain.</param>
-        /// <param name="timeUtc">The date time utc of the commit.</param>
-        /// <param name="events">The events of the transaction. Can be empty.</param>
-        /// <param name="commands">The commands emitted by the transaction and that should be handled. Can be empty.</param>
-        /// <param name="postActionsCollector">Collector for asynchronous actions to execute.</param>
-        void OnTransactionCommit( ObservableDomain d, DateTime timeUtc, IReadOnlyList<ObservableEvent> events, IReadOnlyList<ObservableCommand> commands, Action<Func<IActivityMonitor,Task>> postActionsCollector );
+        /// <param name="context">The successful context.</param>
+        void OnTransactionCommit( in SuccessfulTransactionContext context );
 
         /// <summary>
         /// Called when an error occurred in a transaction.

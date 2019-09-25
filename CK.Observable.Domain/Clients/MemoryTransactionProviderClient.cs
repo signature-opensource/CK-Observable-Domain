@@ -64,19 +64,11 @@ namespace CK.Observable
         /// <summary>
         /// Default behavior is to create a snapshot (simply calls <see cref="CreateSnapshot"/> protected method).
         /// </summary>
-        /// <param name="d">The associated domain.</param>
-        /// <param name="timeUtc">The date time utc of the commit.</param>
-        /// <param name="events">The events.</param>
-        /// <param name="commands">The commands emitted by the transaction and that should be handled. Can be empty.</param>
-        public virtual void OnTransactionCommit(
-            ObservableDomain d,
-            DateTime timeUtc,
-            IReadOnlyList<ObservableEvent> events,
-            IReadOnlyList<ObservableCommand> commands,
-            Action<Func<IActivityMonitor, Task>> postActionsCollector )
+        /// <param name="c">The transaction context.</param>
+        public virtual void OnTransactionCommit( in SuccessfulTransactionContext c )
         {
-            _next?.OnTransactionCommit( d, timeUtc, events, commands, postActionsCollector );
-            CreateSnapshot( d, timeUtc );
+            _next?.OnTransactionCommit( c );
+            CreateSnapshot( c.ObservableDomain, c.TimeUtc );
         }
 
         /// <summary>
