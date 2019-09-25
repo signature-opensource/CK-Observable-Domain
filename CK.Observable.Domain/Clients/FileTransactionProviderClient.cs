@@ -16,7 +16,9 @@ namespace CK.Observable
     /// </summary>
     public class FileTransactionProviderClient : MemoryTransactionProviderClient
     {
-        readonly NormalizedPath _path;
+        readonly NormalizedPath _filePath;
+        readonly NormalizedPath _tmpFilePath;
+        readonly NormalizedPath _bakFilePath;
         readonly int _minimumDueTimeMs;
         readonly TimeSpan _minimumDueTimeSpan;
         readonly object _fileLock;
@@ -26,7 +28,7 @@ namespace CK.Observable
         /// <summary>
         /// Initializes a new <see cref="MemoryTransactionProviderClient"/>.
         /// </summary>
-        /// <param name="path">
+        /// <param name="filePath">
         /// The path to the persistent file to load the domain from.
         /// This file may not exist.
         /// </param>
@@ -36,11 +38,14 @@ namespace CK.Observable
         /// If 0: Every transaction will write the file.
         /// </param>
         /// <param name="next">The next manager (can be null).</param>
-        public FileTransactionProviderClient( NormalizedPath path, int minimumDueTimeMs, IObservableDomainClient next = null )
+        public FileTransactionProviderClient( NormalizedPath filePath, int minimumDueTimeMs, IObservableDomainClient next = null )
             : base( next )
         {
             if( minimumDueTimeMs < -1 ) throw new ArgumentException( $"{minimumDueTimeMs} is not a valid value. Valid values are -1, 0, or above.", nameof( minimumDueTimeMs ) );
-            _path = path;
+            _filePath = filePath;
+            _tmpFilePath = _filePath + ".tmp";
+            _bakFilePath = _filePath + ".bak";
+
             _minimumDueTimeMs = minimumDueTimeMs;
             _fileLock = new object();
             _nextDueTimeUtc = DateTime.UtcNow; // This is re-scheduled in OnDomainCreated
@@ -57,7 +62,7 @@ namespace CK.Observable
         /// <summary>
         /// The file path provided to this instance.
         /// </summary>
-        public NormalizedPath Path => _path;
+        public NormalizedPath FilePath => _filePath;
 
         /// <summary>
         /// Loads the file if it exists (calls <see cref="MemoryTransactionProviderClient.LoadAndInitializeSnapshot(ObservableDomain, DateTime, Stream)"/>)).
@@ -68,9 +73,9 @@ namespace CK.Observable
         {
             lock( _fileLock )
             {
-                if( File.Exists( _path ) )
+                if( File.Exists( _filePath ) )
                 {
-                    using( var f = new FileStream( _path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096,
+                    using( var f = new FileStream( _filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096,
                         FileOptions.SequentialScan ) )
                     {
                         LoadAndInitializeSnapshot( d, timeUtc, f );
@@ -145,9 +150,26 @@ namespace CK.Observable
             {
                 if( _fileTransactionNumber != CurrentSerialNumber )
                 {
-                    using( var f = new FileStream( _path, FileMode.Create, FileAccess.Write, FileShare.Read, 4096, FileOptions.SequentialScan ) )
+                    using( var f = new FileStream( _tmpFilePath, FileMode.Create, FileAccess.Write, FileShare.Read, 4096, FileOptions.SequentialScan ) )
                     {
                         WriteSnapshotTo( f );
+                    }
+
+                    if( File.Exists( _filePath ) )
+                    {
+                        File.Replace(
+                            _tmpFilePath,
+                            _filePath,
+                            _bakFilePath,
+                            true
+                        );
+                    }
+                    else
+                    {
+                        File.Move(
+                            _tmpFilePath,
+                            _filePath
+                        );
                     }
 
                     _fileTransactionNumber = CurrentSerialNumber;

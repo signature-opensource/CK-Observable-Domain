@@ -15,7 +15,7 @@ namespace CK.Observable.Domain.Tests.Clients
         public void File_can_be_written_manually_with_minimumDueTime_minus_1()
         {
             var client = CreateClient( -1 );
-            FileInfo fi = new FileInfo( client.Path );
+            FileInfo fi = new FileInfo( client.FilePath );
             var d = new ObservableDomain<TestObservableRootObject>( client, TestHelper.Monitor );
 
             d.Modify( TestHelper.Monitor, () =>
@@ -37,7 +37,7 @@ namespace CK.Observable.Domain.Tests.Clients
         public void File_is_written_on_every_snapshot_with_minimumDueTime_0()
         {
             var client = CreateClient( 0 );
-            FileInfo fi = new FileInfo( client.Path );
+            FileInfo fi = new FileInfo( client.FilePath );
             var d = new ObservableDomain<TestObservableRootObject>( client, TestHelper.Monitor );
 
             d.Modify( TestHelper.Monitor, () =>
@@ -56,7 +56,7 @@ namespace CK.Observable.Domain.Tests.Clients
         {
             int dueTimeMs = 300;
             var client = CreateClient( dueTimeMs );
-            FileInfo fi = new FileInfo( client.Path );
+            FileInfo fi = new FileInfo( client.FilePath );
             var d = new ObservableDomain<TestObservableRootObject>( client, TestHelper.Monitor );
 
             // Call once - doesn't trigger the DoWrite yet
@@ -87,7 +87,7 @@ namespace CK.Observable.Domain.Tests.Clients
             int waitTimeMs = dueTimeMs + 150;
 
             var client1 = CreateClient( dueTimeMs );
-            FileInfo fi = new FileInfo( client1.Path );
+            FileInfo fi = new FileInfo( client1.FilePath );
             var d1 = new ObservableDomain<TestObservableRootObject>( client1, TestHelper.Monitor );
 
             // Call once - doesn't trigger the DoWrite yet
@@ -121,7 +121,7 @@ namespace CK.Observable.Domain.Tests.Clients
 
             // Load file with another client and domain to ensure it has the new values
 
-            var client2 = CreateClient( -1, client1.Path );
+            var client2 = CreateClient( -1, client1.FilePath );
             var d2 = new ObservableDomain<TestObservableRootObject>( client2, TestHelper.Monitor );
             using( d2.AcquireReadLock() )
             {
@@ -136,8 +136,8 @@ namespace CK.Observable.Domain.Tests.Clients
         public void Load_throws_on_invalid_file()
         {
             var client = CreateClient( 0 );
-            File.WriteAllText( client.Path, "(INVALID FILE CONTENTS)" );
-            FileInfo fi = new FileInfo( client.Path );
+            File.WriteAllText( client.FilePath, "(INVALID FILE CONTENTS)" );
+            FileInfo fi = new FileInfo( client.FilePath );
 
             Action act = () =>
             {
@@ -202,7 +202,7 @@ namespace CK.Observable.Domain.Tests.Clients
             // Create test file
             {
                 var client = CreateClient( 0 );
-                path = client.Path;
+                path = client.FilePath;
                 var d1 = new ObservableDomain<TestObservableRootObject>( client, TestHelper.Monitor );
                 d1.Modify( TestHelper.Monitor, () =>
                 {
