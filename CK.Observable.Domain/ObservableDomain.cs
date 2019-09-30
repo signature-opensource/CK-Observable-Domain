@@ -453,7 +453,7 @@ namespace CK.Observable
             _roots = new List<ObservableRootObject>();
             // LockRecursionPolicy.NoRecursion: reentrancy must NOT be allowed.
             _lock = new ReaderWriterLockSlim( LockRecursionPolicy.NoRecursion );
-            if( callClientOnCreate ) client.OnDomainCreated( this, DateTime.UtcNow );
+            if( callClientOnCreate ) client?.OnDomainCreated( this, DateTime.UtcNow );
         }
 
         /// <summary>
