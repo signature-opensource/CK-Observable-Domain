@@ -21,7 +21,7 @@
     <None Remove="TestResult.xml" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="CK.Text" Version="8.0.4--0023-develop" />
+    <PackageReference Include="CK.Text" Version="8.0.4" />
     <PackageReference Include="Cake.Npm" Version="0.17.0" />
     <PackageReference Include="SimpleGitVersion.Cake" Version="1.0.2--0000-develop" />
   </ItemGroup>
