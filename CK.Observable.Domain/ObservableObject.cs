@@ -79,9 +79,9 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Gives access to the 
+        /// Gives access to the monitor to use.
         /// </summary>
-        protected IActivityMonitor DomainMonitor => Domain.Monitor;
+        protected IActivityMonitor Monitor => Domain.Monitor;
 
         /// <summary>
         /// Gets whether this object has been disposed.

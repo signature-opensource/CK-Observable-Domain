@@ -17,7 +17,7 @@ namespace CK.Observable
     /// You may use specialized <see cref="ObservableChannel{T}"/> or <see cref="ObservableDomain{T1, T2, T3, T4}"/>
     /// for strongly typed roots.
     /// </summary>
-    public class ObservableDomain
+    public partial class ObservableDomain
     {
         /// <summary>
         /// An artificial <see cref="CKExceptionData"/> that is added to
@@ -48,14 +48,13 @@ namespace CK.Observable
             }
         }
 
-        static int _domainNumber;
-
         [ThreadStatic]
         internal static ObservableDomain CurrentThreadDomain;
 
         internal readonly IExporterResolver _exporters;
         readonly ISerializerResolver _serializers;
         readonly IDeserializerResolver _deserializers;
+        readonly TimerHost _timerHost;
 
         /// <summary>
         /// Maps property names to PropInfo that contains the property index.
@@ -118,7 +117,7 @@ namespace CK.Observable
 
         /// <summary>
         /// The change tracker handles the transfomation of actual changes into events that are
-        /// optimized and serialized by the <see cref="Commit(Func{string, PropInfo})"/> method.
+        /// optimized and serialized by the <see cref="Commit(ObservableDomain, Func{string, PropInfo})"/> method.
         /// </summary>
         class ChangeTracker
         {
@@ -384,6 +383,7 @@ namespace CK.Observable
         /// Initializes a new <see cref="ObservableDomain"/> with an autonomous <see cref="Monitor"/>
         /// and no <see cref="DomainClient"/>.
         /// </summary>
+        /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
         public ObservableDomain( string domainName )
             : this( domainName, null, null )
         {
@@ -393,6 +393,7 @@ namespace CK.Observable
         /// Initializes a new <see cref="ObservableDomain"/> bound to a <see cref="Monitor"/> but without
         /// any <see cref="DomainClient"/>.
         /// </summary>
+        /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
         /// <param name="monitor">The monitor to use. Can be null: a new monitor is created.</param>
         public ObservableDomain( string domainName, IActivityMonitor monitor )
             : this( domainName, null, monitor )
@@ -402,6 +403,7 @@ namespace CK.Observable
         /// <summary>
         /// Initializes a new <see cref="ObservableDomain"/> with a <see cref="DomainClient"/>.
         /// </summary>
+        /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
         /// <param name="client">The associated transaction manager to use. Can be null.</param>
         public ObservableDomain( string domainName, IObservableDomainClient client )
             : this( domainName, client, null )
@@ -413,6 +415,7 @@ namespace CK.Observable
         /// a <see cref="DomainClient"/> an optionals explicit exporter, serializer
         /// and deserializer handlers.
         /// </summary>
+        /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
         /// <param name="client">The transaction manager to use. Can be null.</param>
         /// <param name="monitor">The monitor to use. Can be null.</param>
         /// <param name="exporters">Optional exporters handler.</param>
@@ -451,6 +454,7 @@ namespace CK.Observable
             _changeTracker = new ChangeTracker();
             _exposedObjects = new AllCollection( this );
             _roots = new List<ObservableRootObject>();
+            _timerHost = new TimerHost( this );
             // LockRecursionPolicy.NoRecursion: reentrancy must NOT be allowed.
             _lock = new ReaderWriterLockSlim( LockRecursionPolicy.NoRecursion );
             if( callClientOnCreate ) client?.OnDomainCreated( this, DateTime.UtcNow );
@@ -459,6 +463,7 @@ namespace CK.Observable
         /// <summary>
         /// Initializes a previously <see cref="Save"/>d domain.
         /// </summary>
+        /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
         /// <param name="client">The transaction manager to use. Can be null.</param>
         /// <param name="monitor">The monitor associated to the domain. Can be null (a dedicated one will be created).</param>
         /// <param name="s">The input stream.</param>
@@ -568,6 +573,9 @@ namespace CK.Observable
         /// </summary>
         public IActivityMonitor Monitor { get; private set; }
 
+        /// <summary>
+        /// Gets this domain name.
+        /// </summary>
         public string DomainName { get; }
 
         /// <summary>
@@ -900,7 +908,7 @@ namespace CK.Observable
         {
             if( CurrentThreadDomain == null )
             {
-                throw new InvalidOperationException( "A transaction is required (ObservableObject can be created only inside a transaction)." );
+                throw new InvalidOperationException( "A transaction is required (Observable objects can be created only inside a transaction)." );
             }
             return CurrentThreadDomain;
         }
@@ -942,6 +950,8 @@ namespace CK.Observable
             _freeList.Push( o.OId );
             --_actualObjectCount;
         }
+
+        internal TimerHost TimerHost => _timerHost;
 
         internal void SendCommand( ObservableObject o, object command )
         {

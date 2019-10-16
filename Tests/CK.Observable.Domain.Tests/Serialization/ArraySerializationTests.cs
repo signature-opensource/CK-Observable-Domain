@@ -10,14 +10,14 @@ namespace CK.Serialization.Tests
     public class ArraySerializationTests
     {
         [Test]
-        public void basic_types_array_serialization()
+        public void struct_types_array_serialization()
         {
-            int[] integers = new int[] { 12, 11, 10, 9, 8 };
+            var positions = new Observable.Domain.Tests.Sample.Position[] { new Observable.Domain.Tests.Sample.Position( 12.2, 78.8 ), new Observable.Domain.Tests.Sample.Position( 44.7, 1214.777 ) };
 
-            object back = SaveAndLoad( integers );
-            back.Should().BeAssignableTo<int[]>();
-            int[] b = (int[])back;
-            b.Should().BeEquivalentTo( integers, options => options.WithStrictOrdering() );
+            object back = SaveAndLoad( positions );
+            back.Should().BeAssignableTo<Observable.Domain.Tests.Sample.Position[]>();
+            var b = (Observable.Domain.Tests.Sample.Position[])back;
+            b.Should().BeEquivalentTo( positions, options => options.WithStrictOrdering() );
         }
 
         [Test]

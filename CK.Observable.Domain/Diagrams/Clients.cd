@@ -1,0 +1,78 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1" MembersFormat="FullSignature">
+  <Class Name="CK.Observable.TransactionEventCollectorClient">
+    <Position X="0.5" Y="2.75" Width="6.25" />
+    <Members>
+      <Field Name="_buffer" Hidden="true" />
+      <Field Name="_events" Hidden="true" />
+      <Field Name="_exporter" Hidden="true" />
+      <Field Name="_next" Hidden="true" />
+      <Method Name="ApplyKeepDuration" Hidden="true" />
+      <Method Name="IObservableDomainClient.OnDomainCreated" Hidden="true" />
+      <Method Name="IObservableDomainClient.OnTransactionCommit" Hidden="true" />
+      <Method Name="IObservableDomainClient.OnTransactionFailure" Hidden="true" />
+      <Method Name="IObservableDomainClient.OnTransactionStart" Hidden="true" />
+    </Members>
+    <Compartments>
+      <Compartment Name="Nested Types" Collapsed="false" />
+    </Compartments>
+    <NestedTypes>
+      <Struct Name="CK.Observable.TransactionEventCollectorClient.TransactionEvent">
+        <TypeIdentifier>
+          <NewMemberFileName>Clients\TransactionEventCollectorClient.cs</NewMemberFileName>
+        </TypeIdentifier>
+      </Struct>
+    </NestedTypes>
+    <TypeIdentifier>
+      <HashCode>AEAAAAAgAAAAAAkAAAAAAAAAAAACAAAgQBGACgAACAA=</HashCode>
+      <FileName>Clients\TransactionEventCollectorClient.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="CK.Observable.MemoryTransactionProviderClient">
+    <Position X="1.5" Y="8.25" Width="5.5" />
+    <Members>
+      <Field Name="_memory" Hidden="true" />
+      <Field Name="_next" Hidden="true" />
+      <Field Name="_snapshotSerialNumber" Hidden="true" />
+      <Field Name="_snapshotTimeUtc" Hidden="true" />
+      <Method Name="CreateSnapshot" Hidden="true" />
+      <Method Name="DoLoadMemory" Hidden="true" />
+      <Method Name="LoadAndInitializeSnapshot" Hidden="true" />
+      <Method Name="ToString" Hidden="true" />
+      <Method Name="WriteSnapshotTo" Hidden="true" />
+    </Members>
+    <TypeIdentifier>
+      <HashCode>AAABAAAAAgABAAAUAAQAEAoAAAAAAAAhREAAQAAAYAA=</HashCode>
+      <FileName>Clients\MemoryTransactionProviderClient.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="CK.Observable.FileTransactionProviderClient">
+    <Position X="0.5" Y="11.75" Width="7.5" />
+    <Members>
+      <Field Name="_bakFilePath" Hidden="true" />
+      <Field Name="_fileLock" Hidden="true" />
+      <Field Name="_filePath" Hidden="true" />
+      <Field Name="_fileTransactionNumber" Hidden="true" />
+      <Field Name="_minimumDueTimeMs" Hidden="true" />
+      <Field Name="_minimumDueTimeSpan" Hidden="true" />
+      <Field Name="_nextDueTimeUtc" Hidden="true" />
+      <Field Name="_tmpFilePath" Hidden="true" />
+      <Method Name="DoWriteFile" Hidden="true" />
+      <Method Name="RescheduleDueTime" Hidden="true" />
+    </Members>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAgAAAAUAAAChAAAAAgAUAAQAEBAIAAIAAA=</HashCode>
+      <FileName>Clients\FileTransactionProviderClient.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Interface Name="CK.Observable.IObservableDomainClient">
+    <Position X="0.5" Y="0.5" Width="5.25" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAQAAAAAAIAAAAAAAAAAEAAAAAAIAA=</HashCode>
+      <FileName>IObservableDomainClient.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>

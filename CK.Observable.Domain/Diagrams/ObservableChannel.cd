@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1" MembersFormat="FullSignature">
+  <Class Name="CK.Observable.ObservableChannel&lt;T&gt;">
+    <Position X="0.5" Y="1.75" Width="3.75" />
+    <Members>
+      <Property Name="ExportedKind" Hidden="true" />
+      <Method Name="ObservableChannel" Hidden="true" />
+      <Method Name="Write" Hidden="true" />
+    </Members>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAEAABAgAABAAAAAAAAAAAAEAAAA=</HashCode>
+      <FileName>ObservableChannel.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CK.Observable.ObservableObject" Collapsed="true">
+    <Position X="1.5" Y="0.5" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AEgAgAAAACAAAAEAIAFAARAAAhAAAAAASAAAAAECBAQ=</HashCode>
+      <FileName>ObservableObject.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Orientation="Right" Position="0.1" />
+  </Class>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>

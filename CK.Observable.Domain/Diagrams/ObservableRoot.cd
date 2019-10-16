@@ -1,0 +1,130 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1" MembersFormat="FullSignature">
+  <Class Name="CK.Observable.ObservableObject">
+    <Position X="0.5" Y="5.25" Width="5" />
+    <Members>
+      <Field Name="_exporter" Hidden="true" />
+      <Field Name="_handler" Hidden="true" />
+      <Field Name="_id" Hidden="true" />
+      <Field Name="Domain" Hidden="true" />
+      <Property Name="ExportedKind" Hidden="true" />
+      <Property Name="IKnowMyExportDriver.ExportDriver" Hidden="true" />
+      <Event Name="INotifyPropertyChanged.PropertyChanged" Hidden="true" />
+    </Members>
+    <TypeIdentifier>
+      <HashCode>AEgAgAAAACAAAAEAIAFAARAAAhAAAAAASAAAAAECBAQ=</HashCode>
+      <FileName>ObservableObject.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Orientation="Right" Position="0.1" />
+  </Class>
+  <Class Name="CK.Observable.ObservableRootObject">
+    <Position X="6.5" Y="7.5" Width="3.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAA=</HashCode>
+      <FileName>ObservableRootObject.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CK.Observable.ObservableDomain">
+    <Position X="0.5" Y="0.5" Width="6.75" />
+    <Members>
+      <Field Name="_actualObjectCount" Hidden="true" />
+      <Field Name="_changeTracker" Hidden="true" />
+      <Field Name="_currentTran" Hidden="true" />
+      <Field Name="_deserializers" Hidden="true" />
+      <Field Name="_deserializing" Hidden="true" />
+      <Field Name="_domainNumber" Hidden="true" />
+      <Field Name="_exporters" Hidden="true" />
+      <Field Name="_exposedObjects" Hidden="true" />
+      <Field Name="_freeList" Hidden="true" />
+      <Field Name="_lock" Hidden="true" />
+      <Field Name="_objects" Hidden="true" />
+      <Field Name="_objectsListCount" Hidden="true" />
+      <Field Name="_observableRootCtorParameters" Hidden="true" />
+      <Field Name="_properties" Hidden="true" />
+      <Field Name="_propertiesByIndex" Hidden="true" />
+      <Field Name="_roots" Hidden="true" />
+      <Field Name="_serializers" Hidden="true" />
+      <Field Name="_transactionSerialNumber" Hidden="true" />
+      <Method Name="AddRoot" Hidden="true" />
+      <Method Name="CheckWriteLockAndObjectDisposed" Hidden="true" />
+      <Field Name="CurrentThreadDomain" Hidden="true" />
+      <Method Name="DoLoad" Hidden="true" />
+      <Method Name="EnsurePropertyInfo" Hidden="true" />
+      <Method Name="GetCurrentActiveDomain" Hidden="true" />
+      <Method Name="ObservableDomain" Hidden="true" />
+      <Method Name="OnCollectionClear" Hidden="true" />
+      <Method Name="OnCollectionMapSet" Hidden="true" />
+      <Method Name="OnCollectionRemoveKey" Hidden="true" />
+      <Method Name="OnListInsert" Hidden="true" />
+      <Method Name="OnListRemoveAt" Hidden="true" />
+      <Method Name="OnListSetAt" Hidden="true" />
+      <Method Name="OnLoaded" Hidden="true" />
+      <Method Name="OnPropertyChanged" Hidden="true" />
+      <Method Name="Register" Hidden="true" />
+      <Method Name="SendCommand" Hidden="true" />
+      <Field Name="UncomittedTransaction" Hidden="true" />
+      <Method Name="Unregister" Hidden="true" />
+    </Members>
+    <NestedTypes>
+      <Class Name="CK.Observable.ObservableDomain.PropInfo" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>ObservableDomain.cs</NewMemberFileName>
+        </TypeIdentifier>
+      </Class>
+      <Class Name="CK.Observable.ObservableDomain.AllCollection" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>ObservableDomain.cs</NewMemberFileName>
+        </TypeIdentifier>
+        <Lollipop Position="0.2" />
+      </Class>
+      <Class Name="CK.Observable.ObservableDomain.ChangeTracker" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>ObservableDomain.cs</NewMemberFileName>
+        </TypeIdentifier>
+      </Class>
+      <Class Name="CK.Observable.ObservableDomain.Transaction" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>ObservableDomain.cs</NewMemberFileName>
+        </TypeIdentifier>
+        <Lollipop Position="0.2" />
+      </Class>
+      <Class Name="CK.Observable.ObservableDomain.InitializationTransaction" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>ObservableDomain.cs</NewMemberFileName>
+        </TypeIdentifier>
+        <Lollipop Position="0.2" />
+      </Class>
+    </NestedTypes>
+    <TypeIdentifier>
+      <HashCode>BAiAoIARAQQQEKAoYAqAHRIIACQFCQBECABBBGIAEJg=</HashCode>
+      <FileName>ObservableDomain.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Struct Name="CK.Observable.SuccessfulTransactionContext">
+    <Position X="7.5" Y="4.75" Width="5.5" />
+    <Members>
+      <Field Name="_postActions" Hidden="true" />
+      <Property Name="RawPostActions" Hidden="true" />
+      <Method Name="SuccessfulTransactionContext" Hidden="true" />
+    </Members>
+    <TypeIdentifier>
+      <HashCode>BAAAAgAAAAEAAAAAAAAQAAAAAgAAABAAAAAAAAAAAQI=</HashCode>
+      <FileName>SuccessfulTransactionContext.cs</FileName>
+    </TypeIdentifier>
+  </Struct>
+  <Interface Name="CK.Observable.IObservableTransaction">
+    <Position X="7.75" Y="0.5" Width="3.25" />
+    <TypeIdentifier>
+      <HashCode>AAAAAEAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAgAAA=</HashCode>
+      <FileName>IObservableTransaction.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="CK.Observable.IObservableDomainClient">
+    <Position X="7.75" Y="2.75" Width="5.25" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAQAAAAAAIAAAAAAAAAAEAAAAAAIAA=</HashCode>
+      <FileName>IObservableDomainClient.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>

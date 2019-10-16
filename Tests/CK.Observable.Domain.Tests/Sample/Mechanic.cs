@@ -2,7 +2,7 @@ using CK.Core;
 
 namespace CK.Observable.Domain.Tests.Sample
 {
-    [SerializationVersionAttribute( 0 )]
+    [SerializationVersion( 0 )]
     public class Mechanic : Employee
     {
         public Mechanic( Garage garage )
@@ -28,7 +28,7 @@ namespace CK.Observable.Domain.Tests.Sample
         void OnCurrentCarChanged( object before, object after )
         {
             if( IsDeserializing ) return;
-            DomainMonitor.Info( $"{ToString()} has a new Car: {CurrentCar?.ToString() ?? "null"}." );
+            Monitor.Info( $"{ToString()} has a new Car: {CurrentCar?.ToString() ?? "null"}." );
             if( CurrentCar != null ) CurrentCar.CurrentMechanic = this;
             else ((Car)before).CurrentMechanic = null;
         }

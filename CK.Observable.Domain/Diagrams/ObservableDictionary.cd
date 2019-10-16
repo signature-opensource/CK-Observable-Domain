@@ -1,0 +1,35 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1" MembersFormat="FullSignature">
+  <Class Name="CK.Observable.ObservableDictionary&lt;TKey, TValue&gt;">
+    <Position X="0.75" Y="1.75" Width="4.75" />
+    <Members>
+      <Field Name="_map" Hidden="true" />
+      <Property Name="ExportedKind" Hidden="true" />
+      <Method Name="ICollection&lt;KeyValuePair&lt;TKey, TValue&gt;&gt;.Add" Hidden="true" />
+      <Method Name="ICollection&lt;KeyValuePair&lt;TKey, TValue&gt;&gt;.Contains" Hidden="true" />
+      <Property Name="ICollection&lt;KeyValuePair&lt;TKey, TValue&gt;&gt;.IsReadOnly" Hidden="true" />
+      <Method Name="ICollection&lt;KeyValuePair&lt;TKey, TValue&gt;&gt;.Remove" Hidden="true" />
+      <Property Name="IDictionary&lt;TKey, TValue&gt;.Keys" Hidden="true" />
+      <Property Name="IDictionary&lt;TKey, TValue&gt;.Values" Hidden="true" />
+      <Method Name="IEnumerable.GetEnumerator" Hidden="true" />
+      <Property Name="IReadOnlyDictionary&lt;TKey, TValue&gt;.Keys" Hidden="true" />
+      <Property Name="IReadOnlyDictionary&lt;TKey, TValue&gt;.Values" Hidden="true" />
+      <Method Name="ObservableDictionary" Hidden="true" />
+      <Method Name="Write" Hidden="true" />
+    </Members>
+    <TypeIdentifier>
+      <HashCode>CAIAAgAAAAAEwBBAGAAABAQAARAAgAAEAkAgIAFAIQA=</HashCode>
+      <FileName>ObservableDictionary.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Orientation="Right" Position="0.1" />
+  </Class>
+  <Class Name="CK.Observable.ObservableObject" Collapsed="true">
+    <Position X="2.25" Y="0.5" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AEgAgAAAACAAAAEAIAFAARAAAhAAAAAASAAAAAECBAQ=</HashCode>
+      <FileName>ObservableObject.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Orientation="Right" Position="0.1" />
+  </Class>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>

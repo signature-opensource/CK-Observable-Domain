@@ -14,7 +14,7 @@ namespace CK.Observable
         {
             if( target == null ) throw new ArgumentNullException( nameof( target ) );
             _target = target;
-            _seen = new Dictionary<object, int>( PureObjectRefEqualityComparer<object>.Default );
+            _seen = new Dictionary<object, int>( CK.Core.PureObjectRefEqualityComparer<object>.Default );
             _drivers = drivers ?? ExporterRegistry.Default;
         }
 
