@@ -10,6 +10,11 @@ namespace CK.Observable
     public interface IObservableTransaction : IDisposable
     {
         /// <summary>
+        /// Gets the transaction start time.
+        /// </summary>
+        DateTime StartTime { get; }
+
+        /// <summary>
         /// Commits all changes and retrieves the events and commands on success.
         /// If errors have been added, the <see cref="TransactionResult"/> contains
         /// the errors but no events nor commands.

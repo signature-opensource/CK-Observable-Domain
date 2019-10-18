@@ -137,6 +137,7 @@ namespace CK.Observable
             else
             {
                 Disposed?.Invoke( this, EventArgs.Empty );
+                Disposed = null;
             }
         }
 

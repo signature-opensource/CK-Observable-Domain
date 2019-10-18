@@ -17,7 +17,10 @@ namespace CK.Observable
         readonly ObservableDomain _domain;
         int _activeCount;
         ObservableTimedEventBase[] _activeEvents;
+        // Tracking is basic: any change are tracked with a simple hash set.
         readonly HashSet<ObservableTimedEventBase> _changed;
+        ObservableTimedEventBase _first;
+        ObservableTimedEventBase _last;
 
         public TimerHost( ObservableDomain domain )
         {
@@ -26,10 +29,23 @@ namespace CK.Observable
             _changed = new HashSet<ObservableTimedEventBase>();
         }
 
-        public void OnChanged( ObservableTimedEventBase t )
+        internal void OnCreated( ObservableTimedEventBase t )
         {
+            if( (t.Next = _first) == null ) _last = t;
+            _first = t;
             _changed.Add( t );
         }
+
+        internal void OnDisposed( ObservableTimedEventBase t )
+        {
+            if( _first == t ) _first = t.Next;
+            else t.Prev.Next = t.Next;
+            if( _last == t ) _last = t.Prev;
+            else t.Next.Prev = t.Prev;
+            _changed.Add( t );
+        }
+
+        internal void OnChanged( ObservableTimedEventBase t ) => _changed.Add( t );
 
         public void Clear()
         {
@@ -37,6 +53,11 @@ namespace CK.Observable
             _activeCount = 0;
         }
 
+        /// <summary>
+        /// Applies all changes: current IsActive property of all changed timed event is handled
+        /// and the first next due time is returned so that an external timer can be setup on it.
+        /// </summary>
+        /// <returns>The first next due time or <see cref="Util.UtcMinValue"/>.</returns>
         public DateTime ApplyChanges()
         {
             foreach( var ev in _changed )
@@ -44,12 +65,12 @@ namespace CK.Observable
                 if( ev.IsActive )
                 {
                     if( ev.ActiveIndex == 0 ) Activate( ev );
-                    else OnNextElapsedUpdated( ev );
+                    else OnNextDueTimeUpdated( ev );
                 }
                 else
                 {
                     if( ev.ActiveIndex != 0 ) Deactivate( ev );
-                    else OnNextElapsedUpdated( ev );
+                    else OnNextDueTimeUpdated( ev );
                 }
             }
             return _activeCount > 0 ? _activeEvents[1].ExpectedDueTimeUtc : Util.UtcMinValue;
@@ -67,7 +88,7 @@ namespace CK.Observable
             MoveUp( timer );
         }
 
-        void OnNextElapsedUpdated( ObservableTimedEventBase timer )
+        void OnNextDueTimeUpdated( ObservableTimedEventBase timer )
         {
             // MoveDown will be called if timer is the current root.
             int parentIndex = timer.ActiveIndex >> 1;
@@ -100,10 +121,10 @@ namespace CK.Observable
             _activeCount--;
             ev.ActiveIndex = 0;
             // Now bubble last (which is no longer the actual last) up or down as appropriate.
-            OnNextElapsedUpdated( last );
+            OnNextDueTimeUpdated( last );
         }
 
-        public bool IsRaising { get; private set; }
+        internal bool IsRaising { get; private set; }
 
         /// <summary>
         /// Raises all timers' event for which <see cref="ObservableTimedEventBase.ExpectedDueTimeUtc"/> is below <paramref name="current"/>
@@ -111,7 +132,7 @@ namespace CK.Observable
         /// </summary>
         /// <param name="current">The current time.</param>
         /// <param name="ignoreOnTimerException">True to silently ignore any handler exception.</param>
-        /// <returns></returns>
+        /// <returns>The number of timers that have fired.</returns>
         public int RaiseElapsedEvent( DateTime current, bool ignoreOnTimerException )
         {
             IsRaising = true;
@@ -128,8 +149,8 @@ namespace CK.Observable
                         if( !_changed.Contains( first ) )
                         {
                             first.OnAfterRaiseUnchanged();
-                            _changed.Remove( first );
                         }
+                        _changed.Remove( first );
                         if( !first.IsActive )
                         {
                             Deactivate( first );
@@ -138,11 +159,9 @@ namespace CK.Observable
                         {
                             if( first.ExpectedDueTimeUtc <= current )
                             {
-                                var updated = current.AddMilliseconds( 10 );
-                                _domain.Monitor.Warn( $"{first.ToString()}: next due time '{first.ExpectedDueTimeUtc.ToString( "o" )}' has been forwarded to '{updated.ToString( "o" )}'." );
-                                first.ExpectedDueTimeUtc = updated;
+                                first.ForwardExpectedDueTime( _domain.Monitor, current.AddMilliseconds( 10 ) );
                             }
-                            OnNextElapsedUpdated( first );
+                            OnNextDueTimeUpdated( first );
                         }
                         ++count;
                     }
@@ -154,7 +173,6 @@ namespace CK.Observable
             {
                 IsRaising = false;
             }
-
         }
 
         void MoveUp( ObservableTimedEventBase timer )

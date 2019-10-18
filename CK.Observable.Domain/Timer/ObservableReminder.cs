@@ -18,13 +18,14 @@ namespace CK.Observable
         /// Initializes a new unnamed <see cref="ObservableReminder"/> bound to the current <see cref="ObservableDomain"/> that,
         /// by default, will fire only once in 1 second.
         /// </summary>
-        /// <param name="durTimeUtc">
+        /// <param name="dueTimeUtc">
         /// The <see cref="DueTimeUtc"/> time. If this time is in the past (but not <see cref="Util.UtcMinValue"/>), the event will
         /// be raised as soon as possible.
         /// </param>
-        public ObservableReminder( DateTime durTimeUtc )
-            : base( durTimeUtc )
+        public ObservableReminder( DateTime dueTimeUtc )
         {
+            if( dueTimeUtc.Kind != DateTimeKind.Utc ) throw new ArgumentException( nameof( dueTimeUtc ), "Must be a Utc DateTime." );
+            ExpectedDueTimeUtc = dueTimeUtc;
         }
 
         internal override bool GetIsActive() => ExpectedDueTimeUtc != Util.UtcMinValue && ExpectedDueTimeUtc != Util.UtcMaxValue; 

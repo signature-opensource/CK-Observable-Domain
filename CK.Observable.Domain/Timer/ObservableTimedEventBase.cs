@@ -17,16 +17,16 @@ namespace CK.Observable
         internal TimerHost TimerHost;
         internal int ActiveIndex;
         internal DateTime ExpectedDueTimeUtc;
+        internal ObservableTimedEventBase Next;
+        internal ObservableTimedEventBase Prev;
 
         EventHandler<ObservableTimedEventArgs> _handlers;
         int _handlerCount;
 
-        internal ObservableTimedEventBase( DateTime dueTimeUtc )
+        internal ObservableTimedEventBase()
         {
-            if( dueTimeUtc.Kind != DateTimeKind.Utc ) throw new ArgumentException( nameof( dueTimeUtc ), "Must be a Utc DateTime." );
             TimerHost = ObservableDomain.GetCurrentActiveDomain().TimerHost;
-            ExpectedDueTimeUtc = dueTimeUtc;
-            TimerHost.OnChanged( this );
+            TimerHost.OnCreated( this );
         }
 
         /// <summary>
@@ -111,13 +111,32 @@ namespace CK.Observable
         internal abstract void OnAfterRaiseUnchanged();
 
         /// <summary>
+        /// This applies to reminders.
+        /// </summary>
+        internal virtual void ForwardExpectedDueTime( IActivityMonitor monitor, DateTime forwarded )
+        {
+            monitor.Warn( $"{ToString()}: next due time '{ExpectedDueTimeUtc.ToString( "o" )}' has been forwarded to '{forwarded.ToString( "o" )}'." );
+            ExpectedDueTimeUtc = forwarded;
+        }
+
+        /// <summary>
+        /// Raised when this object is <see cref="Dispose"/>d.
+        /// Note that when the call to dispose is made by <see cref="ObservableDomain.Load"/>, this event is not
+        /// triggered.
+        /// </summary>
+        public event EventHandler Disposed;
+
+
+        /// <summary>
         /// Disposes this timed event.
         /// </summary>
         public void Dispose()
         {
             if( !IsDisposed )
             {
-                TimerHost.OnChanged( this );
+                Disposed?.Invoke( this, EventArgs.Empty );
+                Disposed = null;
+                TimerHost.OnDisposed( this );
                 TimerHost = null;
                 _handlers = null;
             }

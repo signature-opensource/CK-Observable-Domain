@@ -97,11 +97,11 @@ namespace CK.Observable
                 // Write every snapshot
                 DoWriteFile();
             }
-            else if( _minimumDueTimeMs > 0 && c.TimeUtc > _nextDueTimeUtc )
+            else if( _minimumDueTimeMs > 0 && c.CommitTimeUtc > _nextDueTimeUtc )
             {
                 // Write snapshot if due, then reschedule it.
                 DoWriteFile();
-                RescheduleDueTime( c.TimeUtc );
+                RescheduleDueTime( c.CommitTimeUtc );
             }
         }
 

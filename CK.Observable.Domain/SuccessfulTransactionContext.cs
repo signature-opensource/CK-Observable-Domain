@@ -18,10 +18,21 @@ namespace CK.Observable
         /// </summary>
         public ObservableDomain ObservableDomain { get; }
 
+
+        /// <summary>
+        /// Gets the start time (UTC) of the transaction.
+        /// </summary>
+        public DateTime StartTimeUtc { get; }
+
         /// <summary>
         /// Gets the time (UTC) of the transaction commit.
         /// </summary>
-        public DateTime TimeUtc { get; }
+        public DateTime CommitTimeUtc { get; }
+
+        /// <summary>
+        /// Gets the next due time (UTC) of the <see cref="ObservableTimedEventBase"/>.
+        /// </summary>
+        public DateTime NextDueTimeUtc { get; }
 
         /// <summary>
         /// Gets the events that the transaction generated (all <see cref="ObservableObject"/> changes).
@@ -52,11 +63,13 @@ namespace CK.Observable
             _postActions.Add( action );
         }
 
-        internal SuccessfulTransactionContext( ObservableDomain d, IReadOnlyList<ObservableEvent> e, IReadOnlyList<ObservableCommand> c )
+        internal SuccessfulTransactionContext( ObservableDomain d, IReadOnlyList<ObservableEvent> e, IReadOnlyList<ObservableCommand> c, DateTime startTime, DateTime nextDueTime )
         {
             _postActions = new List<Func<IActivityMonitor, Task>>();
             ObservableDomain = d;
-            TimeUtc = DateTime.UtcNow;
+            NextDueTimeUtc = nextDueTime;
+            StartTimeUtc = startTime;
+            CommitTimeUtc = DateTime.UtcNow;
             Events = e;
             Commands = c;
         }

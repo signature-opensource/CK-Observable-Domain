@@ -68,7 +68,7 @@ namespace CK.Observable
         public virtual void OnTransactionCommit( in SuccessfulTransactionContext c )
         {
             _next?.OnTransactionCommit( c );
-            CreateSnapshot( c.ObservableDomain, c.TimeUtc );
+            CreateSnapshot( c.ObservableDomain, c.CommitTimeUtc );
         }
 
         /// <summary>

@@ -152,7 +152,7 @@ namespace CK.Observable
                 _commands = new List<ObservableCommand>();
             }
 
-            public SuccessfulTransactionContext Commit( ObservableDomain domain, Func<string, PropInfo> ensurePropertInfo )
+            public SuccessfulTransactionContext Commit( ObservableDomain domain, Func<string, PropInfo> ensurePropertInfo, DateTime startTime, DateTime nextTimerDueDate )
             {
                 _changeEvents.RemoveAll( e => e is ICollectionEvent c && c.Object.IsDisposed );
                 foreach( var p in _propChanged.Values )
@@ -178,7 +178,7 @@ namespace CK.Observable
                         _changeEvents.Add( new PropertyChangedEvent( kv.Key, pInfo.PropertyId, pInfo.Name, propValue ) );
                     }
                 }
-                var result = new SuccessfulTransactionContext( domain, _changeEvents.ToArray(), _commands.ToArray() );
+                var result = new SuccessfulTransactionContext( domain, _changeEvents.ToArray(), _commands.ToArray(), startTime, nextTimerDueDate );
                 Reset();
                 return result;
             }
@@ -301,18 +301,22 @@ namespace CK.Observable
             readonly ObservableDomain _previous;
             readonly ObservableDomain _domain;
             readonly IActivityMonitor _previousMonitor;
+            readonly DateTime _startTime;
             CKExceptionData[] _errors;
             TransactionResult _result;
             bool _resultInitialized;
 
-            public Transaction( ObservableDomain d, IActivityMonitor previousMonitor )
+            public Transaction( ObservableDomain d, IActivityMonitor previousMonitor, DateTime startTime )
             {
                 _domain = d;
                 _previousMonitor = previousMonitor;
                 _previous = CurrentThreadDomain;
                 CurrentThreadDomain = d;
+                _startTime = startTime;
                 _errors = Array.Empty<CKExceptionData>();
             }
+
+            public DateTime StartTime => _startTime;
 
             public IReadOnlyList<CKExceptionData> Errors => _errors;
 
@@ -331,13 +335,14 @@ namespace CK.Observable
                 _resultInitialized = true;
                 Debug.Assert( _domain._currentTran == this );
                 Debug.Assert( _domain._lock.IsWriteLockHeld );
+                DateTime nextTimerDueDate = _domain._timerHost.ApplyChanges();
                 CurrentThreadDomain = _previous;
                 _domain._currentTran = null;
                 if( _errors.Length != 0 )
                 {
                     // On errors, resets the change tracker, sends the errors to the managers
                     // and creates an error TransactionResult. 
-                    _result = new TransactionResult( _errors );
+                    _result = new TransactionResult( _errors, _startTime, nextTimerDueDate );
                     _domain._changeTracker.Reset();
                     try
                     {
@@ -351,7 +356,7 @@ namespace CK.Observable
                 }
                 else
                 {
-                    SuccessfulTransactionContext ctx = _domain._changeTracker.Commit( _domain, _domain.EnsurePropertyInfo );
+                    SuccessfulTransactionContext ctx = _domain._changeTracker.Commit( _domain, _domain.EnsurePropertyInfo, _startTime, nextTimerDueDate );
                     ++_domain._transactionSerialNumber;
                     try
                     {
@@ -364,8 +369,10 @@ namespace CK.Observable
                         _result = new TransactionResult( ctx ).WithClientError( ex );
                     }
                 }
+                var monitor = _domain.Monitor;
                 _domain.Monitor = _previousMonitor;
                 _domain._lock.ExitWriteLock();
+                _domain.PostTransactionHook?.OnTransactionDone( monitor, _result );
                 return _result;
             }
 
@@ -496,6 +503,7 @@ namespace CK.Observable
         {
             readonly ObservableDomain _d;
             readonly ObservableDomain _previous;
+            readonly DateTime _startTime;
 
             /// <summary>
             /// Initializes a new <see cref="InitializationTransaction"/> required
@@ -504,6 +512,7 @@ namespace CK.Observable
             /// <param name="d">The observable domain.</param>
             public InitializationTransaction( ObservableDomain d )
             {
+                _startTime = DateTime.UtcNow;
                 _d = d;
                 d._lock.EnterWriteLock();
                 d._currentTran = this;
@@ -511,6 +520,8 @@ namespace CK.Observable
                 CurrentThreadDomain = d;
                 d._deserializing = true;
             }
+
+            DateTime IObservableTransaction.StartTime => _startTime;
 
             void IObservableTransaction.AddError( CKExceptionData d ) { }
 
@@ -571,7 +582,7 @@ namespace CK.Observable
         /// This is never null: an autonomous monitor is automatically created if none is
         /// provided to constructors.
         /// </summary>
-        public IActivityMonitor Monitor { get; private set; }
+        internal IActivityMonitor Monitor { get; private set; }
 
         /// <summary>
         /// Gets this domain name.
@@ -583,6 +594,13 @@ namespace CK.Observable
         /// Can be null.
         /// </summary>
         public IObservableDomainClient DomainClient { get; }
+
+        /// <summary>
+        /// Gets os sets the optional <see cref="IPostTransactionHook"/>.
+        /// Defaults to <see cref="StandardPostTransactionHook"/> that handles the <see cref="TransactionResult.NextDueTimeUtc"/>
+        /// thanks to a <see cref="System.Threading.Timer"/>.
+        /// </summary>
+        public IPostTransactionHook PostTransactionHook { get; set; }
 
         /// <summary>
         /// Acquires a read lock: until the returned disposable is disposed
@@ -642,8 +660,9 @@ namespace CK.Observable
             Monitor = monitor;
             try
             {
-                DomainClient?.OnTransactionStart( this, DateTime.UtcNow );
-                return _currentTran = new Transaction( this, prevMonitor );
+                var startTime = DateTime.UtcNow;
+                DomainClient?.OnTransactionStart( this, startTime );
+                return _currentTran = new Transaction( this, prevMonitor, startTime );
             }
             catch( Exception ex )
             {
@@ -669,6 +688,7 @@ namespace CK.Observable
             {
                 try
                 {
+                    _timerHost.RaiseElapsedEvent( t.StartTime, false );
                     actions();
                 }
                 catch( Exception ex )

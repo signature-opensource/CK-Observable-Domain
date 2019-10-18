@@ -8,7 +8,7 @@ namespace CK.Observable
 {
     /// <summary>
     /// Encapsulates the result of a <see cref="ObservableDomain.Transaction.Commit"/>
-    /// and <see cref="ObservableDomain.Modify(Action)"/>.
+    /// and <see cref="ObservableDomain.Modify(IActivityMonitor, Action)"/>.
     /// </summary>
     public class TransactionResult
     {
@@ -17,12 +17,23 @@ namespace CK.Observable
         /// <summary>
         /// The empty transaction result with no events and no commands: both lists are empty.
         /// </summary>
-        public static readonly TransactionResult Empty = new TransactionResult( Array.Empty<CKExceptionData>() );
+        public static readonly TransactionResult Empty = new TransactionResult( Array.Empty<CKExceptionData>(), Util.UtcMinValue, Util.UtcMinValue );
+
+        /// <summary>
+        /// Gets the start time (UTC) of the transaction.
+        /// </summary>
+        public DateTime StartTimeUtc { get; }
 
         /// <summary>
         /// Gets the time (UTC) of the transaction commit.
         /// </summary>
-        public DateTime TimeUtc { get; }
+        public DateTime CommitTimeUtc { get; }
+
+        /// <summary>
+        /// Gets the next due time (UTC) of the <see cref="ObservableTimedEventBase"/>.
+        /// This is available even if this result is on error.
+        /// </summary>
+        public DateTime NextDueTimeUtc { get; }
 
         /// <summary>
         /// Gets the events that the transaction generated (all <see cref="ObservableObject"/> changes).
@@ -80,16 +91,20 @@ namespace CK.Observable
 
         internal TransactionResult( SuccessfulTransactionContext c )
         {
-            TimeUtc = c.TimeUtc;
+            StartTimeUtc = c.StartTimeUtc;
+            CommitTimeUtc = c.CommitTimeUtc;
+            NextDueTimeUtc = c.NextDueTimeUtc;
             Events = c.Events;
             Commands = c.Commands;
             Errors = Array.Empty<CKExceptionData>();
             _rawPostActions = c.RawPostActions;
         }
 
-        internal TransactionResult( IReadOnlyList<CKExceptionData> errors )
+        internal TransactionResult( IReadOnlyList<CKExceptionData> errors, DateTime startTime, DateTime nextDueTime )
         {
-            TimeUtc = DateTime.UtcNow;
+            StartTimeUtc = startTime;
+            CommitTimeUtc = DateTime.UtcNow;
+            NextDueTimeUtc = nextDueTime;
             Errors = errors;
             Events = Array.Empty<ObservableEvent>();
             Commands = Array.Empty<ObservableCommand>();
@@ -98,7 +113,9 @@ namespace CK.Observable
         TransactionResult( in TransactionResult r, CKExceptionData data )
         {
             Debug.Assert( r.ClientError == null, "ClientError occur at most once." );
-            TimeUtc = r.TimeUtc;
+            StartTimeUtc = r.StartTimeUtc;
+            CommitTimeUtc = r.CommitTimeUtc;
+            NextDueTimeUtc = r.NextDueTimeUtc;
             Events = r.Events;
             Commands = r.Commands;
             Errors = r.Errors;

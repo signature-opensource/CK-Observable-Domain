@@ -28,7 +28,6 @@ namespace CK.Observable
         /// </param>
         /// <param name="intervalMilliSeconds">The interval in millisecond (defaults to 1 second). Must be positive.</param>
         public ObservableTimer( DateTime firstDueTimeUtc, int intervalMilliSeconds = 1000 )
-            : base( firstDueTimeUtc )
         {
             ExpectedDueTimeUtc = AdjustNextDueTimeUtc( DateTime.UtcNow, firstDueTimeUtc, intervalMilliSeconds );
             _milliSeconds = intervalMilliSeconds;
@@ -55,14 +54,21 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Gets the next planned time.
+        /// Gets the next due time.
         /// If this is <see cref="Util.UtcMinValue"/> nor <see cref="Util.UtcMaxValue"/>, then <see cref="ObservableTimedEventBase.IsActive">IsActive</see>
         /// is false.
         /// </summary>
-        public DateTime DueTimeUtc => ExpectedDueTimeUtc;
+        public DateTime DueTimeUtc { get; private set; }
 
         /// <summary>
-        /// Gets or sets the interval, expressed in milliseconds, at which the <see cref="ObservableTimedEventBase.Elapsed"/> event.
+        /// Gets or sets the <see cref="ObservableTimerMode"/> to apply.
+        /// Defaults to <see cref="ObservableTimerMode.Relaxed"/> (<see cref="DueTimeUtc"/> is allowed to shift by any numer of <see cref="IntervalMilliSeconds"/> steps,
+        /// only a warning is emitted).
+        /// </summary>
+        public ObservableTimerMode Mode { get; set; }
+
+        /// <summary>
+        /// Gets or sets the interval, expressed in milliseconds, at which the <see cref="ObservableTimedEventBase.Elapsed"/> event must repeatedly fire.
         /// The value must be greater than zero.
         /// </summary>
         public int IntervalMilliSeconds
@@ -78,7 +84,7 @@ namespace CK.Observable
                         if( value <= 0 ) throw new ArgumentOutOfRangeException( nameof( IntervalMilliSeconds ) );
                         _milliSeconds = value;
                     }
-                    else Reconfigure( DueTimeUtc.AddMilliseconds( -_milliSeconds ), value );
+                    else Reconfigure( DueTimeUtc, value );
                 }
             }
         }
@@ -94,7 +100,7 @@ namespace CK.Observable
         public void Reconfigure( DateTime firstDueTimeUtc, int intervalMilliSeconds )
         {
             CheckDisposed();
-            ExpectedDueTimeUtc = AdjustNextDueTimeUtc( DateTime.UtcNow, firstDueTimeUtc, intervalMilliSeconds );
+            ExpectedDueTimeUtc = DueTimeUtc = AdjustNextDueTimeUtc( DateTime.UtcNow, firstDueTimeUtc, intervalMilliSeconds );
             _milliSeconds = intervalMilliSeconds;
             TimerHost.OnChanged( this );
         }
@@ -102,11 +108,52 @@ namespace CK.Observable
         internal override void OnAfterRaiseUnchanged()
         {
             Debug.Assert( IsActive );
-            ExpectedDueTimeUtc = ExpectedDueTimeUtc.AddMilliseconds( _milliSeconds );
+            ExpectedDueTimeUtc = DueTimeUtc = DueTimeUtc.AddMilliseconds( _milliSeconds );
+        }
+
+        internal override void ForwardExpectedDueTime( IActivityMonitor monitor, DateTime forwarded )
+        {
+            Debug.Assert( ExpectedDueTimeUtc < forwarded );
+            int stepCount = (int)Math.Ceiling( (forwarded - ExpectedDueTimeUtc).TotalMilliseconds / _milliSeconds );
+            Debug.Assert( stepCount > 0 );
+            var mode = Mode & ~ObservableTimerMode.ThrowException;
+            var throwEx = (Mode & ObservableTimerMode.ThrowException) != 0;
+            var msg = $"{ToString()}: next due time '{ExpectedDueTimeUtc.ToString( "o" )}' has been forwarded to '{forwarded.ToString( "o" )}'. ";
+
+            void RaiseError()
+            {
+                msg += $" This is an error since Mode is {mode}.";
+                if( throwEx ) throw new CKException( msg );
+                else monitor.Error( msg );
+            }
+
+            if( stepCount == 1 )
+            {
+                msg += "No event lost.";
+                if( mode == ObservableTimerMode.AllowSlidingAdjustment )
+                {
+                    ExpectedDueTimeUtc = forwarded;
+                }
+                else
+                {
+                    ExpectedDueTimeUtc = DueTimeUtc = ExpectedDueTimeUtc.AddMilliseconds( _milliSeconds );
+                    msg += $" DueTimeUtc aligned to {ExpectedDueTimeUtc.ToString( "o" )}.";
+                }
+                if( mode == ObservableTimerMode.Critical ) RaiseError();
+                else monitor.Warn( msg );
+            }
+            else
+            {
+                msg += $"{stepCount-1} event(s) lost!";
+                ExpectedDueTimeUtc = DueTimeUtc = ExpectedDueTimeUtc.AddMilliseconds( stepCount * _milliSeconds );
+                msg += $" DueTimeUtc aligned to {ExpectedDueTimeUtc.ToString( "o" )}.";
+                if( mode == ObservableTimerMode.Relaxed ) monitor.Warn( msg );
+                else RaiseError();
+            }
         }
 
         /// <summary>
-        /// Ensures that the <paramref name="firstDueTimeUtc"/> will occur after <paramref name="baseTimeUtc"/>.
+        /// Ensures that the <paramref name="firstDueTimeUtc"/> will occur after or on <paramref name="baseTimeUtc"/>.
         /// </summary>
         /// <param name="baseTimeUtc">Typically equals <see cref="DateTime.UtcNow"/>. Must be in Utc.</param>
         /// <param name="firstDueTimeUtc">The first due time. Must be in Utc. When <see cref="Util.UtcMinValue"/> or <see cref="Util.UtcMaxValue"/> it is returned as-is.</param>
