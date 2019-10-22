@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CK.Observable
@@ -131,9 +132,9 @@ namespace CK.Observable
         /// and returns the number of timers that have fired. 
         /// </summary>
         /// <param name="current">The current time.</param>
-        /// <param name="ignoreOnTimerException">True to silently ignore any handler exception.</param>
+        /// <param name="throwException">False to silently ignore any handler exception (only log them).</param>
         /// <returns>The number of timers that have fired.</returns>
-        public int RaiseElapsedEvent( DateTime current, bool ignoreOnTimerException )
+        public int RaiseElapsedEvent( DateTime current, bool throwException )
         {
             IsRaising = true;
             try
@@ -145,7 +146,7 @@ namespace CK.Observable
                     if( first.ExpectedDueTimeUtc <= current )
                     {
                         _changed.Remove( first );
-                        first.DoRaise( _domain.Monitor, current, ignoreOnTimerException );
+                        first.DoRaise( _domain.Monitor, current, throwException );
                         if( !_changed.Contains( first ) )
                         {
                             first.OnAfterRaiseUnchanged();

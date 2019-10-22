@@ -18,6 +18,7 @@ namespace CK.Observable
         /// The <see cref="Root"/> is a new <typeparamref name="T"/> (obtained by calling a constructor
         /// that accepts a ObservableDomain).
         /// </summary>
+        /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
         public ObservableDomain( string domainName )
             : this( domainName, null, null )
         {
@@ -28,7 +29,11 @@ namespace CK.Observable
         /// The <see cref="Root"/> is a new <typeparamref name="T"/> (obtained by calling the constructor
         /// that accepts a ObservableDomain).
         /// </summary>
-        /// <param name="monitor">Monitor to use (when null, an autonomous monitor is automatically created).</param>
+        /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
+        /// <param name="monitor">
+        /// The monitor that will become the <see cref="ObservableDomain.Monitor"/> of this domain.
+        /// Can be null: a new, dedicated, ActivityMonitor will be created.
+        /// </param>
         public ObservableDomain( string domainName, IActivityMonitor monitor )
             : this( domainName, null, monitor )
         {
@@ -39,6 +44,7 @@ namespace CK.Observable
         /// The <see cref="Root"/> is a new <typeparamref name="T"/> (obtained by calling the constructor
         /// that accepts a ObservableDomain).
         /// </summary>
+        /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
         /// <param name="client">The transaction manager. Can be null.</param>
         public ObservableDomain( string domainName, IObservableDomainClient client )
             : this( domainName, client, null )
@@ -50,8 +56,12 @@ namespace CK.Observable
         /// The <see cref="Root"/> is a new <typeparamref name="T"/> (obtained by calling the constructor
         /// that accepts a ObservableDomain).
         /// </summary>
+        /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
         /// <param name="client">The transaction manager. Can be null.</param>
-        /// <param name="monitor">Monitor to use (when null, an autonomous monitor is automatically created).</param>
+        /// <param name="monitor">
+        /// The monitor that will become the <see cref="ObservableDomain.Monitor"/> of this domain.
+        /// Can be null: a new, dedicated, ActivityMonitor will be created.
+        /// </param>
         public ObservableDomain( string domainName, IObservableDomainClient client, IActivityMonitor monitor )
             : base( domainName, client, monitor )
         {
@@ -65,8 +75,12 @@ namespace CK.Observable
         /// <summary>
         /// Initializes a previously <see cref="ObservableDomain.Save"/>d domain.
         /// </summary>
+        /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
         /// <param name="client">The transaction manager to use. Can be null.</param>
-        /// <param name="monitor">The monitor associated to the domain. Can be null (a dedicated one will be created).</param>
+        /// <param name="monitor">
+        /// The monitor that will become the <see cref="ObservableDomain.Monitor"/> of this domain.
+        /// Can be null: a new, dedicated, ActivityMonitor will be created.
+        /// </param>
         /// <param name="s">The input stream.</param>
         /// <param name="leaveOpen">True to leave the stream opened.</param>
         /// <param name="encoding">Optional encoding for characters. Defaults to UTF-8.</param>

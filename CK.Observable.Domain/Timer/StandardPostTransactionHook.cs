@@ -14,28 +14,38 @@ namespace CK.Observable
     /// </summary>
     public class StandardPostTransactionHook : IPostTransactionHook
     {
-        readonly TimerCallback _timerFunc;
+        readonly Timer _timer;
+        readonly ObservableDomain _domain;
+        long _next;
 
-        public StandardPostTransactionHook()
+        public StandardPostTransactionHook( ObservableDomain domain )
         {
-            _timerFunc = new TimerCallback( OnTime );
+            _domain = domain ?? throw new ArgumentNullException( nameof( domain ) );
+            _timer = new Timer( new TimerCallback( OnTime ), this, Timeout.Infinite, Timeout.Infinite );
         }
 
-        class Context
+        static void OnTime( object state )
         {
-            public readonly ObservableDomain Domain;
-            public readonly Timer Timer;
+            var c = (StandardPostTransactionHook)state;
+            var m = new ActivityMonitor( "Raising timer from StandardPostTransactionHook." );
+            try
+            {
+                c._domain.FromTimerModifyAsync();
+            }
+            catch( Exception ex )
+            {
+                m.Error( ex );
+            }
+            m.MonitorEnd();
         }
 
-        void OnTime( object state )
+        public void OnTransactionDone( IActivityMonitor monitor, ObservableDomain origin, TransactionResult result )
         {
-            var c = (Context)state;
-            var r = c.Domain.ModifyAsync( )
-        }
-
-        public void OnTransactionDone( IActivityMonitor monitor, ObservableDomain domain, TransactionResult result )
-        {
+            if( _domain != origin ) throw new ArgumentException( $"Origin must be domain '{_domain.DomainName}', not '{origin?.DomainName ?? "<null>"}'.", nameof( origin ) );
             
+            Interlocked.CompareExchange()
+            _timer.Change( )
+            t.
         }
     }
 }

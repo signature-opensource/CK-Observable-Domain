@@ -8,7 +8,7 @@ namespace CK.Observable
 {
     /// <summary>
     /// Encapsulates the result of a <see cref="ObservableDomain.Transaction.Commit"/>
-    /// and <see cref="ObservableDomain.Modify(IActivityMonitor, Action)"/>.
+    /// and <see cref="ObservableDomain.Modify(IActivityMonitor, Action, int)"/>.
     /// </summary>
     public class TransactionResult
     {
@@ -16,6 +16,7 @@ namespace CK.Observable
 
         /// <summary>
         /// The empty transaction result with no events and no commands: both lists are empty.
+        /// <see cref="StartTimeUtc"/> and <see cref="NextDueTimeUtc"/> are <see cref="Util.UtcMinValue"/> since nothing happened.
         /// </summary>
         public static readonly TransactionResult Empty = new TransactionResult( Array.Empty<CKExceptionData>(), Util.UtcMinValue, Util.UtcMinValue );
 
@@ -68,25 +69,32 @@ namespace CK.Observable
 
         /// <summary>
         /// Attempts to executes all registered <see cref="PostActions"/> if any.
-        /// On error, nothing is done (except logging the error) and the culprit is let as the first next action to execute.
+        /// By default, on error, nothing is done (except logging the error, and by default raising the exception again) and
+        /// the culprit is let as the first next action to execute.
         /// </summary>
         /// <param name="m">The monitor to use.</param>
-        /// <returns>The awaitable.</returns>
-        public async Task ExecutePostActionsAsync( IActivityMonitor m )
+        /// <param name="throwException">Set it to false to log any exception and return it instead of rethrowing it.</param>
+        /// <returns>The exception (if <paramref name="throwException"/> is false).</returns>
+        public async Task<Exception> ExecutePostActionsAsync( IActivityMonitor m, bool throwException = true )
         {
-            try
+            if( _rawPostActions != null && _rawPostActions.Count > 0 )
             {
-                while( _rawPostActions.Count > 0 )
+                try
                 {
-                    await _rawPostActions[0].Invoke( m );
-                    _rawPostActions.RemoveAt( 0 );
+                    while( _rawPostActions.Count > 0 )
+                    {
+                        await _rawPostActions[0].Invoke( m );
+                        _rawPostActions.RemoveAt( 0 );
+                    }
+                }
+                catch( Exception ex )
+                {
+                    m.Error( ex );
+                    if( throwException ) throw;
+                    return ex;
                 }
             }
-            catch( Exception ex )
-            {
-                m.Error( ex );
-                throw;
-            }
+            return null;
         }
 
         internal TransactionResult( SuccessfulTransactionContext c )

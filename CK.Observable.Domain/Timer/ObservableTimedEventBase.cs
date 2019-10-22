@@ -78,7 +78,7 @@ namespace CK.Observable
             if( IsDisposed ) throw new ObjectDisposedException( ToString() );
         }
 
-        internal void DoRaise( IActivityMonitor monitor, DateTime current, bool ignoreOnTimerException )
+        internal void DoRaise( IActivityMonitor monitor, DateTime current, bool throwException )
         {
             Debug.Assert( !IsDisposed );
             var h = _handlers;
@@ -87,7 +87,8 @@ namespace CK.Observable
                 var ev = new ObservableTimedEventArgs( current, ExpectedDueTimeUtc );
                 using( monitor.OpenTrace( $"Raising {ToString()} (Delta: {ev.Delta.TotalMilliseconds} ms)." ) )
                 {
-                    if( ignoreOnTimerException )
+                    if( throwException ) h.Invoke( this, ev );
+                    else
                     {
                         var hList = h.GetInvocationList();
                         for( int i = 0; i < hList.Length; ++i )
@@ -103,7 +104,6 @@ namespace CK.Observable
                             }
                         }
                     }
-                    else h.Invoke( this, ev );
                 }
             }
         }
