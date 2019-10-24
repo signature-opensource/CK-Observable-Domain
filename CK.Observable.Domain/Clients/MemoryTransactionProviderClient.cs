@@ -54,11 +54,12 @@ namespace CK.Observable
         /// Called when the domain instance is created.
         /// By default, does nothing.
         /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
         /// <param name="timeUtc">The date time utc of the creation.</param>
         /// <param name="d">The newly created domain.</param>
-        public virtual void OnDomainCreated( ObservableDomain d, DateTime timeUtc )
+        public virtual void OnDomainCreated( IActivityMonitor monitor, ObservableDomain d, DateTime timeUtc )
         {
-            _next?.OnDomainCreated( d, timeUtc );
+            _next?.OnDomainCreated( monitor, d, timeUtc );
         }
 
         /// <summary>
@@ -75,11 +76,12 @@ namespace CK.Observable
         /// Default behavior is to call <see cref="RestoreSnapshot"/> and throws an <see cref="Exception"/>
         /// if no snapshot was available or if an error occured.
         /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
         /// <param name="d">The associated domain.</param>
         /// <param name="errors">A necessarily non null list of errors with at least one error.</param>
-        public virtual void OnTransactionFailure( ObservableDomain d, IReadOnlyList<CKExceptionData> errors )
+        public virtual void OnTransactionFailure( IActivityMonitor monitor, ObservableDomain d, IReadOnlyList<CKExceptionData> errors )
         {
-            _next?.OnTransactionFailure( d, errors );
+            _next?.OnTransactionFailure( monitor, d, errors );
             if( !RestoreSnapshot( d ) )
             {
                 throw new Exception( "No snapshot available or error while restoring the last snapshot." );
@@ -90,11 +92,12 @@ namespace CK.Observable
         /// Simply calls the next <see cref="IObservableDomainClient"/> in the chain of responsibility
         /// and if there is no snapshot an initial snapshot is created.
         /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
         /// <param name="d">The associated domain.</param>
         /// <param name="timeUtc">The Utc time associated to the transaction.</param>
-        public virtual void OnTransactionStart( ObservableDomain d, DateTime timeUtc )
+        public virtual void OnTransactionStart( IActivityMonitor monitor, ObservableDomain d, DateTime timeUtc )
         {
-            _next?.OnTransactionStart( d, timeUtc );
+            _next?.OnTransactionStart( monitor, d, timeUtc );
             if( !HasSnapshot ) CreateSnapshot( d, timeUtc );
         }
 
@@ -164,7 +167,7 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Creates and adds a snapshot to <see cref="Snapshots"/>.
+        /// Creates a snapshot.
         /// </summary>
         /// <param name="d">The associated domain.</param>
         /// <param name="timeUtc">Time of the operation.</param>

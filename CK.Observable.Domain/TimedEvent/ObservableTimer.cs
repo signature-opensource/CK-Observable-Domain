@@ -48,7 +48,7 @@ namespace CK.Observable
                 {
                     CheckDisposed();
                     _isActive = value;
-                    TimerHost.OnChanged( this );
+                    TimeManager.OnChanged( this );
                 }
             }
         }
@@ -102,7 +102,7 @@ namespace CK.Observable
             CheckDisposed();
             ExpectedDueTimeUtc = DueTimeUtc = AdjustNextDueTimeUtc( DateTime.UtcNow, firstDueTimeUtc, intervalMilliSeconds );
             _milliSeconds = intervalMilliSeconds;
-            TimerHost.OnChanged( this );
+            TimeManager.OnChanged( this );
         }
 
         internal override void OnAfterRaiseUnchanged()

@@ -14,7 +14,7 @@ namespace CK.Observable
     /// </summary>
     public abstract class ObservableTimedEventBase : IDisposable
     {
-        internal TimerHost TimerHost;
+        internal TimeManager TimeManager;
         internal int ActiveIndex;
         internal DateTime ExpectedDueTimeUtc;
         internal ObservableTimedEventBase Next;
@@ -25,8 +25,8 @@ namespace CK.Observable
 
         internal ObservableTimedEventBase()
         {
-            TimerHost = ObservableDomain.GetCurrentActiveDomain().TimerHost;
-            TimerHost.OnCreated( this );
+            TimeManager = ObservableDomain.GetCurrentActiveDomain().TimeManager;
+            TimeManager.OnCreated( this );
         }
 
         /// <summary>
@@ -39,7 +39,7 @@ namespace CK.Observable
         /// <summary>
         /// Gets whether this object has been disposed.
         /// </summary>
-        public bool IsDisposed => TimerHost == null;
+        public bool IsDisposed => TimeManager == null;
 
         /// <summary>
         /// Gets or sets an optional name for this timed object.
@@ -58,7 +58,7 @@ namespace CK.Observable
                 CheckDisposed();
                 _handlers += value;
                 ++_handlerCount;
-                TimerHost.OnChanged( this );
+                TimeManager.OnChanged( this );
             }
             remove
             {
@@ -68,7 +68,7 @@ namespace CK.Observable
                 if( !ReferenceEquals( hBefore, _handlers ) )
                 {
                     --_handlerCount;
-                    TimerHost.OnChanged( this );
+                    TimeManager.OnChanged( this );
                 }
             }
         }
@@ -136,8 +136,8 @@ namespace CK.Observable
             {
                 Disposed?.Invoke( this, EventArgs.Empty );
                 Disposed = null;
-                TimerHost.OnDisposed( this );
-                TimerHost = null;
+                TimeManager.OnDisposed( this );
+                TimeManager = null;
                 _handlers = null;
             }
         }

@@ -14,10 +14,14 @@ namespace CK.Observable
         readonly List<Func<IActivityMonitor, Task>> _postActions;
 
         /// <summary>
+        /// Gets the monitor to use.
+        /// </summary>
+        public IActivityMonitor Monitor => ObservableDomain.Monitor;
+
+        /// <summary>
         /// Gets the observable domain.
         /// </summary>
         public ObservableDomain ObservableDomain { get; }
-
 
         /// <summary>
         /// Gets the start time (UTC) of the transaction.

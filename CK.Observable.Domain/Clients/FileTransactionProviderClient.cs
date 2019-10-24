@@ -67,9 +67,10 @@ namespace CK.Observable
         /// <summary>
         /// Loads the file if it exists (calls <see cref="MemoryTransactionProviderClient.LoadAndInitializeSnapshot(ObservableDomain, DateTime, Stream)"/>)).
         /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
         /// <param name="d">The newly created domain.</param>
         /// <param name="timeUtc">The date time utc of the creation.</param>
-        public override void OnDomainCreated( ObservableDomain d, DateTime timeUtc )
+        public override void OnDomainCreated( IActivityMonitor monitor, ObservableDomain d, DateTime timeUtc )
         {
             lock( _fileLock )
             {
@@ -85,7 +86,7 @@ namespace CK.Observable
             }
             RescheduleDueTime( timeUtc );
 
-            base.OnDomainCreated( d, timeUtc );
+            base.OnDomainCreated( monitor, d, timeUtc );
         }
 
         /// <inheritdoc />

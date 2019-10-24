@@ -45,7 +45,7 @@ namespace CK.Observable
                     if( value.Kind != DateTimeKind.Utc ) throw new ArgumentException( nameof( DueTimeUtc ), "Must be a Utc DateTime." );
                     CheckDisposed();
                     ExpectedDueTimeUtc = value;
-                    TimerHost.OnChanged( this );
+                    TimeManager.OnChanged( this );
                 }
             }
         }
