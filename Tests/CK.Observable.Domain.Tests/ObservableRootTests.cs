@@ -14,7 +14,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void initializing_and_persisting_new_empty_domain()
         {
-            var d = new ObservableDomain<ApplicationState>( "TEST" );
+            var d = new ObservableDomain<ApplicationState>( TestHelper.Monitor, "TEST" );
             d.Root.Should().NotBeNull();
             d.TransactionSerialNumber.Should().Be( 0 );
 
@@ -28,7 +28,7 @@ namespace CK.Observable.Domain.Tests
         {
             var eventCollector = new TransactionEventCollectorClient();
 
-            var d = new ObservableDomain<ApplicationState>( "TEST", eventCollector );
+            var d = new ObservableDomain<ApplicationState>( TestHelper.Monitor, "TEST", eventCollector);
             d.Root.ToDoNumbers.Should().BeEmpty();
 
             d.Modify( TestHelper.Monitor, () =>
@@ -39,14 +39,17 @@ namespace CK.Observable.Domain.Tests
             t1.Should().Be( @"{""N"":1,""E"":[[""I"",1,0,42]]}", "Initial root objects instanciations are not exposed." );
 
             var d2 = SaveAndLoad( d );
-            d.TransactionSerialNumber.Should().Be( 1 );
-            d.Root.ToDoNumbers[0].Should().Be( 42 );
+            d2.TransactionSerialNumber.Should().Be( 1 );
+            d2.Root.ToDoNumbers[0].Should().Be( 42 );
+
+            ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d2 );
+
         }
 
         [Test]
         public void serialization_tests()
         {
-            var d = new ObservableDomain<ApplicationState>( "TEST" );
+            var d = new ObservableDomain<ApplicationState>( TestHelper.Monitor, "TEST" );
             d.Modify( TestHelper.Monitor, () =>
             {
                 d.Root.ToDoNumbers.AddRange( Enumerable.Range( 10, 20 ) );
@@ -59,7 +62,7 @@ namespace CK.Observable.Domain.Tests
                 }
             } );
             var services = new SimpleServiceContainer();
-            services.Add<ObservableDomain>( new ObservableDomain<ApplicationState>( "TEST" ) );
+            services.Add<ObservableDomain>( new ObservableDomain<ApplicationState>( TestHelper.Monitor, "TEST" ) );
             BinarySerializer.IdempotenceCheck( d.Root, services );
         }
 
@@ -67,9 +70,9 @@ namespace CK.Observable.Domain.Tests
         {
             using( var s = new MemoryStream() )
             {
-                domain.Save( s, leaveOpen: true );
+                domain.Save( TestHelper.Monitor, s, leaveOpen: true );
                 s.Position = 0;
-                return new ObservableDomain<T>( "TEST", null, null, s );
+                return new ObservableDomain<T>( TestHelper.Monitor, "TEST", null, s);
             }
         }
     }

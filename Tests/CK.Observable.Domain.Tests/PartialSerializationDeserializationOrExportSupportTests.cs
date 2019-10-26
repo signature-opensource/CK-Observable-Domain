@@ -18,14 +18,14 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void exportable_but_not_serializable()
         {
-            var d = new ObservableDomain( "TEST" );
+            var d = new ObservableDomain( TestHelper.Monitor, "TEST" );
             d.Modify( TestHelper.Monitor, () =>
             {
                 new ExportableOnly() { Name = "Albert" };
             } );
             var export = d.ExportToString();
             export.Should().Be( @"{""N"":1,""C"":1,""P"":[""Name""],""O"":[{""þ"":[0,""A""]},{""°"":1,""Name"":""Albert""}],""R"":[]}" );
-            d.Invoking( sut => sut.Save( new MemoryStream() ) )
+            d.Invoking( sut => sut.Save( TestHelper.Monitor, new MemoryStream() ) )
                 .Should().Throw<InvalidOperationException>().WithMessage( "*is not serializable*" );
         }
 
@@ -55,7 +55,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void serializable_but_not_exportable()
         {
-            var d = new ObservableDomain( "TEST" );
+            var d = new ObservableDomain( TestHelper.Monitor, "TEST" );
             d.Modify( TestHelper.Monitor, () =>
             {
                 new SerializableOnly() { Name = "Albert" };

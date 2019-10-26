@@ -79,7 +79,7 @@ namespace CK.Observable
                     using( var f = new FileStream( _filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096,
                         FileOptions.SequentialScan ) )
                     {
-                        LoadAndInitializeSnapshot( d, timeUtc, f );
+                        LoadAndInitializeSnapshot( monitor, d, timeUtc, f );
                         _fileTransactionNumber = CurrentSerialNumber;
                     }
                 }

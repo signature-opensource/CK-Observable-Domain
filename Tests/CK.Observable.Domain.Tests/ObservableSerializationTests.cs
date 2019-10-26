@@ -1,5 +1,6 @@
 using FluentAssertions;
 using NUnit.Framework;
+using System.Linq;
 using static CK.Testing.MonitorTestHelper;
 
 namespace CK.Observable.Domain.Tests
@@ -7,28 +8,42 @@ namespace CK.Observable.Domain.Tests
     [TestFixture]
     public class ObservableSerializationTests
     {
+
+        [Test]
+        public void simple_idempotence_checks()
+        {
+            var d = new ObservableDomain( TestHelper.Monitor, "TEST" );
+            d.Modify( TestHelper.Monitor, () => new Sample.Car( "Zoé" ) );
+            d.AllObjects.Should().HaveCount( 1 );
+            ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
+
+            d.Modify( TestHelper.Monitor, () => d.AllObjects.Single().Dispose() );
+            ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
+
+            d.Modify( TestHelper.Monitor, () => new Sample.Car( "Zoé is back!" ) );
+            ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
+        }
+
+
         [Test]
         public void immutable_string_serialization_test()
         {
-            var od = new ObservableDomain<CustomRoot>( "TEST" );
-
+            var od = new ObservableDomain<CustomRoot>( TestHelper.Monitor, "TEST" );
             od.Modify( TestHelper.Monitor, () =>
             {
                 od.Root.ImmutablesById = new ObservableDictionary<string, CustomImmutable>();
 
                 var myImmutable = new CustomImmutable( "ABC000", "My object" );
                 od.Root.ImmutablesById.Add( myImmutable.Id, myImmutable );
-
-
                 od.Root.SomeList = new ObservableList<string>();
             } );
-            ObservableRootTests.SaveAndLoad( od );
+            ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, od );
         }
 
         [Test]
         public void created_then_disposed_event_test()
         {
-            var od = new ObservableDomain<CustomRoot>( "TEST" );
+            var od = new ObservableDomain<CustomRoot>( TestHelper.Monitor, "TEST" );
 
             // Prepare initial state
             od.Modify( TestHelper.Monitor, () =>

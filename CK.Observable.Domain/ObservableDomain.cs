@@ -1,4 +1,4 @@
-using CK.Core;
+    using CK.Core;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 
 namespace CK.Observable
 {
+
     /// <summary>
     /// Base class for any observable domain where <see cref="AllRoots"/> are not strongly typed.
     /// You may use specialized <see cref="ObservableChannel{T}"/> or <see cref="ObservableDomain{T1, T2, T3, T4}"/>
@@ -28,7 +29,6 @@ namespace CK.Observable
         public static readonly CKExceptionData UncomittedTransaction = new CKExceptionData( "Uncommitted transaction.", "Not.An.Exception", "Not.An.Exception, No.Assembly", null, null, null, null, null, null );
 
         static readonly Type[] _observableRootCtorParameters = new Type[] { typeof( ObservableDomain ) };
-        static readonly Action _actionVoid = () => { };
 
         class PropInfo
         {
@@ -70,7 +70,7 @@ namespace CK.Observable
         readonly ChangeTracker _changeTracker;
         readonly AllCollection _exposedObjects;
         readonly ReaderWriterLockSlim _lock;
-        Stack<int> _freeList;
+        readonly List<int> _freeList;
 
         ObservableObject[] _objects;
 
@@ -94,8 +94,10 @@ namespace CK.Observable
 
         IObservableTransaction _currentTran;
         int _transactionSerialNumber;
-        IActivityMonitor _domainBoundMonitor;
-        IActivityMonitor _lockedDomainMonitor;
+
+        DomainActivityMonitor _domainMonitor;
+        readonly object _domainMonitorLock;
+        readonly object _saveLock;
 
         bool _deserializing;
 
@@ -305,17 +307,16 @@ namespace CK.Observable
         {
             readonly ObservableDomain _previous;
             readonly ObservableDomain _domain;
-            readonly IActivityMonitor _previousMonitor;
             readonly IDisposableGroup _monitorGroup;
             readonly DateTime _startTime;
             CKExceptionData[] _errors;
             TransactionResult _result;
             bool _resultInitialized;
 
-            public Transaction( ObservableDomain d, IActivityMonitor previousMonitor, DateTime startTime, IDisposableGroup g )
+            public Transaction( ObservableDomain d, IActivityMonitor monitor, DateTime startTime, IDisposableGroup g )
             {
                 _domain = d;
-                _previousMonitor = previousMonitor;
+                Monitor = monitor;
                 _previous = CurrentThreadDomain;
                 CurrentThreadDomain = d;
                 _startTime = startTime;
@@ -324,6 +325,8 @@ namespace CK.Observable
             }
 
             public DateTime StartTime => _startTime;
+
+            public IActivityMonitor Monitor { get; }
 
             public IReadOnlyList<CKExceptionData> Errors => _errors;
 
@@ -344,7 +347,6 @@ namespace CK.Observable
                 Debug.Assert( _domain._lock.IsWriteLockHeld );
                 DateTime nextTimerDueDate = _domain._timeManager.ApplyChanges();
                 CurrentThreadDomain = _previous;
-                _domain._currentTran = null;
                 if( _errors.Length != 0 )
                 {
                     // On errors, resets the change tracker, sends the errors to the managers
@@ -353,11 +355,11 @@ namespace CK.Observable
                     _domain._changeTracker.Reset();
                     try
                     {
-                        _domain.DomainClient?.OnTransactionFailure( _domain.Monitor, _domain, _errors );
+                        _domain.DomainClient?.OnTransactionFailure( Monitor, _domain, _errors );
                     }
                     catch( Exception ex )
                     {
-                        _domain.Monitor.Error( "Error in IObservableTransactionManager.OnTransactionFailure.", ex );
+                        Monitor.Error( "Error in IObservableTransactionManager.OnTransactionFailure.", ex );
                         _result = _result.WithClientError( ex );
                     }
                 }
@@ -372,13 +374,14 @@ namespace CK.Observable
                     }
                     catch( Exception ex )
                     {
-                        _domain.Monitor.Fatal( "Error in IObservableTransactionManager.OnTransactionCommit.", ex );
+                        Monitor.Fatal( "Error in IObservableTransactionManager.OnTransactionCommit.", ex );
                         _result = new TransactionResult( ctx ).WithClientError( ex );
                     }
                 }
-                _domain._timeManager.SetNextDueTimeUtc( _result.NextDueTimeUtc );
+                var next = _result.NextDueTimeUtc;
+                if( next != Util.UtcMinValue ) _domain._timeManager.SetNextDueTimeUtc( Monitor, next );
                 _monitorGroup.Dispose();
-                _domain.Monitor = _previousMonitor;
+                _domain._currentTran = null;
                 _domain._lock.ExitWriteLock();
                 return _result;
             }
@@ -394,36 +397,12 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Initializes a new <see cref="ObservableDomain"/> with an autonomous <see cref="Monitor"/>
-        /// and no <see cref="DomainClient"/>.
+        /// Initializes a new <see cref="ObservableDomain"/> without any <see cref="DomainClient"/>.
         /// </summary>
+        /// <param name="monitor">The monitor used to log the construction of this domain. Can not be null.</param>
         /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
-        public ObservableDomain( string domainName )
-            : this( domainName, null, null )
-        {
-        }
-
-        /// <summary>
-        /// Initializes a new <see cref="ObservableDomain"/> bound to a <see cref="Monitor"/> but without
-        /// any <see cref="DomainClient"/>.
-        /// </summary>
-        /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
-        /// <param name="monitor">
-        /// The monitor that will become the <see cref="Monitor"/> of this domain.
-        /// Can be null: a new, dedicated, ActivityMonitor will be created.
-        /// </param>
-        public ObservableDomain( string domainName, IActivityMonitor monitor )
-            : this( domainName, null, monitor )
-        {
-        }
-
-        /// <summary>
-        /// Initializes a new <see cref="ObservableDomain"/> with a <see cref="DomainClient"/>.
-        /// </summary>
-        /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
-        /// <param name="client">The associated transaction manager to use. Can be null.</param>
-        public ObservableDomain( string domainName, IObservableDomainClient client )
-            : this( domainName, client, null )
+        public ObservableDomain( IActivityMonitor monitor, string domainName )
+            : this( monitor, domainName, null )
         {
         }
 
@@ -432,43 +411,65 @@ namespace CK.Observable
         /// a <see cref="DomainClient"/> an optionals explicit exporter, serializer
         /// and deserializer handlers.
         /// </summary>
+        /// <param name="monitor">The monitor used to log the construction of this domain. Cannot be null.</param>
         /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
         /// <param name="client">The transaction manager to use. Can be null.</param>
-        /// <param name="monitor">
-        /// The monitor that will become the <see cref="Monitor"/> of this domain.
-        /// Can be null: a new, dedicated, ActivityMonitor will be created.
-        /// </param>
         /// <param name="exporters">Optional exporters handler.</param>
         /// <param name="serializers">Optional serializers handler.</param>
         /// <param name="deserializers">Optional deserializers handler.</param>
-        public ObservableDomain(
-            string domainName,
-            IObservableDomainClient client,
-            IActivityMonitor monitor,
-            IExporterResolver exporters = null,
-            ISerializerResolver serializers = null,
-            IDeserializerResolver deserializers = null )
-            : this( domainName, true, client, monitor, exporters, serializers, deserializers )
+        public ObservableDomain( IActivityMonitor monitor,
+                                 string domainName,
+                                 IObservableDomainClient client,
+                                 IExporterResolver exporters = null,
+                                 ISerializerResolver serializers = null,
+                                 IDeserializerResolver deserializers = null )
+            : this( monitor, domainName, client, true, exporters, serializers, deserializers )
         {
         }
 
-        ObservableDomain(
-            string domainName,
-            bool callClientOnCreate,
-            IObservableDomainClient client,
-            IActivityMonitor monitor,
-            IExporterResolver exporters,
-            ISerializerResolver serializers,
-            IDeserializerResolver deserializers )
+        /// <summary>
+        /// Initializes a previously <see cref="Save"/>d domain.
+        /// </summary>
+        /// <param name="monitor">The monitor used to log the construction of this domain. Can not be null.</param>
+        /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
+        /// <param name="client">The transaction manager to use. Can be null.</param>
+        /// <param name="s">The input stream.</param>
+        /// <param name="leaveOpen">True to leave the stream opened.</param>
+        /// <param name="encoding">Optional encoding for characters. Defaults to UTF-8.</param>
+        /// <param name="exporters">Optional exporters handler.</param>
+        /// <param name="serializers">Optional serializers handler.</param>
+        /// <param name="deserializers">Optional deserializers handler.</param>
+        public ObservableDomain( IActivityMonitor monitor,
+                                 string domainName,
+                                 IObservableDomainClient client,
+                                 Stream s,
+                                 bool leaveOpen = false,
+                                 Encoding encoding = null,
+                                 IExporterResolver exporters = null,
+                                 ISerializerResolver serializers = null,
+                                 IDeserializerResolver deserializers = null )
+            : this( monitor, domainName, client, false, exporters, serializers, deserializers )
         {
+            Load( monitor,s, leaveOpen, encoding );
+            client?.OnDomainCreated( monitor, this, DateTime.UtcNow );
+        }
+
+        ObservableDomain( IActivityMonitor monitor,
+                          string domainName,
+                          IObservableDomainClient client,
+                          bool callClientOnCreate,
+                          IExporterResolver exporters,
+                          ISerializerResolver serializers,
+                          IDeserializerResolver deserializers )
+        {
+            if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
             DomainName = domainName ?? throw new ArgumentNullException( nameof( domainName ) );
-            Monitor = _domainBoundMonitor = monitor ?? new ActivityMonitor( $"Observable Domain {DomainName}." );
             _exporters = exporters ?? ExporterRegistry.Default;
             _serializers = serializers ?? SerializerRegistry.Default;
             _deserializers = deserializers ?? DeserializerRegistry.Default;
             DomainClient = client;
             _objects = new ObservableObject[512];
-            _freeList = new Stack<int>();
+            _freeList = new List<int>();
             _properties = new Dictionary<string, PropInfo>();
             _propertiesByIndex = new List<PropInfo>();
             _changeTracker = new ChangeTracker();
@@ -477,38 +478,9 @@ namespace CK.Observable
             _timeManager = new TimeManager( this );
             // LockRecursionPolicy.NoRecursion: reentrancy must NOT be allowed.
             _lock = new ReaderWriterLockSlim( LockRecursionPolicy.NoRecursion );
+            _saveLock = new Object();
+            _domainMonitorLock = new Object();
             if( callClientOnCreate ) client?.OnDomainCreated( monitor, this, DateTime.UtcNow );
-        }
-
-        /// <summary>
-        /// Initializes a previously <see cref="Save"/>d domain.
-        /// </summary>
-        /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
-        /// <param name="client">The transaction manager to use. Can be null.</param>
-        /// <param name="monitor">
-        /// The monitor that will become the <see cref="Monitor"/> of this domain.
-        /// Can be null: a new, dedicated, ActivityMonitor will be created.
-        /// </param>
-        /// <param name="s">The input stream.</param>
-        /// <param name="leaveOpen">True to leave the stream opened.</param>
-        /// <param name="encoding">Optional encoding for characters. Defaults to UTF-8.</param>
-        /// <param name="exporters">Optional exporters handler.</param>
-        /// <param name="serializers">Optional serializers handler.</param>
-        /// <param name="deserializers">Optional deserializers handler.</param>
-        public ObservableDomain(
-            string domainName,
-            IObservableDomainClient client,
-            IActivityMonitor monitor,
-            Stream s,
-            bool leaveOpen = false,
-            Encoding encoding = null,
-            IExporterResolver exporters = null,
-            ISerializerResolver serializers = null,
-            IDeserializerResolver deserializers = null )
-            : this( domainName, false, client, monitor, exporters, serializers, deserializers )
-        {
-            Load( s, leaveOpen, encoding );
-            client?.OnDomainCreated( monitor, this, DateTime.UtcNow );
         }
 
         /// <summary>
@@ -518,24 +490,32 @@ namespace CK.Observable
         protected class InitializationTransaction : IObservableTransaction
         {
             readonly ObservableDomain _d;
-            readonly ObservableDomain _previous;
+            readonly ObservableDomain _previousThreadDomain;
+            readonly IObservableTransaction _previousTran;
             readonly DateTime _startTime;
+            readonly IActivityMonitor _monitor;
+            readonly bool _enterWriteLock;
 
             /// <summary>
             /// Initializes a new <see cref="InitializationTransaction"/> required
             /// to call <see cref="AddRoot{T}(InitializationTransaction)"/>.
             /// </summary>
+            /// <param name="m">The monitor to use while this transaction is the current one.</param>
             /// <param name="d">The observable domain.</param>
-            public InitializationTransaction( ObservableDomain d )
+            /// <param name="enterWriteLock">False to not enter and exit the write lock.</param>
+            public InitializationTransaction( IActivityMonitor m, ObservableDomain d, bool enterWriteLock = true )
             {
+                _monitor = m; 
                 _startTime = DateTime.UtcNow;
                 _d = d;
-                d._lock.EnterWriteLock();
+                if( _enterWriteLock = enterWriteLock ) d._lock.EnterWriteLock();
+                _previousTran = d._currentTran;
                 d._currentTran = this;
-                _previous = CurrentThreadDomain;
+                _previousThreadDomain = CurrentThreadDomain;
                 CurrentThreadDomain = d;
                 d._deserializing = true;
             }
+            IActivityMonitor IObservableTransaction.Monitor => _monitor;
 
             DateTime IObservableTransaction.StartTime => _startTime;
 
@@ -551,9 +531,9 @@ namespace CK.Observable
             public void Dispose()
             {
                 _d._deserializing = false;
-                CurrentThreadDomain = _previous;
-                _d._currentTran = null;
-                _d._lock.ExitWriteLock();
+                CurrentThreadDomain = _previousThreadDomain;
+                _d._currentTran = _previousTran;
+                if( _enterWriteLock ) _d._lock.ExitWriteLock();
             }
         }
 
@@ -593,38 +573,55 @@ namespace CK.Observable
         /// </summary>
         public int TransactionSerialNumber => _transactionSerialNumber;
 
-        /// <summary>
-        /// Gets the monitor that is bound to this domain if it can atomically be obtained or null if
-        /// it has already been locked by another thread. 
-        /// Note that the actual bound monitor is never null: an autonomous monitor is automatically created if none is
-        /// provided to the constructors.
-        /// </summary>
-        /// <returns>The monitor or null.</returns>
-        internal IActivityMonitor LockDomainBoundMonitor()
+        class DomainActivityMonitor : ActivityMonitor, IDisposableActivityMonitor
         {
-            if( Interlocked.CompareExchange( ref _lockedDomainMonitor, _domainBoundMonitor, null ) == null )
-            {
-                return _lockedDomainMonitor;
-            }
-            return null;
-        }
+            readonly ObservableDomain _domain;
 
-        /// <summary>
-        /// Unlocks the domain monitor obtained by <see cref="LockDomainBoundMonitor"/>.
-        /// </summary>
-        internal void UnlockDomainBoundMonitor()
-        {
-            if( Interlocked.CompareExchange( ref _lockedDomainMonitor, null, _domainBoundMonitor ) != _domainBoundMonitor )
+            public DomainActivityMonitor( string topic, ObservableDomain domain )
+                : base( $"Observable domain '{topic}'." )
             {
-                throw new Exception( nameof( UnlockDomainBoundMonitor ) );
+                if( (_domain = domain) == null ) this.Error( $"Failed to obtain the locked domain monitor in less than {LockedDomainMonitorTimeout} ms." );
+            }
+
+            public void Dispose()
+            {
+                if( _domain == null )
+                {
+                    this.MonitorEnd();
+                }
+                else Monitor.Exit( _domain._domainMonitorLock );
             }
         }
 
         /// <summary>
-        /// Gets the monitor to use inside a transaction. It is usually an external monitor that has
-        /// been provided, but it can be the <see cref="LockDomainBoundMonitor"/> (as long as it has been locked).
+        /// Default timeout before <see cref="ObtainDomainMonitor(int)"/> creates a new temporary <see cref="IDisposableActivityMonitor"/>
+        /// instead of reusing the default one.
         /// </summary>
-        internal IActivityMonitor Monitor { get; private set; }
+        public const int LockedDomainMonitorTimeout = 1000;
+
+        /// <summary>
+        /// Obtains a monitor that is bound to this domain (it must be disposed once done with it).
+        /// This implementation creates a new dedicated <see cref="IDisposableActivityMonitor"/> once and caches it
+        /// or returns a new dedicated one if the shared one cannot be obtained before <paramref name="milliSecondTimeout"/>.
+        /// </summary>
+        /// <returns>The cached monitor bound to this timer.</returns>
+        public IDisposableActivityMonitor ObtainDomainMonitor( int milliSecondTimeout = LockedDomainMonitorTimeout, bool createAutonomousOnTimeout = true )
+        {
+            if( !Monitor.TryEnter( _domainMonitorLock, LockedDomainMonitorTimeout ) )
+            {
+                return createAutonomousOnTimeout ? new DomainActivityMonitor( $"Autonomous monitor for observable domain '{DomainName}'.", null ) : null;
+            }
+            if( _domainMonitor == null )
+            {
+                _domainMonitor = new DomainActivityMonitor( $"Observable Domain '{DomainName}'.", this );
+            }
+            return _domainMonitor;
+        }
+
+        /// <summary>
+        /// Gets the monitor to use (from the current transaction).
+        /// </summary>
+        internal IActivityMonitor CurrentMonitor => _currentTran.Monitor;
 
         /// <summary>
         /// Gets this domain name.
@@ -663,10 +660,7 @@ namespace CK.Observable
         /// Any exceptions raised by <see cref="IObservableDomainClient.OnTransactionStart(IActivityMonitor, ObservableDomain, DateTime)"/> are thrown
         /// by this method.
         /// </summary>
-        /// <param name="monitor">
-        /// Monitor to use. Must not be null.
-        /// It will be substituted to this <see cref="Monitor"/> during the transaction execution.
-        /// </param>
+        /// <param name="monitor">Monitor to use. Cannot be null.</param>
         /// <param name="millisecondsTimeout">
         /// The maximum number of milliseconds to wait for a read access before giving up.
         /// Wait indefinitely by default.
@@ -697,28 +691,25 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Returns the created IObservableTransaction XOR an IObservableTransactionManager.OnTransactionStart exception.
-        /// Write lock is held (and released on error).
+        /// Returns the created IObservableTransaction XOR an IObservableDomainClient.OnTransactionStart exception.
+        /// Write lock must be held before the call and kept until (but released on error).
         /// </summary>
-        /// <param name="monitor">The monitor to use.</param>
-        /// <param name="throwException">Whether to throw or return the potential IObservableTransactionManager.OnTransactionStart exception.</param>
-        /// <returns>The transaction XOR the IObservableTransactionManager.OnTransactionStart exception.</returns>
-        (IObservableTransaction,Exception) DoBeginTransaction( IActivityMonitor monitor, bool throwException )
+        /// <param name="m">The monitor to use.</param>
+        /// <param name="throwException">Whether to throw or return the potential IObservableDomainClient.OnTransactionStart exception.</param>
+        /// <returns>The transaction XOR the IObservableDomainClient.OnTransactionStart exception.</returns>
+        (IObservableTransaction,Exception) DoBeginTransaction( IActivityMonitor m, bool throwException )
         {
-            Debug.Assert( monitor != null && _lock.IsWriteLockHeld );
-            var prevMonitor = Monitor;
-            Monitor = monitor;
-            var group = monitor.OpenTrace( "Starting transaction." );
+            Debug.Assert( m != null && _lock.IsWriteLockHeld );
+            var group = m.OpenTrace( "Starting transaction." );
             try
             {
                 var startTime = DateTime.UtcNow;
-                DomainClient?.OnTransactionStart( monitor, this, startTime );
-                return (_currentTran = new Transaction( this, prevMonitor, startTime, group ), null);
+                DomainClient?.OnTransactionStart( m, this, startTime );
+                return (_currentTran = new Transaction( this, m, startTime, group ), null);
             }
             catch( Exception ex )
             {
-                Monitor.Error( "While calling IObservableTransactionManager.OnTransactionStart().", ex );
-                Monitor = prevMonitor;
+                m.Error( "While calling IObservableTransactionManager.OnTransactionStart().", ex );
                 group.Dispose();
                 _lock.ExitWriteLock();
                 if( throwException ) throw;
@@ -731,11 +722,11 @@ namespace CK.Observable
         /// Any exceptions raised by <see cref="IObservableDomainClient.OnTransactionStart(IActivityMonitor,ObservableDomain, DateTime)"/> are thrown
         /// by this method, but any other exceptions are caught, logged, and appears in <see cref="TransactionResult"/>.
         /// </summary>
-        /// <param name="monitor">
-        /// Monitor to use. Must not be null.
-        /// It will be substituted to this <see cref="Monitor"/> during the transaction execution.
+        /// <param name="monitor">Monitor to use. Cannot be null.</param>
+        /// <param name="actions">
+        /// The actions to execute inside the ObservableDomain's current transaction.
+        /// Can be null: only pending timed events are executed if any.
         /// </param>
-        /// <param name="actions">Any action that can alter the objects of this domain.</param>
         /// <param name="millisecondsTimeout">
         /// The maximum number of milliseconds to wait for a read access before giving up.
         /// Wait indefinitely by default.
@@ -755,21 +746,24 @@ namespace CK.Observable
         /// that have been registered: all this occurs in the lock and it is released at the end. This never throws
         /// since the transaction result contains any errors.
         /// </summary>
-        /// <param name="actions">The actions to execute. Cannnot be null.</param>
-        /// <param name="t">The observable transaction. Cannnot be null.</param>
+        /// <param name="actions">The actions to execute. Can be null.</param>
+        /// <param name="t">The observable transaction. Cannot be null.</param>
         /// <returns>The transaction result. Will never be null.</returns>
         TransactionResult DoModifyAndCommit( Action actions, IObservableTransaction t )
         {
-            Debug.Assert( actions != null && t != null );
+            Debug.Assert( t != null );
             try
             {
                 _timeManager.RaiseElapsedEvent( t.StartTime );
-                actions();
-                _timeManager.RaiseElapsedEvent( DateTime.UtcNow );
+                if( actions != null )
+                {
+                    actions();
+                    _timeManager.RaiseElapsedEvent( DateTime.UtcNow );
+                }
             }
             catch( Exception ex )
             {
-                Monitor.Error( ex );
+                t.Monitor.Error( ex );
                 t.AddError( CKExceptionData.CreateFrom( ex ) );
             }
             // The transaction commit updates the timers to return the NextDueTime.
@@ -781,8 +775,11 @@ namespace CK.Observable
         /// Any exceptions raised by <see cref="IObservableDomainClient.OnTransactionStart(IActivityMonitor,ObservableDomain, DateTime)"/> (at the start of the process)
         /// and by <see cref="TransactionResult.PostActions"/> (after the successful commit or the failure) are thrown by this method.
         /// </summary>
-        /// <param name="monitor">The ActivityMonitor.</param>
-        /// <param name="actions">The actions to execute inside the ObservableDomain's modification context.</param>
+        /// <param name="monitor">The monitor to use.</param>
+        /// <param name="actions">
+        /// The actions to execute inside the ObservableDomain's current transaction.
+        /// Can be null: only pending timed events are executed if any.
+        /// </param>
         /// <param name="millisecondsTimeout">
         /// The maximum number of milliseconds to wait for a read access before giving up.
         /// Wait indefinitely by default.
@@ -799,50 +796,35 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Called by <see cref="Observable.TimeManager"/> or by this <see cref="FromTimerHookAsync"/> method.
-        /// <para>
-        /// Returns the transaction result (that may be <see cref="TransactionResult.Empty"/>) and the IObservableTransactionManager.OnTransactionStart
-        /// or TransactionResult.ExecutePostActionsAsync exception if any.
-        /// </para>
+        /// Safe version of <see cref="ModifyAsync(IActivityMonitor, Action, int)"/> that will never throw: any exception raised
+        /// by <see cref="IObservableDomainClient.OnTransactionStart(IActivityMonitor, ObservableDomain, DateTime)"/>
+        /// or <see cref="TransactionResult.ExecutePostActionsAsync(IActivityMonitor, bool)"/> is logged and returned.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
-        /// <returns>See summary.</returns>
-        internal async Task<(TransactionResult, Exception)> FromTimerAsync( IActivityMonitor monitor )
+        /// <param name="actions">
+        /// The actions to execute inside the ObservableDomain's current transaction.
+        /// Can be null: only pending timed events are executed if any.
+        /// </param>
+        /// <param name="millisecondsTimeout">
+        /// The maximum number of milliseconds to wait for a read access before giving up.
+        /// Wait indefinitely by default.
+        /// </param>
+        /// <returns>
+        /// Returns the transaction result (that may be <see cref="TransactionResult.Empty"/>) and any exception outside of the observable transaction itself.
+        /// </returns>
+        public async Task<(TransactionResult, Exception)> SafeModifyAsync( IActivityMonitor monitor, Action actions, int millisecondsTimeout = -1 )
         {
-            if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
+            Debug.Assert( monitor != null );
             TransactionResult tr = TransactionResult.Empty;
-            if( _lock.TryEnterWriteLock( 0 ) )
+            if( _lock.TryEnterWriteLock( millisecondsTimeout ) )
             {
                 var tEx = DoBeginTransaction( monitor, false );
-                Debug.Assert( (tEx.Item1 != null) != (tEx.Item2 != null), "IObservableTransaction XOR IObservableClient.OnStartTransaction() exception." );
+                Debug.Assert( (tEx.Item1 != null) != (tEx.Item2 != null), "IObservableTransaction XOR IObservableDomainClient.OnTransactionStart() exception." );
                 if( tEx.Item2 != null ) return (tr, tEx.Item2);
-                tr = DoModifyAndCommit( _actionVoid, tEx.Item1 );
+                tr = DoModifyAndCommit( actions, tEx.Item1 );
             }
-            else monitor.Debug( "WriteLock not obtained." );
+            else monitor.Warn( $"WriteLock not obtained in {millisecondsTimeout} ms." );
             return (tr, await tr.ExecutePostActionsAsync( monitor, throwException: false ));
-        }
-
-        internal async Task<(TransactionResult,Exception)> FromTimerHookAsync( Func<IActivityMonitor,Task> before, Func<IActivityMonitor,TransactionResult, Exception, Task> after )
-        {
-            TransactionResult tr = TransactionResult.Empty;
-            Exception error = null;
-            var monitor = LockDomainBoundMonitor();
-            if( monitor == null ) return (tr,error);
-            using( monitor.OpenDebug( "Starting Timed event." ) )
-            {
-                try
-                {
-                    await before?.Invoke( monitor );
-                    (tr, error) = await FromTimerAsync( monitor );
-                    await after?.Invoke( monitor, tr, error );
-                }
-                catch( Exception ex )
-                {
-                    monitor.Error( error = ex );
-                }
-            }
-            UnlockDomainBoundMonitor();
-            return (tr, error);
         }
 
         /// <summary>
@@ -852,14 +834,14 @@ namespace CK.Observable
         /// container (map, list and set) contents.
         /// </summary>
         /// <param name="w">The text writer.</param>
-        /// <param name="millisecondsTimeout">
+        /// <param name="milliSecondsTimeout">
         /// The maximum number of milliseconds to wait for a read access before giving up.
         /// Wait indefinitely by default.
         /// </param>
         /// <returns>True on success, false if timeout occurred.</returns>
-        public bool Export( TextWriter w, int millisecondsTimeout = -1 )
+        public bool Export( TextWriter w, int milliSecondsTimeout = -1 )
         {
-            if( !_lock.TryEnterReadLock( millisecondsTimeout ) ) return false;
+            if( !_lock.TryEnterReadLock( milliSecondsTimeout ) ) return false;
             try
             {
                 var target = new JSONExportTarget( w );
@@ -913,7 +895,8 @@ namespace CK.Observable
         /// <summary>
         /// Saves <see cref="AllObjects"/> of this domain.
         /// </summary>
-        /// <param name="s">The output stream.</param>
+        /// <param name="monitor">The monitor to use. Cannot be null.</param>
+        /// <param name="stream">The output stream.</param>
         /// <param name="leaveOpen">True to leave the stream opened.</param>
         /// <param name="encoding">Optional encoding for characters. Defaults to UTF-8.</param>
         /// <param name="millisecondsTimeout">
@@ -921,15 +904,30 @@ namespace CK.Observable
         /// Wait indefinitely by default.
         /// </param>
         /// <returns>True on success, false if timeout occurred.</returns>
-        public bool Save( Stream s, bool leaveOpen = false, Encoding encoding = null, int millisecondsTimeout = -1 )
+        public bool Save( IActivityMonitor monitor, Stream stream, bool leaveOpen = false, Encoding encoding = null, int millisecondsTimeout = -1 )
         {
-            using( var w = new BinarySerializer( s, _serializers, leaveOpen, encoding ) )
+            if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
+            if( stream == null ) throw new ArgumentNullException( nameof( stream ) );
+
+            // Since we only need the read lock, whenever multiple threads Save() concurrently,
+            // the monitor (current fake transaction) is at risk. This is why we secure the Save with its own lock: since
+            // only one Save at a time can be executed and no other "read with monitor" exists.
+            // Since this is clearly an edge case, we use a lock with the same timeout and we don't care of a potential 2x wait time.
+            if( !Monitor.TryEnter( _saveLock, millisecondsTimeout ) ) return false;
+            using( var w = new BinarySerializer( stream, _serializers, leaveOpen, encoding ) )
             {
                 bool isWrite = _lock.IsWriteLockHeld;
-                if( !isWrite && !_lock.TryEnterReadLock( millisecondsTimeout ) ) return false;
+                bool isRead = _lock.IsReadLockHeld;
+                if( !isWrite && !isRead && !_lock.TryEnterReadLock( millisecondsTimeout ) )
+                {
+                    Monitor.Exit( _saveLock );
+                    return false;
+                }
+                bool needFakeTran = _currentTran == null || _currentTran.Monitor != monitor;
+                if( needFakeTran ) new InitializationTransaction( monitor, this, false );
                 try
                 {
-                    using( isWrite ? Monitor.OpenInfo( $"Transacted saving domain ({_actualObjectCount} objects)." ) : null )
+                    using( isWrite ? monitor.OpenInfo( $"Transacted saving domain ({_actualObjectCount} objects)." ) : null )
                     {
                         w.WriteSmallInt32( 1 ); // Version
                         w.Write( DomainName );
@@ -954,7 +952,9 @@ namespace CK.Observable
                 }
                 finally
                 {
-                    if( !isWrite ) _lock.ExitReadLock();
+                    if( needFakeTran ) _currentTran.Dispose();
+                    if( !isWrite && !isRead ) _lock.ExitReadLock();
+                    Monitor.Exit( _saveLock );
                 }
             }
         }
@@ -962,7 +962,8 @@ namespace CK.Observable
         /// <summary>
         /// Loads previously <see cref="Save"/>d objects into this domain.
         /// </summary>
-        /// <param name="s">The input stream.</param>
+        /// <param name="monitor">The monitor to use. Cannot be null.</param>
+        /// <param name="stream">The input stream.</param>
         /// <param name="leaveOpen">True to leave the stream opened.</param>
         /// <param name="encoding">Optional encoding for characters. Defaults to UTF-8.</param>
         /// <param name="millisecondsTimeout">
@@ -970,27 +971,33 @@ namespace CK.Observable
         /// Wait indefinitely by default.
         /// </param>
         /// <returns>True on success, false if timeout occurred.</returns>
-        public bool Load( Stream s, bool leaveOpen = false, Encoding encoding = null, int millisecondsTimeout = -1 )
+        public bool Load( IActivityMonitor monitor, Stream stream, bool leaveOpen = false, Encoding encoding = null, int millisecondsTimeout = -1 )
         {
+            if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
+            if( stream == null ) throw new ArgumentNullException( nameof( stream ) );
             bool isWrite = _lock.IsWriteLockHeld;
             if( !isWrite && !_lock.TryEnterWriteLock( millisecondsTimeout ) ) return false;
+            Debug.Assert( !isWrite || _currentTran != null, "isWrite => _currentTran != null" );
+            bool needFakeTran = _currentTran == null || _currentTran.Monitor != monitor;
+            if( needFakeTran ) new InitializationTransaction( monitor, this, false );
             try
             {
-                using( Monitor.OpenInfo( $"Transacted loading domain." ) )
-                using( var d = new BinaryDeserializer( s, null, _deserializers, leaveOpen, encoding ) )
+                using( monitor.OpenInfo( $"Transacted loading domain." ) )
+                using( var d = new BinaryDeserializer( stream, null, _deserializers, leaveOpen, encoding ) )
                 {
                     d.Services.Add( this );
-                    DoLoad( d );
+                    DoLoad( monitor, d );
                     return true;
                 }
             }
             finally
             {
+                if( needFakeTran ) _currentTran.Dispose();
                 if( !isWrite ) _lock.ExitWriteLock();
             }
         }
 
-        void DoLoad( BinaryDeserializer r )
+        void DoLoad( IActivityMonitor monitor, BinaryDeserializer r )
         {
             Debug.Assert( _lock.IsWriteLockHeld );
             _deserializing = true;
@@ -1009,9 +1016,8 @@ namespace CK.Observable
                 int count = r.ReadNonNegativeSmallInt32();
                 while( --count >= 0 )
                 {
-                    _freeList.Push( r.ReadNonNegativeSmallInt32() );
+                    _freeList.Add( r.ReadNonNegativeSmallInt32() );
                 }
-
                 _properties.Clear();
                 _propertiesByIndex.Clear();
                 count = r.ReadNonNegativeSmallInt32();
@@ -1087,7 +1093,8 @@ namespace CK.Observable
             int idx;
             if( _freeList.Count > 0 )
             {
-                idx = _freeList.Pop();
+                idx = _freeList[_freeList.Count-1 ];
+                _freeList.RemoveAt( _freeList.Count - 1 );
             }
             else
             {
@@ -1112,7 +1119,7 @@ namespace CK.Observable
             CheckWriteLockAndObjectDisposed( o );
             if( !_deserializing ) _changeTracker.OnDisposeObject( o );
             _objects[o.OId] = null;
-            _freeList.Push( o.OId );
+            _freeList.Add( o.OId );
             --_actualObjectCount;
         }
 
@@ -1205,6 +1212,32 @@ namespace CK.Observable
                 throw new InvalidOperationException( "Concurrent access: no lock has been acquired." );
             }
             if( o.IsDisposed ) throw new ObjectDisposedException( o.GetType().FullName );
+        }
+
+        /// <summary>
+        /// Small helper for tests: ensures that a domain that is Saved, Loaded and Saved again results
+        /// in the exact same array of bytes.
+        /// This throws an exception if serialized bytes differ or acquiring locks failed.
+        /// </summary>
+        /// <param name="monitor">Monitor to use. Cannot be null.</param>
+        /// <param name="domain">The domain to check. Must not be null.</param>
+        /// <param name="milliSecondsTimeout">Optional timeout to wait for read or write lock.</param>
+        public static void IdempotenceSerializationCheck( IActivityMonitor monitor, ObservableDomain domain, int milliSecondsTimeout = 0 )
+        {
+            using( var s = new MemoryStream() )
+            {
+                if( !domain.Save( monitor, s, true, millisecondsTimeout: milliSecondsTimeout ) ) throw new Exception( "Second Save failed: Unable to acquire lock." );
+                var originalBytes = s.ToArray();
+                s.Position = 0;
+                if( !domain.Load( monitor, s, true, millisecondsTimeout: milliSecondsTimeout ) ) throw new Exception( "Initial Load failed: Unable to acquire lock." );
+                s.Position = 0;
+                if( !domain.Save( monitor, s, true, millisecondsTimeout: milliSecondsTimeout ) ) throw new Exception( "Second Save failed: Unable to acquire lock." );
+                var rewriteBytes = s.ToArray();
+                if( !originalBytes.SequenceEqual( rewriteBytes ) )
+                {
+                    throw new Exception( "Reserialized bytes differ from original serialized bytes." );
+                }
+            }
         }
 
     }

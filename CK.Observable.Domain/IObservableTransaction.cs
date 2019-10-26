@@ -15,6 +15,11 @@ namespace CK.Observable
         DateTime StartTime { get; }
 
         /// <summary>
+        /// Gets the monitor associated to the transaction.
+        /// </summary>
+        IActivityMonitor Monitor { get; }
+
+        /// <summary>
         /// Commits all changes and retrieves the events and commands on success.
         /// If errors have been added, the <see cref="TransactionResult"/> contains
         /// the errors but no events nor commands.

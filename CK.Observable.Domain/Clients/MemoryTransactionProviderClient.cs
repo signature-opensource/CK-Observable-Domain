@@ -69,7 +69,7 @@ namespace CK.Observable
         public virtual void OnTransactionCommit( in SuccessfulTransactionContext c )
         {
             _next?.OnTransactionCommit( c );
-            CreateSnapshot( c.ObservableDomain, c.CommitTimeUtc );
+            CreateSnapshot( c.Monitor, c.Domain, c.CommitTimeUtc );
         }
 
         /// <summary>
@@ -82,7 +82,7 @@ namespace CK.Observable
         public virtual void OnTransactionFailure( IActivityMonitor monitor, ObservableDomain d, IReadOnlyList<CKExceptionData> errors )
         {
             _next?.OnTransactionFailure( monitor, d, errors );
-            if( !RestoreSnapshot( d ) )
+            if( !RestoreSnapshot( monitor, d ) )
             {
                 throw new Exception( "No snapshot available or error while restoring the last snapshot." );
             }
@@ -98,20 +98,21 @@ namespace CK.Observable
         public virtual void OnTransactionStart( IActivityMonitor monitor, ObservableDomain d, DateTime timeUtc )
         {
             _next?.OnTransactionStart( monitor, d, timeUtc );
-            if( !HasSnapshot ) CreateSnapshot( d, timeUtc );
+            if( !HasSnapshot ) CreateSnapshot( monitor, d, timeUtc );
         }
 
         /// <summary>
         /// Loads the domain and initializes the current snapshot.
         /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
         /// <param name="d">The domain.</param>
         /// <param name="timeUtc">A utc time (typically the creation time).</param>
         /// <param name="s">The readable stream (will be copied into the memory).</param>
-        protected void LoadAndInitializeSnapshot( ObservableDomain d, DateTime timeUtc, Stream s )
+        protected void LoadAndInitializeSnapshot( IActivityMonitor monitor, ObservableDomain d, DateTime timeUtc, Stream s )
         {
             _memory.Position = 0;
             s.CopyTo( _memory );
-            DoLoadMemory( d );
+            DoLoadMemory( monitor, d );
             if( _snapshotSerialNumber == -1 )
             {
                 _snapshotSerialNumber = Int32.MaxValue;
@@ -132,37 +133,38 @@ namespace CK.Observable
         /// <summary>
         /// Restores the last snapshot. Returns false if there is no snapshot or if an error occurred.
         /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
         /// <param name="d">The associated domain.</param>
         /// <returns>False if no snapshot is available or if the restoration failed. True otherwise.</returns>
-        protected bool RestoreSnapshot( ObservableDomain d )
+        protected bool RestoreSnapshot( IActivityMonitor monitor, ObservableDomain d )
         {
             if( !HasSnapshot )
             {
                 Debug.Assert( ToString() == "No snapshot." );
-                d.Monitor.Warn( "No snapshot." );
+                monitor.Warn( "No snapshot." );
                 return false;
             }
-            using( d.Monitor.OpenInfo( $"Restoring snapshot: {ToString()}" ) )
+            using( monitor.OpenInfo( $"Restoring snapshot: {ToString()}" ) )
             {
                 try
                 {
-                    DoLoadMemory( d );
-                    d.Monitor.CloseGroup( "Success." );
+                    DoLoadMemory( monitor, d );
+                    monitor.CloseGroup( "Success." );
                     return true;
                 }
                 catch( Exception ex )
                 {
-                    d.Monitor.Error( ex );
+                    monitor.Error( ex );
                     return false;
                 }
             }
         }
 
-        void DoLoadMemory( ObservableDomain d )
+        void DoLoadMemory( IActivityMonitor monitor, ObservableDomain d )
         {
             long p = _memory.Position;
             _memory.Position = 0;
-            d.Load( _memory, leaveOpen: true );
+            d.Load( monitor, _memory, leaveOpen: true );
             if( _memory.Position != p ) throw new Exception( $"Internal error: stream position should be {p} but was {_memory.Position} after reload." );
         }
 
@@ -171,15 +173,15 @@ namespace CK.Observable
         /// </summary>
         /// <param name="d">The associated domain.</param>
         /// <param name="timeUtc">Time of the operation.</param>
-        protected void CreateSnapshot( ObservableDomain d, DateTime timeUtc )
+        protected void CreateSnapshot( IActivityMonitor monitor, ObservableDomain d, DateTime timeUtc )
         {
-            using( d.Monitor.OpenTrace( $"Creating snapshot." ) )
+            using( monitor.OpenTrace( $"Creating snapshot." ) )
             {
                 _memory.Position = 0;
-                d.Save( _memory, true );
+                d.Save( monitor, _memory, true );
                 _snapshotSerialNumber = d.TransactionSerialNumber;
                 _snapshotTimeUtc = timeUtc;
-                d.Monitor.CloseGroup( ToString() );
+                monitor.CloseGroup( ToString() );
             }
         }
 

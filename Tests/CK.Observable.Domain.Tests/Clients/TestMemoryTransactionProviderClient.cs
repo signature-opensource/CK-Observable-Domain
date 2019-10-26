@@ -17,7 +17,7 @@ namespace CK.Observable.Domain.Tests.Clients
         {
             if( _domainCreatedStream != null )
             {
-                d.Load( _domainCreatedStream );
+                d.Load( monitor, _domainCreatedStream );
             }
             base.OnDomainCreated( monitor, d, timeUtc );
         }

@@ -13,7 +13,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void simple_property_changed_events()
         {
-            var domain = new ObservableDomain( "TEST", TestHelper.Monitor );
+            var domain = new ObservableDomain(TestHelper.Monitor, "TEST");
             Car c0 = null;
             Car c1 = null;
             TransactionResult events;
@@ -55,7 +55,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void property_changed_events_use_the_last_value()
         {
-            var domain = new ObservableDomain( "TEST", TestHelper.Monitor );
+            var domain = new ObservableDomain(TestHelper.Monitor, "TEST");
             Car c = null;
             TransactionResult result;
 
@@ -78,7 +78,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void hard_coded_property_changed_events_are_automatically_triggered()
         {
-            var domain = new ObservableDomain( "TEST", TestHelper.Monitor );
+            var domain = new ObservableDomain(TestHelper.Monitor, "TEST");
             int bang = 0;
             domain.Modify( TestHelper.Monitor, () =>
             {
@@ -99,7 +99,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void ObservableList_is_observable_thanks_to_Item_Inserted_Set_RemovedAt_and_CollectionCleared_events()
         {
-            var domain = new ObservableDomain( "TEST", TestHelper.Monitor );
+            var domain = new ObservableDomain(TestHelper.Monitor, "TEST");
             domain.Modify( TestHelper.Monitor, () =>
             {
                 Car c = new Car( "First Car" );
@@ -153,7 +153,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void list_changed_events()
         {
-            var domain = new ObservableDomain( "TEST", TestHelper.Monitor );
+            var domain = new ObservableDomain(TestHelper.Monitor, "TEST");
             Car c0 = null;
             Car c1 = null;
             Garage g = null;
@@ -177,7 +177,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void simple_reflexes()
         {
-            var domain = new ObservableDomain( "TEST", TestHelper.Monitor );
+            var domain = new ObservableDomain(TestHelper.Monitor, "TEST");
             Car c = null;
             Mechanic m = null;
             Garage g = null;
@@ -213,7 +213,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void ObservableDictionary_is_observable_thanks_to_Item_Added_Set_Removed_and_CollectionCleared_events()
         {
-            var domain = new ObservableDomain( "TEST", TestHelper.Monitor );
+            var domain = new ObservableDomain(TestHelper.Monitor, "TEST");
             domain.Modify( TestHelper.Monitor, () =>
             {
                 var d = new ObservableDictionary<string, int>();

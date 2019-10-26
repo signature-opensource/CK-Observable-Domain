@@ -13,9 +13,9 @@ namespace CK.Observable.Domain.Tests
             return (int)_oIdField.GetValue( o );
         }
 
-        public static Stack<int> GetFreeList( this ObservableDomain d )
+        public static List<int> GetFreeList( this ObservableDomain d )
         {
-            return (Stack<int>)_freeListField.GetValue( d );
+            return (List<int>)_freeListField.GetValue( d );
         }
 
     }

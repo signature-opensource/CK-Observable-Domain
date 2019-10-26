@@ -144,7 +144,7 @@ namespace CK.Observable
             _buffer.GetStringBuilder().Clear();
             _exporter.Reset();
             foreach( var e in c.Events ) e.Export( _exporter );
-            _events.Add( new TransactionEvent( c.ObservableDomain.TransactionSerialNumber, c.CommitTimeUtc, c.Events, _buffer.ToString() ) );
+            _events.Add( new TransactionEvent( c.Domain.TransactionSerialNumber, c.CommitTimeUtc, c.Events, _buffer.ToString() ) );
             ApplyKeepDuration();
             _next?.OnTransactionCommit( c );
         }

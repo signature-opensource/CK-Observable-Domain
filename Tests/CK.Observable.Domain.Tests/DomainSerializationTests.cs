@@ -14,7 +14,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void simple_serialization()
         {
-            var domain = new ObservableDomain( "TEST", TestHelper.Monitor );
+            var domain = new ObservableDomain(TestHelper.Monitor, "TEST");
             domain.Modify( TestHelper.Monitor, () =>
             {
                 var car = new Car( "Hello" );
@@ -30,13 +30,12 @@ namespace CK.Observable.Domain.Tests
                 c.Speed = 10000;
             } );
             r.Events.Should().HaveCount( 1 );
-
         }
 
         [Test]
         public void serialization_with_mutiple_types()
         {
-            var domain = new ObservableDomain( "TEST", TestHelper.Monitor );
+            var domain = new ObservableDomain(TestHelper.Monitor, "TEST");
             MultiPropertyType defValue = null;
             domain.Modify( TestHelper.Monitor, () =>
             {
@@ -65,7 +64,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void with_cycle_serialization()
         {
-            var domain = new ObservableDomain( "TEST", TestHelper.Monitor );
+            var domain = new ObservableDomain(TestHelper.Monitor, "TEST");
             domain.Modify( TestHelper.Monitor, () =>
             {
                 var g = new Garage();
@@ -86,7 +85,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void with_cycle_serialization_between_2_objects()
         {
-            var domain = new ObservableDomain( "TEST", TestHelper.Monitor );
+            var domain = new ObservableDomain(TestHelper.Monitor, "TEST");
             domain.Modify( TestHelper.Monitor, () =>
             {
                 var p1 = new Person() { FirstName = "A" };
@@ -111,7 +110,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void ultimate_cycle_serialization()
         {
-            var domain = new ObservableDomain( "TEST", TestHelper.Monitor );
+            var domain = new ObservableDomain(TestHelper.Monitor, "TEST");
             domain.Modify( TestHelper.Monitor, () =>
             {
                 var p = new Person() { FirstName = "P" };
@@ -138,10 +137,10 @@ namespace CK.Observable.Domain.Tests
         {
             using( var s = new MemoryStream() )
             {
-                domain.Save( s, leaveOpen: true );
-                var d = new ObservableDomain( "TEST", TestHelper.Monitor );
+                domain.Save( TestHelper.Monitor, s, leaveOpen: true );
+                var d = new ObservableDomain(TestHelper.Monitor, "TEST");
                 s.Position = 0;
-                d.Load( s, leaveOpen: true );
+                d.Load( TestHelper.Monitor, s, leaveOpen: true );
                 return d;
             }
         }

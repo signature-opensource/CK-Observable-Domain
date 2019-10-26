@@ -16,7 +16,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void an_observable_must_be_created_in_the_context_of_a_transaction()
         {
-            var d = new ObservableDomain( "TEST" );
+            var d = new ObservableDomain( TestHelper.Monitor, "TEST" );
             Action outOfTran = () => new Car( "" );
             outOfTran.Should().Throw<InvalidOperationException>().WithMessage( "A transaction is required*" );
         }
@@ -24,7 +24,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void an_observable_must_be_modified_in_the_context_of_a_transaction()
         {
-            var d = new ObservableDomain( "TEST" );
+            var d = new ObservableDomain( TestHelper.Monitor, "TEST" );
             using( var t = d.BeginTransaction( TestHelper.Monitor ) )
             {
                 new Car( "Hello" );
@@ -54,7 +54,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void concurrent_accesses_are_detected()
         {
-            var d = new ObservableDomain( "TEST" );
+            var d = new ObservableDomain( TestHelper.Monitor, "TEST" );
             using( d.BeginTransaction( TestHelper.Monitor ) )
             {
                 Action concurrent = () => Parallel.For( 0, 20, i =>
@@ -71,7 +71,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void Export_can_NOT_be_called_within_a_transaction_because_of_LockRecursionPolicy_NoRecursion()
         {
-            var d = new ObservableDomain( "TEST" );
+            var d = new ObservableDomain( TestHelper.Monitor, "TEST" );
             using( d.BeginTransaction( TestHelper.Monitor ) )
             {
                 d.Invoking( sut => sut.ExportToString() )
@@ -82,10 +82,10 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void Save_can_be_called_from_inside_a_transaction()
         {
-            var d = new ObservableDomain( "TEST" );
+            var d = new ObservableDomain( TestHelper.Monitor, "TEST" );
             using( d.BeginTransaction( TestHelper.Monitor ) )
             {
-                d.Invoking( sut => sut.Save( new MemoryStream() ) )
+                d.Invoking( sut => sut.Save( TestHelper.Monitor, new MemoryStream() ) )
                  .Should().NotThrow();
             }
         }
@@ -95,24 +95,24 @@ namespace CK.Observable.Domain.Tests
         {
             using( var s = new MemoryStream() )
             {
-                var d = new ObservableDomain( "TEST" );
+                var d = new ObservableDomain( TestHelper.Monitor, "TEST" );
                 using( d.BeginTransaction( TestHelper.Monitor ) )
                 {
-                    d.Invoking( sut => sut.Save( s, leaveOpen: true ) ).Should().NotThrow();
+                    d.Invoking( sut => sut.Save( TestHelper.Monitor, s, leaveOpen: true ) ).Should().NotThrow();
                     s.Position = 0;
-                    d.Invoking( sut => sut.Load( s, leaveOpen: true ) ).Should().NotThrow();
+                    d.Invoking( sut => sut.Load( TestHelper.Monitor, s, leaveOpen: true ) ).Should().NotThrow();
                 }
                 s.Position = 0;
-                d.Invoking( sut => sut.Load( s, leaveOpen: true ) ).Should().NotThrow();
+                d.Invoking( sut => sut.Load( TestHelper.Monitor, s, leaveOpen: true ) ).Should().NotThrow();
                 s.Position = 0;
-                d.Invoking( sut => sut.Save( s, leaveOpen: true ) ).Should().NotThrow();
+                d.Invoking( sut => sut.Save( TestHelper.Monitor, s, leaveOpen: true ) ).Should().NotThrow();
             }
         }
 
         [Test]
         public void BeginTransaction_and_AcquireReadLock_reentrant_calls_are_detected_by_the_LockRecursionPolicy_NoRecursion()
         {
-            var d = new ObservableDomain( "TEST" );
+            var d = new ObservableDomain( TestHelper.Monitor, "TEST" );
             using( d.BeginTransaction( TestHelper.Monitor ) )
             {
                 d.Invoking( sut => sut.AcquireReadLock() )
@@ -138,7 +138,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void ObservableObject_exposes_Disposed_event()
         {
-            var d = new ObservableDomain( "TEST" );
+            var d = new ObservableDomain( TestHelper.Monitor, "TEST" );
             d.Modify( TestHelper.Monitor, () =>
             {
                 var c = new Car( "Titine" );

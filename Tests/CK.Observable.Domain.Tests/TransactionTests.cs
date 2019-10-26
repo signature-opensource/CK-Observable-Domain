@@ -14,7 +14,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void transaction_works_for_the_very_first_one()
         {
-            var d = new ObservableDomain( "TEST", new MemoryTransactionProviderClient() );
+            var d = new ObservableDomain( TestHelper.Monitor, "TEST", client: new MemoryTransactionProviderClient() );
             d.TransactionSerialNumber.Should().Be( 0 );
             var result = d.Modify( TestHelper.Monitor, () =>
             {
