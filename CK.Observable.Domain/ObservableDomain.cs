@@ -19,7 +19,7 @@ namespace CK.Observable
     /// You may use specialized <see cref="ObservableChannel{T}"/> or <see cref="ObservableDomain{T1, T2, T3, T4}"/>
     /// for strongly typed roots.
     /// </summary>
-    public partial class ObservableDomain
+    public partial class ObservableDomain : IDisposable
     {
         /// <summary>
         /// An artificial <see cref="CKExceptionData"/> that is added to
@@ -27,6 +27,13 @@ namespace CK.Observable
         /// has not been committed.
         /// </summary>
         public static readonly CKExceptionData UncomittedTransaction = new CKExceptionData( "Uncommitted transaction.", "Not.An.Exception", "Not.An.Exception, No.Assembly", null, null, null, null, null, null );
+
+        /// <summary>
+        /// Default timeout before <see cref="ObtainDomainMonitor(int)"/> creates a new temporary <see cref="IDisposableActivityMonitor"/>
+        /// instead of reusing the default one.
+        /// </summary>
+        public const int LockedDomainMonitorTimeout = 1000;
+
 
         static readonly Type[] _observableRootCtorParameters = new Type[] { typeof( ObservableDomain ) };
 
@@ -93,6 +100,7 @@ namespace CK.Observable
         List<ObservableRootObject> _roots;
 
         IObservableTransaction _currentTran;
+        // This is -1 when Dispose has been called.
         int _transactionSerialNumber;
 
         DomainActivityMonitor _domainMonitor;
@@ -487,7 +495,7 @@ namespace CK.Observable
         /// Empty transaction object: must be used during initialization (for <see cref="AddRoot{T}(InitializationTransaction)"/>
         /// to be called).
         /// </summary>
-        protected class InitializationTransaction : IObservableTransaction
+        private protected class InitializationTransaction : IObservableTransaction
         {
             readonly ObservableDomain _d;
             readonly ObservableDomain _previousThreadDomain;
@@ -543,7 +551,7 @@ namespace CK.Observable
         /// </summary>
         /// <typeparam name="T">The root type.</typeparam>
         /// <returns>The instance.</returns>
-        protected T AddRoot<T>( InitializationTransaction initializationContext ) where T : ObservableRootObject
+        private protected T AddRoot<T>( InitializationTransaction initializationContext ) where T : ObservableRootObject
         {
             var o = (T)typeof( T ).GetConstructor( BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
                                                     null,
@@ -591,31 +599,6 @@ namespace CK.Observable
                 }
                 else Monitor.Exit( _domain._domainMonitorLock );
             }
-        }
-
-        /// <summary>
-        /// Default timeout before <see cref="ObtainDomainMonitor(int)"/> creates a new temporary <see cref="IDisposableActivityMonitor"/>
-        /// instead of reusing the default one.
-        /// </summary>
-        public const int LockedDomainMonitorTimeout = 1000;
-
-        /// <summary>
-        /// Obtains a monitor that is bound to this domain (it must be disposed once done with it).
-        /// This implementation creates a new dedicated <see cref="IDisposableActivityMonitor"/> once and caches it
-        /// or returns a new dedicated one if the shared one cannot be obtained before <paramref name="milliSecondTimeout"/>.
-        /// </summary>
-        /// <returns>The cached monitor bound to this timer.</returns>
-        public IDisposableActivityMonitor ObtainDomainMonitor( int milliSecondTimeout = LockedDomainMonitorTimeout, bool createAutonomousOnTimeout = true )
-        {
-            if( !Monitor.TryEnter( _domainMonitorLock, LockedDomainMonitorTimeout ) )
-            {
-                return createAutonomousOnTimeout ? new DomainActivityMonitor( $"Autonomous monitor for observable domain '{DomainName}'.", null ) : null;
-            }
-            if( _domainMonitor == null )
-            {
-                _domainMonitor = new DomainActivityMonitor( $"Observable Domain '{DomainName}'.", this );
-            }
-            return _domainMonitor;
         }
 
         /// <summary>
@@ -1124,9 +1107,42 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Gets the <see cref="TimeManager"/> that is in charge of <see cref="ObservableReminder"/> and <see cref="ObservableTimer"/> objects.
+        /// Gets the <see cref="Observable.TimeManager"/> that is in charge of <see cref="ObservableReminder"/>
+        /// and <see cref="ObservableTimer"/> objects.
         /// </summary>
         public TimeManager TimeManager => _timeManager;
+
+        /// <summary>
+        /// Obtains a monitor that is bound to this domain (it must be disposed once done with it).
+        /// This implementation creates a new dedicated <see cref="IDisposableActivityMonitor"/> once and caches it
+        /// or returns a new dedicated one if the shared one cannot be obtained before <paramref name="milliSecondTimeout"/>.
+        /// </summary>
+        /// <returns>The cached monitor bound to this timer.</returns>
+        public IDisposableActivityMonitor ObtainDomainMonitor( int milliSecondTimeout = LockedDomainMonitorTimeout, bool createAutonomousOnTimeout = true )
+        {
+            if( !Monitor.TryEnter( _domainMonitorLock, LockedDomainMonitorTimeout ) )
+            {
+                return createAutonomousOnTimeout ? new DomainActivityMonitor( $"Autonomous monitor for observable domain '{DomainName}'.", null ) : null;
+            }
+            if( _domainMonitor == null )
+            {
+                _domainMonitor = new DomainActivityMonitor( $"Observable Domain '{DomainName}'.", this );
+            }
+            return _domainMonitor;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public void Dispose()
+        {
+            if( _transactionSerialNumber >= 0 )
+            {
+                _lock.Dispose();
+                _transactionSerialNumber = -1;
+                _timeManager.CurrentTimer?.Dispose();
+            }
+        }
 
         internal void SendCommand( ObservableObject o, object command )
         {

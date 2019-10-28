@@ -12,7 +12,7 @@ namespace CK.Observable
     /// <summary>
     /// Timer management implements the support for <see cref="ObservableTimedEventBase"/>.
     /// </summary>
-    public class TimeManager
+    public sealed class TimeManager
     {
         readonly ObservableDomain _domain;
         int _activeCount;
@@ -94,6 +94,8 @@ namespace CK.Observable
 
             /// <summary>
             /// Disposed the internal <see cref="Timer"/> object.
+            /// This is automatically called by <see cref="ObservableDomain.Dispose()"/> on the <see cref="TimeManager.CurrentTimer"/>:
+            /// this must be called only when explicit AutoTimer are created/assigned.
             /// </summary>
             public void Dispose()
             {
