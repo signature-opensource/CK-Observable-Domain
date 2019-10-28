@@ -157,7 +157,7 @@ namespace CK.Observable
                 {
                     // Handles public event EventHandler <<propertyName>>Changed;
                     // See https://stackoverflow.com/questions/14885325/eventinfo-getraisemethod-always-null
-                    FieldInfo fNamedEv = GetType().GetField( propertyName + "Changed", BindingFlags.NonPublic | BindingFlags.Instance );
+                    FieldInfo fNamedEv = GetType().GetField( propertyName + "Changed", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance );
                     if( fNamedEv != null )
                     {
                         if( fNamedEv.FieldType != typeof( EventHandler ) )

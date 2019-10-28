@@ -23,14 +23,15 @@ namespace CK.Observable
         /// Initial configuration is adjusted by <see cref="AdjustNextDueTimeUtc(DateTime, DateTime, int)"/> with base time <see cref="DateTime.UtcNow"/>.
         /// </summary>
         /// <param name="firstDueTimeUtc">
-        /// The first time where the event must be fired. This is adjusted by <see cref="AdjustNextDueTimeUtc(DateTime, DateTime, int)"/> with
-        /// base time <see cref="DateTime.UtcNow"/>.
+        /// The first time where the event must be fired. This is adjusted by <see cref="AdjustNextDueTimeUtc(DateTime, DateTime, int)"/> based on <see cref="DateTime.UtcNow"/>.
         /// </param>
+        /// <param name="isActive">False to initially deactivate this timer. By default, <see cref="IsActive"/> is true.</param>
         /// <param name="intervalMilliSeconds">The interval in millisecond (defaults to 1 second). Must be positive.</param>
-        public ObservableTimer( DateTime firstDueTimeUtc, int intervalMilliSeconds = 1000 )
+        public ObservableTimer( DateTime firstDueTimeUtc, bool isActive = true, int intervalMilliSeconds = 1000 )
         {
-            ExpectedDueTimeUtc = AdjustNextDueTimeUtc( DateTime.UtcNow, firstDueTimeUtc, intervalMilliSeconds );
+            ExpectedDueTimeUtc = DueTimeUtc = AdjustNextDueTimeUtc( DateTime.UtcNow, firstDueTimeUtc, intervalMilliSeconds );
             _milliSeconds = intervalMilliSeconds;
+            _isActive = isActive;
         }
 
         internal override bool GetIsActive() => _isActive && ExpectedDueTimeUtc != Util.UtcMinValue && ExpectedDueTimeUtc != Util.UtcMaxValue;
@@ -105,7 +106,7 @@ namespace CK.Observable
             TimeManager.OnChanged( this );
         }
 
-        internal override void OnAfterRaiseUnchanged()
+        internal override void OnAfterRaiseUnchanged( DateTime current, IActivityMonitor m )
         {
             Debug.Assert( IsActive );
             ExpectedDueTimeUtc = DueTimeUtc = DueTimeUtc.AddMilliseconds( _milliSeconds );
@@ -153,21 +154,21 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Ensures that the <paramref name="firstDueTimeUtc"/> will occur after or on <paramref name="baseTimeUtc"/>.
+        /// Ensures that the <paramref name="firstDueTimeUtc"/> will occur after or on <paramref name="timeNowUtc"/>.
         /// </summary>
-        /// <param name="baseTimeUtc">Typically equals <see cref="DateTime.UtcNow"/>. Must be in Utc.</param>
+        /// <param name="timeNowUtc">Typically equals <see cref="DateTime.UtcNow"/>. Must be in Utc.</param>
         /// <param name="firstDueTimeUtc">The first due time. Must be in Utc. When <see cref="Util.UtcMinValue"/> or <see cref="Util.UtcMaxValue"/> it is returned as-is.</param>
         /// <param name="intervalMilliSeconds">The interval. Must be positive.</param>
-        /// <returns>The adjusted first due time, necessarily after the <paramref name="baseTimeUtc"/>.</returns>
-        public static DateTime AdjustNextDueTimeUtc( DateTime baseTimeUtc, DateTime firstDueTimeUtc, int intervalMilliSeconds )
+        /// <returns>The adjusted first due time, necessarily after the <paramref name="timeNowUtc"/>.</returns>
+        public static DateTime AdjustNextDueTimeUtc( DateTime timeNowUtc, DateTime firstDueTimeUtc, int intervalMilliSeconds )
         {
             if( firstDueTimeUtc.Kind != DateTimeKind.Utc ) throw new ArgumentException( nameof( firstDueTimeUtc ), "Must be a Utc DateTime." );
             if( intervalMilliSeconds <= 0 ) throw new ArgumentOutOfRangeException( nameof( intervalMilliSeconds ) );
             if( firstDueTimeUtc != Util.UtcMinValue && firstDueTimeUtc != Util.UtcMaxValue )
             {
-                if( firstDueTimeUtc < baseTimeUtc )
+                if( firstDueTimeUtc < timeNowUtc )
                 {
-                    int adjust = ((int)Math.Ceiling( (baseTimeUtc - firstDueTimeUtc).TotalMilliseconds / intervalMilliSeconds )) * intervalMilliSeconds;
+                    int adjust = ((int)Math.Ceiling( (timeNowUtc - firstDueTimeUtc).TotalMilliseconds / intervalMilliSeconds )) * intervalMilliSeconds;
                     firstDueTimeUtc = firstDueTimeUtc.AddMilliseconds( adjust );
                 }
             }

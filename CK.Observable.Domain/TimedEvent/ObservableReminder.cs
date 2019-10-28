@@ -15,8 +15,7 @@ namespace CK.Observable
     public class ObservableReminder : ObservableTimedEventBase
     {
         /// <summary>
-        /// Initializes a new unnamed <see cref="ObservableReminder"/> bound to the current <see cref="ObservableDomain"/> that,
-        /// by default, will fire only once in 1 second.
+        /// Initializes a new unnamed <see cref="ObservableReminder"/> bound to the current <see cref="ObservableDomain"/>.
         /// </summary>
         /// <param name="dueTimeUtc">
         /// The <see cref="DueTimeUtc"/> time. If this time is in the past (but not <see cref="Util.UtcMinValue"/>), the event will
@@ -50,7 +49,7 @@ namespace CK.Observable
             }
         }
 
-        internal override void OnAfterRaiseUnchanged()
+        internal override void OnAfterRaiseUnchanged( DateTime current, IActivityMonitor m )
         {
             Debug.Assert( IsActive );
             ExpectedDueTimeUtc = Util.UtcMinValue;

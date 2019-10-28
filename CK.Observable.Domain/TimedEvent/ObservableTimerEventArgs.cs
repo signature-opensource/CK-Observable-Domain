@@ -1,3 +1,4 @@
+using CK.Core;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,18 +12,20 @@ namespace CK.Observable
     /// expected exact time at which the event should have been raised.
     /// This allows to adapt the behavior to "real" time aspects if necessary.
     /// </summary>
-    public class ObservableTimedEventArgs : EventArgs
+    public class ObservableTimedEventArgs : EventMonitoredArgs
     {
         /// <summary>
         /// Initializes a new <see cref="ObservableTimedEventArgs"/>.
         /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
         /// <param name="current">The current time.</param>
         /// <param name="expected">The expected event time.</param>
-        public ObservableTimedEventArgs( DateTime current, DateTime expected )
+        public ObservableTimedEventArgs( IActivityMonitor monitor, DateTime current, DateTime expected )
+            : base( monitor )
         {
             Current = current;
             Expected = expected;
-            Delta = expected - current;
+            Delta = current - expected;
         }
 
         /// <summary>
@@ -36,9 +39,15 @@ namespace CK.Observable
         public DateTime Current { get; }
 
         /// <summary>
-        /// Gets the difference between <see cref="Expected"/> and <see cref="Current"/>.
+        /// Gets the difference between <see cref="Current"/> and <see cref="Expected"/>.
         /// </summary>
         public TimeSpan Delta { get; }
+
+        /// <summary>
+        /// Overridden to return the Current/Expected/Delta values.
+        /// </summary>
+        /// <returns>A readable string.</returns>
+        public override string ToString() => $"Current: {Current}, Expected: {Expected}, Delta: {Delta}.";
 
     }
 }

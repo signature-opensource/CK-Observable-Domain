@@ -737,11 +737,11 @@ namespace CK.Observable
             Debug.Assert( t != null );
             try
             {
-                _timeManager.RaiseElapsedEvent( t.StartTime );
+                _timeManager.RaiseElapsedEvent( t.StartTime, false );
                 if( actions != null )
                 {
                     actions();
-                    _timeManager.RaiseElapsedEvent( DateTime.UtcNow );
+                    _timeManager.RaiseElapsedEvent( DateTime.UtcNow, true );
                 }
             }
             catch( Exception ex )

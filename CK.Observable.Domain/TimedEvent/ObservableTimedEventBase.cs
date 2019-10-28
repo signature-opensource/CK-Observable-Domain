@@ -16,6 +16,10 @@ namespace CK.Observable
     {
         internal TimeManager TimeManager;
         internal int ActiveIndex;
+
+        /// <summary>
+        /// ExpectedDueTimeUtc is the actual due time that is considered by the TimeManager.
+        /// </summary>
         internal DateTime ExpectedDueTimeUtc;
         internal ObservableTimedEventBase Next;
         internal ObservableTimedEventBase Prev;
@@ -84,7 +88,7 @@ namespace CK.Observable
             var h = _handlers;
             if( h != null )
             {
-                var ev = new ObservableTimedEventArgs( current, ExpectedDueTimeUtc );
+                var ev = new ObservableTimedEventArgs( monitor, current, ExpectedDueTimeUtc );
                 using( monitor.OpenTrace( $"Raising {ToString()} (Delta: {ev.Delta.TotalMilliseconds} ms)." ) )
                 {
                     if( throwException ) h.Invoke( this, ev );
@@ -108,7 +112,7 @@ namespace CK.Observable
             }
         }
 
-        internal abstract void OnAfterRaiseUnchanged();
+        internal abstract void OnAfterRaiseUnchanged( DateTime current, IActivityMonitor m );
 
         /// <summary>
         /// This applies to reminders.

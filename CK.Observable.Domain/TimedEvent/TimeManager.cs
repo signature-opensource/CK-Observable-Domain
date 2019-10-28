@@ -39,20 +39,37 @@ namespace CK.Observable
                 _timer = new Timer( _callback, this, Timeout.Infinite, Timeout.Infinite );
             }
 
+            public static int OnTimeSkipped = 0;
+
             static void OnTime( object state )
             {
                 Debug.Assert( state is AutoTimer );
                 var t = (AutoTimer)state;
                 if( Interlocked.CompareExchange( ref t._reentrantGuard, 1, 0 ) == 0 )
                 {
-                    var m = t.Domain.ObtainDomainMonitor( 0, createAutonomousOnTimeout: false );
+                    var m = t.Domain.ObtainDomainMonitor( 0, createAutonomousOnTimeout: true );
                     if( m != null )
                     {
-                        t.OnDueTimeAsync( m ).ContinueWith( _ =>
+                        using( m.OpenDebug( "OnTime task." ) )
                         {
-                            m.Dispose();
-                            Interlocked.Decrement( ref t._reentrantGuard );
-                        } );
+                            try
+                            {
+                                t.OnDueTimeAsync( m ).GetAwaiter().GetResult();
+                                m.Debug( $"OnTime task." );
+                                m.Dispose();
+                                Interlocked.Decrement( ref t._reentrantGuard );
+
+                            }
+                            catch( Exception ex )
+                            {
+                                m.Error( ex );
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Interlocked.Decrement( ref t._reentrantGuard );
+                        Interlocked.Increment( ref OnTimeSkipped );
                     }
                 }
             }
@@ -75,9 +92,7 @@ namespace CK.Observable
             protected virtual Task OnDueTimeAsync( IActivityMonitor m ) => Domain.SafeModifyAsync( m, null, 0 );
 
             /// <summary>
-            /// Must do whatever is needed to call back this <see cref="FromExternalTimerModifyAsync(IActivityMonitor)"/> or
-            /// <see cref="FromExternalTimerModifyAsync(Func{IActivityMonitor, Task}, Func{IActivityMonitor, TransactionResult, Exception, Task})"/> methods
-            /// at <paramref name="nextDueTimeUtc"/>.
+            /// Must do whatever is needed to call back this <see cref="OnDueTimeAsync(IActivityMonitor)"/> at <paramref name="nextDueTimeUtc"/>.
             /// This is called while the domain's write lock is held.
             /// </summary>
             /// <param name="monitor">The monitor to use.</param>
@@ -88,8 +103,18 @@ namespace CK.Observable
                 if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
                 var delta = nextDueTimeUtc - DateTime.UtcNow;
                 var ms = delta <= TimeSpan.Zero ? 0 : (long)delta.TotalMilliseconds;
-                _timer.Change( ms, Timeout.Infinite );
-                monitor.Debug( $"Timer set in {ms} MilliSeconds." );
+                if( !_timer.Change( ms, Timeout.Infinite ) )
+                {
+                    var msg = $"Timer.Change({ms}Timeout.Infinite) failed.";
+                    monitor.Warn( msg );
+                    _timer.Change( Timeout.Infinite, Timeout.Infinite );
+                    if( !_timer.Change( ms, Timeout.Infinite ) )
+                    {
+                        monitor.Fatal( msg );
+                        return;
+                    }
+                }
+                monitor.Debug( $"Timer set in {ms} ms ({_timer.GetHashCode()})." );
             }
 
             /// <summary>
@@ -185,6 +210,12 @@ namespace CK.Observable
         /// <returns>The first next due time or <see cref="Util.UtcMinValue"/>.</returns>
         internal DateTime ApplyChanges()
         {
+            DoApplyChanges();
+            return _activeCount > 0 ? _activeEvents[1].ExpectedDueTimeUtc : Util.UtcMinValue;
+        }
+
+        void DoApplyChanges()
+        {
             foreach( var ev in _changed )
             {
                 if( ev.IsActive )
@@ -198,7 +229,6 @@ namespace CK.Observable
                     else OnNextDueTimeUpdated( ev );
                 }
             }
-            return _activeCount > 0 ? _activeEvents[1].ExpectedDueTimeUtc : Util.UtcMinValue;
         }
 
         internal bool IsRaising { get; private set; }
@@ -208,9 +238,11 @@ namespace CK.Observable
         /// and returns the number of timers that have fired. 
         /// </summary>
         /// <param name="current">The current time.</param>
+        /// <param name="checkChanges">True to check timed event next due time.</param>
         /// <returns>The number of timers that have fired.</returns>
-        internal int RaiseElapsedEvent( DateTime current )
+        internal int RaiseElapsedEvent( DateTime current, bool checkChanges )
         {
+            if( checkChanges ) DoApplyChanges();
             IsRaising = true;
             try
             {
@@ -221,10 +253,10 @@ namespace CK.Observable
                     if( first.ExpectedDueTimeUtc <= current )
                     {
                         _changed.Remove( first );
-                        first.DoRaise( _domain.CurrentMonitor, current, IgnoreTimedEventException );
+                        first.DoRaise( _domain.CurrentMonitor, current, !IgnoreTimedEventException );
                         if( !_changed.Contains( first ) )
                         {
-                            first.OnAfterRaiseUnchanged();
+                            first.OnAfterRaiseUnchanged( current, _domain.CurrentMonitor );
                         }
                         _changed.Remove( first );
                         if( !first.IsActive )
@@ -239,6 +271,7 @@ namespace CK.Observable
                             }
                             OnNextDueTimeUpdated( first );
                         }
+                        _domain.CurrentMonitor.Debug( $"{first}: ActiveIndex={first.ActiveIndex}" );
                         ++count;
                     }
                     else break;
