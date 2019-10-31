@@ -1,3 +1,5 @@
+using CK.Core;
+
 namespace CK.Observable.Domain.Tests.Sample
 {
     [SerializationVersion( 0 )]
@@ -22,9 +24,10 @@ namespace CK.Observable.Domain.Tests.Sample
 
         public Garage Garage { get; set; }
 
-        protected override void OnDisposed( bool isReloading )
+        protected override void OnDisposed( EventMonitoredArgs args, bool isReloading )
         {
             Garage.Employees.Remove( this );
+            base.OnDisposed( args, isReloading );
         }
 
         public override string ToString() => $"'Employee {FirstName} {LastName} - {Garage?.CompanyName ?? "(no company name)"}'";

@@ -5,6 +5,7 @@ using NUnit.Framework;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -80,7 +81,6 @@ namespace CK.Observable.Domain.Tests.TimedEvents
         public void timed_event_trigger_at_the_start_of_the_Modify()
         {
             // Since we use a Fake AutoTimer, we can use the TestHelper.Monitor: everything occur on it.
-
             IReadOnlyList<ActivityMonitorSimpleCollector.Entry> entries = null;
 
             using( TestHelper.Monitor.CollectEntries( e => entries = e, LogLevelFilter.Info ) )
@@ -117,54 +117,6 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             RawTraces.Enqueue( msg );
         }
 
-        [SerializationVersion( 0 )]
-        class AutoCounter : ObservableObject
-        {
-            readonly ObservableTimer _timer;
-
-            public AutoCounter( int intervalMilliSeconds )
-            {
-                _timer = new ObservableTimer( DateTime.UtcNow, true, intervalMilliSeconds ) { Mode = ObservableTimerMode.Critical };
-                _timer.Elapsed += IncrementCount;
-            }
-
-            void IncrementCount( object sender, ObservableTimedEventArgs e ) => Count++;
-
-            public AutoCounter( IBinaryDeserializerContext d )
-                : base( d )
-            {
-                var r = d.StartReading();
-                Count = r.ReadInt32();
-                _timer = (ObservableTimer)r.ReadObject();
-            }
-
-            /// <summary>
-            /// This event is automatically raised each time Count changed.
-            /// </summary>
-            public EventHandler CountChanged;
-
-            public int Count { get; set; }
-
-            public void Start() => _timer.IsActive = true;
-
-            public void Reconfigure( DateTime firstDueTimeUtc, int intervalMilliSeconds ) => _timer.Reconfigure( firstDueTimeUtc, intervalMilliSeconds );
-
-            public int IntervalMilliSeconds
-            {
-                get => _timer.IntervalMilliSeconds;
-                set => _timer.IntervalMilliSeconds = value;
-            }
-
-            public void Stop() => _timer.IsActive = false;
-
-            void Write( BinarySerializer w )
-            {
-                w.Write( Count );
-                w.WriteObject( _timer );
-            }
-
-        }
-
         [Test]
         public void auto_counter_works_as_expected()
         {
@@ -183,7 +135,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 TestHelper.Monitor.Trace( $"End of Waiting." );
                 using( d.AcquireReadLock() )
                 {
-                    TestHelper.Monitor.Trace( $"counter.Count = {counter.Count}, TimeManager.AutoTimer.OnTimeSkipped = {TimeManager.AutoTimer.OnTimeSkipped}." );
+                    TestHelper.Monitor.Trace( $"counter.Count = {counter.Count}." );
                     d.AllObjects.Single().Should().BeSameAs( counter );
                     relayedCounter.Should().Be( counter.Count );
                     counter.Count.Should().Match( c => c == 10 || c == 11 );
@@ -194,23 +146,181 @@ namespace CK.Observable.Domain.Tests.TimedEvents
         [Test]
         public void auto_counter_works_uses_Critical_mode()
         {
+            IReadOnlyList<ActivityMonitorSimpleCollector.Entry> entries = null;
+
+            using( TestHelper.Monitor.CollectEntries( e => entries = e ) )
             using( var d = new ObservableDomain( TestHelper.Monitor, "Test" ) )
             {
                 AutoCounter counter = null;
                 d.Modify( TestHelper.Monitor, () =>
                 {
-                    counter = new AutoCounter( 20 );
-                    Thread.Sleep( 100 );
+                    counter = new AutoCounter( 5 );
+                    // We rely on the end of the Modify that execute pending timers
+                    // (timed events are handled at the start AND the end of the Modify).
+                    Thread.Sleep( 200 );
+                    // Here, there is one execution.
                 } );
+                // This is not really safe: the timer MAY be fired here before we do the AcquireReadLock:
+                // this is why we allow the counter to be greater than 1...
                 using( d.AcquireReadLock() )
                 {
                     TestHelper.Monitor.Trace( $"counter.Count = {counter.Count}." );
                     d.AllObjects.Single().Should().BeSameAs( counter );
-                    counter.Count.Should().Match( c => c == 1 );
+                    counter.Count.Should().BeGreaterOrEqualTo( 1 );
+                }
+            }
+            entries.Should().Match( e => e.Any( m => m.Text.Contains( " event(s) lost!" ) ), "We have lost events (around 40)." );
+        }
+
+        [Test]
+        public void callbacks_for_reminders_as_well_as_timers_must_be_regular_object_methods_or_static()
+        {
+            using( var d = new ObservableDomain( TestHelper.Monitor, "Test" ) )
+            {
+                var tranResult = d.Modify( TestHelper.Monitor, () =>
+                {
+                    var t = new ObservableTimer( DateTime.UtcNow );
+                    Assert.Throws<ArgumentException>( () => t.Elapsed += ( o, e ) => { } );
+                    Assert.Throws<ArgumentException>( () => t.Elapsed += new EventHandler<ObservableTimedEventArgs>( ( o, e ) => { } ) );
+                    var r = new ObservableReminder( DateTime.UtcNow );
+                    Assert.Throws<ArgumentException>( () => r.Elapsed += ( o, e ) => { } );
+                    Assert.Throws<ArgumentException>( () => r.Elapsed += new EventHandler<ObservableTimedEventArgs>( ( o, e ) => { } ) );
+                } );
+                tranResult.Success.Should().BeTrue();
+            }
+        }
+
+        [SerializationVersion(0)]
+        sealed class SimpleValue : ObservableObject
+        {
+            public SimpleValue()
+            {
+            }
+
+            SimpleValue( IBinaryDeserializerContext c )
+                : base( c )
+            {
+                var r = c.StartReading();
+                Value = r.ReadInt32();
+            }
+
+            void Write( BinarySerializer w )
+            {
+                w.Write( Value );
+            }
+
+            public int Value { get; set; }
+
+            public void SilentIncrementValue( object source, EventArgs args )
+            {
+                Value += 1;
+            }
+
+            public void IncrementValue( object source, EventMonitoredArgs args )
+            {
+                Value += 1;
+                args.Monitor.Trace( $"Value => {Value}" );
+            }
+        }
+
+
+        [Test]
+        public void serializing_timers_and_reminders()
+        {
+            var now = DateTime.UtcNow;
+            using( var d = new ObservableDomain( TestHelper.Monitor, "Test" ) )
+            {
+                var tranResult = d.Modify( TestHelper.Monitor, () =>
+                {
+                    // First due time: from 50 to 450 ms.
+                    // Interval: from 20 to 180 ms.
+                    // Latest in 450+180 ms = 630 ms.
+                    Enumerable.Range( 0, 8 ).Select( i => new ObservableTimer( now.AddMilliseconds( (i + 1) * 50 ), (i & 1) != 0, (i + 1) * 20 ) ).ToArray();
+                    d.TimeManager.AllObservableTimedEvents.Where( o => !o.IsActive ).Should().HaveCount( 8 );
+                } );
+                tranResult.Success.Should().BeTrue();
+                using( var d2 = SaveAndLoad( d ) )
+                {
+                    d2.TimeManager.Timers.Should().HaveCount( 8 );
+                    d2.TimeManager.AllObservableTimedEvents.Where( o => !o.IsActive ).Should().HaveCount( 8 );
+                }
+                SimpleValue val;
+                d.Modify( TestHelper.Monitor, () =>
+                {
+                    val = new SimpleValue();
+                    foreach( var t in d.TimeManager.Timers )
+                    {
+                        t.Elapsed += val.SilentIncrementValue;
+                    }
+                    // Max: (5+1)*50 = 300 ms.
+                    foreach( var r in Enumerable.Range( 0, 5 ).Select( i => new ObservableReminder( now.AddMilliseconds( (i + 1) * 50 ) ) ) )
+                    {
+                        r.Elapsed += val.IncrementValue;
+                    }
+                    d.TimeManager.AllObservableTimedEvents.Where( o => o.IsActive ).Should().HaveCount( 4 + 5 );
+                } ).Success.Should().BeTrue();
+
+                using( var d2 = SaveAndLoad( d ) )
+                {
+                    d2.TimeManager.Timers.Should().HaveCount( 8 );
+                    d2.TimeManager.Reminders.Should().HaveCount( 8 );
+                    d2.TimeManager.AllObservableTimedEvents.Where( o => !o.IsActive ).Should().HaveCount( 16 );
                 }
             }
         }
 
+        [Test]
+        public void hundred_timers_from_10_to_1000_ms_in_action()
+        {
+            const int testTime = 5000;
+            AutoCounter[] counters = null;
+
+            using( var d = new ObservableDomain( TestHelper.Monitor, "Test" ) )
+            {
+                TestHelper.Monitor.Info( $"Creating 100 active counters with interval from 10 to 1000 ms." );
+                var tranResult = d.Modify( TestHelper.Monitor, () =>
+                {
+                    counters = Enumerable.Range( 0, 100 ).Select( i => new AutoCounter( 1000 - i*10 ) ).ToArray();
+                } );
+                tranResult.Success.Should().BeTrue();
+                tranResult.NextDueTimeUtc.Should().BeCloseTo( DateTime.UtcNow, precision: 10 );
+                TestHelper.Monitor.Info( $"Waiting for {testTime} ms." );
+                Thread.Sleep( testTime );
+                tranResult = d.Modify( TestHelper.Monitor, () =>
+                {
+                    foreach( var c in counters ) c.Stop();
+                    TestHelper.Monitor.Info( $"All counters must have a Count that is {testTime}/IntervalMilliSeconds except the 10 ms one: 10 ms is too small (20 ms is okay here)." );
+                    var deviants = counters.Select( ( c, idx ) => (Idx: idx, C : c, Delta: c.Count - (testTime / c.IntervalMilliSeconds)) )
+                                           .Where( c => Math.Abs( c.Delta ) > 2 );
+                    TestHelper.Monitor.Info( deviants.Select( x => $"{x.Idx }: {x.C.Count}, {x.C.IntervalMilliSeconds} ms => {x.Delta}" ).Concatenate( Environment.NewLine ) );
+                    deviants.Skip( 1 ).Should().BeEmpty();
+                    //
+                    TestHelper.Monitor.Info( $"Reconfiguring the 100 active counters with interval from 1000 to 10 ms and restart them." );
+                    for( int i = 0; i < counters.Length; ++i )
+                    {
+                        var c = counters[i];
+                        int before = c.IntervalMilliSeconds;
+                        c.Reconfigure( DateTime.UtcNow, (i+1) * 10 );
+                        TestHelper.Monitor.Info( $"{before} => {c.IntervalMilliSeconds} (Count:{c.Count}." );
+                    }
+                    foreach( var c in counters ) c.Restart();
+                    counters.Should().Match( c => c.All( x => x.Count == 0 ) );
+                } );
+                tranResult.Success.Should().BeTrue();
+                TestHelper.Monitor.Info( $"Waiting for {testTime} ms again." );
+                Thread.Sleep( testTime );
+                TestHelper.Monitor.Info( $"Same as before: All counters must have a Count that is {testTime}/IntervalMilliSeconds except the 10 ms one: 10 ms is too small (20 ms is okay here)." );
+                using( d.AcquireReadLock() )
+                {
+                    var deviants = counters.Select( ( c, idx ) => (Idx: idx, C: c, Delta: c.Count - (testTime / c.IntervalMilliSeconds)) )
+                                           .Where( c => Math.Abs( c.Delta ) > 2 );
+                    TestHelper.Monitor.Info( deviants.Select( x => $"{x.Idx }: {x.C.Count}, {x.C.IntervalMilliSeconds} ms => {x.Delta}" ).Concatenate( Environment.NewLine ) );
+                    deviants.Skip( 1 ).Should().BeEmpty();
+                }
+            }
+        }
+
+        #region Simplified Timer use (code sandbox).
         [Test]
         public void testing_system_time()
         {
@@ -222,9 +332,10 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 TestHelper.Monitor.Trace( $"new AutoCounter( OTimer ) done. Waiting {waitTime} ms." );
                 Thread.Sleep( waitTime );
                 TestHelper.Monitor.Trace( $"End of Waiting. Counter = {timer.Counter}." );
-                timer.Counter.Should().Match( c => c == 10 || c == 11 );
+                timer.Counter.Should().Match( c => c == 10 || c == 11 || c == 12 );
             }
         }
+
 
         class OTimer : IDisposable
         {
@@ -272,5 +383,19 @@ namespace CK.Observable.Domain.Tests.TimedEvents
 
         }
 
+        #endregion
+
+
+        internal static ObservableDomain SaveAndLoad( ObservableDomain domain )
+        {
+            using( var s = new MemoryStream() )
+            {
+                domain.Save( TestHelper.Monitor, s, leaveOpen: true );
+                var d = new ObservableDomain( TestHelper.Monitor, domain.DomainName );
+                s.Position = 0;
+                d.Load( TestHelper.Monitor, s, leaveOpen: true );
+                return d;
+            }
+        }
     }
 }

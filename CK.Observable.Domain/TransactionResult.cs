@@ -21,6 +21,11 @@ namespace CK.Observable
         public static readonly TransactionResult Empty = new TransactionResult( Array.Empty<CKExceptionData>(), Util.UtcMinValue, Util.UtcMinValue );
 
         /// <summary>
+        /// Gets whether <see cref="Errors"/> is empty and <see cref="ClientError"/> is null.
+        /// </summary>
+        public bool Success => Errors.Count == 0 && ClientError == null;
+
+        /// <summary>
         /// Gets the start time (UTC) of the transaction.
         /// </summary>
         public DateTime StartTimeUtc { get; }

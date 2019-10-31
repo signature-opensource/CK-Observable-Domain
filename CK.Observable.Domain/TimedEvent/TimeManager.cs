@@ -1,5 +1,6 @@
 using CK.Core;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -14,14 +15,15 @@ namespace CK.Observable
     /// </summary>
     public sealed class TimeManager
     {
-        readonly ObservableDomain _domain;
         int _activeCount;
+        int _count;
         ObservableTimedEventBase[] _activeEvents;
         // Tracking is basic: any change are tracked with a simple hash set.
         readonly HashSet<ObservableTimedEventBase> _changed;
         ObservableTimedEventBase _first;
         ObservableTimedEventBase _last;
         AutoTimer _current;
+        DateTime _currentNext;
 
         /// <summary>
         /// Default implementation that is available on <see cref="CurrentTimer"/> and can be specialized
@@ -29,47 +31,39 @@ namespace CK.Observable
         /// </summary>
         public class AutoTimer : IDisposable
         {
+            static readonly TimerCallback _timerCallback = new TimerCallback( OnTime );
+            static readonly WaitCallback _waitCallback = new WaitCallback( OnTime );
+
             readonly Timer _timer;
-            int _reentrantGuard;
-            static readonly TimerCallback _callback = new TimerCallback( OnTime );
+            int _onTimeLostFlag;
 
             public AutoTimer( ObservableDomain domain )
             {
                 Domain = domain ?? throw new ArgumentNullException( nameof( domain ) );
-                _timer = new Timer( _callback, this, Timeout.Infinite, Timeout.Infinite );
+                _timer = new Timer( _timerCallback, this, Timeout.Infinite, Timeout.Infinite );
             }
-
-            public static int OnTimeSkipped = 0;
 
             static void OnTime( object state )
             {
                 Debug.Assert( state is AutoTimer );
                 var t = (AutoTimer)state;
-                if( Interlocked.CompareExchange( ref t._reentrantGuard, 1, 0 ) == 0 )
+                var m = t.Domain.ObtainDomainMonitor( 0, createAutonomousOnTimeout: false );
+                if( m != null )
                 {
-                    var m = t.Domain.ObtainDomainMonitor( 0, createAutonomousOnTimeout: true );
-                    if( m != null )
+                    if( Interlocked.CompareExchange( ref t._onTimeLostFlag, 0, 1 ) == 1 )
                     {
-                        using( m.OpenDebug( "OnTime task." ) )
-                        {
-                            try
-                            {
-                                t.OnDueTimeAsync( m ).GetAwaiter().GetResult();
-                                m.Debug( $"OnTime task." );
-                                m.Dispose();
-                                Interlocked.Decrement( ref t._reentrantGuard );
-
-                            }
-                            catch( Exception ex )
-                            {
-                                m.Error( ex );
-                            }
-                        }
+                        m.Debug( "Executing enqueued OnTime." );
                     }
-                    else
+                    t.OnDueTimeAsync( m ).ContinueWith( _ =>
                     {
-                        Interlocked.Decrement( ref t._reentrantGuard );
-                        Interlocked.Increment( ref OnTimeSkipped );
+                        m.Dispose();
+                    }, TaskContinuationOptions.ExecuteSynchronously );
+                }
+                else
+                {
+                    if( Interlocked.CompareExchange( ref t._onTimeLostFlag, 1, 0 ) == 0 )
+                    {
+                        ThreadPool.QueueUserWorkItem( _waitCallback, state );
                     }
                 }
             }
@@ -77,7 +71,7 @@ namespace CK.Observable
             /// <summary>
             /// Gets whether this AutoTimer has been <see cref="Dispose"/>d.
             /// </summary>
-            public bool IsDisposed => _reentrantGuard < 0;
+            public bool IsDisposed => _onTimeLostFlag < 0;
 
             /// <summary>
             /// Gets the domain to which this timer is bound.
@@ -92,17 +86,19 @@ namespace CK.Observable
             protected virtual Task OnDueTimeAsync( IActivityMonitor m ) => Domain.SafeModifyAsync( m, null, 0 );
 
             /// <summary>
-            /// Must do whatever is needed to call back this <see cref="OnDueTimeAsync(IActivityMonitor)"/> at <paramref name="nextDueTimeUtc"/>.
+            /// Must do whatever is needed to call back this <see cref="OnDueTimeAsync(IActivityMonitor)"/> at <paramref name="nextDueTimeUtc"/> (or
+            /// right after but not before!).
             /// This is called while the domain's write lock is held.
             /// </summary>
             /// <param name="monitor">The monitor to use.</param>
             /// <param name="nextDueTimeUtc">The expected callback time.</param>
             public virtual void SetNextDueTimeUtc( IActivityMonitor monitor, DateTime nextDueTimeUtc )
             {
-                if( IsDisposed ) throw new ObjectDisposedException( GetType().FullName );
+                if( IsDisposed ) throw new ObjectDisposedException( ToString() );
                 if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
                 var delta = nextDueTimeUtc - DateTime.UtcNow;
-                var ms = delta <= TimeSpan.Zero ? 0 : (long)delta.TotalMilliseconds;
+                var ms = (long)Math.Ceiling( delta.TotalMilliseconds );
+                if( ms <= 0 ) ms = 0;
                 if( !_timer.Change( ms, Timeout.Infinite ) )
                 {
                     var msg = $"Timer.Change({ms}Timeout.Infinite) failed.";
@@ -124,9 +120,9 @@ namespace CK.Observable
             /// </summary>
             public void Dispose()
             {
-                if( _reentrantGuard >= 0 )
+                if( _onTimeLostFlag >= 0 )
                 {
-                    _reentrantGuard = int.MinValue;
+                    _onTimeLostFlag = int.MinValue;
                     _timer.Dispose();
                 }
             }
@@ -134,11 +130,17 @@ namespace CK.Observable
 
         internal TimeManager( ObservableDomain domain )
         {
-            _domain = domain;
+            Domain = domain;
             _activeEvents = new ObservableTimedEventBase[16];
             _changed = new HashSet<ObservableTimedEventBase>();
-            _current = new AutoTimer( _domain );
+            _current = new AutoTimer( Domain );
+            _currentNext = Util.UtcMinValue;
         }
+
+        /// <summary>
+        /// Exposes the domain.
+        /// </summary>
+        internal readonly ObservableDomain Domain;
 
         /// <summary>
         /// Gets or sets whether exceptions raised by <see cref="ObservableTimedEventBase.Elapsed"/> callbacks
@@ -163,19 +165,53 @@ namespace CK.Observable
             set
             {
                 if( value == null ) throw new ArgumentNullException( nameof( CurrentTimer ) );
-                _current = value;
+                if( _current != value )
+                {
+                    _currentNext = Util.UtcMinValue;
+                    _current = value;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets the set of <see cref="ObservableTimer"/>.
+        /// </summary>
+        public IEnumerable<ObservableTimer> Timers => AllObservableTimedEvents.OfType<ObservableTimer>();
+
+        /// <summary>
+        /// Gets the set of <see cref="ObservableReminder"/>.
+        /// </summary>
+        public IEnumerable<ObservableReminder> Reminders => AllObservableTimedEvents.OfType<ObservableReminder>();
+
+        /// <summary>
+        /// Gets the set of all the <see cref="ObservableTimedEventBase"/>.
+        /// </summary>
+        public IEnumerable<ObservableTimedEventBase> AllObservableTimedEvents
+        {
+            get
+            {
+                var o = _first;
+                while( o != null )
+                {
+                    yield return o;
+                    o = o.Next;
+                }
             }
         }
 
         internal void SetNextDueTimeUtc( IActivityMonitor m, DateTime nextDueTimeUtc )
         {
-            try
+            if( _currentNext != nextDueTimeUtc )
             {
-                _current.SetNextDueTimeUtc( m, nextDueTimeUtc );
-            }
-            catch( Exception ex )
-            {
-                m.Error( ex );
+                try
+                {
+                    _current.SetNextDueTimeUtc( m, nextDueTimeUtc );
+                    _currentNext = nextDueTimeUtc;
+                }
+                catch( Exception ex )
+                {
+                    m.Error( ex );
+                }
             }
         }
 
@@ -184,6 +220,7 @@ namespace CK.Observable
             if( (t.Next = _first) == null ) _last = t;
             _first = t;
             _changed.Add( t );
+            ++_count;
         }
 
         internal void OnDisposed( ObservableTimedEventBase t )
@@ -193,14 +230,28 @@ namespace CK.Observable
             if( _last == t ) _last = t.Prev;
             else t.Next.Prev = t.Prev;
             _changed.Add( t );
+            --_count;
         }
 
         internal void OnChanged( ObservableTimedEventBase t ) => _changed.Add( t );
 
-        internal void Clear()
+        internal void Save( IActivityMonitor m, BinarySerializer w )
         {
+
+        }
+
+        internal void Load( IActivityMonitor m, BinaryDeserializer r )
+        {
+            Debug.Assert( _count == 0 );
+        }
+
+        internal void Clear( IActivityMonitor monitor )
+        {
+            Debug.Assert( _activeEvents[0] == null );
             Array.Clear( _activeEvents, 1, _activeCount );
-            _activeCount = 0;
+            _count = _activeCount = 0;
+            _first = _last = null;
+            _current.SetNextDueTimeUtc( monitor, Util.UtcMinValue );
         }
 
         /// <summary>
@@ -226,7 +277,6 @@ namespace CK.Observable
                 else
                 {
                     if( ev.ActiveIndex != 0 ) Deactivate( ev );
-                    else OnNextDueTimeUpdated( ev );
                 }
             }
         }
@@ -253,10 +303,10 @@ namespace CK.Observable
                     if( first.ExpectedDueTimeUtc <= current )
                     {
                         _changed.Remove( first );
-                        first.DoRaise( _domain.CurrentMonitor, current, !IgnoreTimedEventException );
+                        first.DoRaise( Domain.CurrentMonitor, current, !IgnoreTimedEventException );
                         if( !_changed.Contains( first ) )
                         {
-                            first.OnAfterRaiseUnchanged( current, _domain.CurrentMonitor );
+                            first.OnAfterRaiseUnchanged( current, Domain.CurrentMonitor );
                         }
                         _changed.Remove( first );
                         if( !first.IsActive )
@@ -267,11 +317,11 @@ namespace CK.Observable
                         {
                             if( first.ExpectedDueTimeUtc <= current )
                             {
-                                first.ForwardExpectedDueTime( _domain.CurrentMonitor, current.AddMilliseconds( 10 ) );
+                                first.ForwardExpectedDueTime( Domain.CurrentMonitor, current.AddMilliseconds( 10 ) );
                             }
                             OnNextDueTimeUpdated( first );
                         }
-                        _domain.CurrentMonitor.Debug( $"{first}: ActiveIndex={first.ActiveIndex}" );
+                        Domain.CurrentMonitor.Debug( $"{first}: ActiveIndex={first.ActiveIndex}, Next in {(first.ExpectedDueTimeUtc - DateTime.UtcNow).TotalMilliseconds} ms." );
                         ++count;
                     }
                     else break;

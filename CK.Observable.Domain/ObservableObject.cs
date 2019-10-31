@@ -1,5 +1,3 @@
-
-
 using CK.Core;
 using System;
 using System.ComponentModel;
@@ -14,13 +12,14 @@ namespace CK.Observable
     /// which properties changes and <see cref="Dispose"/> are tracked.
     /// </summary>
     [SerializationVersion( 0 )]
-    public abstract class ObservableObject : INotifyPropertyChanged, IDisposable, IKnowMyExportDriver
+    public abstract class ObservableObject : INotifyPropertyChanged, IDisposableObject, IKnowMyExportDriver
     {
         int _id;
         internal readonly ObservableDomain Domain;
         PropertyChangedEventHandler _handler;
         internal int OId => _id;
         internal readonly IObjectExportTypeDriver _exporter;
+        readonly ObservableEventHandler<EventMonitoredArgs> _disposed;
 
         /// <summary>
         /// Raised when this object is <see cref="Dispose"/>d by <see cref="OnDisposed"/>.
@@ -28,7 +27,15 @@ namespace CK.Observable
         /// triggered to avoid a useless (and potentialy dangerous) snowball effect: eventually ALL <see cref="ObservableObject.OnDisposed(bool)"/>
         /// will be called during a reload.
         /// </summary>
-        public event EventHandler Disposed;
+        public event EventHandler<EventMonitoredArgs> Disposed
+        {
+            add
+            {
+                if( IsDisposed ) throw new ObjectDisposedException( ToString() );
+                _disposed.Add( value, nameof( Disposed ) );
+            }
+            remove => _disposed.Remove( value );
+        }
 
         /// <summary>
         /// Constructor for specialized instance.
@@ -90,7 +97,7 @@ namespace CK.Observable
         public bool IsDisposed => _id < 0;
 
         /// <summary>
-        /// Gets whether the odomain is being deserialized.
+        /// Gets whether the domain is being deserialized.
         /// </summary>
         protected bool IsDeserializing => Domain.IsDeserializing;
 
@@ -99,13 +106,14 @@ namespace CK.Observable
         IObjectExportTypeDriver IKnowMyExportDriver.ExportDriver => _exporter;
 
         /// <summary>
-        /// Disposes this object (if not already disposed).
+        /// Disposes this object (can be called multiple times).
         /// </summary>
         public void Dispose()
         {
             if( _id >= 0 )
             {
-                OnDisposed( false );
+                Domain.CheckBeforeDispose( this );
+                OnDisposed( new EventMonitoredArgs( Domain.CurrentMonitor ), false );
                 Domain.Unregister( this );
                 _id = -1;
             }
@@ -126,9 +134,17 @@ namespace CK.Observable
         /// Called before this object is disposed.
         /// Implementation at this level raises the <see cref="Disposed"/> event: it must be called
         /// by overrides.
+        /// <para>
+        /// Note that the Disposed event is raised only for explicit object disposing: a <see cref="ObservableDomain.Load"/> doesn't trigger the event.
+        /// </para>
         /// </summary>
-        /// <param name="isReloading">True when this dispose is due to a domain reload.</param>
-        protected internal virtual void OnDisposed( bool isReloading )
+        /// <param name="reusableArgs">
+        /// The event arguments that exposes the monitor to use (that is the same as this <see cref="Monitor"/> protected property).
+        /// </param>
+        /// <param name="isReloading">
+        /// True when this dispose is due to a domain reload. (When true the <see cref="Disposed"/> event is not raised.)
+        /// </param>
+        protected internal virtual void OnDisposed( EventMonitoredArgs reusableArgs, bool isReloading )
         {
             if( isReloading )
             {
@@ -136,8 +152,7 @@ namespace CK.Observable
             }
             else
             {
-                Disposed?.Invoke( this, EventArgs.Empty );
-                Disposed = null;
+                _disposed.Raise( reusableArgs.Monitor, this, reusableArgs, nameof(Disposed) );
             }
         }
 
@@ -171,6 +186,7 @@ namespace CK.Observable
                 }
             }
         }
+
 
     }
 

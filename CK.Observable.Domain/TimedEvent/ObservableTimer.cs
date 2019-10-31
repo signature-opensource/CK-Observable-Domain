@@ -29,7 +29,7 @@ namespace CK.Observable
         /// <param name="intervalMilliSeconds">The interval in millisecond (defaults to 1 second). Must be positive.</param>
         public ObservableTimer( DateTime firstDueTimeUtc, bool isActive = true, int intervalMilliSeconds = 1000 )
         {
-            ExpectedDueTimeUtc = DueTimeUtc = AdjustNextDueTimeUtc( DateTime.UtcNow, firstDueTimeUtc, intervalMilliSeconds );
+            ExpectedDueTimeUtc = AdjustNextDueTimeUtc( DateTime.UtcNow, firstDueTimeUtc, intervalMilliSeconds );
             _milliSeconds = intervalMilliSeconds;
             _isActive = isActive;
         }
@@ -47,8 +47,8 @@ namespace CK.Observable
             {
                 if( _isActive != value )
                 {
-                    CheckDisposed();
-                    _isActive = value;
+                    this.CheckDisposed();
+                    if( _isActive = value ) ExpectedDueTimeUtc = DateTime.UtcNow;
                     TimeManager.OnChanged( this );
                 }
             }
@@ -59,7 +59,7 @@ namespace CK.Observable
         /// If this is <see cref="Util.UtcMinValue"/> nor <see cref="Util.UtcMaxValue"/>, then <see cref="ObservableTimedEventBase.IsActive">IsActive</see>
         /// is false.
         /// </summary>
-        public DateTime DueTimeUtc { get; private set; }
+        public DateTime DueTimeUtc => ExpectedDueTimeUtc;
 
         /// <summary>
         /// Gets or sets the <see cref="ObservableTimerMode"/> to apply.
@@ -79,8 +79,8 @@ namespace CK.Observable
             {
                 if( _milliSeconds != value )
                 {
-                    CheckDisposed();
-                    if( DueTimeUtc == Util.UtcMinValue || DueTimeUtc == Util.UtcMaxValue )
+                    this.CheckDisposed();
+                    if( ExpectedDueTimeUtc == Util.UtcMinValue || ExpectedDueTimeUtc == Util.UtcMaxValue )
                     {
                         if( value <= 0 ) throw new ArgumentOutOfRangeException( nameof( IntervalMilliSeconds ) );
                         _milliSeconds = value;
@@ -100,16 +100,39 @@ namespace CK.Observable
         /// <param name="intervalMilliSeconds">The interval in millisecond (defaults to 1 second).</param>
         public void Reconfigure( DateTime firstDueTimeUtc, int intervalMilliSeconds )
         {
-            CheckDisposed();
-            ExpectedDueTimeUtc = DueTimeUtc = AdjustNextDueTimeUtc( DateTime.UtcNow, firstDueTimeUtc, intervalMilliSeconds );
+            this.CheckDisposed();
+            ExpectedDueTimeUtc = AdjustNextDueTimeUtc( DateTime.UtcNow, firstDueTimeUtc, intervalMilliSeconds );
             _milliSeconds = intervalMilliSeconds;
             TimeManager.OnChanged( this );
+        }
+
+        private protected override void OnRaising( IActivityMonitor monitor, bool throwException, ObservableTimedEventArgs ev )
+        {
+            if( ev.DeltaMilliSeconds >= _milliSeconds )
+            {
+                int stepCount = ev.DeltaMilliSeconds / _milliSeconds;
+                var mode = Mode & ~ObservableTimerMode.ThrowException;
+                throwException &= (Mode & ObservableTimerMode.ThrowException) != 0;
+
+                if( stepCount == 1 )
+                {
+                    var msg = "Lost one event.";
+                    if( mode == ObservableTimerMode.Critical ) RaiseError( monitor, mode, throwException, msg );
+                    else monitor.Warn( msg );
+                }
+                else
+                {
+                    var msg = $"{stepCount} event(s) lost!";
+                    if( mode == ObservableTimerMode.Relaxed ) monitor.Warn( msg );
+                    else RaiseError( monitor, mode, throwException, msg );
+                }
+            }
         }
 
         internal override void OnAfterRaiseUnchanged( DateTime current, IActivityMonitor m )
         {
             Debug.Assert( IsActive );
-            ExpectedDueTimeUtc = DueTimeUtc = DueTimeUtc.AddMilliseconds( _milliSeconds );
+            ExpectedDueTimeUtc = DueTimeUtc.AddMilliseconds( _milliSeconds );
         }
 
         internal override void ForwardExpectedDueTime( IActivityMonitor monitor, DateTime forwarded )
@@ -121,13 +144,6 @@ namespace CK.Observable
             var throwEx = (Mode & ObservableTimerMode.ThrowException) != 0;
             var msg = $"{ToString()}: next due time '{ExpectedDueTimeUtc.ToString( "o" )}' has been forwarded to '{forwarded.ToString( "o" )}'. ";
 
-            void RaiseError()
-            {
-                msg += $" This is an error since Mode is {mode}.";
-                if( throwEx ) throw new CKException( msg );
-                else monitor.Error( msg );
-            }
-
             if( stepCount == 1 )
             {
                 msg += "No event lost.";
@@ -137,20 +153,27 @@ namespace CK.Observable
                 }
                 else
                 {
-                    ExpectedDueTimeUtc = DueTimeUtc = ExpectedDueTimeUtc.AddMilliseconds( _milliSeconds );
+                    ExpectedDueTimeUtc = ExpectedDueTimeUtc.AddMilliseconds( _milliSeconds );
                     msg += $" DueTimeUtc aligned to {ExpectedDueTimeUtc.ToString( "o" )}.";
                 }
-                if( mode == ObservableTimerMode.Critical ) RaiseError();
+                if( mode == ObservableTimerMode.Critical ) RaiseError( monitor, mode, throwEx, msg );
                 else monitor.Warn( msg );
             }
             else
             {
                 msg += $"{stepCount-1} event(s) lost!";
-                ExpectedDueTimeUtc = DueTimeUtc = ExpectedDueTimeUtc.AddMilliseconds( stepCount * _milliSeconds );
+                ExpectedDueTimeUtc = ExpectedDueTimeUtc.AddMilliseconds( stepCount * _milliSeconds );
                 msg += $" DueTimeUtc aligned to {ExpectedDueTimeUtc.ToString( "o" )}.";
                 if( mode == ObservableTimerMode.Relaxed ) monitor.Warn( msg );
-                else RaiseError();
+                else RaiseError( monitor, mode, throwEx, msg );
             }
+        }
+
+        static void RaiseError( IActivityMonitor monitor, ObservableTimerMode mode, bool throwEx, string msg )
+        {
+            msg += $" This is an error since Mode is {mode}.";
+            if( throwEx ) throw new CKException( msg );
+            else monitor.Error( msg );
         }
 
         /// <summary>
@@ -179,7 +202,7 @@ namespace CK.Observable
         /// Overridden to return the <see cref="ObservableTimedEventBase.Name"/> of this reminder.
         /// </summary>
         /// <returns>A readable string.</returns>
-        public override string ToString() => $"{(IsDisposed ? "[Disposed]" : "")}ObservableTimer '{Name ?? "<no name>"}'";
+        public override string ToString() => $"{(IsDisposed ? "[Disposed]" : "")}ObservableTimer '{Name ?? "<no name>"}' ({IntervalMilliSeconds} ms)";
 
     }
 

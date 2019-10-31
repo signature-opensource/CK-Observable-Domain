@@ -25,7 +25,7 @@ namespace CK.Observable
         {
             Current = current;
             Expected = expected;
-            Delta = current - expected;
+            DeltaMilliSeconds = (int)Math.Ceiling( (current - expected).TotalMilliseconds );
         }
 
         /// <summary>
@@ -39,15 +39,16 @@ namespace CK.Observable
         public DateTime Current { get; }
 
         /// <summary>
-        /// Gets the difference between <see cref="Current"/> and <see cref="Expected"/>.
+        /// Gets the difference between <see cref="Current"/> and <see cref="Expected"/>
+        /// rounded to the upper millisecond.
         /// </summary>
-        public TimeSpan Delta { get; }
+        public int DeltaMilliSeconds { get; }
 
         /// <summary>
         /// Overridden to return the Current/Expected/Delta values.
         /// </summary>
         /// <returns>A readable string.</returns>
-        public override string ToString() => $"Current: {Current}, Expected: {Expected}, Delta: {Delta}.";
+        public override string ToString() => $"Current: {Current}, Expected: {Expected}, Delta: {DeltaMilliSeconds} ms.";
 
     }
 }

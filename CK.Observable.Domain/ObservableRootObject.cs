@@ -1,3 +1,4 @@
+using CK.Core;
 using System;
 
 namespace CK.Observable
@@ -35,11 +36,14 @@ namespace CK.Observable
         /// <summary>
         /// Overridden to throw <see cref="InvalidOperationException"/>.
         /// </summary>
-        /// <param name="isReloading">Unused (this is never called for root objects).</param>
-        protected internal override void OnDisposed( bool isReloading )
+        /// <param name="reusableArgs">
+        /// The event arguments that exposes the monitor to use (that is the same as this <see cref="ObservableObject.Monitor"/> protected property).
+        /// </param>
+        /// <param name="isReloading">Always false: this is never called for root objects.</param>
+        protected internal override void OnDisposed( EventMonitoredArgs args, bool isReloading )
         {
-            if( isReloading ) base.OnDisposed( isReloading );
-            else throw new InvalidOperationException( "ObservableRootObject can not be disposed." );
+            if( isReloading ) base.OnDisposed( args, isReloading );
+            else throw new InvalidOperationException( "ObservableRootObject cannot be disposed." );
         }
     }
 }

@@ -353,7 +353,16 @@ namespace CK.Observable
                 _resultInitialized = true;
                 Debug.Assert( _domain._currentTran == this );
                 Debug.Assert( _domain._lock.IsWriteLockHeld );
-                DateTime nextTimerDueDate = _domain._timeManager.ApplyChanges();
+                DateTime nextTimerDueDate = Util.UtcMinValue;
+                try
+                {
+                    nextTimerDueDate = _domain._timeManager.ApplyChanges();
+                }
+                catch( Exception ex )
+                {
+                    Monitor.Error( ex );
+                    AddError( CKExceptionData.CreateFrom( ex ) );
+                }
                 CurrentThreadDomain = _previous;
                 if( _errors.Length != 0 )
                 {
@@ -912,7 +921,7 @@ namespace CK.Observable
                 {
                     using( isWrite ? monitor.OpenInfo( $"Transacted saving domain ({_actualObjectCount} objects)." ) : null )
                     {
-                        w.WriteSmallInt32( 1 ); // Version
+                        w.WriteSmallInt32( 2 ); // Version: 2 supports TimeManager.
                         w.Write( DomainName );
                         w.Write( _transactionSerialNumber );
                         w.Write( _actualObjectCount );
@@ -930,6 +939,7 @@ namespace CK.Observable
                         }
                         w.WriteNonNegativeSmallInt32( _roots.Count );
                         foreach( var r in _roots ) w.WriteNonNegativeSmallInt32( r.OId );
+                        _timeManager.Save( monitor, w );
                         return true;
                     }
                 }
@@ -1011,13 +1021,14 @@ namespace CK.Observable
                     _properties.Add( name, p );
                     _propertiesByIndex.Add( p );
                 }
+                var disposedArgs = new EventMonitoredArgs( CurrentMonitor );
                 for( int i = 0; i < _objectsListCount; ++i )
                 {
                     var o = _objects[i];
                     if( o != null )
                     {
                         Debug.Assert( !o.IsDisposed );
-                        o.OnDisposed( true );
+                        o.OnDisposed( disposedArgs, true );
                     }
                 }
                 Array.Clear( _objects, 0, _objectsListCount );
@@ -1037,6 +1048,8 @@ namespace CK.Observable
                 {
                     _roots.Add( _objects[r.ReadNonNegativeSmallInt32()] as ObservableRootObject );
                 }
+                _timeManager.Clear( monitor );
+                if( version > 1 ) _timeManager.Load( monitor, r );
                 OnLoaded();
             }
             finally
@@ -1071,7 +1084,7 @@ namespace CK.Observable
 
         internal int Register( ObservableObject o )
         {
-            CheckWriteLockAndObjectDisposed( o );
+            CheckWriteLock( o ).CheckDisposed();
             Debug.Assert( o != null && o.Domain == this );
             int idx;
             if( _freeList.Count > 0 )
@@ -1096,10 +1109,15 @@ namespace CK.Observable
             return idx;
         }
 
-        internal void Unregister( ObservableObject o )
+        internal EventMonitoredArgs CheckBeforeDispose( IDisposableObject o )
         {
             Debug.Assert( !o.IsDisposed );
-            CheckWriteLockAndObjectDisposed( o );
+            CheckWriteLock( o ).CheckDisposed();
+            return new EventMonitoredArgs( CurrentMonitor );
+        }
+
+        internal void Unregister( ObservableObject o )
+        {
             if( !_deserializing ) _changeTracker.OnDisposeObject( o );
             _objects[o.OId] = null;
             _freeList.Add( o.OId );
@@ -1138,15 +1156,16 @@ namespace CK.Observable
         {
             if( _transactionSerialNumber >= 0 )
             {
-                _lock.Dispose();
                 _transactionSerialNumber = -1;
                 _timeManager.CurrentTimer?.Dispose();
+                _lock.Dispose();
+                _transactionSerialNumber = -1;
             }
         }
 
         internal void SendCommand( ObservableObject o, object command )
         {
-            CheckWriteLockAndObjectDisposed( o );
+            CheckWriteLock( o ).CheckDisposed();
             _changeTracker.OnSendCommand( new ObservableCommand( o, command ) );
         }
 
@@ -1158,7 +1177,7 @@ namespace CK.Observable
             {
                 return null;
             }
-            CheckWriteLockAndObjectDisposed( o );
+            CheckWriteLock( o ).CheckDisposed();
             PropInfo p = EnsurePropertyInfo( propertyName );
             _changeTracker.OnPropertyChanged( o, p, before, after );
             return p.EventArg;
@@ -1180,46 +1199,46 @@ namespace CK.Observable
         internal ListRemoveAtEvent OnListRemoveAt( ObservableObject o, int index )
         {
             if( _deserializing ) return null;
-            CheckWriteLockAndObjectDisposed( o );
+            CheckWriteLock( o ).CheckDisposed();
             return _changeTracker.OnListRemoveAt( o, index );
         }
 
         internal ListSetAtEvent OnListSetAt( ObservableObject o, int index, object value )
         {
             if( _deserializing ) return null;
-            CheckWriteLockAndObjectDisposed( o );
+            CheckWriteLock( o ).CheckDisposed();
             return _changeTracker.OnListSetAt( o, index, value );
         }
 
         internal CollectionClearEvent OnCollectionClear( ObservableObject o )
         {
             if( _deserializing ) return null;
-            CheckWriteLockAndObjectDisposed( o );
+            CheckWriteLock( o ).CheckDisposed();
             return _changeTracker.OnCollectionClear( o );
         }
 
         internal ListInsertEvent OnListInsert( ObservableObject o, int index, object item )
         {
             if( _deserializing ) return null;
-            CheckWriteLockAndObjectDisposed( o );
+            CheckWriteLock( o ).CheckDisposed();
             return _changeTracker.OnListInsert( o, index, item );
         }
 
         internal CollectionMapSetEvent OnCollectionMapSet( ObservableObject o, object key, object value )
         {
             if( _deserializing ) return null;
-            CheckWriteLockAndObjectDisposed( o );
+            CheckWriteLock( o ).CheckDisposed();
             return _changeTracker.OnCollectionMapSet( o, key, value );
         }
 
         internal CollectionRemoveKeyEvent OnCollectionRemoveKey( ObservableObject o, object key )
         {
             if( _deserializing ) return null;
-            CheckWriteLockAndObjectDisposed( o );
+            CheckWriteLock( o ).CheckDisposed();
             return _changeTracker.OnCollectionRemoveKey( o, key );
         }
 
-        void CheckWriteLockAndObjectDisposed( ObservableObject o )
+        IDisposableObject CheckWriteLock( IDisposableObject o )
         {
             if( !_lock.IsWriteLockHeld )
             {
@@ -1227,7 +1246,7 @@ namespace CK.Observable
                 if( _lock.IsReadLockHeld ) throw new InvalidOperationException( "Concurrent access: only Read lock has been acquired." );
                 throw new InvalidOperationException( "Concurrent access: no lock has been acquired." );
             }
-            if( o.IsDisposed ) throw new ObjectDisposedException( o.GetType().FullName );
+            return o;
         }
 
         /// <summary>

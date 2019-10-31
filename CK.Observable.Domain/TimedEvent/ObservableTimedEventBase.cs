@@ -12,7 +12,8 @@ namespace CK.Observable
     /// <summary>
     /// Base behavior for timed event management.
     /// </summary>
-    public abstract class ObservableTimedEventBase : IDisposable
+    [SerializationVersion( 0 )]
+    public abstract class ObservableTimedEventBase : IDisposableObject
     {
         internal TimeManager TimeManager;
         internal int ActiveIndex;
@@ -24,8 +25,8 @@ namespace CK.Observable
         internal ObservableTimedEventBase Next;
         internal ObservableTimedEventBase Prev;
 
-        EventHandler<ObservableTimedEventArgs> _handlers;
-        int _handlerCount;
+        readonly ObservableEventHandler<EventMonitoredArgs> _disposed;
+        readonly ObservableEventHandler<ObservableTimedEventArgs> _handlers;
 
         internal ObservableTimedEventBase()
         {
@@ -33,10 +34,29 @@ namespace CK.Observable
             TimeManager.OnCreated( this );
         }
 
+        protected ObservableTimedEventBase( IBinaryDeserializerContext c )
+        {
+            var r = c.StartReading();
+            ActiveIndex = r.ReadInt32();
+            ExpectedDueTimeUtc = r.ReadDateTime();
+            _disposed = (ObservableEventHandler<EventMonitoredArgs>)r.ReadObject();
+            _handlers = (ObservableEventHandler<ObservableTimedEventArgs>)r.ReadObject();
+        }
+
+        void Write( BinarySerializer w )
+        {
+            Debug.Assert( !IsDisposed );
+            w.Write( ActiveIndex );
+            w.Write( ExpectedDueTimeUtc );
+            _disposed.Write( w );
+            _handlers.Write( w );
+        }
+
         /// <summary>
         /// Gets whether this timed event is active.
+        /// There must be at least one <see cref="Elapsed"/> registered callback for this to be true.
         /// </summary>
-        public bool IsActive => GetIsActive();
+        public bool IsActive => _handlers.HasHandlers && GetIsActive();
 
         internal abstract bool GetIsActive();
 
@@ -58,58 +78,32 @@ namespace CK.Observable
         {
             add
             {
-                if( value == null ) throw new ArgumentNullException( nameof( EventHandler<ObservableTimedEventArgs> ) );
-                CheckDisposed();
-                _handlers += value;
-                ++_handlerCount;
+                this.CheckDisposed();
+                _handlers.Add( value, nameof( Elapsed ) );
                 TimeManager.OnChanged( this );
             }
             remove
             {
-                CheckDisposed();
-                var hBefore = _handlers;
-                _handlers -= value;
-                if( !ReferenceEquals( hBefore, _handlers ) )
-                {
-                    --_handlerCount;
-                    TimeManager.OnChanged( this );
-                }
+                this.CheckDisposed();
+                if( _handlers.Remove( value ) ) TimeManager.OnChanged( this );
             }
-        }
-
-        internal void CheckDisposed()
-        {
-            if( IsDisposed ) throw new ObjectDisposedException( ToString() );
         }
 
         internal void DoRaise( IActivityMonitor monitor, DateTime current, bool throwException )
         {
             Debug.Assert( !IsDisposed );
-            var h = _handlers;
-            if( h != null )
+            if( _handlers.HasHandlers )
             {
                 var ev = new ObservableTimedEventArgs( monitor, current, ExpectedDueTimeUtc );
-                using( monitor.OpenTrace( $"Raising {ToString()} (Delta: {ev.Delta.TotalMilliseconds} ms)." ) )
+                using( monitor.OpenDebug( $"Raising {ToString()} (Delta: {ev.DeltaMilliSeconds} ms)." ) )
                 {
-                    if( throwException ) h.Invoke( this, ev );
-                    else
-                    {
-                        var hList = h.GetInvocationList();
-                        for( int i = 0; i < hList.Length; ++i )
-                        {
-                            h = (EventHandler<ObservableTimedEventArgs>)hList[i];
-                            try
-                            {
-                                h.Invoke( this, ev );
-                            }
-                            catch( Exception ex )
-                            {
-                                monitor.Warn( $"While raising {ToString()}. Ignoring error.", ex );
-                            }
-                        }
-                    }
+                    _handlers.Raise( monitor, this, ev, nameof( Elapsed ), throwException );
                 }
             }
+        }
+
+        private protected virtual void OnRaising( IActivityMonitor monitor, bool throwException, ObservableTimedEventArgs ev )
+        {
         }
 
         internal abstract void OnAfterRaiseUnchanged( DateTime current, IActivityMonitor m );
@@ -128,8 +122,11 @@ namespace CK.Observable
         /// Note that when the call to dispose is made by <see cref="ObservableDomain.Load"/>, this event is not
         /// triggered.
         /// </summary>
-        public event EventHandler Disposed;
-
+        public event EventHandler<EventMonitoredArgs> Disposed
+        {
+            add => _disposed.Add( value, nameof( Disposed ) );
+            remove => _disposed.Remove( value );
+        }
 
         /// <summary>
         /// Disposes this timed event.
@@ -138,11 +135,13 @@ namespace CK.Observable
         {
             if( !IsDisposed )
             {
-                Disposed?.Invoke( this, EventArgs.Empty );
-                Disposed = null;
+                TimeManager.Domain.CheckBeforeDispose( this );
+                var m = TimeManager.Domain.CurrentMonitor;
+                _disposed.Raise( m, this, new EventMonitoredArgs( m ), nameof( Disposed ) );
+                _disposed.RemoveAll();
                 TimeManager.OnDisposed( this );
                 TimeManager = null;
-                _handlers = null;
+                _handlers.RemoveAll();
             }
         }
     }

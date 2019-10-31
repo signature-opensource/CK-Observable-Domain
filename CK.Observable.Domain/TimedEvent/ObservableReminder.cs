@@ -12,6 +12,7 @@ namespace CK.Observable
     /// <summary>
     /// Simple reminder that raises its <see cref="ObservableTimedEventBase.Elapsed"/> event once at <see cref="DueTimeUtc"/> time.
     /// </summary>
+    [SerializationVersion(0)]
     public class ObservableReminder : ObservableTimedEventBase
     {
         /// <summary>
@@ -25,6 +26,16 @@ namespace CK.Observable
         {
             if( dueTimeUtc.Kind != DateTimeKind.Utc ) throw new ArgumentException( nameof( dueTimeUtc ), "Must be a Utc DateTime." );
             ExpectedDueTimeUtc = dueTimeUtc;
+        }
+
+        ObservableReminder( IBinaryDeserializerContext c )
+            : base( c )
+        {
+            var r = c.StartReading();
+        }
+
+        void Write( BinarySerializer w )
+        {
         }
 
         internal override bool GetIsActive() => ExpectedDueTimeUtc != Util.UtcMinValue && ExpectedDueTimeUtc != Util.UtcMaxValue; 
@@ -42,7 +53,7 @@ namespace CK.Observable
                 if( ExpectedDueTimeUtc != value )
                 {
                     if( value.Kind != DateTimeKind.Utc ) throw new ArgumentException( nameof( DueTimeUtc ), "Must be a Utc DateTime." );
-                    CheckDisposed();
+                    this.CheckDisposed();
                     ExpectedDueTimeUtc = value;
                     TimeManager.OnChanged( this );
                 }
