@@ -96,20 +96,19 @@ namespace CK.Observable
             if( _minimumDueTimeMs == 0 )
             {
                 // Write every snapshot
-                DoWriteFile();
+                WriteFileIfNeeded();
             }
             else if( _minimumDueTimeMs > 0 && c.CommitTimeUtc > _nextDueTimeUtc )
             {
                 // Write snapshot if due, then reschedule it.
-                DoWriteFile();
+                WriteFileIfNeeded();
                 RescheduleDueTime( c.CommitTimeUtc );
             }
         }
 
 
         /// <summary>
-        /// Writes any pending snapshot to the disk,
-        /// without waiting for the next timer tick.
+        /// Writes any pending snapshot to the disk if something changed.
         /// </summary>
         /// <param name="m">The monitor to use</param>
         /// <returns>
@@ -120,7 +119,7 @@ namespace CK.Observable
         {
             try
             {
-                DoWriteFile();
+                WriteFileIfNeeded();
                 if( _minimumDueTimeMs > 0 )
                 {
                     RescheduleDueTime( DateTime.UtcNow );
@@ -139,35 +138,38 @@ namespace CK.Observable
             _nextDueTimeUtc = relativeTimeUtc + _minimumDueTimeSpan;
         }
 
-        private void DoWriteFile()
+        void WriteFileIfNeeded()
         {
-            lock( _fileLock )
+            if( _fileTransactionNumber != CurrentSerialNumber )
             {
-                if( _fileTransactionNumber != CurrentSerialNumber )
+                lock( _fileLock )
                 {
-                    using( var f = new FileStream( _tmpFilePath, FileMode.Create, FileAccess.Write, FileShare.Read, 4096, FileOptions.SequentialScan ) )
+                    if( _fileTransactionNumber != CurrentSerialNumber )
                     {
-                        WriteSnapshotTo( f );
-                    }
+                        using( var f = new FileStream( _tmpFilePath, FileMode.Create, FileAccess.Write, FileShare.Read, 4096, FileOptions.SequentialScan ) )
+                        {
+                            WriteSnapshotTo( f );
+                        }
 
-                    if( File.Exists( _filePath ) )
-                    {
-                        File.Replace(
-                            _tmpFilePath,
-                            _filePath,
-                            _bakFilePath,
-                            true
-                        );
-                    }
-                    else
-                    {
-                        File.Move(
-                            _tmpFilePath,
-                            _filePath
-                        );
-                    }
+                        if( File.Exists( _filePath ) )
+                        {
+                            File.Replace(
+                                _tmpFilePath,
+                                _filePath,
+                                _bakFilePath,
+                                true
+                            );
+                        }
+                        else
+                        {
+                            File.Move(
+                                _tmpFilePath,
+                                _filePath
+                            );
+                        }
 
-                    _fileTransactionNumber = CurrentSerialNumber;
+                        _fileTransactionNumber = CurrentSerialNumber;
+                    }
                 }
             }
         }

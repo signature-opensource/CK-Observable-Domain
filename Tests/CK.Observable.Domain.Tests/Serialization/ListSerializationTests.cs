@@ -2,6 +2,8 @@ using FluentAssertions;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
+using CK.Core;
+using static CK.Testing.MonitorTestHelper;
 
 namespace CK.Serialization.Tests
 {
@@ -13,7 +15,7 @@ namespace CK.Serialization.Tests
         {
             var integers = new List<int>{ 12, 11, 10, 9, 8 };
 
-            object back = SaveAndLoad( integers );
+            object back = TestHelper.SaveAndLoad( integers );
             back.Should().BeAssignableTo<List<int>>();
             var b = (List<int>)back;
             b.Should().BeEquivalentTo( integers, options => options.WithStrictOrdering() );
@@ -24,12 +26,10 @@ namespace CK.Serialization.Tests
         {
             var objects = new List<object>{ 12, "Pouf", 10.90, new DateTime( 2018, 9, 17 ) };
 
-            object back = SaveAndLoad( objects );
+            object back = TestHelper.SaveAndLoad( objects );
             back.Should().BeAssignableTo<List<object>>();
             var b = (List<object>)back;
             b.Should().BeEquivalentTo( objects, options => options.WithStrictOrdering() );
         }
-
-        static object SaveAndLoad( object o ) => ArraySerializationTests.SaveAndLoad( o );
     }
 }

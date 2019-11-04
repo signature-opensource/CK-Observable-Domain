@@ -34,7 +34,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                     TestHelper.Monitor.Info( "Before!" );
                 } );
                 TestHelper.Monitor.Info( "After!" );
-                d.TimeManager.AllObservableTimedEventBase().Single().IsActive.Should().BeFalse();
+                d.TimeManager.AllObservableTimedEvents.Single().IsActive.Should().BeFalse();
             }
             entries.Select( e => e.Text ).Concatenate().Should().Match( "*Before!*Elapsed:*After!*" );
         }
@@ -54,13 +54,13 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                     RawTraces.Enqueue( "Before!" );
                 } );
                 RawTraces.Enqueue( "Not Yet!" );
-                d.TimeManager.AllObservableTimedEventBase().Single().IsActive.Should().BeTrue();
+                d.TimeManager.AllObservableTimedEvents.Single().IsActive.Should().BeTrue();
                 Thread.Sleep( 50 );
                 d.Modify( TestHelper.Monitor, () =>
                 {
                     RawTraces.Enqueue( "After!" );
                 } );
-                d.TimeManager.AllObservableTimedEventBase().Single().IsActive.Should().BeFalse();
+                d.TimeManager.AllObservableTimedEvents.Single().IsActive.Should().BeFalse();
             }
 
             RawTraces.Concatenate().Should().Match( "*Before!*Not Yet!*Elapsed:*After!*" );
@@ -73,7 +73,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             {
             }
 
-            protected override Task OnDueTimeAsync( IActivityMonitor m ) => Task.CompletedTask;
+            protected override Task<(TransactionResult, Exception)> OnDueTimeAsync( IActivityMonitor m ) => Task.FromResult<(TransactionResult, Exception)>((TransactionResult.Empty,null));
         }  
 
 
@@ -97,14 +97,14 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                     TestHelper.Monitor.Info( "Before!" );
                 } );
                 TestHelper.Monitor.Info( "Not Yet!" );
-                d.TimeManager.AllObservableTimedEventBase().Single().IsActive.Should().BeTrue();
+                d.TimeManager.AllObservableTimedEvents.Single().IsActive.Should().BeTrue();
                 Thread.Sleep( 50 + 30 );
-                d.TimeManager.AllObservableTimedEventBase().Single().IsActive.Should().BeTrue( "Auto timer is Fake: +30 ms (whatever the delta is) will never trigger the event." );
+                d.TimeManager.AllObservableTimedEvents.Single().IsActive.Should().BeTrue( "Auto timer is Fake: +30 ms (whatever the delta is) will never trigger the event." );
                 d.Modify( TestHelper.Monitor, () =>
                 {
                     TestHelper.Monitor.Info( "After!" );
                 } );
-                d.TimeManager.AllObservableTimedEventBase().Single().IsActive.Should().BeFalse();
+                d.TimeManager.AllObservableTimedEvents.Single().IsActive.Should().BeFalse();
             }
             entries.Select( e => e.Text ).Concatenate().Should().Match( "*Before!*Elapsed:*After!*" );
         }
@@ -179,7 +179,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             {
                 var tranResult = d.Modify( TestHelper.Monitor, () =>
                 {
-                    var t = new ObservableTimer( DateTime.UtcNow );
+                    var t = new ObservableTimer(DateTime.UtcNow);
                     Assert.Throws<ArgumentException>( () => t.Elapsed += ( o, e ) => { } );
                     Assert.Throws<ArgumentException>( () => t.Elapsed += new EventHandler<ObservableTimedEventArgs>( ( o, e ) => { } ) );
                     var r = new ObservableReminder( DateTime.UtcNow );
@@ -202,40 +202,51 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             {
                 var r = c.StartReading();
                 Value = r.ReadInt32();
+                ValueFromReminders = r.ReadInt32();
             }
 
             void Write( BinarySerializer w )
             {
                 w.Write( Value );
+                w.Write( ValueFromReminders );
             }
 
             public int Value { get; set; }
 
+            public int ValueFromReminders { get; set; }
+
             public void SilentIncrementValue( object source, EventArgs args )
             {
                 Value += 1;
+                if( source is ObservableReminder ) ValueFromReminders += 1;
             }
 
-            public void IncrementValue( object source, EventMonitoredArgs args )
+            public void IncrementValue( object source, ObservableTimedEventArgs args )
             {
                 Value += 1;
-                args.Monitor.Trace( $"Value => {Value}" );
+                args.Monitor.Trace( $"[{args.Source.Domain.DomainName}] Value => {Value}" );
+                if( source is ObservableReminder )
+                {
+                    ValueFromReminders += 1;
+                    args.Monitor.Trace( $"ValueFromReminders => {ValueFromReminders}" );
+                }
             }
         }
-
 
         [Test]
         public void serializing_timers_and_reminders()
         {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+
             var now = DateTime.UtcNow;
-            using( var d = new ObservableDomain( TestHelper.Monitor, "Test" ) )
+            using( var d = new ObservableDomain( TestHelper.Monitor, "Primary" ) )
             {
                 var tranResult = d.Modify( TestHelper.Monitor, () =>
                 {
-                    // First due time: from 50 to 450 ms.
-                    // Interval: from 20 to 180 ms.
-                    // Latest in 450+180 ms = 630 ms.
-                    Enumerable.Range( 0, 8 ).Select( i => new ObservableTimer( now.AddMilliseconds( (i + 1) * 50 ), (i & 1) != 0, (i + 1) * 20 ) ).ToArray();
+                    // Interval: from 1 to 36 ms.
+                    // Only half of them (odd ones) are Active.
+                    Enumerable.Range( 0, 8 ).Select( i => new ObservableTimer(i.ToString(), now, 1 + i * 5, (i & 1) != 0)).ToArray();
                     d.TimeManager.AllObservableTimedEvents.Where( o => !o.IsActive ).Should().HaveCount( 8 );
                 } );
                 tranResult.Success.Should().BeTrue();
@@ -244,27 +255,57 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                     d2.TimeManager.Timers.Should().HaveCount( 8 );
                     d2.TimeManager.AllObservableTimedEvents.Where( o => !o.IsActive ).Should().HaveCount( 8 );
                 }
+                TestHelper.Monitor.Info( "Setting callback to timers and creating 5 reminders on Primary Domain." );
                 SimpleValue val;
                 d.Modify( TestHelper.Monitor, () =>
                 {
                     val = new SimpleValue();
                     foreach( var t in d.TimeManager.Timers )
                     {
-                        t.Elapsed += val.SilentIncrementValue;
+                        t.Elapsed += val.IncrementValue;
                     }
-                    // Max: (5+1)*50 = 300 ms.
-                    foreach( var r in Enumerable.Range( 0, 5 ).Select( i => new ObservableReminder( now.AddMilliseconds( (i + 1) * 50 ) ) ) )
+                    // From 0 ms to 5*9 = 45 ms.
+                    foreach( var r in Enumerable.Range( 0, 5 ).Select( i => new ObservableReminder( now.AddMilliseconds( i * 9 ) ) ) )
                     {
-                        r.Elapsed += val.IncrementValue;
+                        r.Elapsed += val.SilentIncrementValue;
                     }
-                    d.TimeManager.AllObservableTimedEvents.Where( o => o.IsActive ).Should().HaveCount( 4 + 5 );
+                    d.TimeManager.AllObservableTimedEvents.Where( o => o.IsActive ).Should().HaveCount( 4 + 5, "4 timers and 5 reminders are Active." );
+                    TestHelper.Monitor.Info( "Leaving Primary Domain configuration." );
                 } ).Success.Should().BeTrue();
 
-                using( var d2 = SaveAndLoad( d ) )
+                Thread.Sleep( 50 );
+                d.TimeManager.CurrentTimer.WaitForNext();
+
+                int secondaryValue = 0;
+                using( TestHelper.Monitor.OpenInfo( "Having slept during 50 ms: now creating Secondary by Save/Load the primary domain." ) )
                 {
-                    d2.TimeManager.Timers.Should().HaveCount( 8 );
-                    d2.TimeManager.Reminders.Should().HaveCount( 8 );
-                    d2.TimeManager.AllObservableTimedEvents.Where( o => !o.IsActive ).Should().HaveCount( 16 );
+                    using( var d2 = SaveAndLoad( d, "Secondary" ) )
+                    {
+                        d2.TimeManager.Timers.Should().HaveCount( 8 );
+                        d2.TimeManager.Reminders.Should().HaveCount( 5 );
+                        using( d2.AcquireReadLock() )
+                        {
+                            d2.AllObjects.OfType<SimpleValue>().Single().Value.Should().BeGreaterOrEqualTo( 9, "5 reminders have fired, 4 timers have fired at least once." );
+                            d2.TimeManager.Reminders.All( r => !r.IsActive ).Should().BeTrue( "No more Active reminders." );
+                            d2.TimeManager.Timers.All( o => o.IsActive == ((int.Parse( o.Name ) & 1) != 0) ).Should().BeTrue();
+                            var v = d2.AllObjects.OfType<SimpleValue>().Single();
+                            v.ValueFromReminders.Should().Be( 5, "[Secondary] 5 from reminders." );
+                            v.Value.Should().BeGreaterOrEqualTo( 9, "[Secondary] 5 reminders have fired, the 4 timers have fired at least once." );
+                            secondaryValue = v.Value;
+                        }
+                    }
+                }
+                // Wait for next tick...
+                d.TimeManager.CurrentTimer.WaitForNext();
+
+                using( TestHelper.Monitor.OpenInfo( "Checking value on Primary domain." ) )
+                {
+                    using( d.AcquireReadLock() )
+                    {
+                        var v = d.AllObjects.OfType<SimpleValue>().Single();
+                        v.ValueFromReminders.Should().Be( 5, "[Primary] 5 from reminders." );
+                        v.Value.Should().BeGreaterThan( secondaryValue, "[Primary] Must be greater than the secondary." );
+                    }
                 }
             }
         }
@@ -272,6 +313,9 @@ namespace CK.Observable.Domain.Tests.TimedEvents
         [Test]
         public void hundred_timers_from_10_to_1000_ms_in_action()
         {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+
             const int testTime = 5000;
             AutoCounter[] counters = null;
 
@@ -284,8 +328,11 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 } );
                 tranResult.Success.Should().BeTrue();
                 tranResult.NextDueTimeUtc.Should().BeCloseTo( DateTime.UtcNow, precision: 10 );
+
                 TestHelper.Monitor.Info( $"Waiting for {testTime} ms." );
                 Thread.Sleep( testTime );
+                d.TimeManager.CurrentTimer.WaitForNext();
+
                 tranResult = d.Modify( TestHelper.Monitor, () =>
                 {
                     foreach( var c in counters ) c.Stop();
@@ -307,8 +354,11 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                     counters.Should().Match( c => c.All( x => x.Count == 0 ) );
                 } );
                 tranResult.Success.Should().BeTrue();
+
                 TestHelper.Monitor.Info( $"Waiting for {testTime} ms again." );
                 Thread.Sleep( testTime );
+                d.TimeManager.CurrentTimer.WaitForNext();
+
                 TestHelper.Monitor.Info( $"Same as before: All counters must have a Count that is {testTime}/IntervalMilliSeconds except the 10 ms one: 10 ms is too small (20 ms is okay here)." );
                 using( d.AcquireReadLock() )
                 {
@@ -319,6 +369,66 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 }
             }
         }
+
+
+        static bool ReentrantGuard = false;
+        static int AutoTimeFiredSleepTime = 0;
+        static int AutoTimeFiredCount = 0;
+
+        static void AutoTime_has_trampoline_OnTimer( object source, ObservableTimedEventArgs args )
+        {
+            if( ReentrantGuard ) throw new Exception( "AutoTimer guaranties no-reentrancy." );
+            ReentrantGuard = true;
+            args.Monitor.Debug( $"Fired: {++AutoTimeFiredCount}." );
+            if( AutoTimeFiredSleepTime != 0 ) Thread.Sleep( AutoTimeFiredSleepTime );
+            ReentrantGuard = false;
+        }
+
+        [TestCase( 0 )]
+        public void AutoTime_is_obviously_not_reentrant_and_has_a_safety_trampoline( int autoTimeFiredSleepTime )
+        {
+            AutoTimeFiredSleepTime = autoTimeFiredSleepTime;
+            AutoTimeFiredCount = 0;
+
+            using( var d = new ObservableDomain( TestHelper.Monitor, "Test" ) )
+            {
+                int current = 0, previous = 0, delta = 0;
+                void UpdateCount()
+                {
+                    using( d.AcquireReadLock())
+                    {
+                        var c = AutoTimeFiredCount;
+                        delta = c - (previous = current);
+                        current = c;
+                    }
+                }
+
+                d.Modify( TestHelper.Monitor, () =>
+                {
+                    var t = new ObservableTimer( DateTime.UtcNow, 10 );
+                    t.Elapsed += AutoTime_has_trampoline_OnTimer;
+                } ).Success.Should().BeTrue();
+
+                d.TimeManager.CurrentTimer.WaitForNext();
+                UpdateCount();
+                delta.Should().BeGreaterThan( 0 );
+
+                d.TimeManager.CurrentTimer.WaitForNext();
+                UpdateCount();
+                delta.Should().BeGreaterThan( 0 );
+
+                using( d.AcquireReadLock() )
+                {
+                    TestHelper.Monitor.Info( "Locking the Domain for 200 ms." );
+                    Thread.Sleep( 200 );
+                }
+
+                d.TimeManager.CurrentTimer.WaitForNext();
+                UpdateCount();
+                delta.Should().BeGreaterThan( 0 );
+            }
+        }
+
 
         #region Simplified Timer use (code sandbox).
         [Test]
@@ -385,17 +495,17 @@ namespace CK.Observable.Domain.Tests.TimedEvents
 
         #endregion
 
-
-        internal static ObservableDomain SaveAndLoad( ObservableDomain domain )
+        internal static ObservableDomain SaveAndLoad( ObservableDomain domain, string renamed = null )
         {
             using( var s = new MemoryStream() )
             {
                 domain.Save( TestHelper.Monitor, s, leaveOpen: true );
-                var d = new ObservableDomain( TestHelper.Monitor, domain.DomainName );
+                var d = new ObservableDomain( TestHelper.Monitor, renamed ?? domain.DomainName );
                 s.Position = 0;
-                d.Load( TestHelper.Monitor, s, leaveOpen: true );
+                d.Load( TestHelper.Monitor, s, domain.DomainName );
                 return d;
             }
         }
+
     }
 }

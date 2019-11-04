@@ -13,7 +13,7 @@ namespace CK.Observable
     /// Simple reminder that raises its <see cref="ObservableTimedEventBase.Elapsed"/> event once at <see cref="DueTimeUtc"/> time.
     /// </summary>
     [SerializationVersion(0)]
-    public class ObservableReminder : ObservableTimedEventBase
+    public sealed class ObservableReminder : ObservableTimedEventBase
     {
         /// <summary>
         /// Initializes a new unnamed <see cref="ObservableReminder"/> bound to the current <see cref="ObservableDomain"/>.

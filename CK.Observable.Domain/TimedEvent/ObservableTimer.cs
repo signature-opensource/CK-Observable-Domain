@@ -13,7 +13,8 @@ namespace CK.Observable
     /// The event time is based on the <see cref="DueTimeUtc"/>: we try to always raise the event based on a multiple
     /// of the <see cref="IntervalMilliSeconds"/> from <see cref="DueTimeUtc"/>.
     /// </summary>
-    public class ObservableTimer : ObservableTimedEventBase
+    [SerializationVersion(0)]
+    public sealed class ObservableTimer : ObservableTimedEventBase
     {
         int _milliSeconds;
         bool _isActive;
@@ -25,13 +26,47 @@ namespace CK.Observable
         /// <param name="firstDueTimeUtc">
         /// The first time where the event must be fired. This is adjusted by <see cref="AdjustNextDueTimeUtc(DateTime, DateTime, int)"/> based on <see cref="DateTime.UtcNow"/>.
         /// </param>
-        /// <param name="isActive">False to initially deactivate this timer. By default, <see cref="IsActive"/> is true.</param>
         /// <param name="intervalMilliSeconds">The interval in millisecond (defaults to 1 second). Must be positive.</param>
-        public ObservableTimer( DateTime firstDueTimeUtc, bool isActive = true, int intervalMilliSeconds = 1000 )
+        /// <param name="isActive">False to initially deactivate this timer. By default, <see cref="IsActive"/> is true.</param>
+        public ObservableTimer( DateTime firstDueTimeUtc, int intervalMilliSeconds = 1000, bool isActive = true )
         {
             ExpectedDueTimeUtc = AdjustNextDueTimeUtc( DateTime.UtcNow, firstDueTimeUtc, intervalMilliSeconds );
             _milliSeconds = intervalMilliSeconds;
             _isActive = isActive;
+        }
+
+        /// <summary>
+        /// Initializes a new named <see cref="ObservableTimer"/> bound to the current <see cref="ObservableDomain"/>.
+        /// Initial configuration is adjusted by <see cref="AdjustNextDueTimeUtc(DateTime, DateTime, int)"/> with base time <see cref="DateTime.UtcNow"/>.
+        /// </summary>
+        /// <param name="name">Name of the timer. Can be null.</param>
+        /// <param name="firstDueTimeUtc">
+        /// The first time where the event must be fired. This is adjusted by <see cref="AdjustNextDueTimeUtc(DateTime, DateTime, int)"/> based on <see cref="DateTime.UtcNow"/>.
+        /// </param>
+        /// <param name="intervalMilliSeconds">The interval in millisecond (defaults to 1 second). Must be positive.</param>
+        /// <param name="isActive">False to initially deactivate this timer. By default, <see cref="IsActive"/> is true.</param>
+        public ObservableTimer( string name, DateTime firstDueTimeUtc, int intervalMilliSeconds = 1000, bool isActive = true )
+            : this( firstDueTimeUtc, intervalMilliSeconds, isActive )
+        {
+            Name = name ?? throw new ArgumentNullException( nameof( name ) );
+        }
+
+        ObservableTimer( IBinaryDeserializerContext c )
+            : base( c )
+        {
+            var r = c.StartReading();
+            _milliSeconds = r.ReadInt32();
+            if( _milliSeconds < 0 )
+            {
+                _milliSeconds = -_milliSeconds;
+                _isActive = true;
+            }
+        }
+
+        void Write( BinarySerializer w )
+        {
+            Debug.Assert( !IsDisposed );
+            w.Write( _isActive ? -_milliSeconds : _milliSeconds );
         }
 
         internal override bool GetIsActive() => _isActive && ExpectedDueTimeUtc != Util.UtcMinValue && ExpectedDueTimeUtc != Util.UtcMaxValue;

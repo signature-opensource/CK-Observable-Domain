@@ -12,9 +12,12 @@ namespace CK.Observable
         /// </summary>
         public sealed class DObject : UnifiedTypeDriverBase<Object>
         {
-            public DObject() : base( Alias ) {}
+            public DObject() : base( Alias, isFinalType: false ) { }
 
-            public static readonly string Alias = "#object";
+            /// <summary>
+            /// The alias of the Object type is the empty string.
+            /// </summary>
+            public static readonly string Alias = String.Empty;
 
             public static readonly DObject Default = new DObject();
 
@@ -24,6 +27,28 @@ namespace CK.Observable
 
             public override void Export( object o, int num, ObjectExporter exporter ) => exporter.ExportObject( o );
 
+        }
+
+        public sealed class DType : UnifiedTypeDriverBase<Type>
+        {
+            public DType() : base( Alias ) { }
+
+            public static readonly string Alias = "#t";
+
+            public static readonly DType Default = new DType();
+
+            public override Type ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo ) => r.ReadType();
+
+            public override void WriteData( BinarySerializer w, Type t ) => w.Write( t );
+
+            public override void Export( Type o, int num, ObjectExporter exporter )
+            {
+                var t = exporter.Target;
+                t.EmitStartObject( num, ObjectExportedKind.Object );
+                t.EmitPropertyName( nameof( Type.AssemblyQualifiedName ) );
+                t.EmitString( o.AssemblyQualifiedName );
+                t.EmitEndObject( num, ObjectExportedKind.Object );
+            }
         }
 
         public sealed class DBool : UnifiedTypeDriverBase<Boolean>

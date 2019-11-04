@@ -18,7 +18,7 @@ namespace CK.Observable
         /// Deserializes the <see cref="ObservableEvent"/>.
         /// </summary>
         /// <param name="c">The context.</param>
-        public ObservableEventHandler( IBinaryDeserializerContext c ) => _handler = new ObservableDelegate( c );
+        public ObservableEventHandler( IBinaryDeserializer r ) => _handler = new ObservableDelegate( r );
 
         /// <summary>
         /// Serializes this <see cref="ObservableEvent"/>.
@@ -29,7 +29,7 @@ namespace CK.Observable
         /// <summary>
         /// Gets whether at least one handler is registered.
         /// </summary>
-        public bool HasHandlers => _handler.D != null;
+        public bool HasHandlers => _handler.HasHandlers;
 
         /// <summary>
         /// Adds a handler.

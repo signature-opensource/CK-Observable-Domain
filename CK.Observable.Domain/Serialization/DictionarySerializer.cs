@@ -14,6 +14,8 @@ namespace CK.Observable
             _value = value;
         }
 
+        bool ITypeSerializationDriver.IsFinalType => false;
+
         public Type Type => typeof( Dictionary<TKey, TValue> );
 
         void ITypeSerializationDriver<Dictionary<TKey, TValue>>.WriteData( BinarySerializer w, Dictionary<TKey, TValue> o )

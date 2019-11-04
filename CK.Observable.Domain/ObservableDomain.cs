@@ -594,10 +594,10 @@ namespace CK.Observable
         {
             readonly ObservableDomain _domain;
 
-            public DomainActivityMonitor( string topic, ObservableDomain domain )
+            public DomainActivityMonitor( string topic, ObservableDomain domain, int timeout )
                 : base( $"Observable domain '{topic}'." )
             {
-                if( (_domain = domain) == null ) this.Error( $"Failed to obtain the locked domain monitor in less than {LockedDomainMonitorTimeout} ms." );
+                if( (_domain = domain) == null ) this.Error( $"Failed to obtain the locked domain monitor in less than {timeout} ms." );
             }
 
             public void Dispose()
@@ -606,7 +606,11 @@ namespace CK.Observable
                 {
                     this.MonitorEnd();
                 }
-                else Monitor.Exit( _domain._domainMonitorLock );
+                else
+                {
+                    while( CloseGroup( new DateTimeStamp( LastLogTime, DateTime.UtcNow ) ) );
+                    Monitor.Exit( _domain._domainMonitorLock );
+                }
             }
         }
 
@@ -815,7 +819,7 @@ namespace CK.Observable
                 if( tEx.Item2 != null ) return (tr, tEx.Item2);
                 tr = DoModifyAndCommit( actions, tEx.Item1 );
             }
-            else monitor.Warn( $"WriteLock not obtained in {millisecondsTimeout} ms." );
+            else monitor.Warn( $"WriteLock not obtained in {millisecondsTimeout} ms (returning TransactionResult.Empty)." );
             return (tr, await tr.ExecutePostActionsAsync( monitor, throwException: false ));
         }
 
@@ -957,6 +961,10 @@ namespace CK.Observable
         /// </summary>
         /// <param name="monitor">The monitor to use. Cannot be null.</param>
         /// <param name="stream">The input stream.</param>
+        /// <param name="expectedLoadedName">
+        /// Name of the domain that is saved in <paramref name="stream"/> and must be loaded. It can differ from this <see cref="DomainName"/>.
+        /// Must not be null or empty.
+        /// </param>
         /// <param name="leaveOpen">True to leave the stream opened.</param>
         /// <param name="encoding">Optional encoding for characters. Defaults to UTF-8.</param>
         /// <param name="millisecondsTimeout">
@@ -964,10 +972,11 @@ namespace CK.Observable
         /// Wait indefinitely by default.
         /// </param>
         /// <returns>True on success, false if timeout occurred.</returns>
-        public bool Load( IActivityMonitor monitor, Stream stream, bool leaveOpen = false, Encoding encoding = null, int millisecondsTimeout = -1 )
+        public bool Load( IActivityMonitor monitor, Stream stream, string expectedLoadedName, bool leaveOpen = false, Encoding encoding = null, int millisecondsTimeout = -1 )
         {
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
             if( stream == null ) throw new ArgumentNullException( nameof( stream ) );
+            if( String.IsNullOrEmpty( expectedLoadedName ) ) throw new ArgumentNullException( nameof( expectedLoadedName ) );
             bool isWrite = _lock.IsWriteLockHeld;
             if( !isWrite && !_lock.TryEnterWriteLock( millisecondsTimeout ) ) return false;
             Debug.Assert( !isWrite || _currentTran != null, "isWrite => _currentTran != null" );
@@ -979,7 +988,7 @@ namespace CK.Observable
                 using( var d = new BinaryDeserializer( stream, null, _deserializers, leaveOpen, encoding ) )
                 {
                     d.Services.Add( this );
-                    DoLoad( monitor, d );
+                    DoLoad( monitor, d, expectedLoadedName );
                     return true;
                 }
             }
@@ -990,7 +999,24 @@ namespace CK.Observable
             }
         }
 
-        void DoLoad( IActivityMonitor monitor, BinaryDeserializer r )
+        /// <summary>
+        /// Loads previously <see cref="Save"/>d objects into this domain.
+        /// </summary>
+        /// <param name="monitor">The monitor to use. Cannot be null.</param>
+        /// <param name="stream">The input stream.</param>
+        /// <param name="leaveOpen">True to leave the stream opened.</param>
+        /// <param name="encoding">Optional encoding for characters. Defaults to UTF-8.</param>
+        /// <param name="millisecondsTimeout">
+        /// The maximum number of milliseconds to wait for a read access before giving up.
+        /// Wait indefinitely by default.
+        /// </param>
+        /// <returns>True on success, false if timeout occurred.</returns>
+        public bool Load( IActivityMonitor monitor, Stream stream, bool leaveOpen = false, Encoding encoding = null, int millisecondsTimeout = -1 )
+        {
+            return Load( monitor, stream, DomainName, leaveOpen, encoding, millisecondsTimeout );
+        }
+
+        void DoLoad( IActivityMonitor monitor, BinaryDeserializer r, string expectedName )
         {
             Debug.Assert( _lock.IsWriteLockHeld );
             _deserializing = true;
@@ -999,8 +1025,8 @@ namespace CK.Observable
                 int version = r.ReadSmallInt32();
                 if( version > 0 )
                 {
-                    var check = r.ReadString();
-                    if( DomainName != check ) throw new InvalidDataException( $"Domain name mismatch: reading '{check}' into domain named '{DomainName}'." );
+                    var loaded = r.ReadString();
+                    if( loaded != expectedName ) throw new InvalidDataException( $"Domain name mismatch: loading domain named '{loaded}' but expected '{expectedName}'." );
                 }
                 _transactionSerialNumber = r.ReadInt32();
                 _actualObjectCount = r.ReadInt32();
@@ -1051,6 +1077,8 @@ namespace CK.Observable
                 _timeManager.Clear( monitor );
                 if( version > 1 ) _timeManager.Load( monitor, r );
                 OnLoaded();
+                var next = _timeManager.ApplyChanges();
+                if( next != Util.UtcMinValue ) _timeManager.SetNextDueTimeUtc( monitor, next );
             }
             finally
             {
@@ -1135,16 +1163,16 @@ namespace CK.Observable
         /// This implementation creates a new dedicated <see cref="IDisposableActivityMonitor"/> once and caches it
         /// or returns a new dedicated one if the shared one cannot be obtained before <paramref name="milliSecondTimeout"/>.
         /// </summary>
-        /// <returns>The cached monitor bound to this timer.</returns>
+        /// <returns>The cached monitor bound to this timer or null if <paramref name="createAutonomousOnTimeout"/> was false and the monitor has not been obtained.</returns>
         public IDisposableActivityMonitor ObtainDomainMonitor( int milliSecondTimeout = LockedDomainMonitorTimeout, bool createAutonomousOnTimeout = true )
         {
-            if( !Monitor.TryEnter( _domainMonitorLock, LockedDomainMonitorTimeout ) )
+            if( !Monitor.TryEnter( _domainMonitorLock, milliSecondTimeout ) )
             {
-                return createAutonomousOnTimeout ? new DomainActivityMonitor( $"Autonomous monitor for observable domain '{DomainName}'.", null ) : null;
+                return createAutonomousOnTimeout ? new DomainActivityMonitor( $"Autonomous monitor for observable domain '{DomainName}'.", null, milliSecondTimeout ) : null;
             }
             if( _domainMonitor == null )
             {
-                _domainMonitor = new DomainActivityMonitor( $"Observable Domain '{DomainName}'.", this );
+                _domainMonitor = new DomainActivityMonitor( $"Observable Domain '{DomainName}'.", this, milliSecondTimeout );
             }
             return _domainMonitor;
         }

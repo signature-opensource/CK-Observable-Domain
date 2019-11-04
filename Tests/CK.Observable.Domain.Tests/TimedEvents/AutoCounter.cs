@@ -12,7 +12,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
 
         public AutoCounter( int intervalMilliSeconds )
         {
-            _timer = new ObservableTimer( DateTime.UtcNow, true, intervalMilliSeconds ) { Mode = ObservableTimerMode.Critical };
+            _timer = new ObservableTimer(DateTime.UtcNow, intervalMilliSeconds, true) { Mode = ObservableTimerMode.Critical };
             _timer.Elapsed += IncrementCount;
         }
 

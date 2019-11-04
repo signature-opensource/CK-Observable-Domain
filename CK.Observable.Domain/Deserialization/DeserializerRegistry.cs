@@ -43,7 +43,7 @@ namespace CK.Observable
         /// <param name="driver">The driver to register.</param>
         public void Register( string name, IDeserializationDriver driver )
         {
-            if( String.IsNullOrWhiteSpace( name ) ) throw new ArgumentNullException( nameof( name ) );
+            if( name == null ) throw new ArgumentNullException( nameof( name ) );
             if( driver == null ) throw new ArgumentNullException( nameof( driver ) );
             _drivers.AddOrUpdate( name, driver, ( type, already ) => driver );
         }

@@ -1,6 +1,10 @@
 using CK.Core;
+using CK.Text;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Reflection;
 using System.Text;
 
 namespace CK.Observable
@@ -10,42 +14,46 @@ namespace CK.Observable
     /// an <see cref="ObservableObject"/>.
     /// This is an internal helper.
     /// </summary>
-    [SerializationVersion(0)]
     struct ObservableDelegate
     {
         /// <summary>
         /// Wrapped delegate.
         /// </summary>
-        public Delegate D;
+        Delegate _d;
 
         /// <summary>
         /// Deserializes the delegate.
         /// </summary>
-        /// <param name="c">The context.</param>
-        public ObservableDelegate( IBinaryDeserializerContext c )
+        /// <param name="r">The context.</param>
+        public ObservableDelegate( IBinaryDeserializer r )
         {
-            D = null;
-            var r = c.StartReading();
+            _d = null;
             int count = r.ReadNonNegativeSmallInt32();
             if( count > 0 )
             {
                 Delegate final = null;
-                Type tD = (Type)r.ReadObject();
+                Type tD = r.ReadType();
                 do
                 {
                     object o = r.ReadObject();
-                    string n = r.ReadSharedString();
+                    string methodName = r.ReadSharedString();
+                    Type[] paramTypes = ArrayDeserializer<Type>.ReadArray( r, BasicTypeDrivers.DType.Default );
                     if( o is Type t )
                     {
-                        final = Delegate.Combine( final, Delegate.CreateDelegate( tD, t, r.ReadSharedString() ) );                     
+                        var m = t.GetMethod( methodName, BindingFlags.Static|BindingFlags.FlattenHierarchy|BindingFlags.Public|BindingFlags.NonPublic, null, paramTypes, null );
+                        if( m == null ) throw new Exception( $"Unable to find static method {methodName} on type {t.FullName} with parameters {paramTypes.Select( t => t.Name ).Concatenate()}." );
+                        final = Delegate.Combine( final, Delegate.CreateDelegate( tD, m, true ) );                     
                     }
                     else
                     {
-                        final = Delegate.Combine( final, Delegate.CreateDelegate( tD, o, r.ReadSharedString() ) );
+                        var oT = o.GetType();
+                        var m = oT.GetMethod( methodName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, paramTypes, null );
+                        if( m == null ) throw new Exception( $"Unable to find method {methodName} on type {oT.FullName} with parameters {paramTypes.Select( t => t.Name ).Concatenate()}." );
+                        final = Delegate.Combine( final, Delegate.CreateDelegate( tD, o, m ) );
                     }
                 }
                 while( --count > 0 );
-                D = final;
+                _d = final;
             }
         }
 
@@ -59,14 +67,21 @@ namespace CK.Observable
             w.WriteNonNegativeSmallInt32( list.Length );
             if( list.Length > 0 )
             {
-                w.WriteObject( list[0].GetType() );
+                w.Write( list[0].GetType() );
                 foreach( var d in list )
                 {
                     w.WriteObject( d.Target ?? d.Method.DeclaringType );
                     w.WriteSharedString( d.Method.Name );
+                    var paramInfos = d.Method.GetParameters();
+                    ArraySerializer<Type>.WriteObjects( w, paramInfos.Length, paramInfos.Select( p => p.ParameterType ), BasicTypeDrivers.DType.Default );
                 }
             }
         }
+
+        /// <summary>
+        /// Gets whether at least one handler is registered.
+        /// </summary>
+        public bool HasHandlers => _d != null;
 
         /// <summary>
         /// Adds a delegate.
@@ -76,7 +91,7 @@ namespace CK.Observable
         public void Add( Delegate d, string eventName )
         {
             CheckNonNullAndSerializableDelegate( d, eventName );
-            D = Delegate.Combine( D, d );
+            _d = Delegate.Combine( _d, d );
         }
 
         /// <summary>
@@ -86,15 +101,15 @@ namespace CK.Observable
         /// <returns>True if the delegate has been removed, false otherwise.</returns>
         public bool Remove( Delegate d )
         {
-            var hBefore = D;
-            D = Delegate.Remove( D, d );
-            return !ReferenceEquals( hBefore, D );
+            var hBefore = _d;
+            _d = Delegate.Remove( _d, d );
+            return !ReferenceEquals( hBefore, _d );
         }
 
         /// <summary>
         /// Clears the delegate list.
         /// </summary>
-        public void RemoveAll() => D = null;
+        public void RemoveAll() => _d = null;
 
         /// <summary>
         /// Removes any delegates that reference disposed objects and returns the
@@ -103,7 +118,7 @@ namespace CK.Observable
         /// <returns>The atomic delegate list without any disposed ObservableObject in it. Can be empty.</returns>
         public Delegate[] Cleanup()
         {
-            var h = D;
+            var h = _d;
             if( h == null ) return Array.Empty<Delegate>();
             var dList = h.GetInvocationList();
             bool needCleanup = false;
@@ -123,7 +138,7 @@ namespace CK.Observable
                 {
                     if( !cleanup[i] ) newOne = Delegate.Combine( newOne, dList[i] );
                 }
-                D = newOne;
+                _d = newOne;
                 dList = newOne.GetInvocationList();
             }
             return dList;

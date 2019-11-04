@@ -129,6 +129,12 @@ namespace CK.Observable
                         Write( ds );
                         return;
                     }
+                case Type type:
+                    {
+                        Write( (byte)SerializationMarker.Type );
+                        Write( type );
+                        return;
+                    }
             }
             SerializationMarker marker;
             Type t = o.GetType();
@@ -183,38 +189,66 @@ namespace CK.Observable
             // serialization/deserialization process, including instance tracking,
             // regardless of the struct/class kind of the objects.
             // New object pools from CK.Core should definitly help for this.
-            if( t.IsClass && t != typeof(string) )
+            if( t.IsClass && t != typeof( string ) )
             {
-                if( _seen.TryGetValue( o, out var num ) )
+                if( typeof( Type ).IsAssignableFrom( t ) )
                 {
-                    Write( (byte)SerializationMarker.Reference );
-                    Write( num );
-                    return;
+                    marker = SerializationMarker.Type;
                 }
-                idxSeen = _seen.Count;
-                _seen.Add( o, _seen.Count );
-                if( t == typeof( object ) )
+                else
                 {
-                    Write( (byte)SerializationMarker.EmptyObject );
-                    return;
+                    if( _seen.TryGetValue( o, out var num ) )
+                    {
+                        Write( (byte)SerializationMarker.Reference );
+                        Write( num );
+                        return;
+                    }
+                    idxSeen = _seen.Count;
+                    _seen.Add( o, _seen.Count );
+                    if( t == typeof( object ) )
+                    {
+                        Write( (byte)SerializationMarker.EmptyObject );
+                        return;
+                    }
+                    marker = SerializationMarker.Object;
                 }
-                marker = SerializationMarker.Object;
             }
             else marker = SerializationMarker.Struct;
             Write( (byte)marker );
             driver.WriteData( this, o );
         }
 
-        internal bool WriteSimpleType( Type t, string alias)
+        /// <summary>
+        /// Writes a type.
+        /// </summary>
+        /// <param name="t">The type to write. Can be null.</param>
+        public void Write( Type t )
+        {
+            ITypeSerializationDriver driver = _drivers.FindDriver( t );
+            if( driver != null ) driver.WriteTypeInformation( this );
+            else WriteSimpleType( t, null );
+        }
+
+        internal bool WriteSimpleType( Type t, string alias )
         {
             if( DoWriteSimpleType( t, alias ) )
             {
+                // Fake version when the type is new: AutoTypeRegistry serializes the base class
+                // (it directly calls DoWriteSimpleType) right after their own version that is,
+                // by design, positive. -1 stops the chain.
                 WriteSmallInt32( -1 );
                 return true;
             }
             return false;
         }
 
+        /// <summary>
+        /// Writes the type, returning true if the type has been written for the first time
+        /// or false if it has been previsously written.
+        /// </summary>
+        /// <param name="t">Type to serialize. Can be null.</param>
+        /// <param name="alias">Optional replacement (typically shorter) for <see cref="Type.AssemblyQualifiedName"/>.</param>
+        /// <returns>True if the type has been written, false if it was already serialized.</returns>
         internal bool DoWriteSimpleType( Type t, string alias )
         {
             if( t == null ) Write( (byte)0 );
@@ -236,13 +270,6 @@ namespace CK.Observable
                 WriteNonNegativeSmallInt32( info.Number );
             }
             return false;
-        }
-
-        TypeInfo RegisterType( Type t )
-        {
-            var info = new TypeInfo( t, _types.Count );
-            _types.Add( t, info );
-            return info;
         }
 
         public static bool IdempotenceCheck( object o, IServiceProvider services, bool throwOnFailure = true )

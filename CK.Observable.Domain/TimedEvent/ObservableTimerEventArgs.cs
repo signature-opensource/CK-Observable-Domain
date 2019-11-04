@@ -17,16 +17,26 @@ namespace CK.Observable
         /// <summary>
         /// Initializes a new <see cref="ObservableTimedEventArgs"/>.
         /// </summary>
-        /// <param name="monitor">The monitor to use.</param>
+        /// <param name="monitor">The monitor to expose to event clients.</param>
+        /// <param name="source">
+        /// The typed source, so that <see cref="ObservableTimedEventBase.Domain"/> and <see cref="ObservableTimedEventBase.Tag"/> object
+        /// are easily accessible.
+        /// </param>
         /// <param name="current">The current time.</param>
         /// <param name="expected">The expected event time.</param>
-        public ObservableTimedEventArgs( IActivityMonitor monitor, DateTime current, DateTime expected )
+        public ObservableTimedEventArgs( IActivityMonitor monitor, ObservableTimedEventBase source, DateTime current, DateTime expected )
             : base( monitor )
         {
+            Source = source;
             Current = current;
             Expected = expected;
             DeltaMilliSeconds = (int)Math.Ceiling( (current - expected).TotalMilliseconds );
         }
+
+        /// <summary>
+        /// Gets the <see cref="ObservableTimedEventBase"/> that is raising this event.
+        /// </summary>
+        public ObservableTimedEventBase Source { get; }
 
         /// <summary>
         /// Gets the current, standardized, time of this event.

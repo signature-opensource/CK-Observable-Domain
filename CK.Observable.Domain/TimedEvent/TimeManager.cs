@@ -20,6 +20,7 @@ namespace CK.Observable
         ObservableTimedEventBase[] _activeEvents;
         // Tracking is basic: any change are tracked with a simple hash set.
         readonly HashSet<ObservableTimedEventBase> _changed;
+        readonly List<ObservableTimedEventBase> _changedCleanupBuffer;
         ObservableTimedEventBase _first;
         ObservableTimedEventBase _last;
         AutoTimer _current;
@@ -35,37 +36,96 @@ namespace CK.Observable
             static readonly WaitCallback _waitCallback = new WaitCallback( OnTime );
 
             readonly Timer _timer;
+            // This is the shell for the trampoline state and the object used
+            // for the Wait().
+            readonly TrampolineWorkItem _fromWorkItem;
             int _onTimeLostFlag;
 
             public AutoTimer( ObservableDomain domain )
             {
                 Domain = domain ?? throw new ArgumentNullException( nameof( domain ) );
                 _timer = new Timer( _timerCallback, this, Timeout.Infinite, Timeout.Infinite );
+                _fromWorkItem = new TrampolineWorkItem( this );
+            }
+
+            class TrampolineWorkItem
+            {
+                public readonly AutoTimer Timer;
+
+                public TrampolineWorkItem( AutoTimer t ) => Timer = t;
             }
 
             static void OnTime( object state )
             {
-                Debug.Assert( state is AutoTimer );
-                var t = (AutoTimer)state;
+                Debug.Assert( state is AutoTimer || state is TrampolineWorkItem );
+
+                bool trampolineRequired = false;
+                var st = state as TrampolineWorkItem;
+                var t = st?.Timer ?? (AutoTimer)state;
+
                 var m = t.Domain.ObtainDomainMonitor( 0, createAutonomousOnTimeout: false );
                 if( m != null )
                 {
+                    m.OpenDebug( $"Executing OnTime for Domain {t.Domain.DomainName}." );
+                    // All this stuff is to do exactly what must be done. No more.
+                    // This ensures that only ONE trampoline is active at a time and
+                    // that if it became useless (because a regular timer call occurred), it is skipped.
                     if( Interlocked.CompareExchange( ref t._onTimeLostFlag, 0, 1 ) == 1 )
                     {
-                        m.Debug( "Executing enqueued OnTime." );
+                        m.Debug( st != null ? "Executing trampoline OnTime." : "Executing OnTime while a trampoline is pending." );
                     }
-                    t.OnDueTimeAsync( m ).ContinueWith( _ =>
+                    else if( st != null )
                     {
+                        m.Debug( "Skipping useless OnTime trampoline." );
                         m.Dispose();
+                        return;
+                    }
+                    t.OnDueTimeAsync( m ).ContinueWith( r =>
+                    {
+                        // On success, unhandled exception or cancellation, we do nothing.
+                        // We only handle one case: if the write lock obtetion failed we need the trampoline
+                        // to retry asap.
+                        if( r.IsFaulted ) m.Fatal( "Unhandled exception from AutoTimer.OnDueTimeAsync.", r.Exception );
+                        else
+                        {
+                            if( r.IsCanceled ) m.Warn( "Async operation canceled." );
+                            else if( r.Result.Item1 == TransactionResult.Empty )
+                            {
+                                m.Debug( "Failed to obtain the write lock: trampolineRequired = true" );
+                                // Failed to obtain the write lock.
+                                trampolineRequired = true;
+                            }
+                        }
+                        m.Dispose();
+                        t.RaiseWait();
                     }, TaskContinuationOptions.ExecuteSynchronously );
                 }
-                else
+                else trampolineRequired = true;
+
+                // If we need the trampoline, we only need it if we are currently in 'the' trampoline call or there is no
+                // active trampoline.
+                if( trampolineRequired && (st != null || Interlocked.CompareExchange( ref t._onTimeLostFlag, 1, 0 ) == 0) )
                 {
-                    if( Interlocked.CompareExchange( ref t._onTimeLostFlag, 1, 0 ) == 0 )
-                    {
-                        ThreadPool.QueueUserWorkItem( _waitCallback, state );
-                    }
+                    ThreadPool.QueueUserWorkItem( _waitCallback, t._fromWorkItem );
                 }
+            }
+
+            /// <summary>
+            /// Waits until the xext call to <see cref="OnDueTimeAsync(IActivityMonitor)"/> from the internal timer finished.
+            /// </summary>
+            /// <param name="millisecondsTimeout">The number of milliseconds to wait before giving up.</param>
+            /// <returns>
+            /// True if a call to <see cref="OnDueTimeAsync(IActivityMonitor)"/> from the internal timer finished before the timeout.
+            /// False otherwise.
+            /// </returns>
+            public bool WaitForNext( int millisecondsTimeout = Timeout.Infinite )
+            {
+                lock( _fromWorkItem ) return Monitor.Wait( _fromWorkItem, millisecondsTimeout );
+            }
+
+            internal void RaiseWait()
+            {
+                lock( _fromWorkItem ) Monitor.PulseAll( _fromWorkItem );
             }
 
             /// <summary>
@@ -80,10 +140,11 @@ namespace CK.Observable
             public ObservableDomain Domain { get; }
 
             /// <summary>
-            /// Simply calls <see cref="ObservableDomain.SafeModifyAsync"/> the shared <see cref="ObservableDomain.ObtainDomainMonitor(int)"/>, null actions and 0 timeout:
-            /// pending timed events are handled if any and if there is no current transaction.
+            /// Simply calls <see cref="ObservableDomain.SafeModifyAsync"/> with the shared <see cref="ObservableDomain.ObtainDomainMonitor(int)"/>, null actions
+            /// and 0 timeout: pending timed events are handled if any and if there is no current transaction: <see cref="TransactionResult.Empty"/> is
+            /// returned if the write lock failed to be obtained.
             /// </summary>
-            protected virtual Task OnDueTimeAsync( IActivityMonitor m ) => Domain.SafeModifyAsync( m, null, 0 );
+            protected virtual Task<(TransactionResult, Exception)> OnDueTimeAsync( IActivityMonitor m ) => Domain.SafeModifyAsync( m, null, 0 );
 
             /// <summary>
             /// Must do whatever is needed to call back this <see cref="OnDueTimeAsync(IActivityMonitor)"/> at <paramref name="nextDueTimeUtc"/> (or
@@ -133,6 +194,7 @@ namespace CK.Observable
             Domain = domain;
             _activeEvents = new ObservableTimedEventBase[16];
             _changed = new HashSet<ObservableTimedEventBase>();
+            _changedCleanupBuffer = new List<ObservableTimedEventBase>();
             _current = new AutoTimer( Domain );
             _currentNext = Util.UtcMinValue;
         }
@@ -237,12 +299,25 @@ namespace CK.Observable
 
         internal void Save( IActivityMonitor m, BinarySerializer w )
         {
-
+            w.WriteNonNegativeSmallInt32( 0 );
+            w.WriteObject( _first );
+            w.WriteObject( _last );
         }
 
         internal void Load( IActivityMonitor m, BinaryDeserializer r )
         {
-            Debug.Assert( _count == 0 );
+            Debug.Assert( _count == 0 && _first == null && _last == null && _activeCount == 0 );
+            int version = r.ReadNonNegativeSmallInt32();
+            _first = (ObservableTimedEventBase)r.ReadObject();
+            _last = (ObservableTimedEventBase)r.ReadObject();
+        }
+
+        internal void OnLoadedActive( ObservableTimedEventBase t )
+        {
+            Debug.Assert( t.ActiveIndex > 0 );
+            EnsureActiveLength( t.ActiveIndex );
+            _activeEvents[t.ActiveIndex] = t;
+            ++_activeCount;
         }
 
         internal void Clear( IActivityMonitor monitor )
@@ -267,6 +342,7 @@ namespace CK.Observable
 
         void DoApplyChanges()
         {
+            Debug.Assert( _changedCleanupBuffer.Count == 0 );
             foreach( var ev in _changed )
             {
                 if( ev.IsActive )
@@ -277,7 +353,16 @@ namespace CK.Observable
                 else
                 {
                     if( ev.ActiveIndex != 0 ) Deactivate( ev );
+                    _changedCleanupBuffer.Add( ev );
                 }
+            }
+            if( _changedCleanupBuffer.Count > 0 )
+            {
+                foreach( var rem in _changedCleanupBuffer )
+                {
+                    _changed.Remove( rem );
+                }
+                _changedCleanupBuffer.Clear();
             }
         }
 
@@ -338,14 +423,18 @@ namespace CK.Observable
 
         void Activate( ObservableTimedEventBase timer )
         {
-            if( _activeCount >= _activeEvents.Length - 1 )
-            {
-                Array.Resize( ref _activeEvents, _activeEvents.Length * 2 );
-            }
-            _activeCount++;
+            EnsureActiveLength( ++_activeCount );
             _activeEvents[_activeCount] = timer;
             timer.ActiveIndex = _activeCount;
             MoveUp( timer );
+        }
+
+        void EnsureActiveLength( int idx )
+        {
+            while( idx >= _activeEvents.Length )
+            {
+                Array.Resize( ref _activeEvents, _activeEvents.Length * 2 );
+            }
         }
 
         void OnNextDueTimeUpdated( ObservableTimedEventBase timer )

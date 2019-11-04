@@ -15,8 +15,8 @@ namespace CK.Observable
         List<Func<IActivityMonitor, Task>> _rawPostActions;
 
         /// <summary>
-        /// The empty transaction result with no events and no commands: both lists are empty.
-        /// <see cref="StartTimeUtc"/> and <see cref="NextDueTimeUtc"/> are <see cref="Util.UtcMinValue"/> since nothing happened.
+        /// The empty transaction result is used when absolutely nothing happened. It has no events and no commands,
+        /// the <see cref="StartTimeUtc"/> and <see cref="NextDueTimeUtc"/> are <see cref="Util.UtcMinValue"/>.
         /// </summary>
         public static readonly TransactionResult Empty = new TransactionResult( Array.Empty<CKExceptionData>(), Util.UtcMinValue, Util.UtcMinValue );
 
@@ -27,6 +27,7 @@ namespace CK.Observable
 
         /// <summary>
         /// Gets the start time (UTC) of the transaction.
+        /// This is <see cref="Util.UtcMinValue"/> if and only if this result is the <see cref="Empty"/> object.
         /// </summary>
         public DateTime StartTimeUtc { get; }
 
@@ -115,6 +116,7 @@ namespace CK.Observable
 
         internal TransactionResult( IReadOnlyList<CKExceptionData> errors, DateTime startTime, DateTime nextDueTime )
         {
+            Debug.Assert( startTime != Util.UtcMinValue || Empty == null, "startTime == Util.UtcMinValue ==> is Empty" );
             StartTimeUtc = startTime;
             CommitTimeUtc = DateTime.UtcNow;
             NextDueTimeUtc = nextDueTime;

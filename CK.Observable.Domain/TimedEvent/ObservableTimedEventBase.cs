@@ -25,8 +25,8 @@ namespace CK.Observable
         internal ObservableTimedEventBase Next;
         internal ObservableTimedEventBase Prev;
 
-        readonly ObservableEventHandler<EventMonitoredArgs> _disposed;
-        readonly ObservableEventHandler<ObservableTimedEventArgs> _handlers;
+        ObservableEventHandler<EventMonitoredArgs> _disposed;
+        ObservableEventHandler<ObservableTimedEventArgs> _handlers;
 
         internal ObservableTimedEventBase()
         {
@@ -35,12 +35,18 @@ namespace CK.Observable
         }
 
         protected ObservableTimedEventBase( IBinaryDeserializerContext c )
+            : this()
         {
             var r = c.StartReading();
             ActiveIndex = r.ReadInt32();
             ExpectedDueTimeUtc = r.ReadDateTime();
-            _disposed = (ObservableEventHandler<EventMonitoredArgs>)r.ReadObject();
-            _handlers = (ObservableEventHandler<ObservableTimedEventArgs>)r.ReadObject();
+            Name = r.ReadNullableString();
+            _disposed = new ObservableEventHandler<EventMonitoredArgs>( r );
+            _handlers = new ObservableEventHandler<ObservableTimedEventArgs>( r );
+            Next = (ObservableTimedEventBase)r.ReadObject();
+            Prev = (ObservableTimedEventBase)r.ReadObject();
+
+            if( ActiveIndex != 0 ) TimeManager.OnLoadedActive( this );
         }
 
         void Write( BinarySerializer w )
@@ -48,8 +54,11 @@ namespace CK.Observable
             Debug.Assert( !IsDisposed );
             w.Write( ActiveIndex );
             w.Write( ExpectedDueTimeUtc );
+            w.WriteNullableString( Name );
             _disposed.Write( w );
             _handlers.Write( w );
+            w.WriteObject( Next );
+            w.WriteObject( Prev );
         }
 
         /// <summary>
@@ -64,6 +73,19 @@ namespace CK.Observable
         /// Gets whether this object has been disposed.
         /// </summary>
         public bool IsDisposed => TimeManager == null;
+
+        /// <summary>
+        /// Gets the domain to which this timed even belongs.
+        /// Null when <see cref="IsDisposed"/> is true.
+        /// </summary>
+        public ObservableDomain Domain => TimeManager?.Domain;
+
+        /// <summary>
+        /// Gets or sets an associated object that can be useful for simple scenario where a state
+        /// must be associated to the event source without polluting the object model itself.
+        /// This object must be serializable. This property is set to null after <see cref="Dispose"/> has been called.
+        /// </summary>
+        public object Tag { get; set; }
 
         /// <summary>
         /// Gets or sets an optional name for this timed object.
@@ -94,7 +116,7 @@ namespace CK.Observable
             Debug.Assert( !IsDisposed );
             if( _handlers.HasHandlers )
             {
-                var ev = new ObservableTimedEventArgs( monitor, current, ExpectedDueTimeUtc );
+                var ev = new ObservableTimedEventArgs( monitor, this, current, ExpectedDueTimeUtc );
                 using( monitor.OpenDebug( $"Raising {ToString()} (Delta: {ev.DeltaMilliSeconds} ms)." ) )
                 {
                     _handlers.Raise( monitor, this, ev, nameof( Elapsed ), throwException );
@@ -142,6 +164,7 @@ namespace CK.Observable
                 TimeManager.OnDisposed( this );
                 TimeManager = null;
                 _handlers.RemoveAll();
+                Tag = null;
             }
         }
     }

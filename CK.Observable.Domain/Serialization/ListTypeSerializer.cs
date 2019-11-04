@@ -14,6 +14,8 @@ namespace CK.Observable
 
         public Type Type => typeof(List<T>);
 
+        bool ITypeSerializationDriver.IsFinalType => false;
+
         void ITypeSerializationDriver<List<T>>.WriteData( BinarySerializer w, List<T> o ) => DoWriteData( w, o );
 
         void DoWriteData( BinarySerializer w, List<T> o ) => ArraySerializer<T>.WriteObjects( w, o?.Count ?? 0, o, _itemSerializer );
