@@ -40,25 +40,11 @@ namespace CK.Observable
         public void Add( SafeEventHandler<TEventArgs> h, string eventName ) => _handler.Add( h, eventName );
 
         /// <summary>
-        /// Adds a delegate, bypassing any type checking: its signature MUST match <see cref="SafeEventHandler{TEventArgs}"/>.
-        /// </summary>
-        /// <param name="h">The handler must be non null and be a static method or a method on a <see cref="ObservableObject"/>.</param>
-        /// <param name="eventName">The event name (used for error messages).</param>
-        public void AddUnsafe( Delegate h, string eventName ) => _handler.Add( h, eventName );
-
-        /// <summary>
         /// Removes a handler and returns true if it has been removed.
         /// </summary>
         /// <param name="h">The handler to remove. Can be null.</param>
         /// <returns>True if the handler has been removed, false otherwise.</returns>
         public bool Remove( SafeEventHandler<TEventArgs> h ) => _handler.Remove( h );
-
-        /// <summary>
-        /// Removes a handler whose type is not exactly a <see cref="SafeEventHandler{TEventArgs}"/>.
-        /// </summary>
-        /// <param name="h">The handler to remove. Can be null.</param>
-        /// <returns>True if the handler has been removed, false otherwise.</returns>
-        public bool RemoveUnsafe( Delegate h ) => _handler.Remove( h );
 
         /// <summary>
         /// Clears the delegate list.

@@ -41,10 +41,10 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             w.WriteObject( _timer );
         }
 
-
         /// <summary>
         /// This event is automatically raised each time Count changed.
         /// This is an unsafe event (it is not serialized and no cleanup of disposed <see cref="IDisposableObject"/> is done).
+        /// Even if it is supported, safe event should always be preferred.
         /// </summary>
         public EventHandler CountChanged;
 

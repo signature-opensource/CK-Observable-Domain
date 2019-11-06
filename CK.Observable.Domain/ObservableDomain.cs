@@ -106,6 +106,9 @@ namespace CK.Observable
         IObservableTransaction _currentTran;
         int _transactionSerialNumber;
 
+        // Available to objects.
+        internal readonly ObservableDomainEventArgs DefaultEventArgs;
+
         // A reusable domain monitor is created on-demand and is protecte dby an exclusive lock.
         DomainActivityMonitor _domainMonitor;
         readonly object _domainMonitorLock;
@@ -501,6 +504,7 @@ namespace CK.Observable
             _exposedObjects = new AllCollection( this );
             _roots = new List<ObservableRootObject>();
             _timeManager = new TimeManager( this );
+            DefaultEventArgs = new ObservableDomainEventArgs( this );
             // LockRecursionPolicy.NoRecursion: reentrancy must NOT be allowed.
             _lock = new ReaderWriterLockSlim( LockRecursionPolicy.NoRecursion );
             _saveLock = new Object();
@@ -1090,14 +1094,13 @@ namespace CK.Observable
                     _properties.Add( name, p );
                     _propertiesByIndex.Add( p );
                 }
-                var disposedArgs = new EventMonitoredArgs( CurrentMonitor );
                 for( int i = 0; i < _objectsListCount; ++i )
                 {
                     var o = _objects[i];
                     if( o != null )
                     {
                         Debug.Assert( !o.IsDisposed );
-                        o.OnDisposed( disposedArgs, true );
+                        o.OnDisposed( DefaultEventArgs, true );
                     }
                 }
                 Array.Clear( _objects, 0, _objectsListCount );
@@ -1124,7 +1127,7 @@ namespace CK.Observable
                 var internalObj = _firstInternalObject;
                 while( internalObj != null )
                 {
-                    internalObj.OnDisposed( disposedArgs, true );
+                    internalObj.OnDisposed( DefaultEventArgs, true );
                     internalObj = internalObj.Next;
                 }
                 _firstInternalObject = _lastInternalObject = null;
@@ -1221,11 +1224,10 @@ namespace CK.Observable
             return idx;
         }
 
-        internal EventMonitoredArgs CheckBeforeDispose( IDisposableObject o )
+        internal void CheckBeforeDispose( IDisposableObject o )
         {
             Debug.Assert( !o.IsDisposed );
             CheckWriteLock( o ).CheckDisposed();
-            return new EventMonitoredArgs( CurrentMonitor );
         }
 
         internal void Unregister( ObservableObject o )

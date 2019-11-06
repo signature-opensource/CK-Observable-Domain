@@ -24,9 +24,12 @@ namespace CK.Observable.Domain.Tests.Sample
 
         public Garage Garage { get; set; }
 
-        protected override void OnDisposed( EventMonitoredArgs args, bool isReloading )
+        protected override void OnDisposed( ObservableDomainEventArgs args, bool isReloading )
         {
-            Garage.Employees.Remove( this );
+            if( !isReloading )
+            {
+                Garage.Employees.Remove( this );
+            }
             base.OnDisposed( args, isReloading );
         }
 

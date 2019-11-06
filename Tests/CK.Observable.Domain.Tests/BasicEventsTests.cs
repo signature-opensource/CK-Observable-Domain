@@ -3,6 +3,7 @@ using CK.Observable.Domain.Tests.Sample;
 using FluentAssertions;
 using NUnit.Framework;
 using System;
+using System.ComponentModel;
 using System.Linq;
 using static CK.Testing.MonitorTestHelper;
 
@@ -81,6 +82,69 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
+        public void INotifyPropertyChanged_is_supported_only_because_of_PropertyChanged_Fody_and_NotSupportedException_is_raised()
+        {
+            using( var domain = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
+            {
+                domain.Modify( TestHelper.Monitor, () =>
+                {
+                    InternalCounter counter = new InternalCounter();
+                    Car c = new Car( "First Car" );
+                    Assert.Throws<NotSupportedException>( () => ((INotifyPropertyChanged)c).PropertyChanged += counter.SilentIncrement );
+                } );
+            }
+        }
+
+        [Test]
+        public void SafeEvent_automatically_cleanup_Disposed_targets()
+        {
+            using( var domain = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
+            {
+                domain.Modify( TestHelper.Monitor, () =>
+                {
+                    InternalCounter counter = new InternalCounter();
+
+                    Car c1 = new Car( "First Car" );
+                    c1.SpeedChanged += counter.Increment;
+                    c1.PositionChanged += counter.SilentIncrement;
+
+                    Car c2 = new Car( "Second Car" );
+                    c2.SpeedChanged += counter.Increment;
+                    c2.PositionChanged += counter.SilentIncrement;
+
+                    Car c3 = new Car( "Third Car" );
+                    c3.SpeedChanged += counter.Increment;
+                    c3.PositionChanged += counter.SilentIncrement;
+
+                    c1.Position = new Position( 1.0, 1.0 );
+                    c2.Speed = 12;
+                    c3.Position = new Position( 1.0, 1.0 );
+
+                    counter.Count.Should().Be( 3 );
+
+                    c2.Dispose();
+                    c2.Invoking( c => c.Speed = 78 ).Should().Throw<ObjectDisposedException>();
+                    c2.Invoking( c => c.Position = new Position( 10.0, 10.0 ) ).Should().Throw<ObjectDisposedException>();
+
+                    c1.Speed = 42;
+                    c3.Position = new Position( 187.0, 1.0 );
+
+                    counter.Count.Should().Be( 5 );
+
+                    c1.Dispose();
+                    c3.Speed = 64678;
+
+                    counter.Count.Should().Be( 6 );
+
+                    c3.Dispose();
+
+                    counter.Count.Should().Be( 6 );
+
+                } ).Success.Should().BeTrue();
+            }
+        }
+
+        [Test]
         public void explicit_property_changed_events_are_automatically_triggered()
         {
             using( var domain = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
@@ -91,14 +155,17 @@ namespace CK.Observable.Domain.Tests
                     InternalCounter counter = new InternalCounter();
 
                     Car c = new Car( "First Car" );
-                    //c.SpeedChanged += counter.SilentIncrement;
-                    //counter.Count.Should().Be( 0 );
-                    //c.Speed = 56;
-                    //counter.Count.Should().Be( 1 );
-                    //c.Speed = 57;
-                    //counter.Count.Should().Be( 2 );
-                    //c.Speed = 57;
-                    //counter.Count.Should().Be( 2, "No change." );
+
+                    // The safe event is also subscribed.
+                    c.SpeedChanged += counter.Increment;
+
+                    counter.Count.Should().Be( 0 );
+                    c.Speed = 56;
+                    counter.Count.Should().Be( 1 );
+                    c.Speed = 57;
+                    counter.Count.Should().Be( 2 );
+                    c.Speed = 57;
+                    counter.Count.Should().Be( 2, "No change." );
 
                     EventHandler incBang = ( o, e ) => bang++;
                     c.PositionChanged += incBang;

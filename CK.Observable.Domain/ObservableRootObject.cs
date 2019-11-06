@@ -37,10 +37,10 @@ namespace CK.Observable
         /// Overridden to throw <see cref="InvalidOperationException"/>.
         /// </summary>
         /// <param name="reusableArgs">
-        /// The event arguments that exposes the monitor to use (that is the same as this <see cref="ObservableObject.Monitor"/> protected property).
+        /// The event arguments that exposes the domain and monitor to use (that is the same as this <see cref="ObservableObject.Monitor"/> protected property).
         /// </param>
         /// <param name="isReloading">Always false: this is never called for root objects.</param>
-        protected internal override void OnDisposed( EventMonitoredArgs args, bool isReloading )
+        protected internal override void OnDisposed( ObservableDomainEventArgs args, bool isReloading )
         {
             if( isReloading ) base.OnDisposed( args, isReloading );
             else throw new InvalidOperationException( "ObservableRootObject cannot be disposed." );

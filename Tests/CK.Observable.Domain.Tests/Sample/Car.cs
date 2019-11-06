@@ -6,7 +6,7 @@ namespace CK.Observable.Domain.Tests.Sample
     [SerializationVersion(0)]
     public class Car : ObservableObject
     {
-        ObservableEventHandler _speedChanged;
+        ObservableEventHandler<ObservableDomainEventArgs> _speedChanged;
 
         public Car( string name )
         {
@@ -14,13 +14,14 @@ namespace CK.Observable.Domain.Tests.Sample
             Name = name;
         }
 
-        public Car( IBinaryDeserializerContext d ) : base( d )
+        protected Car( IBinaryDeserializerContext d )
+            : base( d )
         {
             var r = d.StartReading();
             Name = r.ReadNullableString();
             Speed = r.ReadInt32();
             Position = (Position)r.ReadObject();
-            _speedChanged = new ObservableEventHandler( r );
+            _speedChanged = new ObservableEventHandler<ObservableDomainEventArgs>( r );
         }
 
         void Write( BinarySerializer w )
@@ -37,10 +38,11 @@ namespace CK.Observable.Domain.Tests.Sample
 
         /// <summary>
         /// Defining this event is enough: it will be automatically fired whenever Speed has changed.
-        /// The private field MUST be a <see cref="ObservableEventHandler"/> exacly named _[propName]Changed.
+        /// The private field MUST be a <see cref="ObservableEventHandler"/>, a <see cref="ObservableEventHandler{EventMonitoredArgs}"/>
+        /// or a <see cref="ObservableEventHandler{ObservableDomainEventArgs}"/> exacly named _[propName]Changed.
         /// This is fired before <see cref="ObservableObject.PropertyChanged"/> event with property's name.
         /// </summary>
-        public event SafeEventHandler SpeedChanged
+        public event SafeEventHandler<ObservableDomainEventArgs> SpeedChanged
         {
             add => _speedChanged.Add( value, nameof( SpeedChanged ) );
             remove => _speedChanged.Remove( value );
@@ -48,7 +50,8 @@ namespace CK.Observable.Domain.Tests.Sample
 
         /// <summary>
         /// Defining this event is enough: it will be automatically fired whenever Position has changed.
-        /// Its type MUST be EventHandler BUT, a SafeEventHandler should be used whenever possible.
+        /// Its type MUST be EventHandler BUT, a SafeEventHandler should be used whenever possible:
+        /// see <see cref="InternalObject."/>
         /// This is fired before <see cref="ObservableObject.PropertyChanged"/> event with property's name.
         /// </summary>
         public event EventHandler PositionChanged;

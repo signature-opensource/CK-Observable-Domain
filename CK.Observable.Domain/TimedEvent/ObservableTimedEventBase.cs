@@ -25,7 +25,7 @@ namespace CK.Observable
         internal ObservableTimedEventBase Next;
         internal ObservableTimedEventBase Prev;
 
-        ObservableEventHandler<EventMonitoredArgs> _disposed;
+        ObservableEventHandler<ObservableDomainEventArgs> _disposed;
         ObservableEventHandler<ObservableTimedEventArgs> _handlers;
 
         internal ObservableTimedEventBase()
@@ -41,7 +41,7 @@ namespace CK.Observable
             ActiveIndex = r.ReadInt32();
             ExpectedDueTimeUtc = r.ReadDateTime();
             Name = r.ReadNullableString();
-            _disposed = new ObservableEventHandler<EventMonitoredArgs>( r );
+            _disposed = new ObservableEventHandler<ObservableDomainEventArgs>( r );
             _handlers = new ObservableEventHandler<ObservableTimedEventArgs>( r );
             Tag = r.ReadObject();
 
@@ -114,7 +114,7 @@ namespace CK.Observable
             Debug.Assert( !IsDisposed );
             if( _handlers.HasHandlers )
             {
-                var ev = new ObservableTimedEventArgs( monitor, this, current, ExpectedDueTimeUtc );
+                var ev = new ObservableTimedEventArgs( this, current, ExpectedDueTimeUtc );
                 using( monitor.OpenDebug( $"Raising {ToString()} (Delta: {ev.DeltaMilliSeconds} ms)." ) )
                 {
                     _handlers.Raise( monitor, this, ev, nameof( Elapsed ), throwException );
@@ -142,7 +142,7 @@ namespace CK.Observable
         /// Note that when the call to dispose is made by <see cref="ObservableDomain.Load"/>, this event is not
         /// triggered.
         /// </summary>
-        public event SafeEventHandler<EventMonitoredArgs> Disposed
+        public event SafeEventHandler<ObservableDomainEventArgs> Disposed
         {
             add => _disposed.Add( value, nameof( Disposed ) );
             remove => _disposed.Remove( value );
@@ -156,8 +156,7 @@ namespace CK.Observable
             if( !IsDisposed )
             {
                 TimeManager.Domain.CheckBeforeDispose( this );
-                var m = TimeManager.Domain.CurrentMonitor;
-                _disposed.Raise( m, this, new EventMonitoredArgs( m ), nameof( Disposed ) );
+                _disposed.Raise( Domain.CurrentMonitor, this, Domain.DefaultEventArgs, nameof( Disposed ) );
                 _disposed.RemoveAll();
                 TimeManager.OnDisposed( this );
                 TimeManager = null;

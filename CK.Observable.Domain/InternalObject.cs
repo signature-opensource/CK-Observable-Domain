@@ -18,7 +18,7 @@ namespace CK.Observable
         internal ObservableDomain Domain;
         internal InternalObject Next;
         internal InternalObject Prev;
-        ObservableEventHandler<EventMonitoredArgs> _disposed;
+        ObservableEventHandler<ObservableDomainEventArgs> _disposed;
 
         /// <summary>
         /// Raised when this object is <see cref="Dispose"/>d by <see cref="OnDisposed"/>.
@@ -26,7 +26,7 @@ namespace CK.Observable
         /// triggered to avoid a useless (and potentialy dangerous) snowball effect: eventually ALL <see cref="InternalObject.OnDisposed(bool)"/>
         /// will be called during a reload.
         /// </summary>
-        public event SafeEventHandler<EventMonitoredArgs> Disposed
+        public event SafeEventHandler<ObservableDomainEventArgs> Disposed
         {
             add
             {
@@ -66,7 +66,7 @@ namespace CK.Observable
             var r = d.StartReading();
             Debug.Assert( r.CurrentReadInfo.Version == 0 );
             Domain = r.Services.GetService<ObservableDomain>( throwOnNull: true );
-            _disposed = new ObservableEventHandler<EventMonitoredArgs>( r );
+            _disposed = new ObservableEventHandler<ObservableDomainEventArgs>( r );
         }
 
         void Write( BinarySerializer w )
@@ -93,7 +93,7 @@ namespace CK.Observable
         /// <summary>
         /// Gets whether this object has been disposed.
         /// </summary>
-        public bool IsDisposed => Domain != null;
+        public bool IsDisposed => Domain == null;
 
         /// <summary>
         /// Gets whether the domain is being deserialized.
@@ -107,7 +107,8 @@ namespace CK.Observable
         {
             if( Domain != null )
             {
-                OnDisposed( Domain.CheckBeforeDispose( this ), false );
+                Domain.CheckBeforeDispose( this );
+                OnDisposed( Domain.DefaultEventArgs, false );
                 Domain.Unregister( this );
                 Domain = null;
             }
@@ -121,12 +122,12 @@ namespace CK.Observable
         /// </para>
         /// </summary>
         /// <param name="reusableArgs">
-        /// The event arguments that exposes the monitor to use (that is the same as this <see cref="Monitor"/> protected property).
+        /// The event arguments that exposes the domain and monitor to use (that is the same as this <see cref="Monitor"/> protected property).
         /// </param>
         /// <param name="isReloading">
         /// True when this dispose is due to a domain reload. (When true the <see cref="Disposed"/> event is not raised.)
         /// </param>
-        protected internal virtual void OnDisposed( EventMonitoredArgs reusableArgs, bool isReloading )
+        protected internal virtual void OnDisposed( ObservableDomainEventArgs reusableArgs, bool isReloading )
         {
             if( isReloading )
             {

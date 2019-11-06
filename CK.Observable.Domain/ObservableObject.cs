@@ -20,7 +20,7 @@ namespace CK.Observable
         internal readonly ObservableDomain Domain;
         internal int OId => _id;
         internal readonly IObjectExportTypeDriver _exporter;
-        ObservableEventHandler<EventMonitoredArgs> _disposed;
+        ObservableEventHandler<ObservableDomainEventArgs> _disposed;
         ObservableEventHandler<PropertyChangedEventArgs> _propertyChanged;
 
         /// <summary>
@@ -29,7 +29,7 @@ namespace CK.Observable
         /// triggered to avoid a useless (and potentialy dangerous) snowball effect: eventually ALL <see cref="ObservableObject.OnDisposed(bool)"/>
         /// will be called during a reload.
         /// </summary>
-        public event SafeEventHandler<EventMonitoredArgs> Disposed
+        public event SafeEventHandler<ObservableDomainEventArgs> Disposed
         {
             add
             {
@@ -57,10 +57,12 @@ namespace CK.Observable
         {
             add
             {
-                if( IsDisposed ) throw new ObjectDisposedException( ToString() );
-                _propertyChanged.AddUnsafe( value, nameof( PropertyChanged ) );
+                throw new NotSupportedException( "INotifyPropertyChanged is supported only because PropertyChanged.Fody requires it. It must not be used." );
             }
-            remove => _propertyChanged.RemoveUnsafe( value );
+            remove
+            {
+                throw new NotSupportedException( "INotifyPropertyChanged is supported only because PropertyChanged.Fody requires it. It must not be used." );
+            }
         }
 
         /// <summary>
@@ -97,7 +99,7 @@ namespace CK.Observable
             Domain = r.Services.GetService<ObservableDomain>( throwOnNull: true );
             _exporter = Domain._exporters.FindDriver( GetType() );
             _id = r.ReadInt32();
-            _disposed = new ObservableEventHandler<EventMonitoredArgs>( r );
+            _disposed = new ObservableEventHandler<ObservableDomainEventArgs>( r );
             _propertyChanged = new ObservableEventHandler<PropertyChangedEventArgs>( r );
             Debug.Assert( _id >= 0 );
         }
@@ -136,7 +138,8 @@ namespace CK.Observable
         {
             if( _id >= 0 )
             {
-                OnDisposed( Domain.CheckBeforeDispose( this ), false );
+                Domain.CheckBeforeDispose( this );
+                OnDisposed( Domain.DefaultEventArgs, false );
                 Domain.Unregister( this );
                 _id = -1;
             }
@@ -162,12 +165,12 @@ namespace CK.Observable
         /// </para>
         /// </summary>
         /// <param name="reusableArgs">
-        /// The event arguments that exposes the monitor to use (that is the same as this <see cref="Monitor"/> protected property).
+        /// The event arguments that exposes the domain and monitor to use (that is the same as this <see cref="Monitor"/> protected property).
         /// </param>
         /// <param name="isReloading">
         /// True when this dispose is due to a domain reload. (When true the <see cref="Disposed"/> event is not raised.)
         /// </param>
-        protected internal virtual void OnDisposed( EventMonitoredArgs reusableArgs, bool isReloading )
+        protected internal virtual void OnDisposed( ObservableDomainEventArgs reusableArgs, bool isReloading )
         {
             if( isReloading )
             {
@@ -188,41 +191,59 @@ namespace CK.Observable
         /// <param name="after">The new property value.</param>
         public virtual void OnPropertyChanged( string propertyName, object before, object after )
         {
-            if( !IsDisposed )
+            this.CheckDisposed();
+            var ev = Domain.OnPropertyChanged( this, propertyName, before, after );
+            if( ev != null )
             {
-                var ev = Domain.OnPropertyChanged( this, propertyName, before, after );
-                if( ev != null )
-                {                   
-                    // Handles public event EventHandler propertyNameChanged;
-                    // See https://stackoverflow.com/questions/14885325/eventinfo-getraisemethod-always-null
+                // Handles public event EventHandler propertyNameChanged;
+                // See https://stackoverflow.com/questions/14885325/eventinfo-getraisemethod-always-null
+                {
+                    FieldInfo fNamedEv = GetType().GetField( propertyName + "Changed", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance );
+                    if( fNamedEv != null )
                     {
-                        FieldInfo fNamedEv = GetType().GetField( propertyName + "Changed", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance );
-                        if( fNamedEv != null )
+                        if( fNamedEv.FieldType != typeof( EventHandler ) )
                         {
-                            if( fNamedEv.FieldType != typeof( EventHandler ) )
-                            {
-                                throw new Exception( $"Changed event must be typed as mere EventHandler (PropertyName = {propertyName})." );
-                            }
-                            ((EventHandler)fNamedEv.GetValue( this ))?.Invoke( this, EventArgs.Empty );
+                            throw new Exception( $"{propertyName}Changed event must be a mere EventHandler (not a {fNamedEv.FieldType.Name})." );
                         }
+                        ((EventHandler)fNamedEv.GetValue( this ))?.Invoke( this, EventArgs.Empty );
                     }
+                }
+                {
+                    FieldInfo fNamedEv = GetType().GetField( '_' + propertyName.ToLowerInvariant() + "Changed", BindingFlags.NonPublic | BindingFlags.Instance );
+                    if( fNamedEv != null )
                     {
-                        FieldInfo fNamedEv = GetType().GetField( '_' + propertyName.ToLowerInvariant() + "Changed", BindingFlags.NonPublic | BindingFlags.Instance );
-                        if( fNamedEv != null )
+
+                        if( fNamedEv.FieldType == typeof( ObservableEventHandler ) )
                         {
-                            if( fNamedEv.FieldType != typeof( ObservableEventHandler ) )
-                            {
-                                throw new Exception( $"Changed event must be typed as SafeEventHandler for PropertyName: '{propertyName}'." );
-                            }
                             var handler = (ObservableEventHandler)fNamedEv.GetValue( this );
                             if( handler.HasHandlers ) handler.Raise( Monitor, this, ev, ev.PropertyName );
                         }
+                        else if( fNamedEv.FieldType == typeof( ObservableEventHandler<ObservableDomainEventArgs> ) )
+                        {
+                            var handler = (ObservableEventHandler<ObservableDomainEventArgs>)fNamedEv.GetValue( this );
+                            if( handler.HasHandlers ) handler.Raise( Monitor, this, Domain.DefaultEventArgs, ev.PropertyName );
+                        }
+                        else if( fNamedEv.FieldType == typeof( ObservableEventHandler<EventMonitoredArgs> ) )
+                        {
+                            var handler = (ObservableEventHandler<EventMonitoredArgs>)fNamedEv.GetValue( this );
+                            if( handler.HasHandlers ) handler.Raise( Monitor, this, Domain.DefaultEventArgs, ev.PropertyName );
+                        }
+                        else if( fNamedEv.FieldType == typeof( ObservableEventHandler<EventArgs> ) )
+                        {
+                            var handler = (ObservableEventHandler<EventArgs>)fNamedEv.GetValue( this );
+                            if( handler.HasHandlers ) handler.Raise( Monitor, this, ev, ev.PropertyName );
+                        }
+                        else
+                        {
+                            throw new Exception( $"{propertyName}Changed implementation _{propertyName.ToLowerInvariant()}Changed must be a ObservableEventHandler, a ObservableEventHandler<EventMonitoredArgs> or a ObservableEventHandler<ObservableDomainEventArgs>." );
+                        }
                     }
-                    // OnPropertyChanged (by name).
-                    if( _propertyChanged.HasHandlers ) _propertyChanged.Raise( Monitor, this, ev, nameof( PropertyChanged ) );
                 }
+                // OnPropertyChanged (by name).
+                if( _propertyChanged.HasHandlers ) _propertyChanged.Raise( Monitor, this, ev, nameof( PropertyChanged ) );
             }
         }
+        
 
 
     }

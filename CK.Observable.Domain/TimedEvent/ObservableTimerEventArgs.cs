@@ -12,20 +12,19 @@ namespace CK.Observable
     /// expected exact time at which the event should have been raised.
     /// This allows to adapt the behavior to "real" time aspects if necessary.
     /// </summary>
-    public class ObservableTimedEventArgs : EventMonitoredArgs
+    public class ObservableTimedEventArgs : ObservableDomainEventArgs
     {
         /// <summary>
         /// Initializes a new <see cref="ObservableTimedEventArgs"/>.
         /// </summary>
-        /// <param name="monitor">The monitor to expose to event clients.</param>
         /// <param name="source">
-        /// The typed source, so that <see cref="ObservableTimedEventBase.Domain"/> and <see cref="ObservableTimedEventBase.Tag"/> object
-        /// are easily accessible.
+        /// The typed source, so that the source can be reconfigured as needed (and its <see cref="ObservableTimedEventBase.Tag"/> object
+        /// is easily accessible).
         /// </param>
         /// <param name="current">The current time.</param>
         /// <param name="expected">The expected event time.</param>
-        public ObservableTimedEventArgs( IActivityMonitor monitor, ObservableTimedEventBase source, DateTime current, DateTime expected )
-            : base( monitor )
+        public ObservableTimedEventArgs( ObservableTimedEventBase source, DateTime current, DateTime expected )
+            : base( source.Domain )
         {
             Source = source;
             Current = current;
