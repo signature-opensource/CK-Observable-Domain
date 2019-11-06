@@ -43,8 +43,7 @@ namespace CK.Observable
             Name = r.ReadNullableString();
             _disposed = new ObservableEventHandler<EventMonitoredArgs>( r );
             _handlers = new ObservableEventHandler<ObservableTimedEventArgs>( r );
-            Next = (ObservableTimedEventBase)r.ReadObject();
-            Prev = (ObservableTimedEventBase)r.ReadObject();
+            Tag = r.ReadObject();
 
             if( ActiveIndex != 0 ) TimeManager.OnLoadedActive( this );
         }
@@ -57,8 +56,7 @@ namespace CK.Observable
             w.WriteNullableString( Name );
             _disposed.Write( w );
             _handlers.Write( w );
-            w.WriteObject( Next );
-            w.WriteObject( Prev );
+            w.WriteObject( Tag );
         }
 
         /// <summary>
@@ -96,7 +94,7 @@ namespace CK.Observable
         /// <summary>
         /// The timed event.
         /// </summary>
-        public event EventHandler<ObservableTimedEventArgs> Elapsed
+        public event SafeEventHandler<ObservableTimedEventArgs> Elapsed
         {
             add
             {
@@ -144,7 +142,7 @@ namespace CK.Observable
         /// Note that when the call to dispose is made by <see cref="ObservableDomain.Load"/>, this event is not
         /// triggered.
         /// </summary>
-        public event EventHandler<EventMonitoredArgs> Disposed
+        public event SafeEventHandler<EventMonitoredArgs> Disposed
         {
             add => _disposed.Add( value, nameof( Disposed ) );
             remove => _disposed.Remove( value );

@@ -97,7 +97,7 @@ namespace CK.Observable
             void ITypeSerializationDriver.WriteTypeInformation( BinarySerializer s )
             {
                 var tInfo = this;
-                while( s.DoWriteSimpleType( tInfo?.Type, null ) )
+                while( s.DoWriteSimpleType( tInfo?.Type ) )
                 {
                     Debug.Assert( tInfo._version >= 0 );
                     s.WriteSmallInt32( tInfo._version );

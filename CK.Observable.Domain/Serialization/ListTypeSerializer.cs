@@ -22,7 +22,7 @@ namespace CK.Observable
 
         void ITypeSerializationDriver.WriteData( BinarySerializer w, object o ) => DoWriteData( w, (List<T>)o );
 
-        public void WriteTypeInformation( BinarySerializer s ) => s.WriteSimpleType( Type, null );
+        public void WriteTypeInformation( BinarySerializer s ) => s.WriteSimpleType( Type );
 
     }
 }

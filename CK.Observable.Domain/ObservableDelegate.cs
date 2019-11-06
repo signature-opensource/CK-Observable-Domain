@@ -10,8 +10,7 @@ using System.Text;
 namespace CK.Observable
 {
     /// <summary>
-    /// Wraps a delegate to a static method or an instance method of
-    /// an <see cref="ObservableObject"/>.
+    /// Wraps a delegate to a static method or an instance method of an <see cref="ObservableObject"/>.
     /// This is an internal helper.
     /// </summary>
     struct ObservableDelegate
@@ -126,7 +125,7 @@ namespace CK.Observable
             for( int i = 0; i < dList.Length; ++i )
             {
                 var d = dList[i];
-                if( d.Target is ObservableObject o && o.IsDisposed )
+                if( d.Target is IDisposableObject o && o.IsDisposed )
                 {
                     cleanup[i] = needCleanup = true;
                 }
@@ -147,7 +146,7 @@ namespace CK.Observable
         static void CheckNonNullAndSerializableDelegate( Delegate value, string eventName )
         {
             if( value == null ) throw new ArgumentNullException( eventName );
-            if( value.Target != null && !(value.Target is ObservableObject) )
+            if( value.Target != null && !(value.Target is IDisposableObject) )
             {
                 throw new ArgumentException( $"Only static methods or ObservableObject's instance methods can be registered on {eventName} event.", eventName );
             }

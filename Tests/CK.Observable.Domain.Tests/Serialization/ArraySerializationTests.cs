@@ -36,7 +36,7 @@ namespace CK.Serialization.Tests
         [Test]
         public void type_array_serialization()
         {
-            Type[] types = new Type[] { GetType(), typeof(int), typeof(string), typeof(IActivityLogGroup) };
+            Type[] types = new Type[] { GetType(), typeof(int), typeof(string), typeof(IActivityLogGroup), typeof(Type) };
 
             {
                 Type[] back = (Type[])TestHelper.SaveAndLoad( types );

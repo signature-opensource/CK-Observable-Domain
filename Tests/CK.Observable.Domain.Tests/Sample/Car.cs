@@ -6,6 +6,8 @@ namespace CK.Observable.Domain.Tests.Sample
     [SerializationVersion(0)]
     public class Car : ObservableObject
     {
+        ObservableEventHandler _speedChanged;
+
         public Car( string name )
         {
             Monitor.Info( $"Creating Car '{name}'." );
@@ -18,6 +20,7 @@ namespace CK.Observable.Domain.Tests.Sample
             Name = r.ReadNullableString();
             Speed = r.ReadInt32();
             Position = (Position)r.ReadObject();
+            _speedChanged = new ObservableEventHandler( r );
         }
 
         void Write( BinarySerializer w )
@@ -25,6 +28,7 @@ namespace CK.Observable.Domain.Tests.Sample
             w.WriteNullableString( Name );
             w.Write( Speed );
             w.WriteObject( Position );
+            _speedChanged.Write( w );
         }
 
         public string Name { get; }
@@ -32,10 +36,20 @@ namespace CK.Observable.Domain.Tests.Sample
         public int Speed { get; set; }
 
         /// <summary>
-        /// Defining this event is enough: it will be automatically fired
-        /// whenever Position has changed.
-        /// Its type MUST be EventHandler.
-        /// This is fired before INotifyPropertyChanged.PropertyChanged named event.
+        /// Defining this event is enough: it will be automatically fired whenever Speed has changed.
+        /// The private field MUST be a <see cref="ObservableEventHandler"/> exacly named _[propName]Changed.
+        /// This is fired before <see cref="ObservableObject.PropertyChanged"/> event with property's name.
+        /// </summary>
+        public event SafeEventHandler SpeedChanged
+        {
+            add => _speedChanged.Add( value, nameof( SpeedChanged ) );
+            remove => _speedChanged.Remove( value );
+        }
+
+        /// <summary>
+        /// Defining this event is enough: it will be automatically fired whenever Position has changed.
+        /// Its type MUST be EventHandler BUT, a SafeEventHandler should be used whenever possible.
+        /// This is fired before <see cref="ObservableObject.PropertyChanged"/> event with property's name.
         /// </summary>
         public event EventHandler PositionChanged;
 

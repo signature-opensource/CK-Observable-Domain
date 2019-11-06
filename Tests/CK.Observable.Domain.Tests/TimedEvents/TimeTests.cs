@@ -121,7 +121,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
         public void auto_counter_works_as_expected()
         {
             int relayedCounter = 0;
-            const int waitTime = 100 * 11;
+            const int waitTime = 100 * 10;
             using( var d = new ObservableDomain( TestHelper.Monitor, "Test" ) )
             {
                 AutoCounter counter = null;
@@ -133,12 +133,13 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 TestHelper.Monitor.Trace( $"new AutoCounter( 100 ) done. Waiting {waitTime} ms." );
                 Thread.Sleep( waitTime );
                 TestHelper.Monitor.Trace( $"End of Waiting." );
+                d.TimeManager.CurrentTimer.WaitForNext();
                 using( d.AcquireReadLock() )
                 {
                     TestHelper.Monitor.Trace( $"counter.Count = {counter.Count}." );
                     d.AllObjects.Single().Should().BeSameAs( counter );
-                    relayedCounter.Should().Be( counter.Count );
                     counter.Count.Should().Match( c => c == 10 || c == 11 );
+                    relayedCounter.Should().Be( counter.Count );
                 }
             }
         }
@@ -181,10 +182,8 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 {
                     var t = new ObservableTimer(DateTime.UtcNow);
                     Assert.Throws<ArgumentException>( () => t.Elapsed += ( o, e ) => { } );
-                    Assert.Throws<ArgumentException>( () => t.Elapsed += new EventHandler<ObservableTimedEventArgs>( ( o, e ) => { } ) );
                     var r = new ObservableReminder( DateTime.UtcNow );
                     Assert.Throws<ArgumentException>( () => r.Elapsed += ( o, e ) => { } );
-                    Assert.Throws<ArgumentException>( () => r.Elapsed += new EventHandler<ObservableTimedEventArgs>( ( o, e ) => { } ) );
                 } );
                 tranResult.Success.Should().BeTrue();
             }
@@ -419,7 +418,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
 
                 using( d.AcquireReadLock() )
                 {
-                    TestHelper.Monitor.Info( "Locking the Domain for 200 ms." );
+                    TestHelper.Monitor.Info( "Locking the Domain for 50 ms." );
                     Thread.Sleep( 200 );
                 }
 

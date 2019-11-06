@@ -226,12 +226,12 @@ namespace CK.Observable
         {
             ITypeSerializationDriver driver = _drivers.FindDriver( t );
             if( driver != null ) driver.WriteTypeInformation( this );
-            else WriteSimpleType( t, null );
+            else WriteSimpleType( t );
         }
 
-        internal bool WriteSimpleType( Type t, string alias )
+        internal bool WriteSimpleType( Type t )
         {
-            if( DoWriteSimpleType( t, alias ) )
+            if( DoWriteSimpleType( t ) )
             {
                 // Fake version when the type is new: AutoTypeRegistry serializes the base class
                 // (it directly calls DoWriteSimpleType) right after their own version that is,
@@ -247,9 +247,8 @@ namespace CK.Observable
         /// or false if it has been previsously written.
         /// </summary>
         /// <param name="t">Type to serialize. Can be null.</param>
-        /// <param name="alias">Optional replacement (typically shorter) for <see cref="Type.AssemblyQualifiedName"/>.</param>
         /// <returns>True if the type has been written, false if it was already serialized.</returns>
-        internal bool DoWriteSimpleType( Type t, string alias )
+        internal bool DoWriteSimpleType( Type t )
         {
             if( t == null ) Write( (byte)0 );
             else if( t == typeof( object ) )
@@ -263,7 +262,7 @@ namespace CK.Observable
                     info = new TypeInfo( t, _types.Count );
                     _types.Add( t, info );
                     Write( (byte)2 );
-                    Write( alias ?? info.Type.AssemblyQualifiedName );
+                    Write( info.Type.AssemblyQualifiedName );
                     return true;
                 }
                 Write( (byte)3 );

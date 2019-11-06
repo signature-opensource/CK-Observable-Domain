@@ -11,15 +11,17 @@ namespace CK.Observable
     /// Observable objects are reference types that belong to a <see cref="ObservableDomain"/> and for
     /// which properties changes and <see cref="Dispose"/> are tracked.
     /// </summary>
+    /// <remarks>
+    /// </remarks>
     [SerializationVersion( 0 )]
     public abstract class ObservableObject : INotifyPropertyChanged, IDisposableObject, IKnowMyExportDriver
     {
         int _id;
         internal readonly ObservableDomain Domain;
-        PropertyChangedEventHandler _handler;
         internal int OId => _id;
         internal readonly IObjectExportTypeDriver _exporter;
-        readonly ObservableEventHandler<EventMonitoredArgs> _disposed;
+        ObservableEventHandler<EventMonitoredArgs> _disposed;
+        ObservableEventHandler<PropertyChangedEventArgs> _propertyChanged;
 
         /// <summary>
         /// Raised when this object is <see cref="Dispose"/>d by <see cref="OnDisposed"/>.
@@ -27,7 +29,7 @@ namespace CK.Observable
         /// triggered to avoid a useless (and potentialy dangerous) snowball effect: eventually ALL <see cref="ObservableObject.OnDisposed(bool)"/>
         /// will be called during a reload.
         /// </summary>
-        public event EventHandler<EventMonitoredArgs> Disposed
+        public event SafeEventHandler<EventMonitoredArgs> Disposed
         {
             add
             {
@@ -35,6 +37,30 @@ namespace CK.Observable
                 _disposed.Add( value, nameof( Disposed ) );
             }
             remove => _disposed.Remove( value );
+        }
+
+        /// <summary>
+        /// Generic property changed safe event that can be used to track any change on observable properties (by name).
+        /// This uses the standard <see cref="PropertyChangedEventArgs"/> event.
+        /// </summary>
+        public event SafeEventHandler<PropertyChangedEventArgs> PropertyChanged
+        {
+            add
+            {
+                if( IsDisposed ) throw new ObjectDisposedException( ToString() );
+                _propertyChanged.Add( value, nameof( PropertyChanged ) );
+            }
+            remove => _propertyChanged.Remove( value );
+        }
+
+        event PropertyChangedEventHandler INotifyPropertyChanged.PropertyChanged
+        {
+            add
+            {
+                if( IsDisposed ) throw new ObjectDisposedException( ToString() );
+                _propertyChanged.AddUnsafe( value, nameof( PropertyChanged ) );
+            }
+            remove => _propertyChanged.RemoveUnsafe( value );
         }
 
         /// <summary>
@@ -71,18 +97,16 @@ namespace CK.Observable
             Domain = r.Services.GetService<ObservableDomain>( throwOnNull: true );
             _exporter = Domain._exporters.FindDriver( GetType() );
             _id = r.ReadInt32();
+            _disposed = new ObservableEventHandler<EventMonitoredArgs>( r );
+            _propertyChanged = new ObservableEventHandler<PropertyChangedEventArgs>( r );
             Debug.Assert( _id >= 0 );
         }
 
         void Write( BinarySerializer w )
         {
             w.Write( _id );
-        }
-
-        event PropertyChangedEventHandler INotifyPropertyChanged.PropertyChanged
-        {
-            add { _handler += value; }
-            remove { _handler -= value; }
+            _disposed.Write( w );
+            _propertyChanged.Write( w );
         }
 
         /// <summary>
@@ -112,8 +136,7 @@ namespace CK.Observable
         {
             if( _id >= 0 )
             {
-                Domain.CheckBeforeDispose( this );
-                OnDisposed( new EventMonitoredArgs( Domain.CurrentMonitor ), false );
+                OnDisposed( Domain.CheckBeforeDispose( this ), false );
                 Domain.Unregister( this );
                 _id = -1;
             }
@@ -125,7 +148,7 @@ namespace CK.Observable
         /// and can be processed by any <see cref="IObservableDomainClient"/>.
         /// </summary>
         /// <param name="command">Any command description.</param>
-        public void SendCommand( object command )
+        protected void SendCommand( object command )
         {
             Domain.SendCommand( this, command );
         }
@@ -169,20 +192,34 @@ namespace CK.Observable
             {
                 var ev = Domain.OnPropertyChanged( this, propertyName, before, after );
                 if( ev != null )
-                {
-                    // Handles public event EventHandler <<propertyName>>Changed;
+                {                   
+                    // Handles public event EventHandler propertyNameChanged;
                     // See https://stackoverflow.com/questions/14885325/eventinfo-getraisemethod-always-null
-                    FieldInfo fNamedEv = GetType().GetField( propertyName + "Changed", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance );
-                    if( fNamedEv != null )
                     {
-                        if( fNamedEv.FieldType != typeof( EventHandler ) )
+                        FieldInfo fNamedEv = GetType().GetField( propertyName + "Changed", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance );
+                        if( fNamedEv != null )
                         {
-                            throw new Exception( $"Changed event must be typed as mere EventHandler (PropertyName = {propertyName})." );
+                            if( fNamedEv.FieldType != typeof( EventHandler ) )
+                            {
+                                throw new Exception( $"Changed event must be typed as mere EventHandler (PropertyName = {propertyName})." );
+                            }
+                            ((EventHandler)fNamedEv.GetValue( this ))?.Invoke( this, EventArgs.Empty );
                         }
-                        ((EventHandler)fNamedEv.GetValue( this ))?.Invoke( this, EventArgs.Empty );
+                    }
+                    {
+                        FieldInfo fNamedEv = GetType().GetField( '_' + propertyName.ToLowerInvariant() + "Changed", BindingFlags.NonPublic | BindingFlags.Instance );
+                        if( fNamedEv != null )
+                        {
+                            if( fNamedEv.FieldType != typeof( ObservableEventHandler ) )
+                            {
+                                throw new Exception( $"Changed event must be typed as SafeEventHandler for PropertyName: '{propertyName}'." );
+                            }
+                            var handler = (ObservableEventHandler)fNamedEv.GetValue( this );
+                            if( handler.HasHandlers ) handler.Raise( Monitor, this, ev, ev.PropertyName );
+                        }
                     }
                     // OnPropertyChanged (by name).
-                    _handler?.Invoke( this, ev );
+                    if( _propertyChanged.HasHandlers ) _propertyChanged.Raise( Monitor, this, ev, nameof( PropertyChanged ) );
                 }
             }
         }

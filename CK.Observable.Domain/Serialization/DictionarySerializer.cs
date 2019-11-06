@@ -87,7 +87,7 @@ namespace CK.Observable
 
         public void WriteData( BinarySerializer w, object o ) => DoWrite( w, (Dictionary<TKey,TValue>)o, _key, _value );
 
-        public void WriteTypeInformation( BinarySerializer s ) => s.WriteSimpleType( Type, null );
+        public void WriteTypeInformation( BinarySerializer s ) => s.WriteSimpleType( Type );
 
     }
 }

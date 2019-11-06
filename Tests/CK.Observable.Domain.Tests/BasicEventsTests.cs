@@ -1,3 +1,4 @@
+using CK.Core;
 using CK.Observable.Domain.Tests.Sample;
 using FluentAssertions;
 using NUnit.Framework;
@@ -80,14 +81,25 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
-        public void hard_coded_property_changed_events_are_automatically_triggered()
+        public void explicit_property_changed_events_are_automatically_triggered()
         {
             using( var domain = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
             {
                 int bang = 0;
                 domain.Modify( TestHelper.Monitor, () =>
                 {
+                    InternalCounter counter = new InternalCounter();
+
                     Car c = new Car( "First Car" );
+                    //c.SpeedChanged += counter.SilentIncrement;
+                    //counter.Count.Should().Be( 0 );
+                    //c.Speed = 56;
+                    //counter.Count.Should().Be( 1 );
+                    //c.Speed = 57;
+                    //counter.Count.Should().Be( 2 );
+                    //c.Speed = 57;
+                    //counter.Count.Should().Be( 2, "No change." );
+
                     EventHandler incBang = ( o, e ) => bang++;
                     c.PositionChanged += incBang;
                     bang.Should().Be( 0 );

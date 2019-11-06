@@ -8,9 +8,10 @@ namespace CK.Observable
     public readonly struct ObservableCommand
     {
         /// <summary>
-        /// The command sender (the one who emitted the command via <see cref="ObservableObject.SendCommand(object)"/>.
+        /// The command sender (the one who emitted the command via <see cref="ObservableObject.SendCommand(object)"/>
+        /// or <see cref="InternalObject.SendCommand(object)"/>.
         /// </summary>
-        public readonly ObservableObject Sender;
+        public readonly IDisposableObject Sender;
 
         /// <summary>
         /// The command object payload.
@@ -22,7 +23,7 @@ namespace CK.Observable
         /// </summary>
         /// <param name="sender">The sender. Must not be null.</param>
         /// <param name="payload">The command payload. Must not be null.</param>
-        public ObservableCommand( ObservableObject sender, object payload )
+        public ObservableCommand( IDisposableObject sender, object payload )
         {
             Sender = sender ?? throw new ArgumentNullException( nameof( sender ) );
             Payload = payload ?? throw new ArgumentNullException( nameof( payload ) );

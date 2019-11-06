@@ -8,7 +8,7 @@ namespace CK.Observable
     public class TypeReadInfo
     {
         /// <summary>
-        /// Gets the serialized type name. It may be an assembly qualified name or an alias.
+        /// Gets the serialized type name. It's the assembly qualified name.
         /// </summary>
         public string TypeName { get; }
 

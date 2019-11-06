@@ -25,7 +25,7 @@ namespace CK.Observable
 
         void DoWriteData( BinarySerializer w, T[] o ) => WriteObjects( w, o?.Length ?? 0, o, _itemSerializer );
 
-        public void WriteTypeInformation( BinarySerializer s ) => s.WriteSimpleType( Type, null );
+        public void WriteTypeInformation( BinarySerializer s ) => s.WriteSimpleType( Type );
 
         /// <summary>
         /// Writes any list content.

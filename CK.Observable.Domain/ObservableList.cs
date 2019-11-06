@@ -12,26 +12,46 @@ namespace CK.Observable
     public class ObservableList<T> : ObservableObject, IList<T>, IReadOnlyList<T>
     {
         readonly List<T> _list;
+        ObservableEventHandler<ListSetAtEvent> _itemSet;
+        ObservableEventHandler<ListInsertEvent> _itemInserted;
+        ObservableEventHandler<ListRemoveAtEvent> _itemRemovedAt;
+        ObservableEventHandler<CollectionClearEvent> _collectionCleared;
 
         /// <summary>
         /// Raised when an existing item has been updated by <see cref="this[int]"/> to a different value.
         /// </summary>
-        public event EventHandler<ListSetAtEvent> ItemSet;
+        public event SafeEventHandler<ListSetAtEvent> ItemSet
+        {
+            add => _itemSet.Add( value, nameof( ItemSet ) );
+            remove => _itemSet.Remove( value );
+        }
 
         /// <summary>
         /// Raised by <see cref="Add(T)"/> or <see cref="Insert(int, T)"/>.
         /// </summary>
-        public event EventHandler<ListInsertEvent> ItemInserted;
+        public event SafeEventHandler<ListInsertEvent> ItemInserted
+        {
+            add => _itemInserted.Add( value, nameof( ItemInserted ) );
+            remove => _itemInserted.Remove( value );
+        }
 
         /// <summary>
         /// Raised by <see cref="Remove(T)"/> or <see cref="RemoveAt(int)"/>.
         /// </summary>
-        public event EventHandler<ListRemoveAtEvent> ItemRemovedAt;
+        public event SafeEventHandler<ListRemoveAtEvent> ItemRemovedAt
+        {
+            add => _itemRemovedAt.Add( value, nameof( ItemRemovedAt ) );
+            remove => _itemRemovedAt.Remove( value );
+        }
 
         /// <summary>
         /// Raised by <see cref="Clear"/>.
         /// </summary>
-        public event EventHandler<CollectionClearEvent> CollectionCleared;
+        public event SafeEventHandler<CollectionClearEvent> CollectionCleared
+        {
+            add => _collectionCleared.Add( value, nameof( CollectionCleared ) );
+            remove => _collectionCleared.Remove( value );
+        }
 
         /// <summary>
         /// Initializes a new empty observable list.
@@ -49,6 +69,10 @@ namespace CK.Observable
         {
             var r = d.StartReading();
             _list = (List<T>)r.ReadObject();
+            _itemSet = new ObservableEventHandler<ListSetAtEvent>( r );
+            _itemInserted = new ObservableEventHandler<ListInsertEvent>( r );
+            _itemRemovedAt = new ObservableEventHandler<ListRemoveAtEvent>( r );
+            _collectionCleared = new ObservableEventHandler<CollectionClearEvent>( r );
         }
 
         /// <summary>
@@ -58,6 +82,10 @@ namespace CK.Observable
         void Write( BinarySerializer s )
         {
             s.WriteObject( _list );
+            _itemSet.Write( s );
+            _itemInserted.Write( s );
+            _itemRemovedAt.Write( s );
+            _collectionCleared.Write( s );
         }
 
         /// <summary>
@@ -81,7 +109,7 @@ namespace CK.Observable
                     {
                         var e = Domain.OnListSetAt( this, index, value );
                         _list[index] = value;
-                        if( e != null && ItemSet != null ) ItemSet( this, e );
+                        if( e != null && _itemSet.HasHandlers ) _itemSet.Raise( Monitor, this, e, nameof( ItemSet ) );
                     }
                 }
             }
@@ -104,7 +132,7 @@ namespace CK.Observable
         {
             var e = Domain.OnListInsert( this, _list.Count, item );
             _list.Add( item );
-            if( e != null && ItemInserted != null ) ItemInserted( this, e );
+            if( e != null && _itemInserted.HasHandlers ) _itemInserted.Raise( Monitor, this, e, nameof( ItemInserted ) );
         }
 
         /// <summary>
@@ -125,7 +153,7 @@ namespace CK.Observable
             {
                 var e = Domain.OnCollectionClear( this );
                 _list.Clear();
-                if( e != null && CollectionCleared != null ) CollectionCleared( this, e );
+                if( e != null && _collectionCleared.HasHandlers ) _collectionCleared.Raise( Monitor, this, e, nameof( CollectionCleared ) );
             }
         }
 
@@ -138,7 +166,7 @@ namespace CK.Observable
         {
             var e = Domain.OnListInsert( this, index, item );
             _list.Insert( index, item );
-            if( e != null && ItemInserted != null ) ItemInserted( this, e );
+            if( e != null && _itemInserted.HasHandlers ) _itemInserted.Raise( Monitor, this, e, nameof( ItemInserted ) );
         }
 
         /// <summary>
@@ -174,7 +202,7 @@ namespace CK.Observable
         {
             var e = Domain.OnListRemoveAt( this, index );
             _list.RemoveAt( index );
-            if( e != null && ItemRemovedAt != null ) ItemRemovedAt( this, e );
+            if( e != null && _itemRemovedAt.HasHandlers ) _itemRemovedAt.Raise( Monitor, this, e, nameof( ItemRemovedAt ) );
         }
 
         /// <summary>

@@ -14,7 +14,7 @@ namespace CK.Observable
         /// <summary>
         /// Raised when this object is disposed and will not be part of its <see cref="ObservableDomain"/> anymore.
         /// </summary>
-        event EventHandler<EventMonitoredArgs> Disposed;
+        event SafeEventHandler<EventMonitoredArgs> Disposed;
 
         /// <summary>
         /// Gets whether this object has been disposed.

@@ -6,22 +6,23 @@ using System.Text;
 namespace CK.Observable
 {
     /// <summary>
-    /// Serializable and checked event handler: only non null and static method or method on a <see cref="ObservableObject"/> can
-    /// be added. 
+    /// Serializable and safe event handler: only non null and static method or method on a <see cref="IDisposableObject"/> (that must
+    /// be serializable) can be added.
+    /// This is a helper class that implements <see cref="SafeEventHandler{TEventArgs}"/> events.
     /// </summary>
-    /// <typeparam name="TEventArgs">Event argument.</typeparam>
+    /// <typeparam name="TEventArgs">The type of the event argument.</typeparam>
     public struct ObservableEventHandler<TEventArgs> where TEventArgs : EventArgs
     {
         ObservableDelegate _handler;
 
         /// <summary>
-        /// Deserializes the <see cref="ObservableEvent"/>.
+        /// Deserializes the <see cref="ObservableEventHandler{TEventArgs}"/>.
         /// </summary>
-        /// <param name="c">The context.</param>
+        /// <param name="c">The deserializer.</param>
         public ObservableEventHandler( IBinaryDeserializer r ) => _handler = new ObservableDelegate( r );
 
         /// <summary>
-        /// Serializes this <see cref="ObservableEvent"/>.
+        /// Serializes this <see cref="ObservableEventHandler{TEventArgs}"/>.
         /// </summary>
         /// <param name="w">The writer.</param>
         public void Write( BinarySerializer w ) => _handler.Write( w );
@@ -36,14 +37,28 @@ namespace CK.Observable
         /// </summary>
         /// <param name="h">The handler must be non null and be a static method or a method on a <see cref="ObservableObject"/>.</param>
         /// <param name="eventName">The event name (used for error messages).</param>
-        public void Add( EventHandler<TEventArgs> h, string eventName ) => _handler.Add( h, eventName );
+        public void Add( SafeEventHandler<TEventArgs> h, string eventName ) => _handler.Add( h, eventName );
+
+        /// <summary>
+        /// Adds a delegate, bypassing any type checking: its signature MUST match <see cref="SafeEventHandler{TEventArgs}"/>.
+        /// </summary>
+        /// <param name="h">The handler must be non null and be a static method or a method on a <see cref="ObservableObject"/>.</param>
+        /// <param name="eventName">The event name (used for error messages).</param>
+        public void AddUnsafe( Delegate h, string eventName ) => _handler.Add( h, eventName );
 
         /// <summary>
         /// Removes a handler and returns true if it has been removed.
         /// </summary>
         /// <param name="h">The handler to remove. Can be null.</param>
         /// <returns>True if the handler has been removed, false otherwise.</returns>
-        public bool Remove( EventHandler<TEventArgs> h ) => _handler.Remove( h );
+        public bool Remove( SafeEventHandler<TEventArgs> h ) => _handler.Remove( h );
+
+        /// <summary>
+        /// Removes a handler whose type is not exactly a <see cref="SafeEventHandler{TEventArgs}"/>.
+        /// </summary>
+        /// <param name="h">The handler to remove. Can be null.</param>
+        /// <returns>True if the handler has been removed, false otherwise.</returns>
+        public bool RemoveUnsafe( Delegate h ) => _handler.Remove( h );
 
         /// <summary>
         /// Clears the delegate list.
@@ -65,7 +80,7 @@ namespace CK.Observable
             {
                 try
                 {
-                    ((EventHandler<TEventArgs>)h[i]).Invoke( sender, args );
+                    ((SafeEventHandler<TEventArgs>)h[i]).Invoke( sender, args );
                 }
                 catch( Exception ex )
                 {

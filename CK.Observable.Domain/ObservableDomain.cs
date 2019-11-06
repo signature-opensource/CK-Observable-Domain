@@ -79,6 +79,10 @@ namespace CK.Observable
         readonly ReaderWriterLockSlim _lock;
         readonly List<int> _freeList;
 
+        int _internalObjectCount;
+        InternalObject _firstInternalObject;
+        InternalObject _lastInternalObject;
+
         ObservableObject[] _objects;
 
         /// <summary>
@@ -100,14 +104,18 @@ namespace CK.Observable
         List<ObservableRootObject> _roots;
 
         IObservableTransaction _currentTran;
-        // This is -1 when Dispose has been called.
         int _transactionSerialNumber;
 
+        // A reusable domain monitor is created on-demand and is protecte dby an exclusive lock.
         DomainActivityMonitor _domainMonitor;
         readonly object _domainMonitorLock;
+
+        // This lock is used to allow one and only one Save at a time: this is to protect
+        // the potential fake transaction that is used when saving.
         readonly object _saveLock;
 
         bool _deserializing;
+        bool _disposed;
 
         /// <summary>
         /// Exposes the non null objects in _objects as a collection.
@@ -572,15 +580,36 @@ namespace CK.Observable
 
         /// <summary>
         /// Gets all the observable objects that this domain contains (roots included).
-        /// These exposed objects are out of any transactions or reentrancy checks: any attempt
-        /// to modify one of them will throw.
+        /// These exposed objects are out of any transactions or reentrancy checks: they should not 
+        /// be used outside of <see cref="BeginTransaction"/> (or other <see cref="Modify"/>, <see cref="ModifyAsync"/> methods)
+        /// or <see cref="AcquireReadLock"/> scopes.
         /// </summary>
         public IReadOnlyCollection<ObservableObject> AllObjects => _exposedObjects;
 
         /// <summary>
+        /// Gets all the internal objects that this domain contains.
+        /// These exposed objects are out of any transactions or reentrancy checks: they should not 
+        /// be used outside of <see cref="BeginTransaction"/> (or other <see cref="Modify"/>, <see cref="ModifyAsync"/> methods)
+        /// or <see cref="AcquireReadLock"/> scopes.
+        /// </summary>
+        public IEnumerable<InternalObject> AllInternalObjects
+        {
+            get
+            {
+                var o = _firstInternalObject;
+                while( o != null )
+                {
+                    yield return o;
+                    o = o.Next;
+                }
+            }
+        }
+
+        /// <summary>
         /// Gets the root observable objects that this domain contains.
-        /// These exposed objects are out of any transactions or reentrancy checks: any attempt
-        /// to modify one of them will throw.
+        /// These exposed objects are out of any transactions or reentrancy checks: they should not 
+        /// be used outside of <see cref="BeginTransaction"/> (or other <see cref="Modify"/>, <see cref="ModifyAsync"/> methods)
+        /// or <see cref="AcquireReadLock"/> scopes.
         /// </summary>
         public IReadOnlyList<ObservableRootObject> AllRoots => _roots;
 
@@ -678,6 +707,7 @@ namespace CK.Observable
         public IObservableTransaction BeginTransaction( IActivityMonitor monitor, int millisecondsTimeout = -1 )
         {
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
+            if( _disposed ) throw new ObjectDisposedException( ToString() );
             if( !_lock.TryEnterWriteLock( millisecondsTimeout ) )
             {
                 monitor.Warn( $"Write lock not obtained in less than {millisecondsTimeout} ms." );
@@ -810,7 +840,8 @@ namespace CK.Observable
         /// </returns>
         public async Task<(TransactionResult, Exception)> SafeModifyAsync( IActivityMonitor monitor, Action actions, int millisecondsTimeout = -1 )
         {
-            Debug.Assert( monitor != null );
+            if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
+            if( _disposed ) throw new ObjectDisposedException( ToString() );
             TransactionResult tr = TransactionResult.Empty;
             if( _lock.TryEnterWriteLock( millisecondsTimeout ) )
             {
@@ -837,6 +868,7 @@ namespace CK.Observable
         /// <returns>True on success, false if timeout occurred.</returns>
         public bool Export( TextWriter w, int milliSecondsTimeout = -1 )
         {
+            if( _disposed ) throw new ObjectDisposedException( ToString() );
             if( !_lock.TryEnterReadLock( milliSecondsTimeout ) ) return false;
             try
             {
@@ -904,10 +936,11 @@ namespace CK.Observable
         {
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
             if( stream == null ) throw new ArgumentNullException( nameof( stream ) );
+            if( _disposed ) throw new ObjectDisposedException( ToString() );
 
             // Since we only need the read lock, whenever multiple threads Save() concurrently,
-            // the monitor (current fake transaction) is at risk. This is why we secure the Save with its own lock: since
-            // only one Save at a time can be executed and no other "read with monitor" exists.
+            // the monitor (of the fake transaction) is at risk. This is why we secure the Save with its own lock: since
+            // only one Save at a time can be executed and no other "read with a monitor (even in a fake transaction)" exists.
             // Since this is clearly an edge case, we use a lock with the same timeout and we don't care of a potential 2x wait time.
             if( !Monitor.TryEnter( _saveLock, millisecondsTimeout ) ) return false;
             using( var w = new BinarySerializer( stream, _serializers, leaveOpen, encoding ) )
@@ -925,7 +958,7 @@ namespace CK.Observable
                 {
                     using( isWrite ? monitor.OpenInfo( $"Transacted saving domain ({_actualObjectCount} objects)." ) : null )
                     {
-                        w.WriteSmallInt32( 2 ); // Version: 2 supports TimeManager.
+                        w.WriteSmallInt32( 2 ); // Version: 2 supports TimeManager & Internal objects.
                         w.Write( DomainName );
                         w.Write( _transactionSerialNumber );
                         w.Write( _actualObjectCount );
@@ -941,8 +974,17 @@ namespace CK.Observable
                         {
                             w.WriteObject( _objects[i] );
                         }
+
                         w.WriteNonNegativeSmallInt32( _roots.Count );
                         foreach( var r in _roots ) w.WriteNonNegativeSmallInt32( r.OId );
+
+                        w.WriteNonNegativeSmallInt32( _internalObjectCount );
+                        var f = _firstInternalObject;
+                        while( f != null )
+                        {
+                            w.WriteObject( f );
+                            f = f.Next;
+                        }
                         _timeManager.Save( monitor, w );
                         return true;
                     }
@@ -977,6 +1019,7 @@ namespace CK.Observable
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
             if( stream == null ) throw new ArgumentNullException( nameof( stream ) );
             if( String.IsNullOrEmpty( expectedLoadedName ) ) throw new ArgumentNullException( nameof( expectedLoadedName ) );
+            if( _disposed ) throw new ObjectDisposedException( ToString() );
             bool isWrite = _lock.IsWriteLockHeld;
             if( !isWrite && !_lock.TryEnterWriteLock( millisecondsTimeout ) ) return false;
             Debug.Assert( !isWrite || _currentTran != null, "isWrite => _currentTran != null" );
@@ -1067,15 +1110,37 @@ namespace CK.Observable
                 {
                     _objects[i] = (ObservableObject)r.ReadObject();
                 }
-                r.ImplementationServices.ExecutePostDeserializationActions();
                 _roots.Clear();
                 count = r.ReadNonNegativeSmallInt32();
                 while( --count >= 0 )
                 {
                     _roots.Add( _objects[r.ReadNonNegativeSmallInt32()] as ObservableRootObject );
                 }
+
+                // Clears any time event objects.
                 _timeManager.Clear( monitor );
-                if( version > 1 ) _timeManager.Load( monitor, r );
+
+                // Clears any internal objects.
+                var internalObj = _firstInternalObject;
+                while( internalObj != null )
+                {
+                    internalObj.OnDisposed( disposedArgs, true );
+                    internalObj = internalObj.Next;
+                }
+                _firstInternalObject = _lastInternalObject = null;
+
+                if( version > 1 )
+                {
+                    _timeManager.Load( monitor, r );
+
+                    count = r.ReadNonNegativeSmallInt32();
+                    while( --count >= 0 )
+                    {
+                        r.ReadObject();
+                    }
+                }
+
+                r.ImplementationServices.ExecutePostDeserializationActions();
                 OnLoaded();
                 var next = _timeManager.ApplyChanges();
                 if( next != Util.UtcMinValue ) _timeManager.SetNextDueTimeUtc( monitor, next );
@@ -1110,10 +1175,29 @@ namespace CK.Observable
 
         internal bool IsDeserializing => _deserializing;
 
+        internal void Register( InternalObject o )
+        {
+            Debug.Assert( o != null && o.Domain == this && o.Prev == null && o.Next == null );
+            CheckWriteLock( o );
+            if( (o.Next = _firstInternalObject) == null ) _lastInternalObject = o;
+            _firstInternalObject = o;
+            ++_internalObjectCount;
+        }
+
+        internal void Unregister( InternalObject o )
+        {
+            Debug.Assert( o.Domain == this );
+            if( _firstInternalObject == o ) _firstInternalObject = o.Next;
+            else o.Prev.Next = o.Next;
+            if( _lastInternalObject == o ) _lastInternalObject = o.Prev;
+            else o.Next.Prev = o.Prev;
+            --_internalObjectCount;
+        }
+
         internal int Register( ObservableObject o )
         {
-            CheckWriteLock( o ).CheckDisposed();
             Debug.Assert( o != null && o.Domain == this );
+            CheckWriteLock( o );
             int idx;
             if( _freeList.Count > 0 )
             {
@@ -1182,16 +1266,20 @@ namespace CK.Observable
         /// </summary>
         public void Dispose()
         {
-            if( _transactionSerialNumber >= 0 )
+            if( !_disposed )
             {
-                _transactionSerialNumber = -1;
-                _timeManager.CurrentTimer?.Dispose();
-                _lock.Dispose();
-                _transactionSerialNumber = -1;
+                _lock.EnterWriteLock();
+                if( !_disposed )
+                {
+                    _disposed = true;
+                    _timeManager.CurrentTimer?.Dispose();
+                    _lock.ExitWriteLock();
+                    _lock.Dispose();
+                }
             }
         }
 
-        internal void SendCommand( ObservableObject o, object command )
+        internal void SendCommand( IDisposableObject o, object command )
         {
             CheckWriteLock( o ).CheckDisposed();
             _changeTracker.OnSendCommand( new ObservableCommand( o, command ) );
@@ -1285,14 +1373,14 @@ namespace CK.Observable
         /// <param name="monitor">Monitor to use. Cannot be null.</param>
         /// <param name="domain">The domain to check. Must not be null.</param>
         /// <param name="milliSecondsTimeout">Optional timeout to wait for read or write lock.</param>
-        public static void IdempotenceSerializationCheck( IActivityMonitor monitor, ObservableDomain domain, int milliSecondsTimeout = 0 )
+        public static void IdempotenceSerializationCheck( IActivityMonitor monitor, ObservableDomain domain, int milliSecondsTimeout = -1 )
         {
             using( var s = new MemoryStream() )
             {
-                if( !domain.Save( monitor, s, true, millisecondsTimeout: milliSecondsTimeout ) ) throw new Exception( "Second Save failed: Unable to acquire lock." );
+                if( !domain.Save( monitor, s, true, millisecondsTimeout: milliSecondsTimeout ) ) throw new Exception( "First Save failed: Unable to acquire lock." );
                 var originalBytes = s.ToArray();
                 s.Position = 0;
-                if( !domain.Load( monitor, s, true, millisecondsTimeout: milliSecondsTimeout ) ) throw new Exception( "Initial Load failed: Unable to acquire lock." );
+                if( !domain.Load( monitor, s, true, millisecondsTimeout: milliSecondsTimeout ) ) throw new Exception( "Reload failed: Unable to acquire lock." );
                 s.Position = 0;
                 if( !domain.Save( monitor, s, true, millisecondsTimeout: milliSecondsTimeout ) ) throw new Exception( "Second Save failed: Unable to acquire lock." );
                 var rewriteBytes = s.ToArray();
