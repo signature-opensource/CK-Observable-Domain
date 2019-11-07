@@ -8,26 +8,48 @@ namespace CK.Observable
     public class ObservableDictionary<TKey, TValue> : ObservableObject, IDictionary<TKey, TValue>, IReadOnlyDictionary<TKey, TValue>
     {
         readonly Dictionary<TKey, TValue> _map;
+        ObservableEventHandler<CollectionMapSetEvent> _itemSet;
+        ObservableEventHandler<CollectionMapSetEvent> _itemAdded;
+        ObservableEventHandler<CollectionClearEvent> _collectionCleared;
+        ObservableEventHandler<CollectionRemoveKeyEvent> _itemRemoved;
 
         /// <summary>
         /// Raised when an existing item has been updated by <see cref="this[TKey]"/> to a different value.
         /// </summary>
-        public event EventHandler<CollectionMapSetEvent> ItemSet;
+        public event SafeEventHandler<CollectionMapSetEvent> ItemSet
+        {
+            add => _itemSet.Add( value, nameof( ItemSet ) );
+            remove => _itemSet.Remove( value );
+        }
 
         /// <summary>
         /// Raised when a new item has been added by <see cref="this[TKey]"/> or <see cref="Add(TKey, TValue)"/>.
         /// </summary>
-        public event EventHandler<CollectionMapSetEvent> ItemAdded;
+        public event SafeEventHandler<CollectionMapSetEvent> ItemAdded
+        {
+            add => _itemAdded.Add( value, nameof( ItemAdded ) );
+            remove => _itemAdded.Remove( value );
+        }
+
 
         /// <summary>
         /// Raised by <see cref="Clear"/>.
         /// </summary>
-        public event EventHandler<CollectionClearEvent> CollectionCleared;
+        public event SafeEventHandler<CollectionClearEvent> CollectionCleared
+        {
+            add => _collectionCleared.Add( value, nameof( CollectionCleared ) );
+            remove => _collectionCleared.Remove( value );
+        }
 
         /// <summary>
         /// Raised by <see cref="Remove(TKey)"/>.
         /// </summary>
-        public event EventHandler<CollectionRemoveKeyEvent> ItemRemoved;
+        public event SafeEventHandler<CollectionRemoveKeyEvent> ItemRemoved
+        {
+            add => _itemRemoved.Add( value, nameof( CollectionCleared ) );
+            remove => _itemRemoved.Remove( value );
+        }
+
 
         /// <summary>
         /// Initializes a new <see cref="ObservableDictionary{TKey, TValue}"/>.
@@ -41,11 +63,19 @@ namespace CK.Observable
         {
             var r = d.StartReading();
             _map = (Dictionary<TKey, TValue>)r.ReadObject();
+            _itemSet = new ObservableEventHandler<CollectionMapSetEvent>( r );
+            _itemAdded = new ObservableEventHandler<CollectionMapSetEvent>( r );
+            _collectionCleared = new ObservableEventHandler<CollectionClearEvent>( r );
+            _itemRemoved = new ObservableEventHandler<CollectionRemoveKeyEvent>( r );
         }
 
         void Write( BinarySerializer s )
         {
             s.WriteObject( _map );
+            _itemSet.Write( s );
+            _itemAdded.Write( s );
+            _collectionCleared.Write( s );
+            _itemRemoved.Write( s );
         }
 
         internal override ObjectExportedKind ExportedKind => ObjectExportedKind.Map;
@@ -61,7 +91,7 @@ namespace CK.Observable
                     {
                         _map[key] = value;
                         CollectionMapSetEvent e = Domain.OnCollectionMapSet( this, key, value );
-                        if( e != null && ItemSet != null ) ItemSet( this, e );
+                        if( e != null && _itemSet.HasHandlers ) _itemSet.Raise( Monitor, this, e, nameof(ItemSet) );
                     }
                 }
                 else Add( key, value );
@@ -88,7 +118,7 @@ namespace CK.Observable
         {
             _map.Add( key, value );
             CollectionMapSetEvent e = Domain.OnCollectionMapSet( this, key, value );
-            if( e != null && ItemAdded != null ) ItemAdded( this, e );
+            if( e != null && _itemAdded.HasHandlers ) _itemAdded.Raise( Monitor, this, e, nameof( ItemAdded ) );
         }
 
         void ICollection<KeyValuePair<TKey, TValue>>.Add( KeyValuePair<TKey, TValue> item ) => Add( item.Key, item.Value );
@@ -99,7 +129,7 @@ namespace CK.Observable
             {
                 _map.Clear();
                 CollectionClearEvent e = Domain.OnCollectionClear( this );
-                if( e != null && CollectionCleared != null ) CollectionCleared( this, e );
+                if( e != null && _collectionCleared.HasHandlers ) _collectionCleared.Raise( Monitor, this, e, nameof( CollectionCleared ) );
             }
         }
 
@@ -108,7 +138,7 @@ namespace CK.Observable
             if( _map.Remove( key ) )
             {
                 CollectionRemoveKeyEvent e = Domain.OnCollectionRemoveKey( this, key );
-                if( e != null && ItemRemoved != null ) ItemRemoved( this, e );
+                if( e != null && _itemRemoved.HasHandlers ) _itemRemoved.Raise( Monitor, this, e, nameof( ItemRemoved ) );
                 return true;
             }
             return false;
@@ -120,7 +150,7 @@ namespace CK.Observable
             if( ((IDictionary<TKey, TValue>)_map).Remove( item ) )
             {
                 CollectionRemoveKeyEvent e = Domain.OnCollectionRemoveKey( this, item.Key );
-                if( e != null && ItemRemoved != null ) ItemRemoved( this, e );
+                if( e != null && _itemRemoved.HasHandlers ) _itemRemoved.Raise( Monitor, this, e, nameof( ItemRemoved ) );
                 return true;
             }
             return false;

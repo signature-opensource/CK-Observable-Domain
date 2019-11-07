@@ -4,17 +4,20 @@ using System.Diagnostics;
 
 namespace CK.Observable
 {
-    class ArraySerializer<T> : ArraySerializer, ITypeSerializationDriver<T[]>
+    public class ArraySerializer<T> : ArraySerializer, ITypeSerializationDriver<T[]>
     {
         readonly ITypeSerializationDriver<T> _itemSerializer;
 
         public ArraySerializer( ITypeSerializationDriver<T> itemSerializer )
         {
             Debug.Assert( itemSerializer != null );
+            Debug.Assert( typeof(T[]).IsSealed );
             _itemSerializer = itemSerializer;
         }
 
         public Type Type => typeof(T[]);
+
+        bool ITypeSerializationDriver.IsFinalType => true;
 
         void ITypeSerializationDriver<T[]>.WriteData( BinarySerializer w, T[] o ) => DoWriteData( w, o );
 
@@ -22,7 +25,7 @@ namespace CK.Observable
 
         void DoWriteData( BinarySerializer w, T[] o ) => WriteObjects( w, o?.Length ?? 0, o, _itemSerializer );
 
-        public void WriteTypeInformation( BinarySerializer s ) => s.WriteSimpleType( Type, null );
+        public void WriteTypeInformation( BinarySerializer s ) => s.WriteSimpleType( Type );
 
         /// <summary>
         /// Writes any list content.
@@ -45,12 +48,11 @@ namespace CK.Observable
             w.WriteSmallInt32( count );
             if( count > 0 )
             {
-                var tI = itemSerializer.Type;
-                bool monoType = tI.IsSealed || tI.IsValueType;
+                if( itemSerializer == null ) itemSerializer = w.Drivers.FindDriver<T>();
+                bool monoType = itemSerializer.IsFinalType;
                 w.Write( monoType );
                 if( monoType )
                 {
-                    if( itemSerializer == null ) itemSerializer = w.Drivers.FindDriver<T>();
                     foreach( var i in items )
                     {
                         w.Write( i, itemSerializer );

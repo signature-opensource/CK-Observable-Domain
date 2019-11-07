@@ -11,10 +11,16 @@ namespace CK.Observable
     [SerializationVersion(0)]
     public class ObservableChannel<T> : ObservableObject
     {
+        ObservableEventHandler<ListInsertEvent> _itemSent;
+
         /// <summary>
         /// Raised by <see cref="Send(T)"/>. Note that <see cref="ListInsertEvent.Index"/> is always 0.
         /// </summary>
-        public event EventHandler<ListInsertEvent> ItemSent;
+        public event SafeEventHandler<ListInsertEvent> ItemSent
+        {
+            add => _itemSent.Add( value, nameof( ItemSent ) );
+            remove => _itemSent.Remove( value );
+        }
 
         /// <summary>
         /// Initializes a new <see cref="ObservableChannel{T}"/>.
@@ -29,7 +35,8 @@ namespace CK.Observable
         /// <param name="d">The deserialization context.</param>
         protected ObservableChannel( IBinaryDeserializerContext d ) : base( d )
         {
-            d.StartReading();
+            var r = d.StartReading();
+            _itemSent = new ObservableEventHandler<ListInsertEvent>( r );
         }
 
         /// <summary>
@@ -38,8 +45,8 @@ namespace CK.Observable
         /// <param name="s">The binary serializer to use.</param>
         void Write( BinarySerializer s )
         {
+            _itemSent.Write( s );
         }
-
 
         /// <summary>
         /// Define to export this channel as an empty list of items.
@@ -60,7 +67,7 @@ namespace CK.Observable
         public void Send( T item )
         {
             var e = Domain.OnListInsert( this, 0, item );
-            if( e != null && ItemSent != null ) ItemSent( this, e );
+            if( e != null && _itemSent.HasHandlers ) _itemSent.Raise( Monitor, this, e, nameof(ItemSent) );
         }
 
         /// <summary>

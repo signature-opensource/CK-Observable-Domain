@@ -9,7 +9,7 @@ namespace CK.Observable.Domain.Tests.Sample
     {
         public static ObservableDomain CreateSample( IObservableDomainClient tm = null )
         {
-            var d = new ObservableDomain( "TEST", tm, TestHelper.Monitor );
+            var d = new ObservableDomain(TestHelper.Monitor, "TEST", tm);
             d.Modify( TestHelper.Monitor, () =>
             {
                 var g1 = new Garage() { CompanyName = "Boite" };

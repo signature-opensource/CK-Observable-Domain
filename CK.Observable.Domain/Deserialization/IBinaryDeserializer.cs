@@ -21,6 +21,16 @@ namespace CK.Observable
         object ReadObject();
 
         /// <summary>
+        /// Reads a <see cref="Type"/> written by <see cref="BinarySerializer.Write(Type)"/>.
+        /// </summary>
+        /// <param name="throwIfMissing">
+        /// By default a <see cref="TypeLoadException"/> is thrown if the Type cannot be resolved.
+        /// False to simply return null.
+        /// </param>
+        /// <returns>The Type.</returns>
+        Type ReadType( bool throwIfMissing = true );
+
+        /// <summary>
         /// Reads an object previously written by <see cref="BinarySerializer.Write{T}(T,ITypeSerializationDriver{T})"/>.
         /// </summary>
         /// <param name="driver">The deserialization driver.</param>

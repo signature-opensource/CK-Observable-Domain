@@ -10,13 +10,23 @@ namespace CK.Observable
     public interface IObservableTransaction : IDisposable
     {
         /// <summary>
+        /// Gets the transaction start time.
+        /// </summary>
+        DateTime StartTime { get; }
+
+        /// <summary>
+        /// Gets the monitor associated to the transaction.
+        /// </summary>
+        IActivityMonitor Monitor { get; }
+
+        /// <summary>
         /// Commits all changes and retrieves the events and commands on success.
         /// If errors have been added, the <see cref="TransactionResult"/> contains
         /// the errors but no events nor commands.
         /// This method calls <see cref="IObservableDomainClient.OnTransactionFailure"/>
         /// or <see cref="IObservableDomainClient.OnTransactionCommit"/>, and may set
         /// <see cref="TransactionResult.ClientError"/> if an Exception is thrown
-        /// when calling them.
+        /// when calling them: this method NEVER throws.
         /// </summary>
         /// <returns>The transaction result.</returns>
         TransactionResult Commit();

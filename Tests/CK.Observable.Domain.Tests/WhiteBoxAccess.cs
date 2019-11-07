@@ -1,4 +1,6 @@
+using CK.Testing;
 using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
 
 namespace CK.Observable.Domain.Tests
@@ -13,9 +15,9 @@ namespace CK.Observable.Domain.Tests
             return (int)_oIdField.GetValue( o );
         }
 
-        public static Stack<int> GetFreeList( this ObservableDomain d )
+        public static List<int> GetFreeList( this ObservableDomain d )
         {
-            return (Stack<int>)_freeListField.GetValue( d );
+            return (List<int>)_freeListField.GetValue( d );
         }
 
     }

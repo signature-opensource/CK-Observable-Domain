@@ -14,6 +14,7 @@ namespace CK.Observable
         {
             _types = new ConcurrentDictionary<Type, ITypeSerializationDriver>();
             RegisterDriver( BasicTypeDrivers.DObject.Default.SerializationDriver );
+            RegisterDriver( BasicTypeDrivers.DType.Default.SerializationDriver );
             RegisterDriver( BasicTypeDrivers.DBool.Default.SerializationDriver );
             RegisterDriver( BasicTypeDrivers.DByte.Default.SerializationDriver );
             RegisterDriver( BasicTypeDrivers.DChar.Default.SerializationDriver );

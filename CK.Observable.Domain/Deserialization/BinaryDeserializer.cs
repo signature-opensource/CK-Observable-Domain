@@ -11,6 +11,7 @@ namespace CK.Observable
     public class BinaryDeserializer : CKBinaryReader, IBinaryDeserializer, IBinaryDeserializerImpl, ICtorBinaryDeserializer, IBinaryDeserializerContext
     {
         readonly IDeserializerResolver _drivers;
+        readonly TypeReadInfo _objectReadTypeInfo;
         readonly List<string> _typesIdx;
         readonly Dictionary<string, TypeReadInfo> _typeInfos;
         readonly List<object> _objects;
@@ -46,6 +47,7 @@ namespace CK.Observable
             _postDeserializationActions = new List<Action>();
             _ctorContextStack = new Stack<ConstructorContext>();
             _drivers = drivers ?? DeserializerRegistry.Default;
+            _objectReadTypeInfo = new TypeReadInfo( _drivers );
         }
 
         /// <summary>
@@ -147,6 +149,7 @@ namespace CK.Observable
                 case SerializationMarker.TimeSpan: return ReadTimeSpan();
                 case SerializationMarker.DateTimeOffset: return ReadDateTimeOffset();
                 case SerializationMarker.Reference: return ReadReference();
+                case SerializationMarker.Type: return ReadType();
             }
             Debug.Assert( b == SerializationMarker.EmptyObject
                           || b == SerializationMarker.ObjectBinaryFormatter
@@ -209,6 +212,7 @@ namespace CK.Observable
                         _objects.Add( o );
                         return (T)o;
                     }
+                case SerializationMarker.Type:
                 case SerializationMarker.Object:
                 case SerializationMarker.Struct:
                     {
@@ -226,11 +230,29 @@ namespace CK.Observable
             }
         }
 
+        /// <summary>
+        /// Reads a <see cref="Type"/> written by <see cref="BinarySerializer.Write(Type)"/>.
+        /// </summary>
+        /// <param name="throwIfMissing">
+        /// By default a <see cref="TypeLoadException"/> is thrown if the Type cannot be resolved.
+        /// False to simply return null.
+        /// </param>
+        /// <returns>The Type.</returns>
+        public Type ReadType( bool throwIfMissing = true )
+        {
+            var info = ReadTypeReadInfo( true );
+            if( info == null ) return null;
+            var t = info.LocalType;
+            if( t == null && throwIfMissing ) throw new TypeLoadException( $"Unable to locally resolve the Type: '{info.TypeName}'." );
+            return t;
+        }
 
         TypeReadInfo ReadTypeReadInfo( bool isTrackedObject )
         {
             TypeReadInfo leaf;
             string sT = DoReadOneTypeName( out bool newType );
+            if( sT == null ) return null;
+            if( sT.Length == 0 ) return _objectReadTypeInfo;
             if( newType )
             {
                 int version = ReadSmallInt32();

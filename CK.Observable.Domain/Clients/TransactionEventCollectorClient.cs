@@ -137,26 +137,26 @@ namespace CK.Observable
             }
         }
 
-        void IObservableDomainClient.OnDomainCreated( ObservableDomain d, DateTime timeUtc ) => _next?.OnDomainCreated( d, timeUtc );
+        void IObservableDomainClient.OnDomainCreated( IActivityMonitor monitor, ObservableDomain d, DateTime timeUtc ) => _next?.OnDomainCreated( monitor, d, timeUtc );
 
         void IObservableDomainClient.OnTransactionCommit( in SuccessfulTransactionContext c )
         {
             _buffer.GetStringBuilder().Clear();
             _exporter.Reset();
             foreach( var e in c.Events ) e.Export( _exporter );
-            _events.Add( new TransactionEvent( c.ObservableDomain.TransactionSerialNumber, c.TimeUtc, c.Events, _buffer.ToString() ) );
+            _events.Add( new TransactionEvent( c.Domain.TransactionSerialNumber, c.CommitTimeUtc, c.Events, _buffer.ToString() ) );
             ApplyKeepDuration();
             _next?.OnTransactionCommit( c );
         }
 
-        void IObservableDomainClient.OnTransactionFailure( ObservableDomain d, IReadOnlyList<CKExceptionData> errors )
+        void IObservableDomainClient.OnTransactionFailure( IActivityMonitor monitor, ObservableDomain d, IReadOnlyList<CKExceptionData> errors )
         {
-            _next?.OnTransactionFailure( d, errors );
+            _next?.OnTransactionFailure( monitor, d, errors );
         }
 
-        void IObservableDomainClient.OnTransactionStart( ObservableDomain d, DateTime timeUtc )
+        void IObservableDomainClient.OnTransactionStart( IActivityMonitor monitor, ObservableDomain d, DateTime timeUtc )
         {
-            _next?.OnTransactionStart( d, timeUtc );
+            _next?.OnTransactionStart( monitor, d, timeUtc );
         }
     }
 }

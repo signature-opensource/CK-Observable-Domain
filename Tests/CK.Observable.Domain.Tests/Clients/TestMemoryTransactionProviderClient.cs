@@ -1,3 +1,4 @@
+using CK.Core;
 using System;
 using System.IO;
 
@@ -12,13 +13,13 @@ namespace CK.Observable.Domain.Tests.Clients
             _domainCreatedStream = domainCreatedStream;
         }
 
-        public override void OnDomainCreated( ObservableDomain d, DateTime timeUtc )
+        public override void OnDomainCreated( IActivityMonitor monitor, ObservableDomain d, DateTime timeUtc )
         {
             if( _domainCreatedStream != null )
             {
-                d.Load( _domainCreatedStream );
+                d.Load( monitor, _domainCreatedStream );
             }
-            base.OnDomainCreated( d, timeUtc );
+            base.OnDomainCreated( monitor, d, timeUtc );
         }
 
         public MemoryStream CreateStreamFromSnapshot()

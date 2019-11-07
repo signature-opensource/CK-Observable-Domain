@@ -12,18 +12,29 @@ namespace CK.Observable
     /// <summary>
     /// Simple reminder that raises its <see cref="ObservableTimedEventBase.Elapsed"/> event once at <see cref="DueTimeUtc"/> time.
     /// </summary>
-    public class ObservableReminder : ObservableTimedEventBase
+    [SerializationVersion(0)]
+    public sealed class ObservableReminder : ObservableTimedEventBase
     {
         /// <summary>
-        /// Initializes a new unnamed <see cref="ObservableReminder"/> bound to the current <see cref="ObservableDomain"/> that,
-        /// by default, will fire only once in 1 second.
+        /// Initializes a new unnamed <see cref="ObservableReminder"/> bound to the current <see cref="ObservableDomain"/>.
         /// </summary>
-        /// <param name="durTimeUtc">
+        /// <param name="dueTimeUtc">
         /// The <see cref="DueTimeUtc"/> time. If this time is in the past (but not <see cref="Util.UtcMinValue"/>), the event will
         /// be raised as soon as possible.
         /// </param>
-        public ObservableReminder( DateTime durTimeUtc )
-            : base( durTimeUtc )
+        public ObservableReminder( DateTime dueTimeUtc )
+        {
+            if( dueTimeUtc.Kind != DateTimeKind.Utc ) throw new ArgumentException( nameof( dueTimeUtc ), "Must be a Utc DateTime." );
+            ExpectedDueTimeUtc = dueTimeUtc;
+        }
+
+        ObservableReminder( IBinaryDeserializerContext c )
+            : base( c )
+        {
+            var r = c.StartReading();
+        }
+
+        void Write( BinarySerializer w )
         {
         }
 
@@ -42,14 +53,14 @@ namespace CK.Observable
                 if( ExpectedDueTimeUtc != value )
                 {
                     if( value.Kind != DateTimeKind.Utc ) throw new ArgumentException( nameof( DueTimeUtc ), "Must be a Utc DateTime." );
-                    CheckDisposed();
+                    this.CheckDisposed();
                     ExpectedDueTimeUtc = value;
-                    TimerHost.OnChanged( this );
+                    TimeManager.OnChanged( this );
                 }
             }
         }
 
-        internal override void OnAfterRaiseUnchanged()
+        internal override void OnAfterRaiseUnchanged( DateTime current, IActivityMonitor m )
         {
             Debug.Assert( IsActive );
             ExpectedDueTimeUtc = Util.UtcMinValue;

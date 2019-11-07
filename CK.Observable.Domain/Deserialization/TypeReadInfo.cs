@@ -8,7 +8,7 @@ namespace CK.Observable
     public class TypeReadInfo
     {
         /// <summary>
-        /// Gets the serialized type name. It may be an assembly qualified name or an alias.
+        /// Gets the serialized type name. It's the assembly qualified name.
         /// </summary>
         public string TypeName { get; }
 
@@ -56,6 +56,7 @@ namespace CK.Observable
         /// <summary>
         /// Gets the deserialization driver if it can be resolved, null otherwise.
         /// </summary>
+        /// <param name="r">The deserializer.</param>
         public IDeserializationDriver GetDeserializationDriver( IDeserializerResolver r )
         {
             if( !_driverLookupDone )
@@ -78,6 +79,22 @@ namespace CK.Observable
             TypeName = t;
             Version = version;
             IsTrackedObject = isTrackedObject;
+        }
+
+        /// <summary>
+        /// Constructor for Object type, bound to <see cref="BasicTypeDrivers.DObject"/>.
+        /// </summary>
+        /// <param name="r">The resolver.</param>
+        internal TypeReadInfo( IDeserializerResolver r )
+        {
+            _localType = typeof( object );
+            _typePath = new[] { this };
+            TypeName = String.Empty;
+            Version = 0;
+            IsTrackedObject = true;
+            _localTypeLookupDone = true;
+            _driverLookupDone = true;
+            _driver = r.FindDriver( String.Empty );
         }
 
         internal void SetBaseType( TypeReadInfo b )

@@ -50,6 +50,8 @@ namespace CK.Observable
             /// </summary>
             public Type Type => _type;
 
+            bool ITypeSerializationDriver.IsFinalType => _type.IsSealed || _type.IsValueType;
+
             public ITypeSerializationDriver SerializationDriver => _write != null ? this : null;
 
             public IDeserializationDriver DeserializationDriver => _ctor != null ? this : null;
@@ -95,7 +97,7 @@ namespace CK.Observable
             void ITypeSerializationDriver.WriteTypeInformation( BinarySerializer s )
             {
                 var tInfo = this;
-                while( s.DoWriteSimpleType( tInfo?.Type, null ) )
+                while( s.DoWriteSimpleType( tInfo?.Type ) )
                 {
                     Debug.Assert( tInfo._version >= 0 );
                     s.WriteSmallInt32( tInfo._version );
@@ -260,7 +262,7 @@ namespace CK.Observable
             {
                 if( v == null ) throw new InvalidOperationException( $"Missing [{nameof( SerializationVersionAttribute )}] attribute on type '{t.Name}'." );
                 Debug.Assert( v.Value >= 0 );
-                if( write == null ) throw new InvalidOperationException( $"Missing 'void {t.Name}.Write({nameof( BinarySerializer )} )' method." );
+                if( write == null ) throw new InvalidOperationException( $"Missing 'private void {t.Name}.Write({nameof( BinarySerializer )} )' method." );
                 version = v.Value;
             }
             else version = -1;

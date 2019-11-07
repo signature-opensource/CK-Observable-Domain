@@ -17,7 +17,9 @@ namespace CK.Observable
 
         public Type Type => typeof( T );
 
-        void ITypeSerializationDriver.WriteTypeInformation( BinarySerializer s ) => s.WriteSimpleType( Type, null );
+        bool ITypeSerializationDriver.IsFinalType => true;
+
+        void ITypeSerializationDriver.WriteTypeInformation( BinarySerializer s ) => s.WriteSimpleType( Type );
 
         void ITypeSerializationDriver.WriteData( BinarySerializer w, object o ) => _underlyingType.WriteData( w, (TU)o );
 

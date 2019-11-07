@@ -16,7 +16,7 @@ namespace CK.Observable.Domain.Tests.Clients
         {
             var client = CreateClient( -1 );
             FileInfo fi = new FileInfo( client.FilePath );
-            var d = new ObservableDomain<TestObservableRootObject>( "TEST", client, TestHelper.Monitor );
+            var d = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, "TEST", client);
 
             d.Modify( TestHelper.Monitor, () =>
             {
@@ -38,7 +38,7 @@ namespace CK.Observable.Domain.Tests.Clients
         {
             var client = CreateClient( 0 );
             FileInfo fi = new FileInfo( client.FilePath );
-            var d = new ObservableDomain<TestObservableRootObject>( "TEST", client, TestHelper.Monitor );
+            var d = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, "TEST", client);
 
             d.Modify( TestHelper.Monitor, () =>
             {
@@ -57,7 +57,7 @@ namespace CK.Observable.Domain.Tests.Clients
             int dueTimeMs = 300;
             var client = CreateClient( dueTimeMs );
             FileInfo fi = new FileInfo( client.FilePath );
-            var d = new ObservableDomain<TestObservableRootObject>( "TEST", client, TestHelper.Monitor );
+            var d = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, "TEST", client);
 
             // Call once - doesn't trigger the DoWrite yet
             d.Modify( TestHelper.Monitor, () =>
@@ -88,7 +88,7 @@ namespace CK.Observable.Domain.Tests.Clients
 
             var client1 = CreateClient( dueTimeMs );
             FileInfo fi = new FileInfo( client1.FilePath );
-            var d1 = new ObservableDomain<TestObservableRootObject>( "TEST", client1, TestHelper.Monitor );
+            var d1 = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, "TEST", client1);
 
             // Call once - doesn't trigger the DoWrite yet
             d1.Modify( TestHelper.Monitor, () =>
@@ -122,7 +122,7 @@ namespace CK.Observable.Domain.Tests.Clients
             // Load file with another client and domain to ensure it has the new values
 
             var client2 = CreateClient( -1, client1.FilePath );
-            var d2 = new ObservableDomain<TestObservableRootObject>( "TEST", client2, TestHelper.Monitor );
+            var d2 = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, "TEST", client2);
             using( d2.AcquireReadLock() )
             {
                 d2.Root.Prop1.Should().Be( "This should" );
@@ -141,7 +141,7 @@ namespace CK.Observable.Domain.Tests.Clients
 
             Action act = () =>
             {
-                var d = new ObservableDomain<TestObservableRootObject>( "TEST", client, TestHelper.Monitor );
+                var d = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, "TEST", client);
             };
 
             // EndOfStreamException is an IOException.
@@ -161,7 +161,7 @@ namespace CK.Observable.Domain.Tests.Clients
             var client = CreateClient( -1, path );
 
 
-            var d = new ObservableDomain<TestObservableRootObject>( "TEST", client, TestHelper.Monitor );
+            var d = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, "TEST", client);
             d.Modify( TestHelper.Monitor, () =>
             {
                 d.Root.Prop1 = "Hello";
@@ -182,7 +182,7 @@ namespace CK.Observable.Domain.Tests.Clients
                 "ObservableDomain.bin"
             );
             var client = CreateClient( 0, path );
-            var d = new ObservableDomain<TestObservableRootObject>( "TEST", client, TestHelper.Monitor );
+            var d = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, "TEST", client);
 
             var transactionResult = d.Modify( TestHelper.Monitor, () =>
             {
@@ -203,7 +203,7 @@ namespace CK.Observable.Domain.Tests.Clients
             {
                 var client = CreateClient( 0 );
                 path = client.FilePath;
-                var d1 = new ObservableDomain<TestObservableRootObject>( "TEST", client, TestHelper.Monitor );
+                var d1 = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, "TEST", client);
                 d1.Modify( TestHelper.Monitor, () =>
                 {
                     d1.Root.Prop1 = "Hello";
@@ -216,7 +216,7 @@ namespace CK.Observable.Domain.Tests.Clients
             {
                 var client = CreateClient( 0, path );
 
-                var d2 = new ObservableDomain<TestObservableRootObject>( "TEST", client, TestHelper.Monitor );
+                var d2 = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, "TEST", client);
 
                 using( d2.AcquireReadLock() )
                 {

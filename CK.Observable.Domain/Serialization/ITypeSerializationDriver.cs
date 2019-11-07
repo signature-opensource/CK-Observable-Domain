@@ -13,6 +13,11 @@ namespace CK.Observable
         Type Type { get; }
 
         /// <summary>
+        /// Gets whether this type cannot have any subordinate types.
+        /// </summary>
+        bool IsFinalType { get; }
+
+        /// <summary>
         /// Writes the type descriptor in the serializer.
         /// </summary>
         /// <param name="s">The serializer.</param>

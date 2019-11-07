@@ -1,5 +1,6 @@
 using FluentAssertions;
 using NUnit.Framework;
+using System.Linq;
 using static CK.Testing.MonitorTestHelper;
 
 namespace CK.Observable.Domain.Tests
@@ -7,61 +8,79 @@ namespace CK.Observable.Domain.Tests
     [TestFixture]
     public class ObservableSerializationTests
     {
+
+        [Test]
+        public void simple_idempotence_checks()
+        {
+            using( var d = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
+            {
+                d.Modify( TestHelper.Monitor, () => new Sample.Car( "Zoé" ) );
+                d.AllObjects.Should().HaveCount( 1 );
+                ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
+
+                d.Modify( TestHelper.Monitor, () => d.AllObjects.Single().Dispose() );
+                ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
+
+                d.Modify( TestHelper.Monitor, () => new Sample.Car( "Zoé is back!" ) );
+                ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
+            }
+        }
+
+
         [Test]
         public void immutable_string_serialization_test()
         {
-            var od = new ObservableDomain<CustomRoot>( "TEST" );
-
-            od.Modify( TestHelper.Monitor, () =>
+            using( var od = new ObservableDomain<CustomRoot>( TestHelper.Monitor, "TEST" ) )
             {
-                od.Root.ImmutablesById = new ObservableDictionary<string, CustomImmutable>();
+                od.Modify( TestHelper.Monitor, () =>
+                {
+                    od.Root.ImmutablesById = new ObservableDictionary<string, CustomImmutable>();
 
-                var myImmutable = new CustomImmutable( "ABC000", "My object" );
-                od.Root.ImmutablesById.Add( myImmutable.Id, myImmutable );
-
-
-                od.Root.SomeList = new ObservableList<string>();
-            } );
-            ObservableRootTests.SaveAndLoad( od );
+                    var myImmutable = new CustomImmutable( "ABC000", "My object" );
+                    od.Root.ImmutablesById.Add( myImmutable.Id, myImmutable );
+                    od.Root.SomeList = new ObservableList<string>();
+                } );
+                ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, od );
+            }
         }
 
         [Test]
         public void created_then_disposed_event_test()
         {
-            var od = new ObservableDomain<CustomRoot>( "TEST" );
-
-            // Prepare initial state
-            od.Modify( TestHelper.Monitor, () =>
+            using( var od = new ObservableDomain<CustomRoot>( TestHelper.Monitor, "TEST" ) )
             {
-                od.Root.CustomObservableList = new ObservableList<CustomObservable>();
-            } );
+                // Prepare initial state
+                od.Modify( TestHelper.Monitor, () =>
+                {
+                    od.Root.CustomObservableList = new ObservableList<CustomObservable>();
+                } );
 
-            var initialState = od.ExportToString();
+                var initialState = od.ExportToString();
 
-            // Add some events for good measure
-            var events = od.Modify( TestHelper.Monitor, () =>
-            {
-                // Create Observable and Immutables
-                var myImmutable = new CustomImmutable( "ABC000", "My object" );
-                var myCustomObservable = new CustomObservable();
+                // Add some events for good measure
+                var events = od.Modify( TestHelper.Monitor, () =>
+                {
+                    // Create Observable and Immutables
+                    var myImmutable = new CustomImmutable( "ABC000", "My object" );
+                    var myCustomObservable = new CustomObservable();
 
-                // Set Immutable in Dictionary of Observable
-                myCustomObservable.ImmutablesById.Add( myImmutable.Id, myImmutable );
+                    // Set Immutable in Dictionary of Observable
+                    myCustomObservable.ImmutablesById.Add( myImmutable.Id, myImmutable );
 
-                // Add observable to List of Root
-                od.Root.CustomObservableList.Add( myCustomObservable );
+                    // Add observable to List of Root
+                    od.Root.CustomObservableList.Add( myCustomObservable );
 
-                // Destroy Dictionary of Observable
-                myCustomObservable.ImmutablesById.Dispose();
+                    // Destroy Dictionary of Observable
+                    myCustomObservable.ImmutablesById.Dispose();
 
-                // Destroy Observable
-                myCustomObservable.Dispose();
+                    // Destroy Observable
+                    myCustomObservable.Dispose();
 
-                // Remove Observable from List of Root
-                bool removed = od.Root.CustomObservableList.Remove( myCustomObservable );
-                removed.Should().BeTrue();
-            } );
-
+                    // Remove Observable from List of Root
+                    bool removed = od.Root.CustomObservableList.Remove( myCustomObservable );
+                    removed.Should().BeTrue();
+                } );
+            }
         }
 
         [SerializationVersion( 0 )]

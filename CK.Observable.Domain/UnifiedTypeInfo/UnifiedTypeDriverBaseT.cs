@@ -6,11 +6,11 @@ namespace CK.Observable
 {
     public abstract class UnifiedTypeDriverBase<T> : IUnifiedTypeDriver<T>, ITypeSerializationDriver<T>, IDeserializationDriver<T>, IObjectExportTypeDriver<T>
     {
-        readonly string _typeAlias;
+        readonly bool _isFinalType;
 
-        protected UnifiedTypeDriverBase( string typeAlias = null )
+        protected UnifiedTypeDriverBase( bool isFinalType = true )
         {
-            _typeAlias = null;
+            _isFinalType = isFinalType;
         }
 
         public ITypeSerializationDriver<T> SerializationDriver => this;
@@ -31,7 +31,9 @@ namespace CK.Observable
 
         IReadOnlyList<PropertyInfo> IObjectExportTypeDriver.ExportableProperties => Array.Empty<PropertyInfo>();
 
-        void ITypeSerializationDriver.WriteTypeInformation( BinarySerializer s ) => s.WriteSimpleType( typeof( T ), _typeAlias );
+        bool ITypeSerializationDriver.IsFinalType => _isFinalType;
+
+        void ITypeSerializationDriver.WriteTypeInformation( BinarySerializer s ) => s.WriteSimpleType( typeof( T ) );
 
         void ITypeSerializationDriver.WriteData( BinarySerializer w, object o ) => WriteData( w, (T)o );
 

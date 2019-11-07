@@ -3,6 +3,8 @@ using FluentAssertions;
 using NUnit.Framework;
 using System;
 using System.IO;
+using CK.Core;
+using static CK.Testing.MonitorTestHelper;
 
 namespace CK.Serialization.Tests
 {
@@ -14,7 +16,7 @@ namespace CK.Serialization.Tests
         {
             var positions = new Observable.Domain.Tests.Sample.Position[] { new Observable.Domain.Tests.Sample.Position( 12.2, 78.8 ), new Observable.Domain.Tests.Sample.Position( 44.7, 1214.777 ) };
 
-            object back = SaveAndLoad( positions );
+            object back = TestHelper.SaveAndLoad( positions );
             back.Should().BeAssignableTo<Observable.Domain.Tests.Sample.Position[]>();
             var b = (Observable.Domain.Tests.Sample.Position[])back;
             b.Should().BeEquivalentTo( positions, options => options.WithStrictOrdering() );
@@ -25,24 +27,28 @@ namespace CK.Serialization.Tests
         {
             object[] objects = new object[] { 12, "Pouf", 10.90, new DateTime( 2018, 9, 17 ) };
 
-            object back = SaveAndLoad( objects );
+            object back = TestHelper.SaveAndLoad( objects );
             back.Should().BeAssignableTo<object[]>();
             object[] b = (object[])back;
             b.Should().BeEquivalentTo( objects, options => options.WithStrictOrdering() );
         }
 
-        internal static object SaveAndLoad( object o, ISerializerResolver serializers = null, IDeserializerResolver deserializers = null )
+        [Test]
+        public void type_array_serialization()
         {
-            using( var s = new MemoryStream() )
-            using( var w = new BinarySerializer( s, serializers, true ) )
+            Type[] types = new Type[] { GetType(), typeof(int), typeof(string), typeof(IActivityLogGroup), typeof(Type) };
+
             {
-                w.WriteObject( o );
-                s.Position = 0;
-                using( var r = new BinaryDeserializer( s, null, deserializers ) )
-                {
-                    return r.ReadObject();
-                }
+                Type[] back = (Type[])TestHelper.SaveAndLoad( types );
+                back.Should().BeEquivalentTo( types, options => options.WithStrictOrdering() );
             }
+            {
+                Type[] back = TestHelper.SaveAndLoad( types,
+                                                      (t,w) => ArraySerializer<Type>.WriteObjects( w, types.Length, types, BasicTypeDrivers.DType.Default ),
+                                                      r => ArrayDeserializer<Type>.ReadArray( r, BasicTypeDrivers.DType.Default ) );
+                back.Should().BeEquivalentTo( types, options => options.WithStrictOrdering() );
+            }
+
         }
 
     }

@@ -15,6 +15,7 @@ namespace CK.Observable
         Guid,
         TimeSpan,
         DateTimeOffset,
+        Type,
 
         EmptyObject = 251,
         StructBinaryFormatter = 252,
