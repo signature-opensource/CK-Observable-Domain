@@ -109,7 +109,7 @@ namespace CK.Observable
                     {
                         var e = Domain.OnListSetAt( this, index, value );
                         _list[index] = value;
-                        if( e != null && _itemSet.HasHandlers ) _itemSet.Raise( Monitor, this, e, nameof( ItemSet ) );
+                        if( e != null && _itemSet.HasHandlers ) _itemSet.Raise( this, e );
                     }
                 }
             }
@@ -132,7 +132,7 @@ namespace CK.Observable
         {
             var e = Domain.OnListInsert( this, _list.Count, item );
             _list.Add( item );
-            if( e != null && _itemInserted.HasHandlers ) _itemInserted.Raise( Monitor, this, e, nameof( ItemInserted ) );
+            if( e != null && _itemInserted.HasHandlers ) _itemInserted.Raise( this, e );
         }
 
         /// <summary>
@@ -153,7 +153,7 @@ namespace CK.Observable
             {
                 var e = Domain.OnCollectionClear( this );
                 _list.Clear();
-                if( e != null && _collectionCleared.HasHandlers ) _collectionCleared.Raise( Monitor, this, e, nameof( CollectionCleared ) );
+                if( e != null && _collectionCleared.HasHandlers ) _collectionCleared.Raise( this, e );
             }
         }
 
@@ -166,7 +166,7 @@ namespace CK.Observable
         {
             var e = Domain.OnListInsert( this, index, item );
             _list.Insert( index, item );
-            if( e != null && _itemInserted.HasHandlers ) _itemInserted.Raise( Monitor, this, e, nameof( ItemInserted ) );
+            if( e != null && _itemInserted.HasHandlers ) _itemInserted.Raise( this, e );
         }
 
         /// <summary>
@@ -202,7 +202,7 @@ namespace CK.Observable
         {
             var e = Domain.OnListRemoveAt( this, index );
             _list.RemoveAt( index );
-            if( e != null && _itemRemovedAt.HasHandlers ) _itemRemovedAt.Raise( Monitor, this, e, nameof( ItemRemovedAt ) );
+            if( e != null && _itemRemovedAt.HasHandlers ) _itemRemovedAt.Raise( this, e );
         }
 
         /// <summary>

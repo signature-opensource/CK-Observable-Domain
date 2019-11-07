@@ -157,6 +157,17 @@ namespace CK.Observable
         }
 
         /// <summary>
+        /// Helper that raises a standard event from this object with a reusable <see cref="ObservableDomainEventArgs"/> instance.
+        /// </summary>
+        protected void RaiseStandardDomainEvent( ObservableEventHandler<ObservableDomainEventArgs> h ) => h.Raise( this, Domain.DefaultEventArgs );
+
+        /// <summary>
+        /// Helper that raises a standard event from this object with a reusable <see cref="EventMonitoredArgs"/> instance (that is the
+        /// shared <see cref="ObservableDomainEventArgs"/> instance).
+        /// </summary>
+        protected void RaiseStandardDomainEvent( ObservableEventHandler<EventMonitoredArgs> h ) => h.Raise( this, Domain.DefaultEventArgs );
+
+        /// <summary>
         /// Called before this object is disposed.
         /// Implementation at this level raises the <see cref="Disposed"/> event: it must be called
         /// by overrides.
@@ -178,7 +189,7 @@ namespace CK.Observable
             }
             else
             {
-                _disposed.Raise( reusableArgs.Monitor, this, reusableArgs, nameof(Disposed) );
+                RaiseStandardDomainEvent( _disposed );
             }
         }
 
@@ -216,22 +227,22 @@ namespace CK.Observable
                         if( fNamedEv.FieldType == typeof( ObservableEventHandler ) )
                         {
                             var handler = (ObservableEventHandler)fNamedEv.GetValue( this );
-                            if( handler.HasHandlers ) handler.Raise( Monitor, this, ev, ev.PropertyName );
+                            if( handler.HasHandlers ) handler.Raise( this, ev );
                         }
                         else if( fNamedEv.FieldType == typeof( ObservableEventHandler<ObservableDomainEventArgs> ) )
                         {
                             var handler = (ObservableEventHandler<ObservableDomainEventArgs>)fNamedEv.GetValue( this );
-                            if( handler.HasHandlers ) handler.Raise( Monitor, this, Domain.DefaultEventArgs, ev.PropertyName );
+                            if( handler.HasHandlers ) RaiseStandardDomainEvent( handler );
                         }
                         else if( fNamedEv.FieldType == typeof( ObservableEventHandler<EventMonitoredArgs> ) )
                         {
                             var handler = (ObservableEventHandler<EventMonitoredArgs>)fNamedEv.GetValue( this );
-                            if( handler.HasHandlers ) handler.Raise( Monitor, this, Domain.DefaultEventArgs, ev.PropertyName );
+                            if( handler.HasHandlers ) RaiseStandardDomainEvent( handler );
                         }
                         else if( fNamedEv.FieldType == typeof( ObservableEventHandler<EventArgs> ) )
                         {
                             var handler = (ObservableEventHandler<EventArgs>)fNamedEv.GetValue( this );
-                            if( handler.HasHandlers ) handler.Raise( Monitor, this, ev, ev.PropertyName );
+                            if( handler.HasHandlers ) handler.Raise( this, ev );
                         }
                         else
                         {
@@ -240,7 +251,7 @@ namespace CK.Observable
                     }
                 }
                 // OnPropertyChanged (by name).
-                if( _propertyChanged.HasHandlers ) _propertyChanged.Raise( Monitor, this, ev, nameof( PropertyChanged ) );
+                if( _propertyChanged.HasHandlers ) _propertyChanged.Raise( this, ev );
             }
         }
         

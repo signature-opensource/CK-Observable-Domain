@@ -67,7 +67,7 @@ namespace CK.Observable
         public void Send( T item )
         {
             var e = Domain.OnListInsert( this, 0, item );
-            if( e != null && _itemSent.HasHandlers ) _itemSent.Raise( Monitor, this, e, nameof(ItemSent) );
+            if( e != null && _itemSent.HasHandlers ) _itemSent.Raise( this, e );
         }
 
         /// <summary>

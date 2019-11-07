@@ -90,6 +90,18 @@ namespace CK.Observable
             Domain.SendCommand( this, command );
         }
 
+
+        /// <summary>
+        /// Helper that raises a standard event from this internal object with a reusable <see cref="ObservableDomainEventArgs"/> instance.
+        /// </summary>
+        protected void RaiseStandardDomainEvent( ObservableEventHandler<ObservableDomainEventArgs> h ) => h.Raise( this, Domain.DefaultEventArgs );
+
+        /// <summary>
+        /// Helper that raises a standard event from this internal object with a reusable <see cref="EventMonitoredArgs"/> instance (that is the
+        /// shared <see cref="ObservableDomainEventArgs"/> instance).
+        /// </summary>
+        protected void RaiseStandardDomainEvent( ObservableEventHandler<EventMonitoredArgs> h ) => h.Raise( this, Domain.DefaultEventArgs );
+
         /// <summary>
         /// Gets whether this object has been disposed.
         /// </summary>
@@ -135,7 +147,7 @@ namespace CK.Observable
             }
             else
             {
-                _disposed.Raise( reusableArgs.Monitor, this, reusableArgs, nameof( Disposed ) );
+                RaiseStandardDomainEvent( _disposed );
             }
         }
 

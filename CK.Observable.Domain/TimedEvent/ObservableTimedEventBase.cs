@@ -117,7 +117,18 @@ namespace CK.Observable
                 var ev = new ObservableTimedEventArgs( this, current, ExpectedDueTimeUtc );
                 using( monitor.OpenDebug( $"Raising {ToString()} (Delta: {ev.DeltaMilliSeconds} ms)." ) )
                 {
-                    _handlers.Raise( monitor, this, ev, nameof( Elapsed ), throwException );
+                    if( throwException ) _handlers.Raise( this, ev );
+                    else
+                    {
+                        try
+                        {
+                            _handlers.Raise( this, ev );
+                        }
+                        catch( Exception ex )
+                        {
+                            monitor.Warn( $"Error while raising Timed event. It is ignored.", ex );
+                        }
+                    }
                 }
             }
         }
@@ -156,7 +167,7 @@ namespace CK.Observable
             if( !IsDisposed )
             {
                 TimeManager.Domain.CheckBeforeDispose( this );
-                _disposed.Raise( Domain.CurrentMonitor, this, Domain.DefaultEventArgs, nameof( Disposed ) );
+                _disposed.Raise( this, Domain.DefaultEventArgs );
                 _disposed.RemoveAll();
                 TimeManager.OnDisposed( this );
                 TimeManager = null;

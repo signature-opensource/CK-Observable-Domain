@@ -54,25 +54,14 @@ namespace CK.Observable
         /// <summary>
         /// Raises this event.
         /// </summary>
-        /// <param name="monitor">Monitor to use. Cannot be null.</param>
-        /// <param name="eventName">Name of the event. Can be null or empty.</param>
         /// <param name="sender">The sender of the event.</param>
         /// <param name="args">The event argument.</param>
-        /// <param name="throwException">False to catch exception and log any error as a warning.</param>
-        public void Raise( IActivityMonitor monitor, object sender, TEventArgs args, string eventName, bool throwException = true )
+        public void Raise( object sender, TEventArgs args )
         {
             var h = _handler.Cleanup();
             for( int i = 0; i < h.Length; ++i )
             {
-                try
-                {
-                    ((SafeEventHandler<TEventArgs>)h[i]).Invoke( sender, args );
-                }
-                catch( Exception ex )
-                {
-                    if( throwException ) throw;
-                    monitor.Warn( $"While raising '{eventName}'. Ignoring error.", ex );
-                }
+                ((SafeEventHandler<TEventArgs>)h[i]).Invoke( sender, args );
             }
         }
 
