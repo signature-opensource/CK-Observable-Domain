@@ -223,7 +223,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             public void IncrementValue( object source, ObservableTimedEventArgs args )
             {
                 Value += 1;
-                args.Monitor.Trace( $"[{args.Source.Domain.DomainName}] Value => {Value}" );
+                args.Monitor.Trace( $"[{args.Domain.DomainName}] Value => {Value}" );
                 if( source is ObservableReminder )
                 {
                     ValueFromReminders += 1;

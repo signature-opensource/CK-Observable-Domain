@@ -11,17 +11,17 @@ namespace CK.Observable
     /// Exposes a standardized current UTC time for the event and the expected exact time at which the event should have been raised.
     /// This allows to adapt the behavior to "real" time aspects if necessary.
     /// </summary>
-    public class ObservableTimerEventArgs : ObservableTimedEventArgs
+    public class ObservableReminderEventArgs : ObservableTimedEventArgs
     {
-        internal ObservableTimerEventArgs( ObservableTimer source )
+        internal ObservableReminderEventArgs( ObservableReminder source )
             : base( source.Domain )
         {
-            Timer = source;
+            Reminder = source;
         }
 
         /// <summary>
-        /// Gets the <see cref="ObservableTimer" /> that is raising this event.
+        /// Gets the <see cref="ObservableReminder" /> that is raising this event.
         /// </summary>
-        public ObservableTimer Timer { get; }
+        public ObservableReminder Reminder { get; }
     }
 }

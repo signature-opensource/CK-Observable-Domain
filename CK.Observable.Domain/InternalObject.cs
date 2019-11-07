@@ -90,7 +90,6 @@ namespace CK.Observable
             Domain.SendCommand( this, command );
         }
 
-
         /// <summary>
         /// Helper that raises a standard event from this internal object with a reusable <see cref="ObservableDomainEventArgs"/> instance.
         /// </summary>
@@ -101,6 +100,10 @@ namespace CK.Observable
         /// shared <see cref="ObservableDomainEventArgs"/> instance).
         /// </summary>
         protected void RaiseStandardDomainEvent( ObservableEventHandler<EventMonitoredArgs> h ) => h.Raise( this, Domain.DefaultEventArgs );
+
+        protected void Remind( DateTime dueTimeUtc, SafeEventHandler<ObservableTimedEventArgs> callback, object tag = null )
+        {
+        }
 
         /// <summary>
         /// Gets whether this object has been disposed.

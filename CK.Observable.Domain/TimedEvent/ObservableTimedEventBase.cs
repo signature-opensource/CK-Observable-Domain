@@ -10,7 +10,7 @@ namespace CK.Observable
 {
 
     /// <summary>
-    /// Base behavior for timed event management.
+    /// Base behavior for timed event that handles internal timer data and basic life cycle aspects.
     /// </summary>
     [SerializationVersion( 0 )]
     public abstract class ObservableTimedEventBase : IDisposableObject
@@ -26,7 +26,6 @@ namespace CK.Observable
         internal ObservableTimedEventBase Prev;
 
         ObservableEventHandler<ObservableDomainEventArgs> _disposed;
-        ObservableEventHandler<ObservableTimedEventArgs> _handlers;
 
         internal ObservableTimedEventBase()
         {
@@ -42,9 +41,7 @@ namespace CK.Observable
             ExpectedDueTimeUtc = r.ReadDateTime();
             Name = r.ReadNullableString();
             _disposed = new ObservableEventHandler<ObservableDomainEventArgs>( r );
-            _handlers = new ObservableEventHandler<ObservableTimedEventArgs>( r );
             Tag = r.ReadObject();
-
             if( ActiveIndex != 0 ) TimeManager.OnLoadedActive( this );
         }
 
@@ -55,17 +52,14 @@ namespace CK.Observable
             w.Write( ExpectedDueTimeUtc );
             w.WriteNullableString( Name );
             _disposed.Write( w );
-            _handlers.Write( w );
             w.WriteObject( Tag );
         }
 
         /// <summary>
         /// Gets whether this timed event is active.
-        /// There must be at least one <see cref="Elapsed"/> registered callback for this to be true.
+        /// There must be at least one registered callback for this to be true.
         /// </summary>
-        public bool IsActive => _handlers.HasHandlers && GetIsActive();
-
-        internal abstract bool GetIsActive();
+        public abstract bool IsActive { get; }
 
         /// <summary>
         /// Gets whether this object has been disposed.
@@ -91,56 +85,12 @@ namespace CK.Observable
         /// </summary>
         public string Name { get; set; }
 
-        /// <summary>
-        /// The timed event.
-        /// </summary>
-        public event SafeEventHandler<ObservableTimedEventArgs> Elapsed
-        {
-            add
-            {
-                this.CheckDisposed();
-                _handlers.Add( value, nameof( Elapsed ) );
-                TimeManager.OnChanged( this );
-            }
-            remove
-            {
-                this.CheckDisposed();
-                if( _handlers.Remove( value ) ) TimeManager.OnChanged( this );
-            }
-        }
-
-        internal void DoRaise( IActivityMonitor monitor, DateTime current, bool throwException )
-        {
-            Debug.Assert( !IsDisposed );
-            if( _handlers.HasHandlers )
-            {
-                var ev = new ObservableTimedEventArgs( this, current, ExpectedDueTimeUtc );
-                using( monitor.OpenDebug( $"Raising {ToString()} (Delta: {ev.DeltaMilliSeconds} ms)." ) )
-                {
-                    if( throwException ) _handlers.Raise( this, ev );
-                    else
-                    {
-                        try
-                        {
-                            _handlers.Raise( this, ev );
-                        }
-                        catch( Exception ex )
-                        {
-                            monitor.Warn( $"Error while raising Timed event. It is ignored.", ex );
-                        }
-                    }
-                }
-            }
-        }
-
-        private protected virtual void OnRaising( IActivityMonitor monitor, bool throwException, ObservableTimedEventArgs ev )
-        {
-        }
+        internal abstract void DoRaise( IActivityMonitor monitor, DateTime current, bool throwException );
 
         internal abstract void OnAfterRaiseUnchanged( DateTime current, IActivityMonitor m );
 
         /// <summary>
-        /// This applies to reminders.
+        /// This default implementation applies to reminders.
         /// </summary>
         internal virtual void ForwardExpectedDueTime( IActivityMonitor monitor, DateTime forwarded )
         {
@@ -162,7 +112,7 @@ namespace CK.Observable
         /// <summary>
         /// Disposes this timed event.
         /// </summary>
-        public void Dispose()
+        public virtual void Dispose()
         {
             if( !IsDisposed )
             {
@@ -171,7 +121,6 @@ namespace CK.Observable
                 _disposed.RemoveAll();
                 TimeManager.OnDisposed( this );
                 TimeManager = null;
-                _handlers.RemoveAll();
                 Tag = null;
             }
         }

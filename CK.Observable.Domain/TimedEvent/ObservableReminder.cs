@@ -15,7 +15,7 @@ namespace CK.Observable
     /// easier to use.
     /// </summary>
     [SerializationVersion(0)]
-    public sealed class ObservableReminder : ObservableTimedEventBase
+    public sealed class ObservableReminder : ObservableTimedEventBase<ObservableReminderEventArgs>
     {
         /// <summary>
         /// Initializes a new unnamed <see cref="ObservableReminder"/> bound to the current <see cref="ObservableDomain"/>.
@@ -28,19 +28,24 @@ namespace CK.Observable
         {
             if( dueTimeUtc.Kind != DateTimeKind.Utc ) throw new ArgumentException( nameof( dueTimeUtc ), "Must be a Utc DateTime." );
             ExpectedDueTimeUtc = dueTimeUtc;
+            ReusableArgs = new ObservableReminderEventArgs( this );
         }
 
         ObservableReminder( IBinaryDeserializerContext c )
             : base( c )
         {
             var r = c.StartReading();
+            ReusableArgs = new ObservableReminderEventArgs( this );
         }
 
         void Write( BinarySerializer w )
         {
         }
 
-        internal override bool GetIsActive() => ExpectedDueTimeUtc != Util.UtcMinValue && ExpectedDueTimeUtc != Util.UtcMaxValue; 
+        private protected override ObservableReminderEventArgs ReusableArgs { get; }
+        
+
+        private protected override bool GetIsActive() => ExpectedDueTimeUtc != Util.UtcMinValue && ExpectedDueTimeUtc != Util.UtcMaxValue; 
 
         /// <summary>
         /// Gets or sets the next planned time: set it to <see cref="Util.UtcMinValue"/> or <see cref="Util.UtcMaxValue"/> to disable

@@ -14,7 +14,7 @@ namespace CK.Observable
     /// of the <see cref="IntervalMilliSeconds"/> from <see cref="DueTimeUtc"/>.
     /// </summary>
     [SerializationVersion(0)]
-    public sealed class ObservableTimer : ObservableTimedEventBase
+    public sealed class ObservableTimer : ObservableTimedEventBase<ObservableTimerEventArgs>
     {
         int _milliSeconds;
         bool _isActive;
@@ -33,6 +33,7 @@ namespace CK.Observable
             ExpectedDueTimeUtc = AdjustNextDueTimeUtc( DateTime.UtcNow, firstDueTimeUtc, intervalMilliSeconds );
             _milliSeconds = intervalMilliSeconds;
             _isActive = isActive;
+            ReusableArgs = new ObservableTimerEventArgs( this );
         }
 
         /// <summary>
@@ -61,6 +62,7 @@ namespace CK.Observable
                 _milliSeconds = -_milliSeconds;
                 _isActive = true;
             }
+            ReusableArgs = new ObservableTimerEventArgs( this );
         }
 
         void Write( BinarySerializer w )
@@ -69,7 +71,9 @@ namespace CK.Observable
             w.Write( _isActive ? -_milliSeconds : _milliSeconds );
         }
 
-        internal override bool GetIsActive() => _isActive && ExpectedDueTimeUtc != Util.UtcMinValue && ExpectedDueTimeUtc != Util.UtcMaxValue;
+        private protected override bool GetIsActive() => _isActive && ExpectedDueTimeUtc != Util.UtcMinValue && ExpectedDueTimeUtc != Util.UtcMaxValue;
+
+        private protected override ObservableTimerEventArgs ReusableArgs { get; }
 
         /// <summary>
         /// Gets or sets whether this timer is active. Note that to be active <see cref="DueTimeUtc"/> must not be <see cref="Util.UtcMinValue"/>
@@ -141,11 +145,11 @@ namespace CK.Observable
             TimeManager.OnChanged( this );
         }
 
-        private protected override void OnRaising( IActivityMonitor monitor, bool throwException, ObservableTimedEventArgs ev )
+        private protected override void OnRaising( IActivityMonitor monitor, bool throwException )
         {
-            if( ev.DeltaMilliSeconds >= _milliSeconds )
+            if( ReusableArgs.DeltaMilliSeconds >= _milliSeconds )
             {
-                int stepCount = ev.DeltaMilliSeconds / _milliSeconds;
+                int stepCount = ReusableArgs.DeltaMilliSeconds / _milliSeconds;
                 var mode = Mode & ~ObservableTimerMode.ThrowException;
                 throwException &= (Mode & ObservableTimerMode.ThrowException) != 0;
 

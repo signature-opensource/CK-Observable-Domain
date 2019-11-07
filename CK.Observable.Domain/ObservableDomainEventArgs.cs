@@ -15,7 +15,7 @@ namespace CK.Observable
         /// <summary>
         /// Instanciates a new <see cref="ObservableDomainEventArgs"/>.
         /// </summary>
-        /// <param name="d">The onwing domain.</param>
+        /// <param name="d">The owning domain.</param>
         public ObservableDomainEventArgs( ObservableDomain d )
         {
             Domain = d;
