@@ -418,7 +418,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
 
                 using( d.AcquireReadLock() )
                 {
-                    TestHelper.Monitor.Info( "Locking the Domain for 50 ms." );
+                    TestHelper.Monitor.Info( "Locking the Domain for 200 ms." );
                     Thread.Sleep( 200 );
                 }
 

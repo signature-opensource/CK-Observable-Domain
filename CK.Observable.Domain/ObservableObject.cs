@@ -139,7 +139,7 @@ namespace CK.Observable
             if( _id >= 0 )
             {
                 Domain.CheckBeforeDispose( this );
-                OnDisposed( Domain.DefaultEventArgs, false );
+                OnDisposed( false );
                 Domain.Unregister( this );
                 _id = -1;
             }
@@ -175,13 +175,10 @@ namespace CK.Observable
         /// Note that the Disposed event is raised only for explicit object disposing: a <see cref="ObservableDomain.Load"/> doesn't trigger the event.
         /// </para>
         /// </summary>
-        /// <param name="reusableArgs">
-        /// The event arguments that exposes the domain and monitor to use (that is the same as this <see cref="Monitor"/> protected property).
-        /// </param>
         /// <param name="isReloading">
         /// True when this dispose is due to a domain reload. (When true the <see cref="Disposed"/> event is not raised.)
         /// </param>
-        protected internal virtual void OnDisposed( ObservableDomainEventArgs reusableArgs, bool isReloading )
+        protected internal virtual void OnDisposed( bool isReloading )
         {
             if( isReloading )
             {

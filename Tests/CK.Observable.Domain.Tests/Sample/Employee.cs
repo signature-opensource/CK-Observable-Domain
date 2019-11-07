@@ -24,13 +24,13 @@ namespace CK.Observable.Domain.Tests.Sample
 
         public Garage Garage { get; set; }
 
-        protected override void OnDisposed( ObservableDomainEventArgs args, bool isReloading )
+        protected override void OnDisposed( bool isReloading )
         {
             if( !isReloading )
             {
                 Garage.Employees.Remove( this );
             }
-            base.OnDisposed( args, isReloading );
+            base.OnDisposed( isReloading );
         }
 
         public override string ToString() => $"'Employee {FirstName} {LastName} - {Garage?.CompanyName ?? "(no company name)"}'";

@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 namespace CK.Observable
 { 
     /// <summary>
-    /// Simple timer that raises its <see cref="ObservableTimedEventBase.Elapsed"/> event repeatedly.
+    /// Timer object that raises its <see cref="ObservableTimedEventBase.Elapsed"/> event repeatedly.
     /// The event time is based on the <see cref="DueTimeUtc"/>: we try to always raise the event based on a multiple
     /// of the <see cref="IntervalMilliSeconds"/> from <see cref="DueTimeUtc"/>.
     /// </summary>

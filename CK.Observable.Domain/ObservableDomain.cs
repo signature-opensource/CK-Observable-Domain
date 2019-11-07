@@ -1100,7 +1100,7 @@ namespace CK.Observable
                     if( o != null )
                     {
                         Debug.Assert( !o.IsDisposed );
-                        o.OnDisposed( DefaultEventArgs, true );
+                        o.OnDisposed( true );
                     }
                 }
                 Array.Clear( _objects, 0, _objectsListCount );
