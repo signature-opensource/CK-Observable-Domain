@@ -13,6 +13,11 @@ namespace CK.Observable
         public string TypeName { get; }
 
         /// <summary>
+        /// Gets the simplified <see cref="TypeName"/>.
+        /// </summary>
+        public string SimpleTypeName => TypeName.Split( ',' )[0];
+
+        /// <summary>
         /// Gets whether the object is tracked (reference type) or not (value type).
         /// </summary>
         public bool IsTrackedObject { get; }
@@ -36,6 +41,30 @@ namespace CK.Observable
         /// When not null, the list ends with this <see cref="TypeReadInfo"/> itself.
         /// </summary>
         public IReadOnlyList<TypeReadInfo> TypePath => _typePath;
+
+        /// <summary>
+        /// Returns a string that describes a type that MUST appear in the <see cref="TypePath"/>
+        /// (that can be this one).
+        /// This MUST be the same as the string produced by <see cref="AutoTypeRegistry.AutoTypeDriver.DescribeAutoTypePathItem"/>.
+        /// </summary>
+        /// <param name="infoInPath">The path item to describe relatively to this leaf.</param>
+        /// <returns>A descriptive string.</returns>
+        internal string DescribeAutoTypePathItem( TypeReadInfo infoInPath )
+        {
+            Debug.Assert( Version >= 0, "Must be called only for TypeBased serialization." );
+            Debug.Assert( TypePath.IndexOf( x => x == infoInPath ) >= 0 );
+            bool isRoot = BaseType == null;
+            bool isLeaf = this == infoInPath;
+            var msg = isRoot
+                        ? (
+                            isLeaf ? " (root and final)" : $" (root type of {SimpleTypeName})"
+                          )
+                        : (
+                            isLeaf ? " (final type)" : $" (base type of {SimpleTypeName})"
+                          );
+            msg = infoInPath.SimpleTypeName + msg;
+            return msg;
+        }
 
         /// <summary>
         /// Gets the Type if it can be resolved locally, null otherwise.
@@ -94,7 +123,7 @@ namespace CK.Observable
             IsTrackedObject = true;
             _localTypeLookupDone = true;
             _driverLookupDone = true;
-            _driver = r.FindDriver( String.Empty );
+            _driver = r.FindDriver( _localType.AssemblyQualifiedName );
         }
 
         internal void SetBaseType( TypeReadInfo b )

@@ -34,6 +34,10 @@ namespace CK.Observable
         /// </summary>
         public const int LockedDomainMonitorTimeout = 1000;
 
+        /// <summary>
+        /// Current serialization version.
+        /// </summary>
+        public const int CurrentSerializationVersion = 2;
 
         static readonly Type[] _observableRootCtorParameters = new Type[] { typeof( ObservableDomain ) };
 
@@ -930,13 +934,14 @@ namespace CK.Observable
         /// <param name="monitor">The monitor to use. Cannot be null.</param>
         /// <param name="stream">The output stream.</param>
         /// <param name="leaveOpen">True to leave the stream opened.</param>
+        /// <param name="debugMode">True to activate <see cref="BinarySerializer.IsDebugMode"/>.</param>
         /// <param name="encoding">Optional encoding for characters. Defaults to UTF-8.</param>
         /// <param name="millisecondsTimeout">
         /// The maximum number of milliseconds to wait for a read access before giving up.
         /// Wait indefinitely by default.
         /// </param>
         /// <returns>True on success, false if timeout occurred.</returns>
-        public bool Save( IActivityMonitor monitor, Stream stream, bool leaveOpen = false, Encoding encoding = null, int millisecondsTimeout = -1 )
+        public bool Save( IActivityMonitor monitor, Stream stream, bool leaveOpen = false, bool debugMode = false, Encoding encoding = null, int millisecondsTimeout = -1 )
         {
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
             if( stream == null ) throw new ArgumentNullException( nameof( stream ) );
@@ -960,28 +965,37 @@ namespace CK.Observable
                 if( needFakeTran ) new InitializationTransaction( monitor, this, false );
                 try
                 {
-                    using( isWrite ? monitor.OpenInfo( $"Transacted saving domain ({_actualObjectCount} objects)." ) : null )
+                    using( isWrite ? monitor.OpenInfo( $"Transacted saving domain ({_actualObjectCount} objects, {_internalObjectCount} internal objects)." ) : null )
                     {
-                        w.WriteSmallInt32( 2 ); // Version: 2 supports TimeManager & Internal objects.
+                        w.WriteSmallInt32( 2 ); // Version: 2 supports DebuMode, TimeManager & Internal objects.
+                        w.DebugWriteMode( debugMode ? (bool?)debugMode : null );
                         w.Write( DomainName );
                         w.Write( _transactionSerialNumber );
                         w.Write( _actualObjectCount );
+
+                        w.DebugWriteSentinel();
                         w.WriteNonNegativeSmallInt32( _freeList.Count );
                         foreach( var i in _freeList ) w.WriteNonNegativeSmallInt32( i );
+
+                        w.DebugWriteSentinel();
                         w.WriteNonNegativeSmallInt32( _properties.Count );
                         foreach( var p in _propertiesByIndex )
                         {
                             w.Write( p.Name );
                         }
+
+                        w.DebugWriteSentinel();
                         Debug.Assert( _objectsListCount == _actualObjectCount + _freeList.Count );
                         for( int i = 0; i < _objectsListCount; ++i )
                         {
                             w.WriteObject( _objects[i] );
                         }
 
+                        w.DebugWriteSentinel();
                         w.WriteNonNegativeSmallInt32( _roots.Count );
                         foreach( var r in _roots ) w.WriteNonNegativeSmallInt32( r.OId );
 
+                        w.DebugWriteSentinel();
                         w.WriteNonNegativeSmallInt32( _internalObjectCount );
                         var f = _firstInternalObject;
                         while( f != null )
@@ -989,7 +1003,9 @@ namespace CK.Observable
                             w.WriteObject( f );
                             f = f.Next;
                         }
+                        w.DebugWriteSentinel();
                         _timeManager.Save( monitor, w );
+                        w.DebugWriteSentinel();
                         return true;
                     }
                 }
@@ -1002,8 +1018,122 @@ namespace CK.Observable
             }
         }
 
+        void DoLoad( IActivityMonitor monitor, BinaryDeserializer r, string expectedName )
+        {
+            Debug.Assert( _lock.IsWriteLockHeld );
+            _deserializing = true;
+            try
+            {
+                int version = r.ReadSmallInt32();
+                if( version < 0 || version > CurrentSerializationVersion )
+                {
+                    throw new InvalidDataException( $"Version must be between 0 and {CurrentSerializationVersion}. Version read: {version}." );
+                }
+                if( version > 0 )
+                {
+                    if( version > 1 )
+                    {
+                        r.DebugReadMode();
+                    }
+                    var loaded = r.ReadString();
+                    if( loaded != expectedName ) throw new InvalidDataException( $"Domain name mismatch: loading domain named '{loaded}' but expected '{expectedName}'." );
+                }
+                _transactionSerialNumber = r.ReadInt32();
+                _actualObjectCount = r.ReadInt32();
+
+                r.DebugCheckSentinel();
+                _freeList.Clear();
+                int count = r.ReadNonNegativeSmallInt32();
+                while( --count >= 0 )
+                {
+                    _freeList.Add( r.ReadNonNegativeSmallInt32() );
+                }
+
+                r.DebugCheckSentinel();
+                _properties.Clear();
+                _propertiesByIndex.Clear();
+                count = r.ReadNonNegativeSmallInt32();
+                for( int iProp = 0; iProp < count; iProp++ )
+                {
+                    string name = r.ReadString();
+                    var p = new PropInfo( iProp, name );
+                    _properties.Add( name, p );
+                    _propertiesByIndex.Add( p );
+                }
+
+                r.DebugCheckSentinel();
+                #region Clearing exisiting objects, sizing _objects array.
+                for( int i = 0; i < _objectsListCount; ++i )
+                {
+                    var o = _objects[i];
+                    if( o != null )
+                    {
+                        Debug.Assert( !o.IsDisposed );
+                        o.OnDisposed( true );
+                    }
+                }
+                Array.Clear( _objects, 0, _objectsListCount );
+                _objectsListCount = count = _actualObjectCount + _freeList.Count;
+                while( _objectsListCount > _objects.Length )
+                {
+                    Array.Resize( ref _objects, _objects.Length * 2 );
+                }
+                #endregion
+                for( int i = 0; i < count; ++i )
+                {
+                    _objects[i] = (ObservableObject)r.ReadObject();
+                }
+
+                // Roots
+                r.DebugCheckSentinel();
+                _roots.Clear();
+                count = r.ReadNonNegativeSmallInt32();
+                while( --count >= 0 )
+                {
+                    _roots.Add( _objects[r.ReadNonNegativeSmallInt32()] as ObservableRootObject );
+                }
+
+                // Clears any internal objects.
+                var internalObj = _firstInternalObject;
+                while( internalObj != null )
+                {
+                    internalObj.OnDisposed( true );
+                    internalObj = internalObj.Next;
+                }
+                _firstInternalObject = _lastInternalObject = null;
+
+                // Clears any time event objects.
+                _timeManager.Clear( monitor );
+
+                if( version > 1 )
+                {
+                    // Reading InternalObjects.
+                    r.DebugCheckSentinel();
+                    count = r.ReadNonNegativeSmallInt32();
+                    while( --count >= 0 )
+                    {
+                        r.ReadObject();
+                    }
+
+                    // Reading Timed events.
+                    r.DebugCheckSentinel();
+                    _timeManager.Load( monitor, r );
+                }
+                r.DebugCheckSentinel();
+                r.ImplementationServices.ExecutePostDeserializationActions();
+                OnLoaded();
+                var next = _timeManager.ApplyChanges();
+                if( next != Util.UtcMinValue ) _timeManager.SetNextDueTimeUtc( monitor, next );
+            }
+            finally
+            {
+                _deserializing = false;
+            }
+        }
+
         /// <summary>
-        /// Loads previously <see cref="Save"/>d objects into this domain.
+        /// Loads previously <see cref="Save"/>d objects from a named domain into this domain: the <paramref name="expectedLoadedName"/> can be
+        /// this <see cref="DomainName"/> or another name.
         /// </summary>
         /// <param name="monitor">The monitor to use. Cannot be null.</param>
         /// <param name="stream">The input stream.</param>
@@ -1061,97 +1191,6 @@ namespace CK.Observable
         public bool Load( IActivityMonitor monitor, Stream stream, bool leaveOpen = false, Encoding encoding = null, int millisecondsTimeout = -1 )
         {
             return Load( monitor, stream, DomainName, leaveOpen, encoding, millisecondsTimeout );
-        }
-
-        void DoLoad( IActivityMonitor monitor, BinaryDeserializer r, string expectedName )
-        {
-            Debug.Assert( _lock.IsWriteLockHeld );
-            _deserializing = true;
-            try
-            {
-                int version = r.ReadSmallInt32();
-                if( version > 0 )
-                {
-                    var loaded = r.ReadString();
-                    if( loaded != expectedName ) throw new InvalidDataException( $"Domain name mismatch: loading domain named '{loaded}' but expected '{expectedName}'." );
-                }
-                _transactionSerialNumber = r.ReadInt32();
-                _actualObjectCount = r.ReadInt32();
-
-                _freeList.Clear();
-                int count = r.ReadNonNegativeSmallInt32();
-                while( --count >= 0 )
-                {
-                    _freeList.Add( r.ReadNonNegativeSmallInt32() );
-                }
-                _properties.Clear();
-                _propertiesByIndex.Clear();
-                count = r.ReadNonNegativeSmallInt32();
-                for( int iProp = 0; iProp < count; iProp++ )
-                {
-                    string name = r.ReadString();
-                    var p = new PropInfo( iProp, name );
-                    _properties.Add( name, p );
-                    _propertiesByIndex.Add( p );
-                }
-                for( int i = 0; i < _objectsListCount; ++i )
-                {
-                    var o = _objects[i];
-                    if( o != null )
-                    {
-                        Debug.Assert( !o.IsDisposed );
-                        o.OnDisposed( true );
-                    }
-                }
-                Array.Clear( _objects, 0, _objectsListCount );
-                _objectsListCount = count = _actualObjectCount + _freeList.Count;
-                while( _objectsListCount > _objects.Length )
-                {
-                    Array.Resize( ref _objects, _objects.Length * 2 );
-                }
-                for( int i = 0; i < count; ++i )
-                {
-                    _objects[i] = (ObservableObject)r.ReadObject();
-                }
-                _roots.Clear();
-                count = r.ReadNonNegativeSmallInt32();
-                while( --count >= 0 )
-                {
-                    _roots.Add( _objects[r.ReadNonNegativeSmallInt32()] as ObservableRootObject );
-                }
-
-                // Clears any time event objects.
-                _timeManager.Clear( monitor );
-
-                // Clears any internal objects.
-                var internalObj = _firstInternalObject;
-                while( internalObj != null )
-                {
-                    internalObj.OnDisposed( DefaultEventArgs, true );
-                    internalObj = internalObj.Next;
-                }
-                _firstInternalObject = _lastInternalObject = null;
-
-                if( version > 1 )
-                {
-                    _timeManager.Load( monitor, r );
-
-                    count = r.ReadNonNegativeSmallInt32();
-                    while( --count >= 0 )
-                    {
-                        r.ReadObject();
-                    }
-                }
-
-                r.ImplementationServices.ExecutePostDeserializationActions();
-                OnLoaded();
-                var next = _timeManager.ApplyChanges();
-                if( next != Util.UtcMinValue ) _timeManager.SetNextDueTimeUtc( monitor, next );
-            }
-            finally
-            {
-                _deserializing = false;
-            }
         }
 
         /// <summary>
@@ -1375,16 +1414,17 @@ namespace CK.Observable
         /// <param name="monitor">Monitor to use. Cannot be null.</param>
         /// <param name="domain">The domain to check. Must not be null.</param>
         /// <param name="milliSecondsTimeout">Optional timeout to wait for read or write lock.</param>
-        public static void IdempotenceSerializationCheck( IActivityMonitor monitor, ObservableDomain domain, int milliSecondsTimeout = -1 )
+        /// <param name="useDebugMode">False to not activate <see cref="BinarySerializer.IsDebugMode"/>.</param>
+        public static void IdempotenceSerializationCheck( IActivityMonitor monitor, ObservableDomain domain, int milliSecondsTimeout = -1, bool useDebugMode = true )
         {
             using( var s = new MemoryStream() )
             {
-                if( !domain.Save( monitor, s, true, millisecondsTimeout: milliSecondsTimeout ) ) throw new Exception( "First Save failed: Unable to acquire lock." );
+                if( !domain.Save( monitor, s, true, millisecondsTimeout: milliSecondsTimeout, debugMode: useDebugMode ) ) throw new Exception( "First Save failed: Unable to acquire lock." );
                 var originalBytes = s.ToArray();
                 s.Position = 0;
                 if( !domain.Load( monitor, s, true, millisecondsTimeout: milliSecondsTimeout ) ) throw new Exception( "Reload failed: Unable to acquire lock." );
                 s.Position = 0;
-                if( !domain.Save( monitor, s, true, millisecondsTimeout: milliSecondsTimeout ) ) throw new Exception( "Second Save failed: Unable to acquire lock." );
+                if( !domain.Save( monitor, s, true, millisecondsTimeout: milliSecondsTimeout, debugMode: useDebugMode ) ) throw new Exception( "Second Save failed: Unable to acquire lock." );
                 var rewriteBytes = s.ToArray();
                 if( !originalBytes.SequenceEqual( rewriteBytes ) )
                 {

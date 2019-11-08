@@ -1,3 +1,4 @@
+using CK.Core;
 using FluentAssertions;
 using NUnit.Framework;
 using System;
@@ -63,7 +64,7 @@ namespace CK.Observable.Domain.Tests
                 {
                     new SerializableOnly() { Name = "Albert" };
                 } );
-                using( var d2 = DomainSerializationTests.SaveAndLoad( d ) )
+                using( var d2 = TestHelper.SaveAndLoad( d ) )
                 {
                     d2.AllObjects.OfType<SerializableOnly>().Single().Name.Should().Be( "Albert" );
 

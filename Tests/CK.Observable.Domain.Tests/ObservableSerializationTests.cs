@@ -1,5 +1,7 @@
+using CK.Core;
 using FluentAssertions;
 using NUnit.Framework;
+using System.IO;
 using System.Linq;
 using static CK.Testing.MonitorTestHelper;
 
@@ -8,6 +10,70 @@ namespace CK.Observable.Domain.Tests
     [TestFixture]
     public class ObservableSerializationTests
     {
+        [SerializationVersion(0)]
+        class ForgetToCallBaseDeserializationCtor : InternalObject
+        {
+            public ForgetToCallBaseDeserializationCtor()
+            {
+            }
+
+            protected ForgetToCallBaseDeserializationCtor( IBinaryDeserializerContext c )
+            {
+                var r = c.StartReading();
+            }
+
+            void Write( BinarySerializer w )
+            {
+            }
+        }
+
+        [SerializationVersion(0)]
+        class ForgetToCallBaseDeserializationCtorSpecialized : ForgetToCallBaseDeserializationCtor
+        {
+            public ForgetToCallBaseDeserializationCtorSpecialized()
+            {
+            }
+
+            ForgetToCallBaseDeserializationCtorSpecialized( IBinaryDeserializerContext c )
+                : base( c )
+            {
+                var r = c.StartReading();
+            }
+
+            void Write( BinarySerializer w )
+            {
+            }
+        }
+
+        [TestCase("")]
+        [TestCase("debugMode")]
+        public void forgetting_to_call_base_deserialization_ctor_throws_explicit_InvalidDataException(string mode)
+        {
+            string msgNoDebugMode = $"Missing \": base( c )\" call in deserialization constructor of '{typeof( ForgetToCallBaseDeserializationCtor ).AssemblyQualifiedName}'.";
+
+            using( var d = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
+            {
+                d.Modify( TestHelper.Monitor, () => new ForgetToCallBaseDeserializationCtor() );
+                d.AllInternalObjects.Should().HaveCount( 1 );
+
+                d.Invoking( x => TestHelper.SaveAndLoad( d, debugMode: mode == "debugMode" ) ).Should()
+                      .Throw<InvalidDataException>()
+                      .WithMessage( msgNoDebugMode );
+            }
+
+            string msgDebugModeForSpecialized = $"Read string failure: expected string 'After: CK.Observable.InternalObject*";
+            string msgForSpecialized = mode == "debugMode" ? msgDebugModeForSpecialized : msgNoDebugMode;
+
+            using( var d = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
+            {
+                d.Modify( TestHelper.Monitor, () => new ForgetToCallBaseDeserializationCtorSpecialized() );
+                d.AllInternalObjects.Should().HaveCount( 1 );
+
+                d.Invoking( x => TestHelper.SaveAndLoad( d, debugMode: mode == "debugMode" ) ).Should()
+                      .Throw<InvalidDataException>()
+                      .WithMessage( msgForSpecialized );
+            }
+        }
 
         [Test]
         public void simple_idempotence_checks()

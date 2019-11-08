@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 
 namespace CK.Observable
@@ -30,7 +31,8 @@ namespace CK.Observable
             readonly AutoTypeDriver[] _typePath;
 
             // Serialization.
-            readonly MethodInfo _write;
+            readonly Action<object,BinarySerializer> _writer;
+
             /// <summary>
             /// The version from the <see cref="SerializationVersionAttribute"/>.
             /// </summary>
@@ -52,7 +54,7 @@ namespace CK.Observable
 
             bool ITypeSerializationDriver.IsFinalType => _type.IsSealed || _type.IsValueType;
 
-            public ITypeSerializationDriver SerializationDriver => _write != null ? this : null;
+            public ITypeSerializationDriver SerializationDriver => _writer != null ? this : null;
 
             public IDeserializationDriver DeserializationDriver => _ctor != null ? this : null;
 
@@ -82,10 +84,29 @@ namespace CK.Observable
 
             protected object DoReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo )
             {
-                var o = r.ImplementationServices.CreateUninitializedInstance( Type, readInfo?.IsTrackedObject ?? false );
                 var ctx = r.ImplementationServices.PushConstructorContext( readInfo );
-                _ctor.Invoke( o, new object[] { ctx } );
+
+                var o = r.ImplementationServices.CreateUninitializedInstance( Type, readInfo?.IsTrackedObject ?? false );
+
+                // Must be replaced with an emitted DynamicMethod or compiled expression.
+                // Note: a simple Expression.New cannot be used since the UnitializedObject MUST be registered (when IsTrackedObject)
+                //       before the ctor code is executed (to handle cycles).
+                //       To allow Expression.New to be used, it must be the StartReading of level 0 (root) that does the tracking.
+                //       This has to be investigated.
+                try
+                {
+                    _ctor.Invoke( o, new object[] { ctx } );
+                }
+                catch( TargetInvocationException ex )
+                {
+                    var inner = System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture( ex.InnerException );
+                    inner.Throw();
+                }
                 r.ImplementationServices.PopConstructorContext();
+                if( r.IsDebugMode )
+                {
+                    r.ReadString( "After: " + readInfo.DescribeAutoTypePathItem( readInfo ) );
+                }
                 return o;
             }
 
@@ -112,12 +133,34 @@ namespace CK.Observable
             /// <param name="o">The object instance.</param>
             void ITypeSerializationDriver.WriteData( BinarySerializer w, object o ) => DoWriteData( w, o );
 
+            string SimpleTypeName => _type.AssemblyQualifiedName.Split( ',' )[0];
+
+            string DescribeAutoTypePathItem( AutoTypeDriver infoInPath )
+            {
+                Debug.Assert( Array.IndexOf( _typePath, infoInPath ) >= 0 );
+                bool isRoot = _baseType == null;
+                bool isLeaf = this == infoInPath;
+                var msg = isRoot
+                            ? (
+                                isLeaf ? " (root and final)" : $" (root type of {SimpleTypeName})"
+                              )
+                            : (
+                                isLeaf ? " (final type)" : $" (base type of {SimpleTypeName})"
+                              );
+                msg = infoInPath.SimpleTypeName + msg;
+                return msg;
+            }
+
             protected void DoWriteData( BinarySerializer w, object o )
             {
                 var parameters = new object[] { w };
                 foreach( var t in _typePath )
                 {
-                    t._write.Invoke( o, parameters );
+                    t._writer( o, w );
+                    if( w.IsDebugMode )
+                    {
+                        w.Write( "After: " + DescribeAutoTypePathItem( t ) );
+                    }
                 }
             }
 
@@ -158,7 +201,7 @@ namespace CK.Observable
 
             internal AutoTypeDriver( Type t, AutoTypeDriver baseType )
             {
-                GetAndCheckTypeAutoParts( t, out _version, out _ctor, out _write, out _exporter, out _exporterBase );
+                GetAndCheckTypeAutoParts( t, out _version, out _ctor, out _writer, out _exporter, out _exporterBase );
                 _type = t;
                 _baseType = baseType;
                 if( baseType != null )
@@ -243,7 +286,7 @@ namespace CK.Observable
             Type t,
             out int version,
             out ConstructorInfo ctor,
-            out MethodInfo write,
+            out Action<object,BinarySerializer> writer,
             out MethodInfo exporter,
             out MethodInfo exporterBase )
         {
@@ -252,20 +295,31 @@ namespace CK.Observable
                                      null,
                                      _ctorParameters,
                                      null );
-            write = t.GetMethod( "Write",
+
+            var writeMethod = t.GetMethod( "Write",
                                  BindingFlags.Instance | BindingFlags.NonPublic,
                                  null,
                                  _writeParameters,
                                  null );
 
-            if( v != null || write != null )
+            if( v != null || writeMethod != null )
             {
                 if( v == null ) throw new InvalidOperationException( $"Missing [{nameof( SerializationVersionAttribute )}] attribute on type '{t.Name}'." );
                 Debug.Assert( v.Value >= 0 );
-                if( write == null ) throw new InvalidOperationException( $"Missing 'private void {t.Name}.Write({nameof( BinarySerializer )} )' method." );
+                if( writeMethod == null ) throw new InvalidOperationException( $"Missing 'private void {t.Name}.Write({nameof( BinarySerializer )} )' method." );
                 version = v.Value;
+
+                // Creates the writer compiled method.
+                var pTarget = ParameterExpression.Parameter( typeof(object) );
+                var pCtx = ParameterExpression.Parameter( typeof( BinarySerializer ) );               
+                var body = Expression.Call( Expression.Convert( pTarget, t ), writeMethod, pCtx );
+                writer = Expression.Lambda<Action<object,BinarySerializer>>( body, pTarget, pCtx ).Compile();
             }
-            else version = -1;
+            else
+            {
+                version = -1;
+                writer = null;
+            }
 
             exporter = t.GetMethod( "Export",
                                     BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly,

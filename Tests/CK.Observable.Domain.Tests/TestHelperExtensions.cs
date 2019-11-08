@@ -22,13 +22,15 @@ namespace CK.Core
             using( var s = new MemoryStream() )
             using( var writer = new BinarySerializer( s, serializers, true ) )
             {
+                writer.DebugWriteSentinel();
                 w( o, writer );
-                writer.Write( "sentinel" );
+                writer.DebugWriteSentinel();
                 s.Position = 0;
                 using( var reader = new BinaryDeserializer( s, null, deserializers ) )
                 {
+                    reader.DebugCheckSentinel();
                     T result = r( reader );
-                    reader.ReadString().Should().Be( "sentinel" );
+                    reader.DebugCheckSentinel();
                     return result;
                 }
             }
@@ -43,5 +45,51 @@ namespace CK.Core
                 return new BinaryFormatter().Deserialize( s );
             }
         }
+
+        public class DomainHandler : IDisposable
+        {
+            public DomainHandler( IActivityMonitor m, string domainName )
+            {
+                Domain = new ObservableDomain( m, domainName );
+            }
+
+            public ObservableDomain Domain { get; private set; }
+
+            public void Reload( IActivityMonitor m )
+            {
+                var d = SaveAndLoad( m, Domain, Domain.DomainName, debugMode: true );
+                Domain.Dispose();
+                Domain = d;
+            }
+
+            public void Dispose()
+            {
+                Domain.Dispose();
+            }
+        }
+
+        public static DomainHandler CreateDomainHandler( this IMonitorTestHelper @this, string domainName )
+        {
+            return new DomainHandler( @this.Monitor, domainName );
+        }
+
+        static ObservableDomain SaveAndLoad( IActivityMonitor m, ObservableDomain domain, string renamed, bool debugMode )
+        {
+            using( var s = new MemoryStream() )
+            {
+                domain.Save( m, s, leaveOpen: true, debugMode );
+                var d = new ObservableDomain( m, renamed ?? domain.DomainName );
+                s.Position = 0;
+                d.Load( m, s, domain.DomainName );
+                return d;
+            }
+        }
+
+        public static ObservableDomain SaveAndLoad( this IMonitorTestHelper @this, ObservableDomain domain, string renamed = null, bool debugMode = true )
+        {
+            return SaveAndLoad( @this.Monitor, domain, renamed, debugMode );
+        }
+
+
     }
 }

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 
@@ -15,7 +16,10 @@ namespace CK.Observable
         readonly ISerializerResolver _drivers;
         BinaryFormatter _binaryFormatter;
 
-        struct TypeInfo
+        int _debugModeCounter;
+        int _debugSentinel;
+
+        readonly struct TypeInfo
         {
             public readonly Type Type;
             public readonly int Number;
@@ -216,6 +220,52 @@ namespace CK.Observable
             else marker = SerializationMarker.Struct;
             Write( (byte)marker );
             driver.WriteData( this, o );
+        }
+
+        /// <summary>
+        /// Gets whether this serializer is currently in debug mode.
+        /// Initially defaults to false.
+        /// </summary>
+        public bool IsDebugMode => _debugModeCounter > 0;
+
+        /// <summary>
+        /// Activates or deactivates the debug mode. This is cumulative so that scoped activations are handled:
+        /// activation/deactivation should be paired and <see cref="IsDebugMode"/> must be used to
+        /// know whether debug mode is actually active.
+        /// </summary>
+        /// <param name="active">Whether the debug mode should be activated, deactivated or (when null) be left as it is.</param>
+        public void DebugWriteMode( bool? active )
+        {
+            if( active.HasValue )
+            {
+                if( active.Value )
+                {
+                    Write( (byte)182 );
+                    ++_debugModeCounter;
+                }
+                else
+                {
+                    Write( (byte)181 );
+                    --_debugModeCounter;
+                }
+            }
+            else Write( (byte)180 );
+        }
+
+        /// <summary>
+        /// Writes a sentinel that must be read back by <see cref="IBinaryDeserializer.DebugCheckSentinel"/>.
+        /// If <see cref="IsDebugMode"/> is false, nothing is written.
+        /// </summary>
+        /// <param name="fileName">Current file name that wrote the data. Used to build the <see cref="InvalidDataException"/> message if sentinel cannot be read back.</param>
+        /// <param name="line">Current line number that wrote the data. Used to build the <see cref="InvalidDataException"/> message if sentinel cannot be read back.</param>
+        public void DebugWriteSentinel( [CallerFilePath]string fileName = null, [CallerLineNumber] int line = 0 )
+        {
+            if( IsDebugMode )
+            {
+                Write( 987654321 );
+                Write( _debugSentinel++ );
+                Write( fileName + '(' + line.ToString() + ')' );
+            }
         }
 
         /// <summary>

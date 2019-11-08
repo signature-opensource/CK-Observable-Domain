@@ -17,6 +17,10 @@ namespace CK.Observable
     [SerializationVersion(0)]
     public sealed class ObservableReminder : ObservableTimedEventBase<ObservableReminderEventArgs>
     {
+        // Link to the next free reminder. Can be not null if and only if this reminder
+        // is a pooled one and is currently inactive.
+        internal ObservableReminder NextFreeReminder;
+
         /// <summary>
         /// Initializes a new unnamed <see cref="ObservableReminder"/> bound to the current <see cref="ObservableDomain"/>.
         /// </summary>
@@ -31,15 +35,54 @@ namespace CK.Observable
             ReusableArgs = new ObservableReminderEventArgs( this );
         }
 
+        /// <summary>
+        /// Initialize a new pooled reminder.
+        /// </summary>
+        internal ObservableReminder()
+        {
+            IsPooled = true;
+            ReusableArgs = new ObservableReminderEventArgs( this );
+        }
+
         ObservableReminder( IBinaryDeserializerContext c )
             : base( c )
         {
             var r = c.StartReading();
+            IsPooled = r.ReadBoolean();
             ReusableArgs = new ObservableReminderEventArgs( this );
+            if( IsPooled && ActiveIndex == 0 ) TimeManager.ReleaseToPool( this );
         }
 
         void Write( BinarySerializer w )
         {
+            w.Write( IsPooled );
+        }
+
+        /// <summary>
+        /// Gets whether this reminder is a pooled one.
+        /// Pooled reminders are created and managed by <see cref="ObservableObject.Remind"/> and <see cref="InternalObject.Remind"/>.
+        /// Calling <see cref="Dispose"/> when this is true is an error.
+        /// </summary>
+        public bool IsPooled { get; }
+
+        internal override void OnDeactivate()
+        {
+            Debug.Assert( !IsDisposed );
+            if( IsPooled )
+            {
+                ClearHandlesAndTag();
+                TimeManager.ReleaseToPool( this );
+            }
+        }
+
+        /// <summary>
+        /// Disposes this reminder.
+        /// If <see cref="IsPooled"/> is true, calling this method throws an <see cref="InvalidOperationException"/>.
+        /// </summary>
+        public override void Dispose()
+        {
+            if( IsPooled ) throw new InvalidOperationException( "A pooled ObservableReminder cannot be disposed." );
+            base.Dispose();
         }
 
         private protected override ObservableReminderEventArgs ReusableArgs { get; }
@@ -74,10 +117,10 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Overridden to return the <see cref="ObservableTimedEventBase.Name"/> of this reminder.
+        /// Overridden to return info on this reminder.
         /// </summary>
         /// <returns>A readable string.</returns>
-        public override string ToString() => $"{(IsDisposed ? "[Disposed]" : "")}ObservableReminder '{Name ?? "<no name>"}'";
+        public override string ToString() => $"{(IsDisposed ? "[Disposed]" : "")}ObservableReminder {(IsActive ? ExpectedDueTimeUtc.ToString( "o" ) : "(inactive)" )}.";
 
     }
 

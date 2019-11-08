@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 
@@ -19,6 +20,11 @@ namespace CK.Observable
         readonly Stack<ConstructorContext> _ctorContextStack;
         TypeReadInfo _currentCtorReadInfo;
         BinaryFormatter _binaryFormatter;
+
+        int _debugModeCounter;
+        int _debugSentinel;
+        string _lastWriteSentinel;
+        string _lastReadSentinel;
 
         class ConstructorContext
         {
@@ -69,7 +75,15 @@ namespace CK.Observable
         ICtorBinaryDeserializer IBinaryDeserializerContext.StartReading()
         {
             var head = _ctorContextStack.Peek();
-            if( head != null ) _currentCtorReadInfo = head.ReadInfo.TypePath[++head.CurrentIndex];
+            if( head != null )
+            {
+                if( IsDebugMode && head.CurrentIndex >= 0 )
+                {
+                    var baseCtorReadInfo = head.ReadInfo.TypePath[head.CurrentIndex];
+                    ReadString( "After: " + head.ReadInfo.DescribeAutoTypePathItem( baseCtorReadInfo ) );
+                }
+                _currentCtorReadInfo = head.ReadInfo.TypePath[++head.CurrentIndex];
+            }
             else _currentCtorReadInfo = null;
             return this;
         }
@@ -114,7 +128,20 @@ namespace CK.Observable
             return this;
         }
 
-        void IBinaryDeserializerImpl.PopConstructorContext() => _ctorContextStack.Pop();
+        void IBinaryDeserializerImpl.PopConstructorContext()
+        {
+            var ctorCtx = _ctorContextStack.Pop();
+            if( ctorCtx != null )
+            {
+                // Always check the deserialization constructor call.
+                int deltaCalled = ctorCtx.ReadInfo.TypePath.Count - ctorCtx.CurrentIndex - 1;
+                if( deltaCalled > 0 )
+                {
+                    var culprit = ctorCtx.ReadInfo.TypePath[deltaCalled];
+                    throw new InvalidDataException( $"Missing \": base( c )\" call in deserialization constructor of '{culprit.TypeName}'." );
+                }
+            }
+        }
 
         void IBinaryDeserializerImpl.ExecutePostDeserializationActions() => ExecutePostDeserializationActions();
 
@@ -125,6 +152,83 @@ namespace CK.Observable
                 action();
             }
             _postDeserializationActions.Clear();
+        }
+
+
+        /// <summary>
+        /// Gets whether this deserializer is currently in debug mode.
+        /// </summary>
+        public bool IsDebugMode => _debugModeCounter > 0;
+
+        /// <summary>
+        /// Updates the current debug mode that must have been written by <see cref="BinarySerializer.DebugWriteMode(bool)"/>.
+        /// </summary>
+        /// <returns>Whether the debug mode is currently active or not.</returns>
+        public bool DebugReadMode()
+        {
+            switch( ReadByte() )
+            {
+                case 182: ++_debugModeCounter; break;
+                case 181: --_debugModeCounter; break;
+                case 180: break;
+                default: throw new InvalidDataException( $"Expected DebugMode byte marker." );
+            }
+            return IsDebugMode;
+        }
+
+        /// <summary>
+        /// Checks the existence of a sentinel written by <see cref="BinarySerializer.DebugWriteSentinel"/>.
+        /// An <see cref="InvalidDataException"/> is thrown if <see cref="IsDebugMode"/> is true and the sentinel cannot be read.
+        /// </summary>
+        /// <param name="fileName">Current file name used to build the <see cref="InvalidDataException"/> message if sentinel cannot be read back.</param>
+        /// <param name="line">Current line number used to build the <see cref="InvalidDataException"/> message if sentinel cannot be read back.</param>
+        public void DebugCheckSentinel( [CallerFilePath]string fileName = null, [CallerLineNumber] int line = 0 )
+        {
+            if( !IsDebugMode ) return;
+            bool success = false;
+            Exception e = null;
+            try
+            {
+                success = ReadInt32() == 987654321
+                          && ReadInt32() == _debugSentinel
+                          && (_lastWriteSentinel = ReadString()) != null;
+            }
+            catch( Exception ex )
+            {
+                e = ex;
+            }
+            if( !success )
+            {
+                var msg = $"Sentinel check failure: expected reading sentinel n°{_debugSentinel} at {fileName}({line}). Last successful sentinel was written at {_lastWriteSentinel} and read at {_lastReadSentinel}.";
+                throw new InvalidDataException( msg, e );
+            }
+            ++_debugSentinel;
+            _lastReadSentinel = fileName + '(' + line.ToString() + ')';
+        }
+
+        /// <summary>
+        /// Reads an expected string and throws an <see cref="InvalidDataException"/> if it cannot be read.
+        /// This is typically used if (and when) <see cref="IsDebugMode"/> is true but can be used independently.
+        /// </summary>
+        /// <param name="expected">The expected string to read. It cannot be null, empty or whitespace.</param>
+        public void ReadString( string expected )
+        {
+            if( String.IsNullOrWhiteSpace( expected ) ) throw new ArgumentException( "Must not be empty or whitespace.", nameof(expected) );
+            string read = null;
+            Exception e = null;
+            try
+            {
+                read = ReadString();
+            }
+            catch( Exception ex )
+            {
+                e = ex;
+            }
+            if( read != expected )
+            {
+                var msg = $"Read string failure: expected string '{expected}' but got '{(e!=null?"<see the inner exception>" : read)}'.";
+                throw new InvalidDataException( msg, e );
+            }
         }
 
         /// <summary>

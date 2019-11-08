@@ -67,6 +67,7 @@ namespace CK.Observable
             Debug.Assert( r.CurrentReadInfo.Version == 0 );
             Domain = r.Services.GetService<ObservableDomain>( throwOnNull: true );
             _disposed = new ObservableEventHandler<ObservableDomainEventArgs>( r );
+            Domain.Register( this );
         }
 
         void Write( BinarySerializer w )
@@ -101,8 +102,16 @@ namespace CK.Observable
         /// </summary>
         protected void RaiseStandardDomainEvent( ObservableEventHandler<EventMonitoredArgs> h ) => h.Raise( this, Domain.DefaultEventArgs );
 
-        protected void Remind( DateTime dueTimeUtc, SafeEventHandler<ObservableTimedEventArgs> callback, object tag = null )
+        /// <summary>
+        /// Uses a pooled <see cref="ObservableReminder"/> to call the specified callback at the given time with the
+        /// associated <see cref="ObservableTimedEventBase.Tag"/> object.
+        /// </summary>
+        /// <param name="dueTimeUtc">The due time. Must be in Utc and not <see cref="Util.UtcMinValue"/> or <see cref="Util.UtcMaxValue"/>.</param>
+        /// <param name="callback">The callback method. Must not be null.</param>
+        /// <param name="tag">Optional tag that will be available on event argument's <see cref="ObservableReminderEventArgs.Reminder"/>.</param>
+        protected void Remind( DateTime dueTimeUtc, SafeEventHandler<ObservableReminderEventArgs> callback, object tag = null )
         {
+            Domain.TimeManager.Remind( dueTimeUtc, callback, tag );
         }
 
         /// <summary>
@@ -123,7 +132,7 @@ namespace CK.Observable
             if( Domain != null )
             {
                 Domain.CheckBeforeDispose( this );
-                OnDisposed( Domain.DefaultEventArgs, false );
+                OnDisposed( false );
                 Domain.Unregister( this );
                 Domain = null;
             }
@@ -136,13 +145,10 @@ namespace CK.Observable
         /// Note that the Disposed event is raised only for explicit object disposing: a <see cref="ObservableDomain.Load"/> doesn't trigger the event.
         /// </para>
         /// </summary>
-        /// <param name="reusableArgs">
-        /// The event arguments that exposes the domain and monitor to use (that is the same as this <see cref="Monitor"/> protected property).
-        /// </param>
         /// <param name="isReloading">
         /// True when this dispose is due to a domain reload. (When true the <see cref="Disposed"/> event is not raised.)
         /// </param>
-        protected internal virtual void OnDisposed( ObservableDomainEventArgs reusableArgs, bool isReloading )
+        protected internal virtual void OnDisposed( bool isReloading )
         {
             if( isReloading )
             {

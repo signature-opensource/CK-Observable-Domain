@@ -133,7 +133,7 @@ namespace CK.Observable.Domain.Tests.Clients
         }
 
         [Test]
-        public void Load_throws_on_invalid_file()
+        public void Load_throws_InvalidDataException_on_invalid_file()
         {
             var client = CreateClient( 0 );
             File.WriteAllText( client.FilePath, "(INVALID FILE CONTENTS)" );
@@ -141,13 +141,11 @@ namespace CK.Observable.Domain.Tests.Clients
 
             Action act = () =>
             {
-                var d = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, "TEST", client);
+                var d = new ObservableDomain<TestObservableRootObject>( TestHelper.Monitor, "TEST", client );
             };
 
             // EndOfStreamException is an IOException.
-            act.Should().Throw<IOException>( "ObservableDomain can't be created when given an invalid file" );
-
-
+            act.Should().Throw<InvalidDataException>( "ObservableDomain can't be created when given an invalid file." );
         }
 
         [Test]

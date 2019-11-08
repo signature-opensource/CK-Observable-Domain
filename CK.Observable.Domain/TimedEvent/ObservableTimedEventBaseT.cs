@@ -38,8 +38,15 @@ namespace CK.Observable
         /// </summary>
         public override bool IsActive => _handlers.HasHandlers && GetIsActive();
 
+        /// <summary>
+        /// This must compute whether this timed event is logically active.
+        /// </summary>
+        /// <returns>True if this timed event is logically active.</returns>
         private protected abstract bool GetIsActive();
 
+        /// <summary>
+        /// This must provide the typed reusable event argument.
+        /// </summary>
         private protected abstract TEventArgs ReusableArgs { get; }
 
         /// <summary>
@@ -71,6 +78,7 @@ namespace CK.Observable
                 ev.DeltaMilliSeconds = (int)(current - ExpectedDueTimeUtc).TotalMilliseconds;
                 using( monitor.OpenDebug( $"Raising {ToString()} (Delta: {ev.DeltaMilliSeconds} ms)." ) )
                 {
+                    OnRaising( monitor, ev.DeltaMilliSeconds, throwException );
                     if( throwException ) _handlers.Raise( this, ev );
                     else
                     {
@@ -87,17 +95,25 @@ namespace CK.Observable
             }
         }
 
-        private protected virtual void OnRaising( IActivityMonitor monitor, bool throwException )
+        private protected virtual void OnRaising( IActivityMonitor monitor, int deltaMilliSeconds, bool throwException )
         {
         }
 
+        private protected void ClearHandlesAndTag()
+        {
+            _handlers.RemoveAll();
+            Tag = null;
+        }
+
         /// <summary>
-        /// Disposes this timer.
+        /// Disposes this timed event.
         /// </summary>
         public override void Dispose()
         {
-            base.Dispose();
+            // Clearing the handlers first makes this timed event logically inactive
+            // if it was active.
             if( !IsDisposed ) _handlers.RemoveAll();
+            base.Dispose();
         }
     }
 

@@ -39,7 +39,6 @@ namespace CK.Observable
             var r = c.StartReading();
             ActiveIndex = r.ReadInt32();
             ExpectedDueTimeUtc = r.ReadDateTime();
-            Name = r.ReadNullableString();
             _disposed = new ObservableEventHandler<ObservableDomainEventArgs>( r );
             Tag = r.ReadObject();
             if( ActiveIndex != 0 ) TimeManager.OnLoadedActive( this );
@@ -50,7 +49,6 @@ namespace CK.Observable
             Debug.Assert( !IsDisposed );
             w.Write( ActiveIndex );
             w.Write( ExpectedDueTimeUtc );
-            w.WriteNullableString( Name );
             _disposed.Write( w );
             w.WriteObject( Tag );
         }
@@ -79,15 +77,11 @@ namespace CK.Observable
         /// </summary>
         public object Tag { get; set; }
 
-        /// <summary>
-        /// Gets or sets an optional name for this timed object.
-        /// Default to null.
-        /// </summary>
-        public string Name { get; set; }
-
         internal abstract void DoRaise( IActivityMonitor monitor, DateTime current, bool throwException );
 
         internal abstract void OnAfterRaiseUnchanged( DateTime current, IActivityMonitor m );
+
+        internal abstract void OnDeactivate();
 
         /// <summary>
         /// This default implementation applies to reminders.
@@ -116,7 +110,8 @@ namespace CK.Observable
         {
             if( !IsDisposed )
             {
-                TimeManager.Domain.CheckBeforeDispose( this );
+                TimeManager.OnPreDisposed( this );
+                Debug.Assert( ActiveIndex == 0, "Timed event has been removed from the priority queue." );
                 _disposed.Raise( this, Domain.DefaultEventArgs );
                 _disposed.RemoveAll();
                 TimeManager.OnDisposed( this );

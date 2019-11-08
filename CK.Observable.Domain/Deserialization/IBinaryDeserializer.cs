@@ -1,5 +1,7 @@
 using CK.Core;
 using System;
+using System.IO;
+using System.Runtime.CompilerServices;
 
 namespace CK.Observable
 {
@@ -41,5 +43,32 @@ namespace CK.Observable
         /// Gets a set of low level methods and helpers.
         /// </summary>
         IBinaryDeserializerImpl ImplementationServices { get; }
+
+        /// <summary>
+        /// Reads an expected string and throws an <see cref="InvalidDataException"/> if it cannot be read.
+        /// This is typically used if (and when) <see cref="IsDebugMode"/> is true but can be used independently.
+        /// </summary>
+        /// <param name="expected">The expected string to read. It cannot be null, empty or whitespace.</param>
+        void ReadString( string expected );
+
+        /// <summary>
+        /// Gets whether this deserializer is currently in debug mode.
+        /// </summary>
+        bool IsDebugMode { get; }
+
+        /// <summary>
+        /// Updates the current debug mode that must have been written by <see cref="BinarySerializer.DebugWriteMode(bool)"/>.
+        /// </summary>
+        /// <returns>Whether the debug mode is currently active or not.</returns>
+        bool DebugReadMode();
+
+        /// <summary>
+        /// Checks the existence of a sentinel written by <see cref="BinarySerializer.DebugWriteSentinel"/>.
+        /// An <see cref="InvalidDataException"/> is thrown if <see cref="IsDebugMode"/> is true and the sentinel cannot be read.
+        /// </summary>
+        /// <param name="fileName">Current file name used to build the <see cref="InvalidDataException"/> message if sentinel cannot be read back.</param>
+        /// <param name="line">Current line number used to build the <see cref="InvalidDataException"/> message if sentinel cannot be read back.</param>
+        void DebugCheckSentinel( [CallerFilePath]string fileName = null, [CallerLineNumber] int line = 0 );
+
     }
 }

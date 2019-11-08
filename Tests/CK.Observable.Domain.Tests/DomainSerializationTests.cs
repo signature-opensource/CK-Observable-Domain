@@ -1,3 +1,4 @@
+using CK.Core;
 using CK.Observable.Domain.Tests.Sample;
 using FluentAssertions;
 using NUnit.Framework;
@@ -21,7 +22,7 @@ namespace CK.Observable.Domain.Tests
                     var car = new Car( "Hello" );
                     car.Speed = 10;
                 } );
-                using( var d2 = SaveAndLoad( domain ) )
+                using( var d2 = TestHelper.SaveAndLoad( domain ) )
                 {
                     var c = d2.AllObjects.OfType<Car>().Single();
                     c.Name.Should().Be( "Hello" );
@@ -50,7 +51,7 @@ namespace CK.Observable.Domain.Tests
                     domain.AllObjects.ElementAt( 1 ).Should().BeSameAs( other );
                 } );
 
-                using( var d2 = SaveAndLoad( domain ) )
+                using( var d2 = TestHelper.SaveAndLoad( domain ) )
                 {
                     d2.AllObjects.OfType<MultiPropertyType>().All( o => o.Equals( defValue ) );
 
@@ -62,7 +63,7 @@ namespace CK.Observable.Domain.Tests
                     d2.AllObjects.First().Should().Match( o => o.Equals( defValue ) );
                     d2.AllObjects.ElementAt( 1 ).Should().Match( o => !o.Equals( defValue ) );
 
-                    using( var d3 = SaveAndLoad( d2 ) )
+                    using( var d3 = TestHelper.SaveAndLoad( d2 ) )
                     {
                         d3.AllObjects.First().Should().Match( o => o.Equals( defValue ) );
                         d3.AllObjects.ElementAt( 1 ).Should().Match( o => !o.Equals( defValue ) );
@@ -84,7 +85,7 @@ namespace CK.Observable.Domain.Tests
                     var m = new Mechanic( g ) { FirstName = "Hela", LastName = "Bas" };
                     m.CurrentCar = car;
                 } );
-                using( var d2 = SaveAndLoad( domain ) )
+                using( var d2 = TestHelper.SaveAndLoad( domain ) )
                 {
                     var g1 = domain.AllObjects.OfType<Garage>().Single();
                     var g2 = d2.AllObjects.OfType<Garage>().Single();
@@ -106,7 +107,7 @@ namespace CK.Observable.Domain.Tests
                     var p2 = new Person() { FirstName = "B", Friend = p1 };
                     p1.Friend = p2;
                 } );
-                using( var d2 = SaveAndLoad( domain ) )
+                using( var d2 = TestHelper.SaveAndLoad( domain ) )
                 {
                     var pA1 = domain.AllObjects.OfType<Person>().Single( p => p.FirstName == "A" );
                     var pB1 = domain.AllObjects.OfType<Person>().Single( p => p.FirstName == "B" );
@@ -133,7 +134,7 @@ namespace CK.Observable.Domain.Tests
                     var p = new Person() { FirstName = "P" };
                     p.Friend = p;
                 } );
-                using( var d2 = SaveAndLoad( domain ) )
+                using( var d2 = TestHelper.SaveAndLoad( domain ) )
                 {
                     var p1 = domain.AllObjects.OfType<Person>().Single();
                     p1.Friend.Should().BeSameAs( p1 );
@@ -149,14 +150,14 @@ namespace CK.Observable.Domain.Tests
         {
             using( var domain = Sample.SampleDomain.CreateSample() )
             {
-                using( var d2 = SaveAndLoad( domain ) )
+                using( var d2 = TestHelper.SaveAndLoad( domain ) )
                 {
                     Sample.SampleDomain.CheckSampleGarage1( d2 );
                 }
 
                 using( domain.AcquireReadLock() )
                 {
-                    using( var d = SaveAndLoad( domain ) )
+                    using( var d = TestHelper.SaveAndLoad( domain ) )
                     {
                         Sample.SampleDomain.CheckSampleGarage1( d );
                     }
@@ -164,26 +165,13 @@ namespace CK.Observable.Domain.Tests
 
                 domain.Modify( TestHelper.Monitor, () =>
                 {
-                    using( var d = SaveAndLoad( domain ) )
+                    using( var d = TestHelper.SaveAndLoad( domain ) )
                     {
                         Sample.SampleDomain.CheckSampleGarage1( d );
                     }
                 } );
             }
         }
-
-        internal static ObservableDomain SaveAndLoad( ObservableDomain domain )
-        {
-            using( var s = new MemoryStream() )
-            {
-                domain.Save( TestHelper.Monitor, s, leaveOpen: true );
-                var d = new ObservableDomain(TestHelper.Monitor, "TEST");
-                s.Position = 0;
-                d.Load( TestHelper.Monitor, s, leaveOpen: true );
-                return d;
-            }
-        }
-
 
     }
 }

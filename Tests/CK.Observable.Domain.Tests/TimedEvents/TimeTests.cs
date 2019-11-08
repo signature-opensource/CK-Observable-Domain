@@ -249,7 +249,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                     d.TimeManager.AllObservableTimedEvents.Where( o => !o.IsActive ).Should().HaveCount( 8 );
                 } );
                 tranResult.Success.Should().BeTrue();
-                using( var d2 = SaveAndLoad( d ) )
+                using( var d2 = TestHelper.SaveAndLoad( d ) )
                 {
                     d2.TimeManager.Timers.Should().HaveCount( 8 );
                     d2.TimeManager.AllObservableTimedEvents.Where( o => !o.IsActive ).Should().HaveCount( 8 );
@@ -278,7 +278,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 int secondaryValue = 0;
                 using( TestHelper.Monitor.OpenInfo( "Having slept during 50 ms: now creating Secondary by Save/Load the primary domain." ) )
                 {
-                    using( var d2 = SaveAndLoad( d, "Secondary" ) )
+                    using( var d2 = TestHelper.SaveAndLoad( d, "Secondary" ) )
                     {
                         d2.TimeManager.Timers.Should().HaveCount( 8 );
                         d2.TimeManager.Reminders.Should().HaveCount( 5 );
@@ -356,7 +356,6 @@ namespace CK.Observable.Domain.Tests.TimedEvents
 
                 TestHelper.Monitor.Info( $"Waiting for {testTime} ms again." );
                 Thread.Sleep( testTime );
-                d.TimeManager.CurrentTimer.WaitForNext();
 
                 TestHelper.Monitor.Info( $"Same as before: All counters must have a Count that is {testTime}/IntervalMilliSeconds except the 10 ms one: 10 ms is too small (20 ms is okay here)." );
                 using( d.AcquireReadLock() )
@@ -428,83 +427,161 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             }
         }
 
-
-        #region Simplified Timer use (code sandbox).
-        [Test]
-        public void testing_system_time()
+        [SerializationVersion(0)]
+        class InternalReminderUser : InternalObject
         {
-            const int waitTime = 50 * 11;
+            readonly InternalCounter _counter;
 
-            TestHelper.Monitor.Trace( "Starting!" );
-            using( var timer = new OTimer( 50 ) )
+            public InternalReminderUser( InternalCounter counter )
             {
-                TestHelper.Monitor.Trace( $"new AutoCounter( OTimer ) done. Waiting {waitTime} ms." );
-                Thread.Sleep( waitTime );
-                TestHelper.Monitor.Trace( $"End of Waiting. Counter = {timer.Counter}." );
-                timer.Counter.Should().Match( c => c == 10 || c == 11 || c == 12 );
+                _counter = counter;
+            }
+
+            InternalReminderUser( IBinaryDeserializerContext c )
+                : base( c )
+            {
+                var r = c.StartReading();
+                _counter = (InternalCounter)r.ReadObject();
+            }
+
+            void Write( BinarySerializer w )
+            {
+                w.WriteObject( _counter );
+            }
+
+            public void StartWork( string message, int repeatCount )
+            {
+                Remind( DateTime.UtcNow, DisplayMessageAndStartCounting, (message, repeatCount) );
+            }
+
+            public void StartTooooooLooooongWork()
+            {
+                Remind( DateTime.UtcNow.AddDays( 1 ), DisplayMessageAndStartCounting, ("Will never happen.", 0) );
+            }
+
+            void DisplayMessageAndStartCounting( object sender, ObservableReminderEventArgs e )
+            {
+                e.Reminder.IsPooled.Should().BeTrue();
+                e.Reminder.Invoking( x => x.Dispose() ).Should().Throw<InvalidOperationException>( "Pooled reminders cannot be disposed." );
+
+                var (msg, count) = ((string,int))e.Reminder.Tag;
+
+                if( msg == "Will never happen." ) throw new Exception( msg );
+                Monitor.Info( $"Working: {msg} (count:{count})" );
+                if( count > 0 )
+                {
+                    e.Reminder.DueTimeUtc = DateTime.UtcNow.AddMilliseconds( 80 );
+                    e.Reminder.Tag = (msg, --count);
+                }
+                // Increment the counter from another reminder :).
+                if( _counter != null ) Remind( DateTime.UtcNow.AddMilliseconds( 20 ), _counter.Increment );
             }
         }
 
-
-        class OTimer : IDisposable
+        [TestCase( "WithIntermediateSaves" )]
+        [TestCase( "" )]
+        public void reminder_helper_uses_pooled_ObservableReminders( string mode )
         {
-            DateTime _baseTime;
-            int _intervalMilliSeconds;
-            Timer _timer;
-            ActivityMonitor _monitor;
-            int _counter;
-
-            public OTimer( int intervalMilliSeconds )
+            IReadOnlyList<ActivityMonitorSimpleCollector.Entry> logs = null;
+            using( var d = TestHelper.CreateDomainHandler( "Test" ) )
             {
-                _baseTime = DateTime.UtcNow;
-                _baseTime = _baseTime.AddMilliseconds( -_baseTime.Millisecond );
-                _intervalMilliSeconds = intervalMilliSeconds;
-                _timer = new System.Threading.Timer( OnTime, this, Timeout.Infinite, Timeout.Infinite );
-                _monitor = new ActivityMonitor();
-                var next = ObservableTimer.AdjustNextDueTimeUtc( DateTime.UtcNow, _baseTime, intervalMilliSeconds );
-                SetNextDueTimeUtc( next );
+                void ReloadIfNeeded()
+                {
+                    if( mode == "WithIntermediateSaves" ) d.Reload( TestHelper.Monitor );
+                }
+
+                using( TestHelper.Monitor.CollectEntries( entries => logs = entries, LogLevelFilter.Info ) )
+                {
+                    d.Domain.Modify( TestHelper.Monitor, () =>
+                    {
+                        var counter = new InternalCounter();
+                        var r1 = new InternalReminderUser( counter );
+                        r1.StartWork( "Hello!", 3 );
+
+                    } ).Success.Should().BeTrue();
+                    ReloadIfNeeded();
+                    Thread.Sleep( 5 * 100 );
+                    ReloadIfNeeded();
+                }
+                logs.Select( l => l.Text ).Should().Contain( "Working: Hello! (count:3)", "The 2 other logs are on the domain monitor!" );
+                using( d.Domain.AcquireReadLock() )
+                {
+                    d.Domain.AllInternalObjects.OfType<InternalCounter>().Single().Count.Should().Be( 4, "Counter has been incremented four times." );
+                    d.Domain.TimeManager.Reminders.Should().HaveCount( 2, "2 pooled reminders have been created." );
+                    d.Domain.TimeManager.Reminders.All( r => r.IsPooled && !r.IsActive && !r.IsDisposed ).Should().BeTrue( "Reminders are free to be reused." );
+                }
+                ReloadIfNeeded();
+                using( TestHelper.Monitor.CollectEntries( entries => logs = entries, LogLevelFilter.Info ) )
+                {
+                    d.Domain.Modify( TestHelper.Monitor, () =>
+                    {
+                        var r2 = new InternalReminderUser( null );
+                        r2.StartWork( "Another Job!", 0 );
+
+                    } ).Success.Should().BeTrue();
+                    ReloadIfNeeded();
+                }
+                logs.Select( l => l.Text ).Should().Contain( "Working: Another Job! (count:0)" );
+                using( d.Domain.AcquireReadLock() )
+                {
+                    d.Domain.TimeManager.Reminders.Should().HaveCount( 2, "Still 2 pooled reminders." );
+                    d.Domain.TimeManager.Reminders.All( r => r.IsPooled && !r.IsActive && !r.IsDisposed ).Should().BeTrue( "Reminders are free to be reused." );
+                }
+                ReloadIfNeeded();
+                d.Domain.Modify( TestHelper.Monitor, () =>
+                {
+                    var r = d.Domain.AllInternalObjects.OfType<InternalReminderUser>().First();
+                    r.StartTooooooLooooongWork();
+
+                } ).Success.Should().BeTrue();
+                ReloadIfNeeded();
+                using( d.Domain.AcquireReadLock() )
+                {
+                    d.Domain.TimeManager.Reminders.Should().HaveCount( 2, "Still 2 pooled reminders." );
+                    d.Domain.TimeManager.Reminders.Where( r => !r.IsActive ).Should().HaveCount( 1, "One is in used." );
+                }
+                ReloadIfNeeded();
+                d.Domain.Modify( TestHelper.Monitor, () =>
+                {
+                    var r3 = new InternalReminderUser( null );
+                    r3.StartTooooooLooooongWork();
+
+                } ).Success.Should().BeTrue();
+                ReloadIfNeeded();
+                using( d.Domain.AcquireReadLock() )
+                {
+                    d.Domain.TimeManager.Reminders.Should().HaveCount( 2, "Still 2 pooled reminders." );
+                    d.Domain.TimeManager.Reminders.Where( r => !r.IsActive ).Should().BeEmpty( "No more free reminders!" );
+                }
+                ReloadIfNeeded();
+                d.Domain.Modify( TestHelper.Monitor, () =>
+                {
+                    var r4 = new InternalReminderUser( null );
+                    r4.StartTooooooLooooongWork();
+
+                } ).Success.Should().BeTrue();
+                ReloadIfNeeded();
+                using( d.Domain.AcquireReadLock() )
+                {
+                    d.Domain.TimeManager.Reminders.Should().HaveCount( 3, "A third one has been required!" );
+                    d.Domain.TimeManager.Reminders.Where( r => !r.IsActive ).Should().BeEmpty( "All 3 are in use." );
+                }
+                ReloadIfNeeded();
+                d.Domain.Modify( TestHelper.Monitor, () =>
+                {
+                    foreach( var r in d.Domain.TimeManager.Reminders )
+                    {
+                        r.DueTimeUtc = Util.UtcMinValue;
+                    }
+
+                } ).Success.Should().BeTrue();
+                ReloadIfNeeded();
+                using( d.Domain.AcquireReadLock() )
+                {
+                    d.Domain.TimeManager.Reminders.Should().HaveCount( 3, "3 created..." );
+                    d.Domain.TimeManager.Reminders.Where( r => !r.IsActive ).Should().HaveCount( 3, "... and free to be reused." );
+                }
             }
-
-            public int Counter => _counter;
-
-            public void SetNextDueTimeUtc( DateTime nextDueTimeUtc )
-            {
-                var delta = nextDueTimeUtc - DateTime.UtcNow;
-                var ms = delta <= TimeSpan.Zero ? 0 : (long)Math.Ceiling( delta.TotalMilliseconds );
-                _timer.Change( ms, Timeout.Infinite );
-                _monitor.Debug( $"Timer set in {ms} ms." );
-            }
-
-            static void OnTime( object o )
-            {
-                var oTimer = (OTimer)o;
-                ++oTimer._counter;
-                oTimer._monitor.Debug( $"Raised! ({oTimer._counter})." );
-                oTimer._baseTime.AddMilliseconds( oTimer._intervalMilliSeconds );
-                var next = ObservableTimer.AdjustNextDueTimeUtc( DateTime.UtcNow, oTimer._baseTime, oTimer._intervalMilliSeconds );
-                oTimer.SetNextDueTimeUtc( next );
-            }
-
-            public void Dispose()
-            {
-                _timer.Dispose();
-            }
-
         }
-
-        #endregion
-
-        internal static ObservableDomain SaveAndLoad( ObservableDomain domain, string renamed = null )
-        {
-            using( var s = new MemoryStream() )
-            {
-                domain.Save( TestHelper.Monitor, s, leaveOpen: true );
-                var d = new ObservableDomain( TestHelper.Monitor, renamed ?? domain.DomainName );
-                s.Position = 0;
-                d.Load( TestHelper.Monitor, s, domain.DomainName );
-                return d;
-            }
-        }
-
     }
 }

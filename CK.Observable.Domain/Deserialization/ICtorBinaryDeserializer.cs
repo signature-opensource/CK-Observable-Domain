@@ -1,3 +1,5 @@
+using System.Runtime.CompilerServices;
+
 namespace CK.Observable
 {
     public interface ICtorBinaryDeserializer : IBinaryDeserializer
@@ -7,6 +9,5 @@ namespace CK.Observable
         /// If the object has been written by an external driver, this is null.
         /// </summary>
         TypeReadInfo CurrentReadInfo { get; }
-
     }
 }

@@ -287,6 +287,34 @@ namespace CK.Observable
             }
         }
 
+        ObservableReminder _firstFreeReminder;
+
+        ObservableReminder GetPooledReminder()
+        {
+            var r = _firstFreeReminder;
+            if( _firstFreeReminder == null ) return new ObservableReminder();
+            _firstFreeReminder = r.NextFreeReminder;
+            return r;
+        }
+
+        internal void ReleaseToPool( ObservableReminder r )
+        {
+            Debug.Assert( r != null );
+            r.NextFreeReminder = _firstFreeReminder;
+            _firstFreeReminder = r;
+        }
+
+        internal void Remind( DateTime dueTimeUtc, SafeEventHandler<ObservableReminderEventArgs> callback, object tag )
+        {
+            // Utc is checked by the DueTimeUtc setter below.
+            if( dueTimeUtc == Util.UtcMinValue || dueTimeUtc == Util.UtcMaxValue ) throw new ArgumentException( nameof( dueTimeUtc ), $"Must be a Utc DateTime, not UtcMinValue nor UtcMaxValue: {dueTimeUtc.ToString("o")}." );
+            if( callback == null ) throw new ArgumentNullException( nameof( callback ) );
+            var r = GetPooledReminder();
+            r.Elapsed += callback;
+            r.Tag = tag;
+            r.DueTimeUtc = dueTimeUtc;
+        }
+
         internal void SetNextDueTimeUtc( IActivityMonitor m, DateTime nextDueTimeUtc )
         {
             if( _currentNext != nextDueTimeUtc )
@@ -309,6 +337,12 @@ namespace CK.Observable
             _first = t;
             _changed.Add( t );
             ++_count;
+        }
+
+        internal void OnPreDisposed( ObservableTimedEventBase t )
+        {
+            Domain.CheckBeforeDispose( t );
+            if( t.ActiveIndex != 0 ) Deactivate( t ); 
         }
 
         internal void OnDisposed( ObservableTimedEventBase t )
@@ -361,6 +395,7 @@ namespace CK.Observable
             _count = _activeCount = 0;
             _first = _last = null;
             _current.SetNextDueTimeUtc( monitor, Util.UtcMinValue );
+            _firstFreeReminder = null;
         }
 
         /// <summary>
@@ -436,11 +471,12 @@ namespace CK.Observable
                         {
                             if( first.ExpectedDueTimeUtc <= current )
                             {
+                                // 10 ms is a "very minimal" step: it is smaller than the approximate thread time slice (20 ms). 
                                 first.ForwardExpectedDueTime( Domain.CurrentMonitor, current.AddMilliseconds( 10 ) );
                             }
                             OnNextDueTimeUpdated( first );
                         }
-                        Domain.CurrentMonitor.Debug( $"{first}: ActiveIndex={first.ActiveIndex}, Next in {(first.ExpectedDueTimeUtc - DateTime.UtcNow).TotalMilliseconds} ms." );
+                        Domain.CurrentMonitor.Debug( $"{first}: ActiveIndex={first.ActiveIndex}." );
                         ++count;
                     }
                     else break;
@@ -488,6 +524,7 @@ namespace CK.Observable
         void Deactivate( ObservableTimedEventBase ev )
         {
             Debug.Assert( ev.ActiveIndex > 0 && Array.IndexOf( _activeEvents, ev ) == ev.ActiveIndex );
+            ev.OnDeactivate();
             // If the event is the last one, we can remove it immediately.
             if( ev.ActiveIndex == _activeCount )
             {
