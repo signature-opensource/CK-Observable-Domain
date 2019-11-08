@@ -3,6 +3,7 @@ using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Reflection;
+using System.Runtime.InteropServices;
 
 namespace CK.Observable
 {
@@ -14,7 +15,7 @@ namespace CK.Observable
     /// <remarks>
     /// </remarks>
     [SerializationVersion( 0 )]
-    public abstract class ObservableObject : INotifyPropertyChanged, IDisposableObject, IKnowMyExportDriver
+    public abstract partial class ObservableObject : INotifyPropertyChanged, IDisposableObject, IKnowMyExportDriver
     {
         int _id;
         internal readonly ObservableDomain Domain;
