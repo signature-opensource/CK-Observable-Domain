@@ -2,7 +2,7 @@ namespace CK.Observable
 {
     public class CollectionRemoveKeyEvent : ObservableEvent, ICollectionEvent
     {
-        public int ObjectId { get; }
+        public ObservableObject.Id ObjectId { get; }
 
         public ObservableObject Object { get; }
 
@@ -11,14 +11,14 @@ namespace CK.Observable
         public CollectionRemoveKeyEvent( ObservableObject o, object key )
             : base( ObservableEventType.CollectionRemoveKey )
         {
-            ObjectId = o.OId;
+            ObjectId = o.ObjectId;
             Object = o;
             Key = key;
         }
 
         protected override void ExportEventData( ObjectExporter e )
         {
-            e.Target.EmitInt32( ObjectId );
+            e.Target.EmitInt32( ObjectId.Index );
             ExportEventObject( e, Key );
         }
 

@@ -2,7 +2,7 @@ namespace CK.Observable
 {
     public class ListSetAtEvent : ObservableEvent, ICollectionEvent
     {
-        public int ObjectId { get; }
+        public ObservableObject.Id ObjectId { get; }
 
         public ObservableObject Object { get; }
 
@@ -14,7 +14,7 @@ namespace CK.Observable
         public ListSetAtEvent( ObservableObject o, int index, object value )
             : base( ObservableEventType.ListSetAt )
         {
-            ObjectId = o.OId;
+            ObjectId = o.ObjectId;
             Object = o;
             Index = index;
             Value = value;
@@ -22,7 +22,7 @@ namespace CK.Observable
 
         protected override void ExportEventData( ObjectExporter e )
         {
-            e.Target.EmitInt32( ObjectId );
+            e.Target.EmitInt32( ObjectId.Index );
             e.Target.EmitInt32( Index );
             ExportEventObject( e, Value );
         }

@@ -2,7 +2,7 @@ namespace CK.Observable
 {
     public class CollectionMapSetEvent : ObservableEvent, ICollectionEvent
     {
-        public int ObjectId { get; }
+        public ObservableObject.Id ObjectId { get; }
 
         public ObservableObject Object { get; }
 
@@ -13,7 +13,7 @@ namespace CK.Observable
         public CollectionMapSetEvent( ObservableObject o, object key, object value )
             : base( ObservableEventType.CollectionMapSet )
         {
-            ObjectId = o.OId;
+            ObjectId = o.ObjectId;
             Object = o;
             Key = key;
             Value = value;
@@ -21,7 +21,7 @@ namespace CK.Observable
 
         protected override void ExportEventData( ObjectExporter e )
         {
-            e.Target.EmitInt32( ObjectId );
+            e.Target.EmitInt32( ObjectId.Index );
             ExportEventObject( e, Key );
             ExportEventObject( e, Value );
         }

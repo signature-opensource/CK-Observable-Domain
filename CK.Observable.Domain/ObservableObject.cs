@@ -14,12 +14,12 @@ namespace CK.Observable
     /// </summary>
     /// <remarks>
     /// </remarks>
-    [SerializationVersion( 0 )]
+    [SerializationVersion( 1 )]
     public abstract partial class ObservableObject : INotifyPropertyChanged, IDisposableObject, IKnowMyExportDriver
     {
-        int _id;
+        Id _id;
         internal readonly ObservableDomain Domain;
-        internal int OId => _id;
+        internal Id ObjectId => _id;
         internal readonly IObjectExportTypeDriver _exporter;
         ObservableEventHandler<ObservableDomainEventArgs> _disposed;
         ObservableEventHandler<PropertyChangedEventArgs> _propertyChanged;
@@ -86,7 +86,6 @@ namespace CK.Observable
             Domain = domain;
             _exporter = Domain._exporters.FindDriver( GetType() );
             _id = Domain.Register( this );
-            Debug.Assert( _id >= 0 );
         }
 
         /// <summary>
@@ -99,15 +98,21 @@ namespace CK.Observable
             Debug.Assert( r.CurrentReadInfo.Version == 0 );
             Domain = r.Services.GetService<ObservableDomain>( throwOnNull: true );
             _exporter = Domain._exporters.FindDriver( GetType() );
-            _id = r.ReadInt32();
-            _disposed = new ObservableEventHandler<ObservableDomainEventArgs>( r );
-            _propertyChanged = new ObservableEventHandler<PropertyChangedEventArgs>( r );
-            Debug.Assert( _id >= 0 );
+            if( r.CurrentReadInfo.Version == 0 )
+            {
+                _id = Domain.CreateId( r.ReadInt32() );
+            }
+            else
+            {
+                _id = new Id( r );
+                _disposed = new ObservableEventHandler<ObservableDomainEventArgs>( r );
+                _propertyChanged = new ObservableEventHandler<PropertyChangedEventArgs>( r );
+            }
         }
 
         void Write( BinarySerializer w )
         {
-            w.Write( _id );
+            _id.Write( w );
             _disposed.Write( w );
             _propertyChanged.Write( w );
         }
@@ -121,7 +126,13 @@ namespace CK.Observable
         /// Gets whether this object has been disposed.
         /// </summary>
         [NotExportable]
-        public bool IsDisposed => _id < 0;
+        public bool IsDisposed => _id == Id.Disposed;
+
+        /// <summary>
+        /// Gets the unique identifier of this observable object.
+        /// This identifier is composed of its internal index and a uniquifier (see <see cref="Id"/> struct).
+        /// </summary>
+        public long OId => _id.UniqueId;
 
         /// <summary>
         /// Gets whether the domain is being deserialized.
@@ -137,12 +148,12 @@ namespace CK.Observable
         /// </summary>
         public void Dispose()
         {
-            if( _id >= 0 )
+            if( _id.IsValid )
             {
                 Domain.CheckBeforeDispose( this );
                 OnDisposed( false );
                 Domain.Unregister( this );
-                _id = -1;
+                _id = Id.Disposed;
             }
         }
 
@@ -183,7 +194,7 @@ namespace CK.Observable
         {
             if( isReloading )
             {
-                _id = -1;
+                _id = Id.Disposed;
             }
             else
             {

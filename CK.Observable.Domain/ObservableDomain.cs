@@ -53,10 +53,16 @@ namespace CK.Observable
                 PropertyId = propertyId;
             }
 
+            /// <summary>
+            /// Builds a long value based on the <see cref="ObservableObject.Id.Index"/> and <see cref="PropertyId"/>
+            /// to use it as a unique local key to track/dedup property changed event.
+            /// </summary>
+            /// <param name="o">The owning object.</param>
+            /// <returns>The key to use for this property of the specified object.</returns>
             public long GetObjectPropertyId( ObservableObject o )
             {
-                Debug.Assert( o.OId >= 0 );
-                long r = o.OId;
+                Debug.Assert( o.ObjectId.IsValid );
+                long r = o.ObjectId.Index;
                 return (r << 24) | (uint)PropertyId;
             }
         }
@@ -101,6 +107,8 @@ namespace CK.Observable
         /// This is the actual number of objects, null cells of _objects are NOT included.
         /// </summary>
         int _actualObjectCount;
+
+        int _currentObjectUniquifier;
 
         /// <summary>
         /// The root objects among all _objects.
@@ -232,7 +240,13 @@ namespace CK.Observable
             /// <returns>True if this is a new object. False if the object has been created earlier.</returns>
             internal bool IsNewObject( ObservableObject o ) => _newObjects.ContainsKey( o );
 
-            internal void OnNewObject( ObservableObject o, int objectId, IObjectExportTypeDriver exporter )
+            /// <summary>
+            /// Called when a new object is being created.
+            /// </summary>
+            /// <param name="o">The oobject itself.</param>
+            /// <param name="objectId">The assigned object identifier.</param>
+            /// <param name="exporter">The export driver of the object. Can be null.</param>
+            internal void OnNewObject( ObservableObject o, ObservableObject.Id objectId, IObjectExportTypeDriver exporter )
             {
                 _changeEvents.Add( new NewObjectEvent( o, objectId ) );
                 if( exporter != null )
@@ -901,7 +915,7 @@ namespace CK.Observable
                 target.EmitStartObject( -1, ObjectExportedKind.List );
                 foreach( var r in _roots )
                 {
-                    target.EmitInt32( r.OId );
+                    target.EmitInt32( r.ObjectId.Index );
                 }
                 target.EmitEndObject( -1, ObjectExportedKind.List );
 
@@ -993,7 +1007,7 @@ namespace CK.Observable
 
                         w.DebugWriteSentinel();
                         w.WriteNonNegativeSmallInt32( _roots.Count );
-                        foreach( var r in _roots ) w.WriteNonNegativeSmallInt32( r.OId );
+                        foreach( var r in _roots ) w.WriteNonNegativeSmallInt32( r.ObjectId.Index );
 
                         w.DebugWriteSentinel();
                         w.WriteNonNegativeSmallInt32( _internalObjectCount );
@@ -1029,11 +1043,13 @@ namespace CK.Observable
                 {
                     throw new InvalidDataException( $"Version must be between 0 and {CurrentSerializationVersion}. Version read: {version}." );
                 }
+                _currentObjectUniquifier = 0;
                 if( version > 0 )
                 {
                     if( version > 1 )
                     {
                         r.DebugReadMode();
+                        _currentObjectUniquifier = r.ReadInt32();
                     }
                     var loaded = r.ReadString();
                     if( loaded != expectedName ) throw new InvalidDataException( $"Domain name mismatch: loading domain named '{loaded}' but expected '{expectedName}'." );
@@ -1236,7 +1252,9 @@ namespace CK.Observable
             --_internalObjectCount;
         }
 
-        internal int Register( ObservableObject o )
+        internal ObservableObject.Id CreateId( int idx ) => new ObservableObject.Id( idx, ObservableObject.Id.ForwardUniquifier( ++_currentObjectUniquifier ) );
+
+        internal ObservableObject.Id Register( ObservableObject o )
         {
             Debug.Assert( o != null && o.Domain == this );
             CheckWriteLock( o );
@@ -1255,12 +1273,14 @@ namespace CK.Observable
                 }
             }
             _objects[idx] = o;
+
+            var id = CreateId( idx );
             if( !_deserializing )
             {
-                _changeTracker.OnNewObject( o, idx, o._exporter );
+                _changeTracker.OnNewObject( o, id, o._exporter );
             }
             ++_actualObjectCount;
-            return idx;
+            return id;
         }
 
         internal void CheckBeforeDispose( IDisposableObject o )
@@ -1272,8 +1292,8 @@ namespace CK.Observable
         internal void Unregister( ObservableObject o )
         {
             if( !_deserializing ) _changeTracker.OnDisposeObject( o );
-            _objects[o.OId] = null;
-            _freeList.Add( o.OId );
+            _objects[o.ObjectId.Index] = null;
+            _freeList.Add( o.ObjectId.Index );
             --_actualObjectCount;
         }
 

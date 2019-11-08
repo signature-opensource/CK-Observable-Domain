@@ -4,13 +4,13 @@ namespace CK.Observable
 {
     public class NewObjectEvent : ObservableEvent
     {
-        public int ObjectId { get; }
+        public ObservableObject.Id ObjectId { get; }
 
         public ObservableObject Object { get; }
 
         public ObjectExportedKind ExportedKind { get;}
 
-        public NewObjectEvent( ObservableObject o, int oid )
+        public NewObjectEvent( ObservableObject o, ObservableObject.Id oid )
             : base( ObservableEventType.NewObject )
         {
             ObjectId = oid;
@@ -20,7 +20,7 @@ namespace CK.Observable
 
         protected override void ExportEventData( ObjectExporter e )
         {
-            e.Target.EmitInt32( ObjectId );
+            e.Target.EmitInt32( ObjectId.Index );
             switch( ExportedKind )
             {
                 case ObjectExportedKind.Object: e.Target.EmitString( "" ); break;

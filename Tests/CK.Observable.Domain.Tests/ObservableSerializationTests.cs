@@ -18,6 +18,7 @@ namespace CK.Observable.Domain.Tests
             }
 
             protected ForgetToCallBaseDeserializationCtor( IBinaryDeserializerContext c )
+                // : base( c )
             {
                 var r = c.StartReading();
             }
