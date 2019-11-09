@@ -2,7 +2,7 @@ namespace CK.Observable
 {
     public class ListRemoveAtEvent : ObservableEvent, ICollectionEvent
     {
-        public int ObjectId { get; }
+        public ObservableObjectId ObjectId { get; }
 
         public ObservableObject Object { get; }
 
@@ -18,7 +18,7 @@ namespace CK.Observable
 
         protected override void ExportEventData( ObjectExporter e )
         {
-            e.Target.EmitInt32( ObjectId );
+            e.Target.EmitInt32( ObjectId.Index );
             e.Target.EmitInt32( Index );
         }
 

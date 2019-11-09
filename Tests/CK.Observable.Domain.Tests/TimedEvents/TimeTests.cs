@@ -25,7 +25,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             IReadOnlyList<ActivityMonitorSimpleCollector.Entry> entries = null;
 
             using( TestHelper.Monitor.CollectEntries( e => entries = e, LogLevelFilter.Info ) )
-            using( var d = new ObservableDomain( TestHelper.Monitor, "Test" ) )
+            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( timed_events_trigger_at_the_end_of_the_Modify_for_immediate_handling ) ) )
             {
                 d.Modify( TestHelper.Monitor, () =>
                 {
@@ -45,7 +45,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
         public void timed_event_trigger_on_Timer_or_at_the_start_of_the_Modify()
         {
             RawTraces.Clear();
-            using( var d = new ObservableDomain( TestHelper.Monitor, "Test" ) )
+            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( timed_event_trigger_on_Timer_or_at_the_start_of_the_Modify ) ) )
             {
                 d.Modify( TestHelper.Monitor, () =>
                 {
@@ -84,7 +84,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             IReadOnlyList<ActivityMonitorSimpleCollector.Entry> entries = null;
 
             using( TestHelper.Monitor.CollectEntries( e => entries = e, LogLevelFilter.Info ) )
-            using( var d = new ObservableDomain( TestHelper.Monitor, "Test" ) )
+            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( timed_event_trigger_at_the_start_of_the_Modify ) ) )
             {
                 var autoTimer = d.TimeManager.CurrentTimer;
                 d.TimeManager.CurrentTimer = new FakeAutoTimer( d );
@@ -122,7 +122,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
         {
             int relayedCounter = 0;
             const int waitTime = 100 * 10;
-            using( var d = new ObservableDomain( TestHelper.Monitor, "Test" ) )
+            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( auto_counter_works_as_expected ) ) )
             {
                 AutoCounter counter = null;
                 d.Modify( TestHelper.Monitor, () =>
@@ -150,7 +150,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             IReadOnlyList<ActivityMonitorSimpleCollector.Entry> entries = null;
 
             using( TestHelper.Monitor.CollectEntries( e => entries = e ) )
-            using( var d = new ObservableDomain( TestHelper.Monitor, "Test" ) )
+            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( auto_counter_works_uses_Critical_mode ) ) )
             {
                 AutoCounter counter = null;
                 d.Modify( TestHelper.Monitor, () =>
@@ -176,7 +176,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
         [Test]
         public void callbacks_for_reminders_as_well_as_timers_must_be_regular_object_methods_or_static()
         {
-            using( var d = new ObservableDomain( TestHelper.Monitor, "Test" ) )
+            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( callbacks_for_reminders_as_well_as_timers_must_be_regular_object_methods_or_static ) ) )
             {
                 var tranResult = d.Modify( TestHelper.Monitor, () =>
                 {
@@ -239,7 +239,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             GC.WaitForPendingFinalizers();
 
             var now = DateTime.UtcNow;
-            using( var d = new ObservableDomain( TestHelper.Monitor, "Primary" ) )
+            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( serializing_timers_and_reminders ) + " (Primary)" ) )
             {
                 var tranResult = d.Modify( TestHelper.Monitor, () =>
                 {
@@ -318,7 +318,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             const int testTime = 5000;
             AutoCounter[] counters = null;
 
-            using( var d = new ObservableDomain( TestHelper.Monitor, "Test" ) )
+            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( hundred_timers_from_10_to_1000_ms_in_action ) ) )
             {
                 TestHelper.Monitor.Info( $"Creating 100 active counters with interval from 10 to 1000 ms." );
                 var tranResult = d.Modify( TestHelper.Monitor, () =>
@@ -388,12 +388,12 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             AutoTimeFiredSleepTime = autoTimeFiredSleepTime;
             AutoTimeFiredCount = 0;
 
-            using( var d = new ObservableDomain( TestHelper.Monitor, "Test" ) )
+            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( AutoTime_is_obviously_not_reentrant_and_has_a_safety_trampoline ) ) )
             {
                 int current = 0, previous = 0, delta = 0;
                 void UpdateCount()
                 {
-                    using( d.AcquireReadLock())
+                    using( d.AcquireReadLock() )
                     {
                         var c = AutoTimeFiredCount;
                         delta = c - (previous = current);
@@ -483,7 +483,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
         public void reminder_helper_uses_pooled_ObservableReminders( string mode )
         {
             IReadOnlyList<ActivityMonitorSimpleCollector.Entry> logs = null;
-            using( var d = TestHelper.CreateDomainHandler( "Test" ) )
+            using( var d = TestHelper.CreateDomainHandler( nameof( reminder_helper_uses_pooled_ObservableReminders)+mode ) )
             {
                 void ReloadIfNeeded()
                 {

@@ -15,7 +15,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void simple_property_changed_events()
         {
-            using( var domain = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
+            using( var domain = new ObservableDomain( TestHelper.Monitor, nameof( simple_property_changed_events ) ) )
             {
                 Car c0 = null;
                 Car c1 = null;
@@ -36,10 +36,13 @@ namespace CK.Observable.Domain.Tests
                                "PropertyChanged 0.Position = (0,0).",
                                "NewProperty CurrentMechanic -> 3.",
                                "PropertyChanged 0.CurrentMechanic = null.",
+                               "NewProperty OId -> 4.",
+                               "PropertyChanged 0.OId = 0.",
                                "PropertyChanged 1.Name = Second Car.",
                                "PropertyChanged 1.Speed = 0.",
                                "PropertyChanged 1.Position = (0,0).",
-                               "PropertyChanged 1.CurrentMechanic = null." );
+                               "PropertyChanged 1.CurrentMechanic = null.",
+                               "PropertyChanged 1.OId = 1." );
 
                 events = domain.Modify( TestHelper.Monitor, () =>
                 {
@@ -59,7 +62,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void property_changed_events_use_the_last_value()
         {
-            using( var domain = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
+            using( var domain = new ObservableDomain( TestHelper.Monitor, nameof( property_changed_events_use_the_last_value ) ) )
             {
                 Car c = null;
                 TransactionResult result;
@@ -84,7 +87,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void INotifyPropertyChanged_is_supported_only_because_of_PropertyChanged_Fody_and_NotSupportedException_is_raised()
         {
-            using( var domain = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
+            using( var domain = new ObservableDomain( TestHelper.Monitor, nameof( INotifyPropertyChanged_is_supported_only_because_of_PropertyChanged_Fody_and_NotSupportedException_is_raised ) ) )
             {
                 domain.Modify( TestHelper.Monitor, () =>
                 {
@@ -98,7 +101,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void SafeEvent_automatically_cleanup_Disposed_targets()
         {
-            using( var domain = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
+            using( var domain = new ObservableDomain( TestHelper.Monitor, nameof( SafeEvent_automatically_cleanup_Disposed_targets ) ) )
             {
                 domain.Modify( TestHelper.Monitor, () =>
                 {
@@ -147,7 +150,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void explicit_property_changed_events_are_automatically_triggered()
         {
-            using( var domain = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
+            using( var domain = new ObservableDomain( TestHelper.Monitor, nameof( explicit_property_changed_events_are_automatically_triggered ) ) )
             {
                 int bang = 0;
                 domain.Modify( TestHelper.Monitor, () =>
@@ -184,7 +187,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void ObservableList_is_observable_thanks_to_Item_Inserted_Set_RemovedAt_and_CollectionCleared_events()
         {
-            using( var domain = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
+            using( var domain = new ObservableDomain( TestHelper.Monitor, nameof( ObservableList_is_observable_thanks_to_Item_Inserted_Set_RemovedAt_and_CollectionCleared_events ) ) )
             {
                 domain.Modify( TestHelper.Monitor, () =>
                 {
@@ -240,7 +243,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void list_changed_events()
         {
-            using( var domain = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
+            using( var domain = new ObservableDomain( TestHelper.Monitor, nameof( list_changed_events ) ) )
             {
                 Car c0 = null;
                 Car c1 = null;
@@ -266,7 +269,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void simple_reflexes()
         {
-            using( var domain = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
+            using( var domain = new ObservableDomain( TestHelper.Monitor, nameof( simple_reflexes ) ) )
             {
                 Car c = null;
                 Mechanic m = null;
@@ -304,7 +307,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void ObservableDictionary_is_observable_thanks_to_Item_Added_Set_Removed_and_CollectionCleared_events()
         {
-            using( var domain = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
+            using( var domain = new ObservableDomain( TestHelper.Monitor, nameof( ObservableDictionary_is_observable_thanks_to_Item_Added_Set_Removed_and_CollectionCleared_events ) ) )
             {
                 domain.Modify( TestHelper.Monitor, () =>
                 {
@@ -375,8 +378,7 @@ namespace CK.Observable.Domain.Tests
 
         static void Check( TransactionResult events, params string[] e )
         {
-            events.Events.Should().HaveCount( e.Length );
-            events.Events.Select( ev => ev.ToString() ).Should().Contain( e );
+            events.Events.Select( ev => ev.ToString() ).Should().BeEquivalentTo( e );
         }
 
     }

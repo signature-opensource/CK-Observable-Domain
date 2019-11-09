@@ -19,14 +19,14 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void exportable_but_not_serializable()
         {
-            using( var d = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
+            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( exportable_but_not_serializable ) ) )
             {
                 d.Modify( TestHelper.Monitor, () =>
                 {
                     new ExportableOnly() { Name = "Albert" };
                 } );
                 var export = d.ExportToString();
-                export.Should().Be( @"{""N"":1,""C"":1,""P"":[""Name""],""O"":[{""þ"":[0,""A""]},{""°"":1,""Name"":""Albert""}],""R"":[]}" );
+                export.Should().Be( @"{""N"":1,""C"":1,""P"":[""Name"",""OId""],""O"":[{""þ"":[0,""A""]},{""°"":1,""Name"":""Albert"",""OId"":33554432}],""R"":[]}" );
                 d.Invoking( sut => sut.Save( TestHelper.Monitor, new MemoryStream() ) )
                     .Should().Throw<InvalidOperationException>().WithMessage( "*is not serializable*" );
             }
@@ -58,7 +58,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void serializable_but_not_exportable()
         {
-            using( var d = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
+            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( serializable_but_not_exportable ) ) )
             {
                 d.Modify( TestHelper.Monitor, () =>
                 {

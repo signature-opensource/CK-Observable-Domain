@@ -33,7 +33,7 @@ namespace CK.Observable.Domain.Tests
                     new Car( "Hello" );
                     var result = t.Commit();
                     result.Errors.Should().BeEmpty();
-                    result.Events.Should().HaveCount( 9 );
+                    result.Events.Should().HaveCount( 11 );
                     result.Commands.Should().BeEmpty();
                 }
                 d.Invoking( sut => sut.AllObjects.OfType<Car>().Single().Speed = 3 )

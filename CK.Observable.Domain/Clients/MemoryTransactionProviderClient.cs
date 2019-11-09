@@ -171,6 +171,7 @@ namespace CK.Observable
         /// <summary>
         /// Creates a snapshot.
         /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
         /// <param name="d">The associated domain.</param>
         /// <param name="timeUtc">Time of the operation.</param>
         protected void CreateSnapshot( IActivityMonitor monitor, ObservableDomain d, DateTime timeUtc )

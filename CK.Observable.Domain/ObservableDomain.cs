@@ -1,4 +1,4 @@
-    using CK.Core;
+using CK.Core;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -29,7 +29,7 @@ namespace CK.Observable
         public static readonly CKExceptionData UncomittedTransaction = new CKExceptionData( "Uncommitted transaction.", "Not.An.Exception", "Not.An.Exception, No.Assembly", null, null, null, null, null, null );
 
         /// <summary>
-        /// Default timeout before <see cref="ObtainDomainMonitor(int)"/> creates a new temporary <see cref="IDisposableActivityMonitor"/>
+        /// Default timeout before <see cref="ObtainDomainMonitor(int, bool)"/> creates a new temporary <see cref="IDisposableActivityMonitor"/>
         /// instead of reusing the default one.
         /// </summary>
         public const int LockedDomainMonitorTimeout = 1000;
@@ -38,6 +38,11 @@ namespace CK.Observable
         /// Current serialization version.
         /// </summary>
         public const int CurrentSerializationVersion = 2;
+
+        /// <summary>
+        /// The length in bytes of the <see cref="SecretKey"/>.
+        /// </summary>
+        public const int DomainSecretKeyLength = 512;
 
         static readonly Type[] _observableRootCtorParameters = new Type[] { typeof( ObservableDomain ) };
 
@@ -53,10 +58,16 @@ namespace CK.Observable
                 PropertyId = propertyId;
             }
 
+            /// <summary>
+            /// Builds a long value based on the <see cref="ObservableObjectId.Index"/> and <see cref="PropertyId"/>
+            /// to use it as a unique local key to track/dedup property changed event.
+            /// </summary>
+            /// <param name="o">The owning object.</param>
+            /// <returns>The key to use for this property of the specified object.</returns>
             public long GetObjectPropertyId( ObservableObject o )
             {
-                Debug.Assert( o.OId >= 0 );
-                long r = o.OId;
+                Debug.Assert( o.OId.IsValid );
+                long r = o.OId.Index;
                 return (r << 24) | (uint)PropertyId;
             }
         }
@@ -82,6 +93,7 @@ namespace CK.Observable
         readonly AllCollection _exposedObjects;
         readonly ReaderWriterLockSlim _lock;
         readonly List<int> _freeList;
+        byte[] _domainSecret;
 
         int _internalObjectCount;
         InternalObject _firstInternalObject;
@@ -101,6 +113,8 @@ namespace CK.Observable
         /// This is the actual number of objects, null cells of _objects are NOT included.
         /// </summary>
         int _actualObjectCount;
+
+        int _currentObjectUniquifier;
 
         /// <summary>
         /// The root objects among all _objects.
@@ -127,7 +141,7 @@ namespace CK.Observable
         /// <summary>
         /// Exposes the non null objects in _objects as a collection.
         /// </summary>
-        class AllCollection : IReadOnlyCollection<ObservableObject>
+        class AllCollection : IObservableObjectCollection
         {
             readonly ObservableDomain _d;
 
@@ -136,7 +150,35 @@ namespace CK.Observable
                 _d = d;
             }
 
+            public ObservableObject this[long id] => this[new ObservableObjectId(id,false)];
+
+            public ObservableObject this[ObservableObjectId id]
+            {
+                get
+                {
+                    if( id.IsValid )
+                    {
+                        int idx = id.Index;
+                        if( idx < _d._objectsListCount )
+                        {
+                            var o = _d._objects[idx];
+                            if( o.OId == id ) return o;
+                        }
+                    }
+                    return null;
+                }
+            }
+
             public int Count => _d._actualObjectCount;
+
+            public T Get<T>( ObservableObjectId id, bool throwOnTypeMismacth = true ) where T : ObservableObject
+            {
+                var o = this[id];
+                if( o == null ) return null;
+                return throwOnTypeMismacth ? (T)o : o as T;
+            }
+
+            public T Get<T>( long id, bool throwOnTypeMismacth = true ) where T : ObservableObject => Get<T>( new ObservableObjectId( id, false ) );
 
             public IEnumerator<ObservableObject> GetEnumerator() => _d._objects.Take( _d._objectsListCount )
                                                                                .Where( o => o != null )
@@ -232,7 +274,13 @@ namespace CK.Observable
             /// <returns>True if this is a new object. False if the object has been created earlier.</returns>
             internal bool IsNewObject( ObservableObject o ) => _newObjects.ContainsKey( o );
 
-            internal void OnNewObject( ObservableObject o, int objectId, IObjectExportTypeDriver exporter )
+            /// <summary>
+            /// Called when a new object is being created.
+            /// </summary>
+            /// <param name="o">The oobject itself.</param>
+            /// <param name="objectId">The assigned object identifier.</param>
+            /// <param name="exporter">The export driver of the object. Can be null.</param>
+            internal void OnNewObject( ObservableObject o, ObservableObjectId objectId, IObjectExportTypeDriver exporter )
             {
                 _changeEvents.Add( new NewObjectEvent( o, objectId ) );
                 if( exporter != null )
@@ -513,7 +561,18 @@ namespace CK.Observable
             _lock = new ReaderWriterLockSlim( LockRecursionPolicy.NoRecursion );
             _saveLock = new Object();
             _domainMonitorLock = new Object();
+
             if( callClientOnCreate ) client?.OnDomainCreated( monitor, this, DateTime.UtcNow );
+            if( _domainSecret == null ) _domainSecret = CreateSecret();
+            monitor.Info( $"ObservableDomain {domainName} created." );
+        }
+
+        static byte[] CreateSecret()
+        {
+            using( var c = new System.Security.Cryptography.Rfc2898DeriveBytes( Guid.NewGuid().ToString(), Guid.NewGuid().ToByteArray(), 1000 ) )
+            {
+                return c.GetBytes( 512 );
+            }
         }
 
         /// <summary>
@@ -592,7 +651,7 @@ namespace CK.Observable
         /// be used outside of <see cref="BeginTransaction"/> (or other <see cref="Modify"/>, <see cref="ModifyAsync"/> methods)
         /// or <see cref="AcquireReadLock"/> scopes.
         /// </summary>
-        public IReadOnlyCollection<ObservableObject> AllObjects => _exposedObjects;
+        public IObservableObjectCollection AllObjects => _exposedObjects;
 
         /// <summary>
         /// Gets all the internal objects that this domain contains.
@@ -660,6 +719,12 @@ namespace CK.Observable
         /// Gets this domain name.
         /// </summary>
         public string DomainName { get; }
+
+        /// <summary>
+        /// Gets the secret key for this domain. It is a <see cref="System.Security.Cryptography.Rfc2898DeriveBytes"/> bytes
+        /// array of length <see cref="DomainSecretKeyLength"/> derived from <see cref="Guid.NewGuid()"/>.
+        /// </summary>
+        public ReadOnlySpan<byte> SecretKey => _domainSecret.AsSpan();
 
         /// <summary>
         /// Gets the associated client (head of the Chain of Responsibility).
@@ -901,7 +966,7 @@ namespace CK.Observable
                 target.EmitStartObject( -1, ObjectExportedKind.List );
                 foreach( var r in _roots )
                 {
-                    target.EmitInt32( r.OId );
+                    target.EmitInt32( r.OId.Index );
                 }
                 target.EmitEndObject( -1, ObjectExportedKind.List );
 
@@ -967,8 +1032,10 @@ namespace CK.Observable
                 {
                     using( isWrite ? monitor.OpenInfo( $"Transacted saving domain ({_actualObjectCount} objects, {_internalObjectCount} internal objects)." ) : null )
                     {
-                        w.WriteSmallInt32( 2 ); // Version: 2 supports DebuMode, TimeManager & Internal objects.
+                        w.WriteSmallInt32( CurrentSerializationVersion ); // Version: 2 supports DebuMode, TimeManager & Internal objects.
                         w.DebugWriteMode( debugMode ? (bool?)debugMode : null );
+                        w.Write( _currentObjectUniquifier );
+                        w.Write( _domainSecret );
                         w.Write( DomainName );
                         w.Write( _transactionSerialNumber );
                         w.Write( _actualObjectCount );
@@ -993,7 +1060,7 @@ namespace CK.Observable
 
                         w.DebugWriteSentinel();
                         w.WriteNonNegativeSmallInt32( _roots.Count );
-                        foreach( var r in _roots ) w.WriteNonNegativeSmallInt32( r.OId );
+                        foreach( var r in _roots ) w.WriteNonNegativeSmallInt32( r.OId.Index );
 
                         w.DebugWriteSentinel();
                         w.WriteNonNegativeSmallInt32( _internalObjectCount );
@@ -1029,11 +1096,18 @@ namespace CK.Observable
                 {
                     throw new InvalidDataException( $"Version must be between 0 and {CurrentSerializationVersion}. Version read: {version}." );
                 }
+                _currentObjectUniquifier = 0;
                 if( version > 0 )
                 {
                     if( version > 1 )
                     {
                         r.DebugReadMode();
+                        _currentObjectUniquifier = r.ReadInt32();
+                        _domainSecret = r.ReadBytes( DomainSecretKeyLength );
+                    }
+                    else
+                    {
+                        _domainSecret = CreateSecret();
                     }
                     var loaded = r.ReadString();
                     if( loaded != expectedName ) throw new InvalidDataException( $"Domain name mismatch: loading domain named '{loaded}' but expected '{expectedName}'." );
@@ -1194,7 +1268,7 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Called after a <see cref="Load"/>.
+        /// Called after a <see cref="G:Load"/>.
         /// Does nothing at this level.
         /// </summary>
         protected internal virtual void OnLoaded()
@@ -1236,7 +1310,9 @@ namespace CK.Observable
             --_internalObjectCount;
         }
 
-        internal int Register( ObservableObject o )
+        internal ObservableObjectId CreateId( int idx ) => new ObservableObjectId( idx, ObservableObjectId.ForwardUniquifier( ref _currentObjectUniquifier ) );
+
+        internal ObservableObjectId Register( ObservableObject o )
         {
             Debug.Assert( o != null && o.Domain == this );
             CheckWriteLock( o );
@@ -1255,12 +1331,14 @@ namespace CK.Observable
                 }
             }
             _objects[idx] = o;
+
+            var id = CreateId( idx );
             if( !_deserializing )
             {
-                _changeTracker.OnNewObject( o, idx, o._exporter );
+                _changeTracker.OnNewObject( o, id, o._exporter );
             }
             ++_actualObjectCount;
-            return idx;
+            return id;
         }
 
         internal void CheckBeforeDispose( IDisposableObject o )
@@ -1272,8 +1350,8 @@ namespace CK.Observable
         internal void Unregister( ObservableObject o )
         {
             if( !_deserializing ) _changeTracker.OnDisposeObject( o );
-            _objects[o.OId] = null;
-            _freeList.Add( o.OId );
+            _objects[o.OId.Index] = null;
+            _freeList.Add( o.OId.Index );
             --_actualObjectCount;
         }
 
@@ -1287,6 +1365,10 @@ namespace CK.Observable
         /// Obtains a monitor that is bound to this domain (it must be disposed once done with it).
         /// This implementation creates a new dedicated <see cref="IDisposableActivityMonitor"/> once and caches it
         /// or returns a new dedicated one if the shared one cannot be obtained before <paramref name="milliSecondTimeout"/>.
+        /// <para>
+        /// This monitor should be used only from contexts where no existing monitor exists: the <see cref="TimeManager"/> uses
+        /// it when executing <see cref="ObservableTimedEventBase{TEventArgs}.Elapsed"/> events.
+        /// </para>
         /// </summary>
         /// <returns>The cached monitor bound to this timer or null if <paramref name="createAutonomousOnTimeout"/> was false and the monitor has not been obtained.</returns>
         public IDisposableActivityMonitor ObtainDomainMonitor( int milliSecondTimeout = LockedDomainMonitorTimeout, bool createAutonomousOnTimeout = true )
@@ -1313,6 +1395,14 @@ namespace CK.Observable
                 if( !_disposed )
                 {
                     _disposed = true;
+                    if( _domainMonitor != null )
+                    {
+                        if( Monitor.TryEnter( _domainMonitorLock, 0 ) )
+                        {
+                            _domainMonitor.MonitorEnd( "Domain disposed." );
+                            Monitor.Exit( _domainMonitorLock );
+                        }
+                    }
                     _timeManager.CurrentTimer?.Dispose();
                     _lock.ExitWriteLock();
                     _lock.Dispose();

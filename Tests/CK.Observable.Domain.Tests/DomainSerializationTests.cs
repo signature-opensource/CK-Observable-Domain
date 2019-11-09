@@ -90,7 +90,7 @@ namespace CK.Observable.Domain.Tests
                     var g1 = domain.AllObjects.OfType<Garage>().Single();
                     var g2 = d2.AllObjects.OfType<Garage>().Single();
                     g2.CompanyName.Should().Be( g1.CompanyName );
-                    g2.GetOId().Should().Be( g1.GetOId() );
+                    g2.OId.Should().Be( g1.OId );
                 }
             }
         }
