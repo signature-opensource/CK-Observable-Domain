@@ -2,7 +2,7 @@ namespace CK.Observable
 {
     public class ListInsertEvent : ObservableEvent, ICollectionEvent
     {
-        public ObservableObject.Id ObjectId { get; }
+        public ObservableObjectId ObjectId { get; }
 
         public ObservableObject Object { get; }
 
@@ -13,7 +13,7 @@ namespace CK.Observable
         public ListInsertEvent( ObservableObject o, int index, object item )
             : base( ObservableEventType.ListInsert )
         {
-            ObjectId = o.ObjectId;
+            ObjectId = o.OId;
             Object = o;
             Index = index;
             Item = item;

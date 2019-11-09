@@ -15,11 +15,17 @@ namespace CK.Observable
 
         public string AssemblyQualifiedName => typeof(T[]).AssemblyQualifiedName;
 
+        /// <summary>
+        /// Reads an array of <typeparamref name="T"/>.
+        /// </summary>
+        /// <param name="r">The deserializer.</param>
+        /// <param name="readInfo">The read info (unused).</param>
+        /// <returns>The array of items.</returns>
         public T[] ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  ) => DoReadArray( r, _item );
 
         /// <summary>
         /// Reads an array of objects that have been previously written
-        /// by <see cref="ArraySerializer.WriteObjects(int, System.Collections.IEnumerable)"/>.
+        /// by <see cref="ArraySerializer.WriteObjects(BinarySerializer, int, System.Collections.IEnumerable)"/>.
         /// </summary>
         /// <returns>The object array.</returns>
         public static T[] ReadObjectArray( IBinaryDeserializer r )

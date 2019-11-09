@@ -2,7 +2,7 @@ namespace CK.Observable
 {
     public class PropertyChangedEvent : ObservableEvent
     {
-        public ObservableObject.Id ObjectId { get; }
+        public ObservableObjectId ObjectId { get; }
 
         public ObservableObject Object { get; }
 
@@ -15,7 +15,7 @@ namespace CK.Observable
         public PropertyChangedEvent( ObservableObject o, int propertyId, string propertyName, object value )
             : base( ObservableEventType.PropertyChanged )
         {
-            ObjectId = o.ObjectId;
+            ObjectId = o.OId;
             Object = o;
             PropertyId = propertyId;
             PropertyName = propertyName;

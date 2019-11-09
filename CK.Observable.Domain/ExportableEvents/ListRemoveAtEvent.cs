@@ -2,7 +2,7 @@ namespace CK.Observable
 {
     public class ListRemoveAtEvent : ObservableEvent, ICollectionEvent
     {
-        public ObservableObject.Id ObjectId { get; }
+        public ObservableObjectId ObjectId { get; }
 
         public ObservableObject Object { get; }
 
@@ -11,7 +11,7 @@ namespace CK.Observable
         public ListRemoveAtEvent( ObservableObject o, int index )
             : base( ObservableEventType.ListRemoveAt )
         {
-            ObjectId = o.ObjectId;
+            ObjectId = o.OId;
             Object = o;
             Index = index;
         }

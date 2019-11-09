@@ -2,14 +2,14 @@ namespace CK.Observable
 {
     public class CollectionClearEvent : ObservableEvent, ICollectionEvent
     {
-        public ObservableObject.Id ObjectId { get; }
+        public ObservableObjectId ObjectId { get; }
 
         public ObservableObject Object { get; }
 
         public CollectionClearEvent( ObservableObject o )
             : base( ObservableEventType.CollectionClear )
         {
-            ObjectId = o.ObjectId;
+            ObjectId = o.OId;
             Object = o;
         }
 

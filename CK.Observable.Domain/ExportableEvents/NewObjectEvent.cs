@@ -4,13 +4,13 @@ namespace CK.Observable
 {
     public class NewObjectEvent : ObservableEvent
     {
-        public ObservableObject.Id ObjectId { get; }
+        public ObservableObjectId ObjectId { get; }
 
         public ObservableObject Object { get; }
 
         public ObjectExportedKind ExportedKind { get;}
 
-        public NewObjectEvent( ObservableObject o, ObservableObject.Id oid )
+        public NewObjectEvent( ObservableObject o, ObservableObjectId oid )
             : base( ObservableEventType.NewObject )
         {
             ObjectId = oid;

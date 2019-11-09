@@ -55,7 +55,7 @@ namespace CK.Observable
             {
                 e.Target.EmitStartObject( -1, ObjectExportedKind.Object );
                 e.Target.EmitPropertyName( "=" );
-                e.Target.EmitInt32( obs.ObjectId.Index );
+                e.Target.EmitInt32( obs.OId.Index );
                 e.Target.EmitEndObject( -1, ObjectExportedKind.Object );
             }
             else

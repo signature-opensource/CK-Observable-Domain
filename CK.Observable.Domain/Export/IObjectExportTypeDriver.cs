@@ -29,7 +29,7 @@ namespace CK.Observable
 
         /// <summary>
         /// Gets the property that must be exported.
-        /// This is empty for basic types and for Type that has a private Export( int, <see cref="ObjectExporter"/> )
+        /// This is empty for basic types and for Type that has a private 'void Export( int, <see cref="ObjectExporter"/> )'
         /// method that takes control of the export.
         /// </summary>
         IReadOnlyList<PropertyInfo> ExportableProperties { get; }

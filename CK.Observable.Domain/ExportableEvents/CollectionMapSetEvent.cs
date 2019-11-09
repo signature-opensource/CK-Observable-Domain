@@ -2,7 +2,7 @@ namespace CK.Observable
 {
     public class CollectionMapSetEvent : ObservableEvent, ICollectionEvent
     {
-        public ObservableObject.Id ObjectId { get; }
+        public ObservableObjectId ObjectId { get; }
 
         public ObservableObject Object { get; }
 
@@ -13,7 +13,7 @@ namespace CK.Observable
         public CollectionMapSetEvent( ObservableObject o, object key, object value )
             : base( ObservableEventType.CollectionMapSet )
         {
-            ObjectId = o.ObjectId;
+            ObjectId = o.OId;
             Object = o;
             Key = key;
             Value = value;

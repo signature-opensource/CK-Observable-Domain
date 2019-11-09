@@ -2,14 +2,14 @@ namespace CK.Observable
 {
     public class DisposedObjectEvent : ObservableEvent
     {
-        public ObservableObject.Id ObjectId { get; }
+        public ObservableObjectId ObjectId { get; }
 
         public ObservableObject Object { get; }
 
         public DisposedObjectEvent( ObservableObject o )
             : base( ObservableEventType.DisposedObject )
         {
-            ObjectId = o.ObjectId;
+            ObjectId = o.OId;
             Object = o;
         }
 

@@ -52,7 +52,7 @@ namespace CK.Observable.Domain.Tests
         {
             string msgNoDebugMode = $"Missing \": base( c )\" call in deserialization constructor of '{typeof( ForgetToCallBaseDeserializationCtor ).AssemblyQualifiedName}'.";
 
-            using( var d = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
+            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( forgetting_to_call_base_deserialization_ctor_throws_explicit_InvalidDataException ) ) )
             {
                 d.Modify( TestHelper.Monitor, () => new ForgetToCallBaseDeserializationCtor() );
                 d.AllInternalObjects.Should().HaveCount( 1 );
@@ -65,7 +65,7 @@ namespace CK.Observable.Domain.Tests
             string msgDebugModeForSpecialized = $"Read string failure: expected string 'After: CK.Observable.InternalObject*";
             string msgForSpecialized = mode == "debugMode" ? msgDebugModeForSpecialized : msgNoDebugMode;
 
-            using( var d = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
+            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( forgetting_to_call_base_deserialization_ctor_throws_explicit_InvalidDataException ) ) )
             {
                 d.Modify( TestHelper.Monitor, () => new ForgetToCallBaseDeserializationCtorSpecialized() );
                 d.AllInternalObjects.Should().HaveCount( 1 );
@@ -79,7 +79,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void simple_idempotence_checks()
         {
-            using( var d = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
+            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( simple_idempotence_checks ) ) )
             {
                 d.Modify( TestHelper.Monitor, () => new Sample.Car( "Zoé" ) );
                 d.AllObjects.Should().HaveCount( 1 );
@@ -97,7 +97,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void immutable_string_serialization_test()
         {
-            using( var od = new ObservableDomain<CustomRoot>( TestHelper.Monitor, "TEST" ) )
+            using( var od = new ObservableDomain<CustomRoot>( TestHelper.Monitor, nameof( immutable_string_serialization_test ) ) )
             {
                 od.Modify( TestHelper.Monitor, () =>
                 {
@@ -114,7 +114,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void created_then_disposed_event_test()
         {
-            using( var od = new ObservableDomain<CustomRoot>( TestHelper.Monitor, "TEST" ) )
+            using( var od = new ObservableDomain<CustomRoot>( TestHelper.Monitor, nameof( created_then_disposed_event_test ) ) )
             {
                 // Prepare initial state
                 od.Modify( TestHelper.Monitor, () =>

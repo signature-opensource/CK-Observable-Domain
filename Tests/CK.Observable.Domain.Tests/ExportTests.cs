@@ -151,7 +151,7 @@ namespace CK.Observable.Domain.Tests
                     d.Root.ProductStateList.Add( new RootSample.Product( p1 ) { Name = "Product n°1" } );
                     d.Root.CurrentProductState = d.Root.ProductStateList[0];
                 } );
-                d.Root.ProductStateList[0].GetOId().Should().Be( 7, "Product n°1 OId is 7." );
+                d.Root.ProductStateList[0].OId.Index.Should().Be( 7, "Product n°1 OId.Index is 7." );
                 d.TransactionSerialNumber.Should().Be( 1 );
 
                 string initial = d.ExportToString();
@@ -166,7 +166,7 @@ namespace CK.Observable.Domain.Tests
                     d.Root.ProductStateList.Add( new RootSample.Product( p2 ) { Name = "Product n°2" } );
                     d.Root.CurrentProductState = d.Root.ProductStateList[1];
                 } );
-                d.Root.ProductStateList[1].GetOId().Should().Be( 6, "Product n°2 OId is 6." );
+                d.Root.ProductStateList[1].OId.Index.Should().Be( 6, "Product n°2 OId.Index is 6." );
 
                 string t1 = eventCollector.WriteEventsFrom( 1 );
                 // p2 is the object n°5.

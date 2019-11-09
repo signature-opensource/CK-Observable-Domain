@@ -2,7 +2,7 @@ namespace CK.Observable
 {
     public class ListSetAtEvent : ObservableEvent, ICollectionEvent
     {
-        public ObservableObject.Id ObjectId { get; }
+        public ObservableObjectId ObjectId { get; }
 
         public ObservableObject Object { get; }
 
@@ -14,7 +14,7 @@ namespace CK.Observable
         public ListSetAtEvent( ObservableObject o, int index, object value )
             : base( ObservableEventType.ListSetAt )
         {
-            ObjectId = o.ObjectId;
+            ObjectId = o.OId;
             Object = o;
             Index = index;
             Value = value;
