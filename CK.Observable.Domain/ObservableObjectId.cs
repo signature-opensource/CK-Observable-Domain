@@ -71,11 +71,14 @@ namespace CK.Observable
         {
             if( idx < 0 || idx > MaxIndexValue ) throw new ArgumentOutOfRangeException( nameof( idx ) );
             if( uniquifier < 0 || uniquifier > MaxUniquifierValue ) throw new ArgumentOutOfRangeException( nameof( uniquifier ) );
-            UniqueId = (uniquifier << IndexBitCount) | idx;
-            Debug.Assert( UniqueId <= MaxValue && IsValid && !Disposed.IsValid && !Invalid.IsValid );
-            Debug.Assert( (((long)MaxUniquifierValue << IndexBitCount) | MaxIndexValue)+1 == MaxValue );
-            Debug.Assert( (long)Math.Floor( ((double)MaxValue) ) == MaxValue );
-            Debug.Assert( (long)Math.Floor( ((double)(MaxValue+1)) ) != MaxValue+1, "This is the maximal possible long." );
+            UniqueId = (long)(((ulong)uniquifier) << IndexBitCount) | (uint)idx;
+            Debug.Assert( UniqueId < MaxValue, "UniqueId < MaxValue" );
+            Debug.Assert( IsValid, $"IsValid ({idx},{uniquifier}) => {UniqueId}" );
+            Debug.Assert( !Disposed.IsValid, "!Disposed.IsValid" );
+            Debug.Assert( !Invalid.IsValid, "!Invalid.IsValid" );
+            Debug.Assert( (((long)MaxUniquifierValue << IndexBitCount) | MaxIndexValue)+1 == MaxValue, "(((long)MaxUniquifierValue << IndexBitCount) | MaxIndexValue)+1 == MaxValue" );
+            Debug.Assert( (long)Math.Floor( ((double)MaxValue) ) == MaxValue, "(long)Math.Floor( ((double)MaxValue) ) == MaxValue" );
+            Debug.Assert( (long)Math.Floor( ((double)(MaxValue+1)) ) != MaxValue+1, "This is the maximal possible long: (long)Math.Floor( ((double)(MaxValue+1)) ) != MaxValue+1" );
         }
 
         /// <summary>
