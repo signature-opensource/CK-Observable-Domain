@@ -11,6 +11,49 @@ namespace CK.Observable.Domain.Tests
     [TestFixture]
     public class ExportTests
     {
+
+        [Test]
+        public void doc_demo()
+        {
+            var eventCollector = new TransactionEventCollectorClient();
+            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( doc_demo ), eventCollector ) )
+            {
+                Car car = null;
+                d.Modify( TestHelper.Monitor, () =>
+                {
+                    car = new Car( "Titine" );
+                } );
+                string initial = d.ExportToString();
+
+                d.Modify( TestHelper.Monitor, () =>
+                {
+                    car.Dispose();
+                } );
+                string firstEvents = eventCollector.WriteEventsFrom( 1 );
+
+                d.Modify( TestHelper.Monitor, () =>
+                {
+                    var g = new Garage();
+                    var m = new Mechanic( g ) { FirstName = "Paul" };
+                    car = new Car( "Titine" );
+                    car.CurrentMechanic = m;
+                    // We rename Paul: only one PropertyChanged event
+                    // is generated per property with the last set
+                    // value.
+                    m.FirstName = "Paulo!";
+                } );
+                string secondEvents = eventCollector.WriteEventsFrom( 2 );
+
+                Console.WriteLine( initial );
+                Console.WriteLine( firstEvents );
+                Console.WriteLine( secondEvents );
+
+                string last = d.ExportToString();
+                Console.WriteLine( last );
+            }
+        }
+
+
         [Test]
         public void exporting_and_altering_simple()
         {
