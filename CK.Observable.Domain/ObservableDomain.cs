@@ -13,13 +13,12 @@ using System.Threading.Tasks;
 
 namespace CK.Observable
 {
-
     /// <summary>
-    /// Base class for any observable domain where <see cref="AllRoots"/> are not strongly typed.
-    /// You may use specialized <see cref="ObservableChannel{T}"/> or <see cref="ObservableDomain{T1, T2, T3, T4}"/>
-    /// for strongly typed roots.
+    /// Base class for any observable domain without strongly typed root. This class should not be specialized:
+    /// you must use specialized <see cref="ObservableChannel{T}"/> or <see cref="ObservableDomain{T1, T2, T3, T4}"/>
+    /// for doamins with strongly typed roots.
     /// </summary>
-    public partial class ObservableDomain : IDisposable
+    public class ObservableDomain : IDisposable
     {
         /// <summary>
         /// An artificial <see cref="CKExceptionData"/> that is added to

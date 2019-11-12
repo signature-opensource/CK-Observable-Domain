@@ -10,7 +10,7 @@ namespace CK.Observable
     /// <see cref="ObservableDomain"/> with a strongly typed <see cref="Root"/>.
     /// </summary>
     /// <typeparam name="T">Type of the root object.</typeparam>
-    public class ObservableDomain<T> : ObservableDomain where T : ObservableRootObject
+    public sealed class ObservableDomain<T> : ObservableDomain where T : ObservableRootObject
     {
         /// <summary>
         /// Initializes a new <see cref="ObservableDomain{T}"/> without any <see cref="ObservableDomain.DomainClient"/>.
