@@ -81,13 +81,16 @@ namespace CK.Observable.Domain.Tests
         {
             using( var d = new ObservableDomain( TestHelper.Monitor, nameof( simple_idempotence_checks ) ) )
             {
+                TestHelper.Monitor.Info( "Test 1" );
                 d.Modify( TestHelper.Monitor, () => new Sample.Car( "Zoé" ) );
                 d.AllObjects.Should().HaveCount( 1 );
                 ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
 
+                TestHelper.Monitor.Info( "Test 2" );
                 d.Modify( TestHelper.Monitor, () => d.AllObjects.Single().Dispose() );
                 ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
 
+                TestHelper.Monitor.Info( "Test 3" );
                 d.Modify( TestHelper.Monitor, () => new Sample.Car( "Zoé is back!" ) );
                 ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
             }

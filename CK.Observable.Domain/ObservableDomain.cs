@@ -1035,6 +1035,7 @@ namespace CK.Observable
                         w.DebugWriteMode( debugMode ? (bool?)debugMode : null );
                         w.Write( _currentObjectUniquifier );
                         w.Write( _domainSecret );
+                        if( debugMode ) monitor.Trace( $"Domain {DomainName}: Tran #{_transactionSerialNumber}, {_actualObjectCount} objects." );
                         w.Write( DomainName );
                         w.Write( _transactionSerialNumber );
                         w.Write( _actualObjectCount );
