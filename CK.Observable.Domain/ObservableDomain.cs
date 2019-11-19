@@ -149,7 +149,7 @@ namespace CK.Observable
                 _d = d;
             }
 
-            public ObservableObject this[long id] => this[new ObservableObjectId(id,false)];
+            public ObservableObject this[long id] => this[new ObservableObjectId( id, false )];
 
             public ObservableObject this[ObservableObjectId id]
             {
@@ -529,7 +529,7 @@ namespace CK.Observable
                                  IDeserializerResolver deserializers = null )
             : this( monitor, domainName, client, false, exporters, serializers, deserializers )
         {
-            Load( monitor,s, leaveOpen, encoding );
+            Load( monitor, s, leaveOpen, encoding );
             client?.OnDomainCreated( monitor, this, DateTime.UtcNow );
         }
 
@@ -596,7 +596,7 @@ namespace CK.Observable
             /// <param name="enterWriteLock">False to not enter and exit the write lock.</param>
             public InitializationTransaction( IActivityMonitor m, ObservableDomain d, bool enterWriteLock = true )
             {
-                _monitor = m; 
+                _monitor = m;
                 _startTime = DateTime.UtcNow;
                 _d = d;
                 if( _enterWriteLock = enterWriteLock ) d._lock.EnterWriteLock();
@@ -703,7 +703,7 @@ namespace CK.Observable
                 }
                 else
                 {
-                    while( CloseGroup( new DateTimeStamp( LastLogTime, DateTime.UtcNow ) ) );
+                    while( CloseGroup( new DateTimeStamp( LastLogTime, DateTime.UtcNow ) ) ) ;
                     Monitor.Exit( _domain._domainMonitorLock );
                 }
             }
@@ -795,7 +795,7 @@ namespace CK.Observable
         /// <param name="m">The monitor to use.</param>
         /// <param name="throwException">Whether to throw or return the potential IObservableDomainClient.OnTransactionStart exception.</param>
         /// <returns>The transaction XOR the IObservableDomainClient.OnTransactionStart exception.</returns>
-        (IObservableTransaction,Exception) DoBeginTransaction( IActivityMonitor m, bool throwException )
+        (IObservableTransaction, Exception) DoBeginTransaction( IActivityMonitor m, bool throwException )
         {
             Debug.Assert( m != null && _lock.IsWriteLockHeld );
             var group = m.OpenTrace( "Starting transaction." );
@@ -1318,7 +1318,7 @@ namespace CK.Observable
             int idx;
             if( _freeList.Count > 0 )
             {
-                idx = _freeList[_freeList.Count-1 ];
+                idx = _freeList[_freeList.Count - 1];
                 _freeList.RemoveAt( _freeList.Count - 1 );
             }
             else
@@ -1517,9 +1517,30 @@ namespace CK.Observable
                 var rewriteBytes = s.ToArray();
                 if( !originalBytes.SequenceEqual( rewriteBytes ) )
                 {
+                    using( monitor.OpenError( "Reserialized bytes differ from original serialized bytes." ) )
+                    {
+                        if( useDebugMode )
+                        {
+                            monitor.Error( $"Original: (${originalBytes.LongLength}) ${ByteArrayToString( originalBytes )}" );
+                            monitor.Error( $"Reserialized: (${rewriteBytes.LongLength}) ${ByteArrayToString( rewriteBytes )}" );
+                        }
+                        else
+                        {
+                            monitor.Error( $"Original: ${originalBytes.LongLength} bytes" );
+                            monitor.Error( $"Reserialized: ${rewriteBytes.LongLength} bytes" );
+                        }
+                    }
                     throw new Exception( "Reserialized bytes differ from original serialized bytes." );
                 }
             }
+        }
+
+        static string ByteArrayToString( byte[] ba )
+        {
+            StringBuilder hex = new StringBuilder( ba.Length * 2 );
+            foreach( byte b in ba )
+                hex.AppendFormat( "{0:x2}", b );
+            return hex.ToString();
         }
 
     }
