@@ -1521,13 +1521,13 @@ namespace CK.Observable
                     {
                         if( useDebugMode )
                         {
-                            monitor.Error( $"Original: (${originalBytes.LongLength}) ${ByteArrayToString( originalBytes )}" );
-                            monitor.Error( $"Reserialized: (${rewriteBytes.LongLength}) ${ByteArrayToString( rewriteBytes )}" );
+                            monitor.Error( $"Original: ({originalBytes.LongLength}) {ByteArrayToString( originalBytes )}" );
+                            monitor.Error( $"Reserialized: ({rewriteBytes.LongLength}) {ByteArrayToString( rewriteBytes )}" );
                         }
                         else
                         {
-                            monitor.Error( $"Original: ${originalBytes.LongLength} bytes" );
-                            monitor.Error( $"Reserialized: ${rewriteBytes.LongLength} bytes" );
+                            monitor.Error( $"Original: {originalBytes.LongLength} bytes" );
+                            monitor.Error( $"Reserialized: {rewriteBytes.LongLength} bytes" );
                         }
                     }
                     throw new Exception( "Reserialized bytes differ from original serialized bytes." );
