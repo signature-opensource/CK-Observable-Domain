@@ -1511,19 +1511,32 @@ namespace CK.Observable
             {
                 if( !domain.Save( monitor, s, true, millisecondsTimeout: milliSecondsTimeout, debugMode: useDebugMode ) ) throw new Exception( "First Save failed: Unable to acquire lock." );
                 var originalBytes = s.ToArray();
+                var originalTransactionSerialNumber = domain.TransactionSerialNumber;
                 s.Position = 0;
                 if( !domain.Load( monitor, s, true, millisecondsTimeout: milliSecondsTimeout ) ) throw new Exception( "Reload failed: Unable to acquire lock." );
                 s.Position = 0;
+                if( useDebugMode )
+                {
+                    Thread.Sleep( 100 ); // TODO: Remove once fixed - Forces pending timers to be run after Load()
+                }
                 if( !domain.Save( monitor, s, true, millisecondsTimeout: milliSecondsTimeout, debugMode: useDebugMode ) ) throw new Exception( "Second Save failed: Unable to acquire lock." );
                 var rewriteBytes = s.ToArray();
+                var rewriteTransactionSerialNumber = domain.TransactionSerialNumber;
                 if( !originalBytes.SequenceEqual( rewriteBytes ) )
                 {
                     using( monitor.OpenError( "Reserialized bytes differ from original serialized bytes." ) )
                     {
+                        if( originalTransactionSerialNumber != rewriteTransactionSerialNumber )
+                        {
+                            monitor.Error( $"TransactionSerialNumber changed (original: {originalTransactionSerialNumber}; rewrite: {rewriteTransactionSerialNumber})!" );
+                            monitor.Error( $"Did a timer fire?" );
+                        }
                         if( useDebugMode )
                         {
-                            monitor.Error( $"Original: ({originalBytes.LongLength}) {ByteArrayToString( originalBytes )}" );
-                            monitor.Error( $"Reserialized: ({rewriteBytes.LongLength}) {ByteArrayToString( rewriteBytes )}" );
+                            monitor.Error( $"Original: {originalBytes.LongLength} bytes" );
+                            monitor.Debug( ByteArrayToString( originalBytes ) );
+                            monitor.Error( $"Reserialized: {rewriteBytes.LongLength} bytes" );
+                            monitor.Debug( ByteArrayToString( rewriteBytes ) );
                         }
                         else
                         {
