@@ -9,6 +9,6 @@ codecakebuilder:
       - '**\*.trx'
       - '**\Tests\**\TestResult*.xml'
       - '**Tests\**\Logs\**\*'
-      - 'CodeCakeBuilder\Releases\**\*'
+      - 'CodeCakeBuilder/Releases/'
     when: always
     expire_in: 6 month
