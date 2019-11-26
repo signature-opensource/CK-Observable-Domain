@@ -174,26 +174,36 @@ namespace CK.Observable
             /// This is called while the domain's write lock is held.
             /// </summary>
             /// <param name="monitor">The monitor to use.</param>
-            /// <param name="nextDueTimeUtc">The expected callback time.</param>
+            /// <param name="nextDueTimeUtc">
+            /// The expected callback time. <see cref="Util.UtcMinValue"/> or <see cref="Util.UtcMaxValue"/> pauses the timer.
+            /// </param>
             public virtual void SetNextDueTimeUtc( IActivityMonitor monitor, DateTime nextDueTimeUtc )
             {
                 if( IsDisposed ) throw new ObjectDisposedException( ToString() );
                 if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
-                var delta = nextDueTimeUtc - DateTime.UtcNow;
-                var ms = (long)Math.Ceiling( delta.TotalMilliseconds );
-                if( ms <= 0 ) ms = 0;
-                if( !_timer.Change( ms, Timeout.Infinite ) )
+                if( nextDueTimeUtc == Util.UtcMinValue || nextDueTimeUtc == Util.UtcMaxValue )
                 {
-                    var msg = $"Timer.Change({ms}Timeout.Infinite) failed.";
-                    monitor.Warn( msg );
                     _timer.Change( Timeout.Infinite, Timeout.Infinite );
+                    monitor.Debug( $"Timer paused ({_timer.GetHashCode()})." );
+                }
+                else
+                {
+                    var delta = nextDueTimeUtc - DateTime.UtcNow;
+                    var ms = (long)Math.Ceiling( delta.TotalMilliseconds );
+                    if( ms <= 0 ) ms = 0;
                     if( !_timer.Change( ms, Timeout.Infinite ) )
                     {
-                        monitor.Fatal( msg );
-                        return;
+                        var msg = $"Timer.Change({ms}) failed.";
+                        monitor.Warn( msg );
+                        _timer.Change( Timeout.Infinite, Timeout.Infinite );
+                        if( !_timer.Change( ms, Timeout.Infinite ) )
+                        {
+                            monitor.Fatal( msg );
+                            return;
+                        }
                     }
+                    monitor.Debug( $"Timer set in {ms} ms ({_timer.GetHashCode()})." );
                 }
-                monitor.Debug( $"Timer set in {ms} ms ({_timer.GetHashCode()})." );
             }
 
             /// <summary>

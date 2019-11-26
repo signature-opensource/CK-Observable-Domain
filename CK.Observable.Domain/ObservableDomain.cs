@@ -1085,7 +1085,7 @@ namespace CK.Observable
             }
         }
 
-        void DoLoad( IActivityMonitor monitor, BinaryDeserializer r, string expectedName )
+        void DoLoad( IActivityMonitor monitor, BinaryDeserializer r, string expectedName, bool callUpdateTimers )
         {
             Debug.Assert( _lock.IsWriteLockHeld );
             _deserializing = true;
@@ -1196,8 +1196,11 @@ namespace CK.Observable
                 r.DebugCheckSentinel();
                 r.ImplementationServices.ExecutePostDeserializationActions();
                 OnLoaded();
-                var next = _timeManager.ApplyChanges();
-                if( next != Util.UtcMinValue ) _timeManager.SetNextDueTimeUtc( monitor, next );
+                if( callUpdateTimers )
+                {
+                    var next = _timeManager.ApplyChanges();
+                    if( next != Util.UtcMinValue ) _timeManager.SetNextDueTimeUtc( monitor, next );
+                }
             }
             finally
             {
@@ -1221,8 +1224,12 @@ namespace CK.Observable
         /// The maximum number of milliseconds to wait for a read access before giving up.
         /// Wait indefinitely by default.
         /// </param>
+        /// <param name="callUpdateTimers">
+        /// By default, =<see cref="TimeManager"/> is sollicitated to apply timers and reminders due times, potentially calling <see cref="SafeModifyAsync(IActivityMonitor, Action, int)"/>
+        /// if needed.
+        /// </param>
         /// <returns>True on success, false if timeout occurred.</returns>
-        public bool Load( IActivityMonitor monitor, Stream stream, string expectedLoadedName, bool leaveOpen = false, Encoding encoding = null, int millisecondsTimeout = -1 )
+        public bool Load( IActivityMonitor monitor, Stream stream, string expectedLoadedName, bool leaveOpen = false, Encoding encoding = null, int millisecondsTimeout = -1, bool callUpdateTimers = true )
         {
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
             if( stream == null ) throw new ArgumentNullException( nameof( stream ) );
@@ -1239,7 +1246,7 @@ namespace CK.Observable
                 using( var d = new BinaryDeserializer( stream, null, _deserializers, leaveOpen, encoding ) )
                 {
                     d.Services.Add( this );
-                    DoLoad( monitor, d, expectedLoadedName );
+                    DoLoad( monitor, d, expectedLoadedName, callUpdateTimers );
                     return true;
                 }
             }
@@ -1261,10 +1268,14 @@ namespace CK.Observable
         /// The maximum number of milliseconds to wait for a read access before giving up.
         /// Wait indefinitely by default.
         /// </param>
+        /// <param name="callUpdateTimers">
+        /// By default, =<see cref="TimeManager"/> is sollicitated to apply timers and reminders due times, potentially calling <see cref="SafeModifyAsync(IActivityMonitor, Action, int)"/>
+        /// if needed.
+        /// </param>
         /// <returns>True on success, false if timeout occurred.</returns>
-        public bool Load( IActivityMonitor monitor, Stream stream, bool leaveOpen = false, Encoding encoding = null, int millisecondsTimeout = -1 )
+        public bool Load( IActivityMonitor monitor, Stream stream, bool leaveOpen = false, Encoding encoding = null, int millisecondsTimeout = -1, bool callUpdateTimers = true )
         {
-            return Load( monitor, stream, DomainName, leaveOpen, encoding, millisecondsTimeout );
+            return Load( monitor, stream, DomainName, leaveOpen, encoding, millisecondsTimeout, callUpdateTimers );
         }
 
         /// <summary>
@@ -1513,12 +1524,8 @@ namespace CK.Observable
                 var originalBytes = s.ToArray();
                 var originalTransactionSerialNumber = domain.TransactionSerialNumber;
                 s.Position = 0;
-                if( !domain.Load( monitor, s, true, millisecondsTimeout: milliSecondsTimeout ) ) throw new Exception( "Reload failed: Unable to acquire lock." );
+                if( !domain.Load( monitor, s, true, millisecondsTimeout: milliSecondsTimeout, callUpdateTimers: false ) ) throw new Exception( "Reload failed: Unable to acquire lock." );
                 s.Position = 0;
-                if( useDebugMode )
-                {
-                    Thread.Sleep( 100 ); // TODO: Remove once fixed - Forces pending timers to be run after Load()
-                }
                 if( !domain.Save( monitor, s, true, millisecondsTimeout: milliSecondsTimeout, debugMode: useDebugMode ) ) throw new Exception( "Second Save failed: Unable to acquire lock." );
                 var rewriteBytes = s.ToArray();
                 var rewriteTransactionSerialNumber = domain.TransactionSerialNumber;
