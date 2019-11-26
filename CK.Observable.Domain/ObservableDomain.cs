@@ -1233,7 +1233,7 @@ namespace CK.Observable
         {
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
             if( stream == null ) throw new ArgumentNullException( nameof( stream ) );
-            if( String.IsNullOrEmpty( expectedLoadedName ) ) throw new ArgumentNullException( nameof( expectedLoadedName ) );
+            if( expectedLoadedName == null ) throw new ArgumentNullException( nameof( expectedLoadedName ) );
             if( _disposed ) throw new ObjectDisposedException( ToString() );
             bool isWrite = _lock.IsWriteLockHeld;
             if( !isWrite && !_lock.TryEnterWriteLock( millisecondsTimeout ) ) return false;
