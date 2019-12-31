@@ -10,7 +10,7 @@ namespace CK.Observable.Domain.Tests
     [TestFixture]
     public class ObservableSerializationTests
     {
-        [SerializationVersion(0)]
+        [SerializationVersion( 0 )]
         class ForgetToCallBaseDeserializationCtor : InternalObject
         {
             public ForgetToCallBaseDeserializationCtor()
@@ -18,7 +18,7 @@ namespace CK.Observable.Domain.Tests
             }
 
             protected ForgetToCallBaseDeserializationCtor( IBinaryDeserializerContext c )
-                // : base( c )
+            // : base( c )
             {
                 var r = c.StartReading();
             }
@@ -28,7 +28,7 @@ namespace CK.Observable.Domain.Tests
             }
         }
 
-        [SerializationVersion(0)]
+        [SerializationVersion( 0 )]
         class ForgetToCallBaseDeserializationCtorSpecialized : ForgetToCallBaseDeserializationCtor
         {
             public ForgetToCallBaseDeserializationCtorSpecialized()
@@ -46,9 +46,9 @@ namespace CK.Observable.Domain.Tests
             }
         }
 
-        [TestCase("")]
-        [TestCase("debugMode")]
-        public void forgetting_to_call_base_deserialization_ctor_throws_explicit_InvalidDataException(string mode)
+        [TestCase( "" )]
+        [TestCase( "debugMode" )]
+        public void forgetting_to_call_base_deserialization_ctor_throws_explicit_InvalidDataException( string mode )
         {
             string msgNoDebugMode = $"Missing \": base( c )\" call in deserialization constructor of '{typeof( ForgetToCallBaseDeserializationCtor ).AssemblyQualifiedName}'.";
 
@@ -153,6 +153,21 @@ namespace CK.Observable.Domain.Tests
             }
         }
 
+        [Test]
+        public void IdempotenceSerializationCheck_works_on_disposing_Observables()
+        {
+            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( IdempotenceSerializationCheck_works_on_disposing_Observables ) ) )
+            {
+                d.Modify( TestHelper.Monitor, () =>
+                {
+                    new TestObservableObject();
+                } );
+                ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
+            }
+        }
+
+
+
         [SerializationVersion( 0 )]
         public class CustomRoot : ObservableRootObject
         {
@@ -230,6 +245,34 @@ namespace CK.Observable.Domain.Tests
                 w.WriteObject( ImmutablesById );
             }
 
+        }
+
+        [SerializationVersion( 0 )]
+        public class TestObservableObject : ObservableObject
+        {
+            private ObservableList<int> ChildObject { get; }
+
+            public TestObservableObject()
+            {
+                ChildObject = new ObservableList<int>();
+            }
+            public TestObservableObject( IBinaryDeserializerContext c ) : base( c )
+            {
+                var r = c.StartReading();
+                ChildObject = (ObservableList<int>)r.ReadObject();
+            }
+
+            void Write( BinarySerializer w )
+            {
+                w.WriteObject( ChildObject );
+            }
+
+            protected override void OnDisposed( bool isReloading )
+            {
+                ChildObject.Clear();
+                ChildObject.Dispose(); // Comment to make it work
+                base.OnDisposed( isReloading );
+            }
         }
     }
 }

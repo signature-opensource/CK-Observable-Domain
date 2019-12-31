@@ -1091,6 +1091,25 @@ namespace CK.Observable
             _deserializing = true;
             try
             {
+                #region Unload/Dispose existing objects.
+                // Call OnDisposed on all objects.
+                for( int i = 0; i < _objectsListCount; ++i )
+                {
+                    var o = _objects[i];
+                    if( o != null )
+                    {
+                        Debug.Assert( !o.IsDisposed );
+                        // This may still call Dispose() on other objects.
+                        // Disposing() an ObservableObject will call InternalUnregister() here,
+                        // and may affect the counts and object/free lists during loading.
+                        o.OnDisposed( true );
+                    }
+                }
+                // Empty _objects completely.
+                Array.Clear( _objects, 0, _objectsListCount );
+                #endregion
+
+
                 int version = r.ReadSmallInt32();
                 if( version < 0 || version > CurrentSerializationVersion )
                 {
@@ -1136,23 +1155,15 @@ namespace CK.Observable
                 }
 
                 r.DebugCheckSentinel();
-                #region Clearing exisiting objects, sizing _objects array.
-                for( int i = 0; i < _objectsListCount; ++i )
-                {
-                    var o = _objects[i];
-                    if( o != null )
-                    {
-                        Debug.Assert( !o.IsDisposed );
-                        o.OnDisposed( true );
-                    }
-                }
-                Array.Clear( _objects, 0, _objectsListCount );
+
+                #region Resize _objects array.
                 _objectsListCount = count = _actualObjectCount + _freeList.Count;
                 while( _objectsListCount > _objects.Length )
                 {
                     Array.Resize( ref _objects, _objects.Length * 2 );
                 }
                 #endregion
+
                 for( int i = 0; i < count; ++i )
                 {
                     _objects[i] = (ObservableObject)r.ReadObject();
