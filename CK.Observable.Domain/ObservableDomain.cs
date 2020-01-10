@@ -732,17 +732,33 @@ namespace CK.Observable
         public IObservableDomainClient DomainClient { get; }
 
         /// <summary>
-        /// Acquires a read lock: until the returned disposable is disposed
-        /// objects can safely be read and any attempt to <see cref="BeginTransaction"/> (from
-        /// other threads) wiil  be blocked.
-        /// Any attempt to call <see cref="BeginTransaction"/> from this thread will
-        /// throw a <see cref="LockRecursionException"/>
+        /// <para>
+        /// Acquires a single-threaded read lock on this <see cref="ObservableDomain"/>:
+        /// until the returned disposable is disposed,
+        /// objects can safely be read, and any attempt to call <see cref="BeginTransaction"/>
+        /// from other threads will be blocked.
+        /// </para>
+        /// <para>
+        /// Changing threads (eg. by awaiting tasks) before the returned disposable is disposed
+        /// will throw a <see cref="SynchronizationLockException"/>.
+        /// </para>
+        /// <para>
+        /// Any attempt to call <see cref="BeginTransaction"/> from this thread 
+        /// will throw a <see cref="LockRecursionException"/>.
+        /// </para>
         /// </summary>
         /// <param name="millisecondsTimeout">
         /// The maximum number of milliseconds to wait for a read access before giving up.
         /// Wait indefinitely by default.
         /// </param>
-        /// <returns>The disposable to release the read lock or null if timeout occurred.</returns>
+        /// <exception cref="LockRecursionException">
+        /// When <see cref="BeginTransaction"/> is being called from the same thread inside the read lock.
+        /// </exception>
+        /// <exception cref="SynchronizationLockException">
+        /// When the current thread has not entered the lock in read mode.
+        /// Can be caused by other threads trying to use this lock (eg. after awaiting a task).
+        /// </exception>
+        /// <returns>A disposable that releases the read lock when disposed, or null if a timeout occurred.</returns>
         public IDisposable AcquireReadLock( int millisecondsTimeout = -1 )
         {
             if( !_lock.TryEnterReadLock( millisecondsTimeout ) ) return null;
