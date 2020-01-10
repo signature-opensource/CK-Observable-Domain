@@ -24,9 +24,9 @@ namespace CK.Observable
         ObservableEventHandler<PropertyChangedEventArgs> _propertyChanged;
 
         /// <summary>
-        /// Raised when this object is <see cref="Dispose"/>d by <see cref="OnDisposed"/>.
+        /// Raised when this object is <see cref="Dispose"/>d by the <see cref="Dispose(bool)"/> overload.
         /// Note that when the call to dispose is made by <see cref="ObservableDomain.Load"/>, this event is not
-        /// triggered to avoid a useless (and potentialy dangerous) snowball effect: eventually ALL <see cref="ObservableObject.OnDisposed(bool)"/>
+        /// triggered to avoid a useless (and potentially dangerous) snowball effect: eventually ALL <see cref="ObservableObject.Dispose(bool)"/>
         /// will be called during a reload.
         /// </summary>
         public event SafeEventHandler<ObservableDomainEventArgs> Disposed
@@ -150,7 +150,7 @@ namespace CK.Observable
             if( _oid.IsValid )
             {
                 Domain.CheckBeforeDispose( this );
-                OnDisposed( false );
+                Dispose( true );
                 Domain.Unregister( this );
                 _oid = ObservableObjectId.Disposed;
             }
@@ -180,24 +180,27 @@ namespace CK.Observable
 
         /// <summary>
         /// Called before this object is disposed.
-        /// Implementation at this level raises the <see cref="Disposed"/> event: it must be called
-        /// by overrides.
+        /// Override to dispose other objects managed by this <see cref="ObservableObject"/>, making sure to call base.
+        /// Implementation at this level raises the <see cref="Disposed"/> event:
+        /// it must be called by overrides.
         /// <para>
         /// Note that the Disposed event is raised only for explicit object disposing: a <see cref="ObservableDomain.Load"/> doesn't trigger the event.
         /// </para>
         /// </summary>
-        /// <param name="isReloading">
-        /// True when this dispose is due to a domain reload. (When true the <see cref="Disposed"/> event is not raised.)
+        /// <param name="shouldCleanup">
+        /// True when other <see cref="ObservableObject"/> instances managed by this object should be disposed, which is most of the time.
+        /// False when managed <see cref="ObservableObject"/> instances will be disposed automatically (eg. during a reload).
+        /// When False, the <see cref="Disposed"/> event is not raised.
         /// </param>
-        protected internal virtual void OnDisposed( bool isReloading )
+        protected internal virtual void Dispose( bool shouldCleanup )
         {
-            if( isReloading )
+            if( shouldCleanup )
             {
-                _oid = ObservableObjectId.Disposed;
+                RaiseStandardDomainEvent( _disposed );
             }
             else
             {
-                RaiseStandardDomainEvent( _disposed );
+                _oid = ObservableObjectId.Disposed;
             }
         }
 

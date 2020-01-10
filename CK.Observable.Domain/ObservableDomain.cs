@@ -1108,7 +1108,7 @@ namespace CK.Observable
             try
             {
                 #region Unload/Dispose existing objects.
-                // Call OnDisposed on all objects.
+                // Call Dispose(false) on all objects.
                 for( int i = 0; i < _objectsListCount; ++i )
                 {
                     var o = _objects[i];
@@ -1118,7 +1118,7 @@ namespace CK.Observable
                         // This may still call Dispose() on other objects.
                         // Disposing() an ObservableObject will call InternalUnregister() here,
                         // and may affect the counts and object/free lists during loading.
-                        o.OnDisposed( true );
+                        o.Dispose( false );
                     }
                 }
                 // Empty _objects completely.
@@ -1198,7 +1198,7 @@ namespace CK.Observable
                 var internalObj = _firstInternalObject;
                 while( internalObj != null )
                 {
-                    internalObj.OnDisposed( true );
+                    internalObj.Dispose( false );
                     internalObj = internalObj.Next;
                 }
                 _firstInternalObject = _lastInternalObject = null;

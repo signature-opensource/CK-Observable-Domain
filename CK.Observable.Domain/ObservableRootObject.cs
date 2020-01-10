@@ -36,10 +36,10 @@ namespace CK.Observable
         /// <summary>
         /// Overridden to throw <see cref="InvalidOperationException"/>.
         /// </summary>
-        /// <param name="isReloading">Always false: this is never called for root objects.</param>
-        protected internal override void OnDisposed( bool isReloading )
+        /// <param name="shouldCleanup">Always false: this method is never called for root objects except when reloading.</param>
+        protected internal override void Dispose( bool shouldCleanup )
         {
-            if( isReloading ) base.OnDisposed( isReloading );
+            if( !shouldCleanup ) base.Dispose( shouldCleanup );
             else throw new InvalidOperationException( "ObservableRootObject cannot be disposed." );
         }
     }

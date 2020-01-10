@@ -153,16 +153,22 @@ namespace CK.Observable.Domain.Tests
             }
         }
 
-        [Test]
-        public void IdempotenceSerializationCheck_works_on_disposing_Observables()
+        [TestCase( true )]
+        [TestCase( false )]
+        public void IdempotenceSerializationCheck_works_on_disposing_Observables( bool alwaysDisposeChild )
         {
             using( var d = new ObservableDomain( TestHelper.Monitor, nameof( IdempotenceSerializationCheck_works_on_disposing_Observables ) ) )
             {
+                TestDisposableObservableObject oldObject = null;
                 d.Modify( TestHelper.Monitor, () =>
                 {
-                    new TestObservableObject();
+                    oldObject = new TestDisposableObservableObject( alwaysDisposeChild );
                 } );
                 ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
+
+                oldObject.Should().NotBeNull();
+                oldObject.IsDisposed.Should().BeTrue( "The reference of the object was disposed when the domain was reloaded" );
+                oldObject.ChildObject.IsDisposed.Should().BeTrue( "The reference of the object's ObservableObject child was disposed when the domain was reloaded" );
             }
         }
 
@@ -248,30 +254,37 @@ namespace CK.Observable.Domain.Tests
         }
 
         [SerializationVersion( 0 )]
-        public class TestObservableObject : ObservableObject
+        public class TestDisposableObservableObject : ObservableObject
         {
-            private ObservableList<int> ChildObject { get; }
+            public bool AlwaysDisposeChild { get; }
+            public ObservableList<int> ChildObject { get; }
 
-            public TestObservableObject()
+            public TestDisposableObservableObject( bool alwaysDisposeChild )
             {
+                AlwaysDisposeChild = alwaysDisposeChild;
                 ChildObject = new ObservableList<int>();
             }
-            public TestObservableObject( IBinaryDeserializerContext c ) : base( c )
+            public TestDisposableObservableObject( IBinaryDeserializerContext c ) : base( c )
             {
                 var r = c.StartReading();
+                AlwaysDisposeChild = r.ReadBoolean();
                 ChildObject = (ObservableList<int>)r.ReadObject();
             }
 
             void Write( BinarySerializer w )
             {
+                w.Write( AlwaysDisposeChild );
                 w.WriteObject( ChildObject );
             }
 
-            protected override void OnDisposed( bool isReloading )
+            protected override void Dispose( bool shouldCleanup )
             {
-                ChildObject.Clear();
-                ChildObject.Dispose(); // Comment to make it work
-                base.OnDisposed( isReloading );
+                if( shouldCleanup || AlwaysDisposeChild )
+                {
+                    ChildObject.Clear();
+                    ChildObject.Dispose();
+                }
+                base.Dispose( shouldCleanup );
             }
         }
     }
