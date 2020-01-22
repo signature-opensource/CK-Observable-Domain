@@ -492,7 +492,7 @@ namespace CK.Observable
         /// </summary>
         /// <param name="monitor">The monitor used to log the construction of this domain. Cannot be null.</param>
         /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
-        /// <param name="client">The transaction manager to use. Can be null.</param>
+        /// <param name="client">The observable client (head of the Chain of Responsibility) to use. Can be null.</param>
         /// <param name="exporters">Optional exporters handler.</param>
         /// <param name="serializers">Optional serializers handler.</param>
         /// <param name="deserializers">Optional deserializers handler.</param>
@@ -511,7 +511,7 @@ namespace CK.Observable
         /// </summary>
         /// <param name="monitor">The monitor used to log the construction of this domain. Can not be null.</param>
         /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
-        /// <param name="client">The transaction manager to use. Can be null.</param>
+        /// <param name="client">The observable client (head of the Chain of Responsibility) to use. Can be null.</param>
         /// <param name="s">The input stream.</param>
         /// <param name="leaveOpen">True to leave the stream opened.</param>
         /// <param name="encoding">Optional encoding for characters. Defaults to UTF-8.</param>
@@ -734,17 +734,15 @@ namespace CK.Observable
         /// <summary>
         /// <para>
         /// Acquires a single-threaded read lock on this <see cref="ObservableDomain"/>:
-        /// until the returned disposable is disposed,
-        /// objects can safely be read, and any attempt to call <see cref="BeginTransaction"/>
-        /// from other threads will be blocked.
+        /// until the returned disposable is disposed, objects can safely be read, and any attempt
+        /// to call <see cref="BeginTransaction"/> from other threads will be blocked.
         /// </para>
         /// <para>
         /// Changing threads (eg. by awaiting tasks) before the returned disposable is disposed
         /// will throw a <see cref="SynchronizationLockException"/>.
         /// </para>
         /// <para>
-        /// Any attempt to call <see cref="BeginTransaction"/> from this thread 
-        /// will throw a <see cref="LockRecursionException"/>.
+        /// Any attempt to call <see cref="BeginTransaction"/> from this thread will throw a <see cref="LockRecursionException"/>.
         /// </para>
         /// </summary>
         /// <param name="millisecondsTimeout">

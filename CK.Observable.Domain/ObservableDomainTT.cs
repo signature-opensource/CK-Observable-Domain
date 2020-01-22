@@ -35,7 +35,7 @@ namespace CK.Observable
         /// </summary>
         /// <param name="monitor">The monitor used to log the construction of this domain. Cannot be null.</param>
         /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
-        /// <param name="client">The transaction manager. Can be null.</param>
+        /// <param name="client">The observable client (head of the Chain of Responsibility) to use. Can be null.</param>
         public ObservableDomain( IActivityMonitor monitor, string domainName, IObservableDomainClient client )
             : base( monitor, domainName, client )
         {
@@ -52,7 +52,7 @@ namespace CK.Observable
         /// </summary>
         /// <param name="monitor">The monitor used to log the construction of this domain. Cannot be null.</param>
         /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
-        /// <param name="client">The transaction manager to use. Can be null.</param>
+        /// <param name="client">The observable client (head of the Chain of Responsibility) to use. Can be null.</param>
         /// <param name="s">The input stream.</param>
         /// <param name="leaveOpen">True to leave the stream opened.</param>
         /// <param name="encoding">Optional encoding for characters. Defaults to UTF-8.</param>

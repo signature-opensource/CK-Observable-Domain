@@ -1,9 +1,11 @@
+using CK.Core;
 using CK.Observable.Domain.Tests.Sample;
 using FluentAssertions;
 using NUnit.Framework;
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
 
@@ -165,6 +167,7 @@ namespace CK.Observable.Domain.Tests
                 } ).Should().NotBeNull();
             }
         }
+
 
     }
 }

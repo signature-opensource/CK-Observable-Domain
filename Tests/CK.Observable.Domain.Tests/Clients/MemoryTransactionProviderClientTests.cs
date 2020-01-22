@@ -235,5 +235,6 @@ namespace CK.Observable.Domain.Tests.Clients
             initialObservableObject.IsDisposed.Should().BeTrue( "Root was disposed following a reload" );
             restoredObservableObject.IsDisposed.Should().BeFalse();
         }
+
     }
 }
