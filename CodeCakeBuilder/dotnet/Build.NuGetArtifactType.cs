@@ -5,7 +5,6 @@ using Cake.Common.Tools.DotNetCore.Pack;
 using CodeCake.Abstractions;
 using CSemVer;
 using SimpleGitVersion;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using static CodeCake.Build;
@@ -13,7 +12,7 @@ using static CodeCake.Build;
 namespace CodeCake
 {
 
-    public partial class DotnetSolution : ISolutionProducingArtifact
+    public partial class DotnetSolution : ICIPublishWorkflow
     {
         private ArtifactType _artifactType;
 
@@ -87,10 +86,8 @@ namespace CodeCake
             /// </summary>
             /// <returns>The set of remote NuGet feeds (in practice at most one).</returns>
             protected override IEnumerable<ArtifactFeed> GetRemoteFeeds()
-            {
-                yield return new SignatureVSTSFeed( this, "Signature-Code", "Default" );
-
-            }
+            {yield return new SignatureVSTSFeed( this, "Signature-Code","Default", null);
+}
 
             /// <summary>
             /// Gets the local target feeds.
