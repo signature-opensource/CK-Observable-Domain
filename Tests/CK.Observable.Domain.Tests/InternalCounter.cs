@@ -13,6 +13,9 @@ namespace CK.Observable.Domain.Tests
     [SerializationVersion( 0 )]
     public sealed class InternalCounter : InternalObject
     {
+        /// <summary>
+        /// Gets the count. Can be called even if <see cref="IDisposableObject.IsDisposed"/> is true.
+        /// </summary>
         public int Count { get; private set; }
 
         public InternalCounter()

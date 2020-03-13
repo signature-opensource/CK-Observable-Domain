@@ -1332,6 +1332,7 @@ namespace CK.Observable
             Debug.Assert( o != null && o.Domain == this && o.Prev == null && o.Next == null );
             CheckWriteLock( o );
             if( (o.Next = _firstInternalObject) == null ) _lastInternalObject = o;
+            else _firstInternalObject.Prev = o;
             _firstInternalObject = o;
             ++_internalObjectCount;
         }

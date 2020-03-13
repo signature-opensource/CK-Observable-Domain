@@ -137,8 +137,8 @@ namespace CK.Observable
                 {
                     if( !cleanup[i] ) newOne = Delegate.Combine( newOne, dList[i] );
                 }
-                _d = newOne;
-                dList = newOne.GetInvocationList();
+                if( (_d = newOne) != null ) dList = newOne.GetInvocationList();
+                else dList = Array.Empty<Delegate>();
             }
             return dList;
         }

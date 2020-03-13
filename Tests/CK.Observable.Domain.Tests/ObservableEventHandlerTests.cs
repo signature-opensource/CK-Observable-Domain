@@ -218,5 +218,80 @@ namespace CK.Observable.Domain.Tests
         }
 
 
+        [Test]
+        public void testing_auto_cleanup()
+        {
+            using( var domain = new ObservableDomain( TestHelper.Monitor, nameof( testing_auto_cleanup ) ) )
+            {
+                domain.Modify( TestHelper.Monitor, () =>
+                {
+                    InternalCounter counter = new InternalCounter();
+                    Sample.Car c = new Sample.Car( "First Car" );
+                    c.SpeedChanged += counter.Increment;
+
+                    counter.Count.Should().Be( 0 );
+                    c.Speed = 89;
+                    counter.Count.Should().Be( 1 );
+                    counter.Dispose();
+                    c.Speed = 1;
+                    counter.Count.Should().Be( 1 );
+
+                    counter = new InternalCounter();
+                    var counter2 = new InternalCounter();
+                    c.SpeedChanged += counter.Increment;
+                    c.SpeedChanged += counter2.Increment;
+                    counter.Count.Should().Be( 0 );
+                    counter2.Count.Should().Be( 0 );
+
+                    c.Speed = 89;
+                    counter.Count.Should().Be( 1 );
+                    counter2.Count.Should().Be( 1 );
+                    counter.Dispose();
+                    c.Speed = 1;
+                    counter.Count.Should().Be( 1 );
+                    counter2.Count.Should().Be( 2 );
+                    counter2.Dispose();
+                    c.Speed = 2;
+                    counter.Count.Should().Be( 1 );
+                    counter2.Count.Should().Be( 2 );
+
+                    counter = new InternalCounter();
+                    counter2 = new InternalCounter();
+                    var counter3 = new InternalCounter();
+                    c.SpeedChanged += counter.Increment;
+                    c.SpeedChanged += counter2.Increment;
+                    c.SpeedChanged += counter3.Increment;
+                    counter.Count.Should().Be( 0 );
+                    counter2.Count.Should().Be( 0 );
+                    counter3.Count.Should().Be( 0 );
+
+                    c.Speed = 89;
+                    counter.Count.Should().Be( 1 );
+                    counter2.Count.Should().Be( 1 );
+                    counter3.Count.Should().Be( 1 );
+
+                    counter2.Dispose();
+                    c.Speed = 1;
+                    counter.Count.Should().Be( 2 );
+                    counter2.Count.Should().Be( 1 );
+                    counter3.Count.Should().Be( 2 );
+
+                    counter3.Dispose();
+                    c.Speed = 2;
+                    counter.Count.Should().Be( 3 );
+                    counter2.Count.Should().Be( 1 );
+                    counter3.Count.Should().Be( 2 );
+
+                    counter.Dispose();
+                    c.Speed = 3;
+                    counter.Count.Should().Be( 3 );
+                    counter2.Count.Should().Be( 1 );
+                    counter3.Count.Should().Be( 2 );
+                } ).Success
+                    .Should().BeTrue();
+            }
+
+        }
+
     }
 }
