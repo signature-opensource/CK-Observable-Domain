@@ -7,6 +7,97 @@ namespace CK.Observable.Domain.Tests.Serialization
     [TestFixture]
     public class ObservableObjectListSerializationTests
     {
+        [SerializationVersion( 0 )]
+        public class C : ObservableObject
+        {
+            public ObservableList<ObservableObject> ObjectList { get; }
+
+            public C()
+            {
+                ObjectList = new ObservableList<ObservableObject>();
+            }
+
+            protected C( IBinaryDeserializerContext d )
+                : base( d )
+            {
+                var r = d.StartReading();
+                ObjectList = (ObservableList<ObservableObject>)r.ReadObject();
+            }
+
+            private void Write( BinarySerializer w )
+            {
+                w.WriteObject( ObjectList );
+            }
+
+            public void OnObjectDisposed( object sender, ObservableDomainEventArgs e ) => ObjectList.Remove( (ObservableObject)sender );
+        }
+
+        [SerializationVersion( 0 )]
+        public class O : ObservableObject
+        {
+            public O()
+            {
+            }
+
+            protected O( IBinaryDeserializerContext d )
+                : base( d )
+            {
+                var r = d.StartReading();
+            }
+
+            void Write( BinarySerializer w )
+            {
+            }
+        }
+
+
+        [Test]
+        public void auto_reference_of_container()
+        {
+            using( var d = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
+            {
+                d.Modify( TestHelper.Monitor, () =>
+                {
+                    var c0 = new C();
+                    c0.ObjectList.Add( c0 );
+                } );
+                ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
+            }
+        }
+
+        [Test]
+        public void auto_reference_of_list()
+        {
+            using( var d = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
+            {
+                d.Modify( TestHelper.Monitor, () =>
+                {
+                    var c0 = new ObservableList<ObservableObject>();
+                    c0.Add( c0 );
+                } );
+                ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
+            }
+        }
+
+
+        [TestCase( true )]
+        [TestCase( false )]
+        public void cross_reference_of_containers( bool sameOrder )
+        {
+            using( var d = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
+            {
+                d.Modify( TestHelper.Monitor, () =>
+                {
+                    var c0 = new C();
+                    var c1 = new C();
+                    if( sameOrder ) c0.ObjectList.Add( c1 );
+                    else c1.ObjectList.Add( c0 );
+                } );
+                ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
+            }
+        }
+
+
         [Test]
         public void Self_registering_ObservableObject_can_be_serialized()
         {
@@ -14,96 +105,13 @@ namespace CK.Observable.Domain.Tests.Serialization
             {
                 d.Modify( TestHelper.Monitor, () =>
                 {
-                    var objectContainer = new TestObjectContainer();
-                    var selfRegisteringObject = new SelfRegisteringObject( new[] { objectContainer } );
-
+                    var c = new C();
+                    var o = new C();
+                    o.Disposed += c.OnObjectDisposed;
                 } );
                 ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
             }
         }
 
-        [SerializationVersion( 0 )]
-        public class SelfRegisteringObject : ObservableObject
-        {
-            private ObservableList<object> Containers { get; }
-
-            public SelfRegisteringObject( IReadOnlyCollection<TestObjectContainer> testObjectContainers )
-            {
-                Containers = new ObservableList<object>();
-                Containers.AddRange( testObjectContainers );
-                foreach( var testObjectContainer in testObjectContainers )
-                {
-                    testObjectContainer.AddObject( this );
-                }
-            }
-
-            protected SelfRegisteringObject( IBinaryDeserializerContext d ) : base( d )
-            {
-                var r = d.StartReading();
-                Containers = (ObservableList<object>)r.ReadObject();
-            }
-
-            private void Write( BinarySerializer w )
-            {
-                w.WriteObject( Containers );
-            }
-
-            protected override void Dispose( bool shouldCleanup )
-            {
-                if( shouldCleanup )
-                {
-                    Containers.Dispose();
-                }
-                base.Dispose( shouldCleanup );
-            }
-        }
-
-        [SerializationVersion( 0 )]
-        public class TestObjectContainer : ObservableObject
-        {
-            public ObservableList<SelfRegisteringObject> ObjectList { get; }
-
-            public TestObjectContainer()
-            {
-                ObjectList = new ObservableList<SelfRegisteringObject>();
-            }
-
-            protected TestObjectContainer( IBinaryDeserializerContext d ) : base( d )
-            {
-                var r = d.StartReading();
-                ObjectList = (ObservableList<SelfRegisteringObject>)r.ReadObject();
-            }
-
-            private void Write( BinarySerializer bs )
-            {
-                bs.WriteObject( ObjectList );
-            }
-
-            protected override void Dispose( bool shouldCleanup )
-            {
-                if( shouldCleanup )
-                {
-                    ObjectList.Dispose();
-                }
-                base.Dispose( shouldCleanup );
-            }
-
-            public void AddObject( SelfRegisteringObject selfRegisteringObject )
-            {
-                if( !ObjectList.Contains( selfRegisteringObject ) )
-                {
-                    selfRegisteringObject.Disposed += TestObject_Disposed;
-                    ObjectList.Add( selfRegisteringObject );
-                }
-            }
-
-            private void TestObject_Disposed( object sender, ObservableDomainEventArgs e )
-            {
-                if( sender is SelfRegisteringObject testObject )
-                {
-                    ObjectList.Remove( testObject );
-                }
-            }
-        }
     }
 }

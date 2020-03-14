@@ -65,7 +65,8 @@ namespace CK.Observable
         /// Deserailization constructor.
         /// </summary>
         /// <param name="d">The deserialization context.</param>
-        protected ObservableList( IBinaryDeserializerContext d ) : base( d )
+        protected ObservableList( IBinaryDeserializerContext d )
+            : base( d )
         {
             var r = d.StartReading();
             _list = (List<T>)r.ReadObject();
