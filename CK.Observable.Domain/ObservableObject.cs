@@ -94,19 +94,11 @@ namespace CK.Observable
         protected ObservableObject( IBinaryDeserializerContext d )
         {
             var r = d.StartReading();
-            Debug.Assert( r.CurrentReadInfo.Version == 1 );
             Domain = r.Services.GetService<ObservableDomain>( throwOnNull: true );
             _exporter = Domain._exporters.FindDriver( GetType() );
-            if( r.CurrentReadInfo.Version == 0 )
-            {
-                _oid = Domain.CreateId( r.ReadInt32() );
-            }
-            else
-            {
-                _oid = new ObservableObjectId( r );
-                _disposed = new ObservableEventHandler<ObservableDomainEventArgs>( r );
-                _propertyChanged = new ObservableEventHandler<PropertyChangedEventArgs>( r );
-            }
+            _oid = new ObservableObjectId( r );
+            _disposed = new ObservableEventHandler<ObservableDomainEventArgs>( r );
+            _propertyChanged = new ObservableEventHandler<PropertyChangedEventArgs>( r );
         }
 
         void Write( BinarySerializer w )

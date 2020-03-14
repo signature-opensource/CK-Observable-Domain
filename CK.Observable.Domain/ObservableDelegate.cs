@@ -36,7 +36,8 @@ namespace CK.Observable
                 {
                     object o = r.ReadObject();
                     string methodName = r.ReadSharedString();
-                    Type[] paramTypes = ArrayDeserializer<Type>.ReadArray( r, BasicTypeDrivers.DType.Default );
+                    // Use local DoReadArray since ArrayDeserializer<Type>.ReadArray track the array and ArraySerializer<Type>.WriteObjects don't.
+                    Type[] paramTypes = DoReadArray( r );
                     if( o is Type t )
                     {
                         var m = t.GetMethod( methodName, BindingFlags.Static|BindingFlags.FlattenHierarchy|BindingFlags.Public|BindingFlags.NonPublic, null, paramTypes, null );
@@ -53,6 +54,15 @@ namespace CK.Observable
                 }
                 while( --count > 0 );
                 _d = final;
+            }
+
+            static Type[] DoReadArray( IBinaryDeserializer r )
+            {
+                int len = r.ReadNonNegativeSmallInt32();
+                if( len == 0 ) return Array.Empty<Type>();
+                var result = new Type[len];
+                for( int i = 0; i < len; ++i ) result[i] = r.ReadType();
+                return result;
             }
         }
 
@@ -72,7 +82,8 @@ namespace CK.Observable
                     w.WriteObject( d.Target ?? d.Method.DeclaringType );
                     w.WriteSharedString( d.Method.Name );
                     var paramInfos = d.Method.GetParameters();
-                    ArraySerializer<Type>.WriteObjects( w, paramInfos.Length, paramInfos.Select( p => p.ParameterType ), BasicTypeDrivers.DType.Default );
+                    w.WriteNonNegativeSmallInt32( paramInfos.Length );
+                    foreach( var p in paramInfos ) w.Write( p.ParameterType );
                 }
             }
         }
