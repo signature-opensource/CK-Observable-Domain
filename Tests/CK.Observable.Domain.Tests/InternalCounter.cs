@@ -11,18 +11,18 @@ namespace CK.Observable.Domain.Tests
     /// This is a sample <see cref="InternalObject"/>.
     /// </summary>
     [SerializationVersion( 0 )]
-    public sealed class InternalCounter : InternalObject
+    public sealed class TestCounter : InternalObject
     {
         /// <summary>
         /// Gets the count. Can be called even if <see cref="IDisposableObject.IsDisposed"/> is true.
         /// </summary>
         public int Count { get; private set; }
 
-        public InternalCounter()
+        public TestCounter()
         {
         }
 
-        InternalCounter( IBinaryDeserializerContext d )
+        TestCounter( IBinaryDeserializerContext d )
             : base( d )
         {
             var r = d.StartReading();

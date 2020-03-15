@@ -91,7 +91,7 @@ namespace CK.Observable.Domain.Tests
             {
                 domain.Modify( TestHelper.Monitor, () =>
                 {
-                    InternalCounter counter = new InternalCounter();
+                    TestCounter counter = new TestCounter();
                     Car c = new Car( "First Car" );
                     Assert.Throws<NotSupportedException>( () => ((INotifyPropertyChanged)c).PropertyChanged += counter.SilentIncrement );
                 } );
@@ -105,7 +105,7 @@ namespace CK.Observable.Domain.Tests
             {
                 domain.Modify( TestHelper.Monitor, () =>
                 {
-                    InternalCounter counter = new InternalCounter();
+                    TestCounter counter = new TestCounter();
 
                     Car c1 = new Car( "First Car" );
                     c1.SpeedChanged += counter.Increment;
@@ -155,7 +155,7 @@ namespace CK.Observable.Domain.Tests
                 int bang = 0;
                 domain.Modify( TestHelper.Monitor, () =>
                 {
-                    InternalCounter counter = new InternalCounter();
+                    TestCounter counter = new TestCounter();
 
                     Car c = new Car( "First Car" );
 

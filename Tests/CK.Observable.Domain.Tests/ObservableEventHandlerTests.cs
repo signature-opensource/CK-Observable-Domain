@@ -225,7 +225,7 @@ namespace CK.Observable.Domain.Tests
             {
                 domain.Modify( TestHelper.Monitor, () =>
                 {
-                    InternalCounter counter = new InternalCounter();
+                    TestCounter counter = new TestCounter();
                     Sample.Car c = new Sample.Car( "First Car" );
                     c.SpeedChanged += counter.Increment;
 
@@ -236,8 +236,8 @@ namespace CK.Observable.Domain.Tests
                     c.Speed = 1;
                     counter.Count.Should().Be( 1 );
 
-                    counter = new InternalCounter();
-                    var counter2 = new InternalCounter();
+                    counter = new TestCounter();
+                    var counter2 = new TestCounter();
                     c.SpeedChanged += counter.Increment;
                     c.SpeedChanged += counter2.Increment;
                     counter.Count.Should().Be( 0 );
@@ -255,9 +255,9 @@ namespace CK.Observable.Domain.Tests
                     counter.Count.Should().Be( 1 );
                     counter2.Count.Should().Be( 2 );
 
-                    counter = new InternalCounter();
-                    counter2 = new InternalCounter();
-                    var counter3 = new InternalCounter();
+                    counter = new TestCounter();
+                    counter2 = new TestCounter();
+                    var counter3 = new TestCounter();
                     c.SpeedChanged += counter.Increment;
                     c.SpeedChanged += counter2.Increment;
                     c.SpeedChanged += counter3.Increment;
