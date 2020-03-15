@@ -17,6 +17,12 @@ namespace CK.Observable.Domain.Tests.TimedEvents
     [TestFixture]
     public class TimeTests
     {
+        [SetUp]
+        public void BeforeEach()
+        {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+        }
 
         [TestCase( -10 )]
         [TestCase( 0 )]
@@ -235,9 +241,6 @@ namespace CK.Observable.Domain.Tests.TimedEvents
         [Test]
         public void serializing_timers_and_reminders()
         {
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-
             var now = DateTime.UtcNow;
             using( var d = new ObservableDomain( TestHelper.Monitor, nameof( serializing_timers_and_reminders ) + " (Primary)" ) )
             {
@@ -312,9 +315,6 @@ namespace CK.Observable.Domain.Tests.TimedEvents
         [Test]
         public void fifty_timers_from_20_to_1000_ms_in_action()
         {
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-
             const int testTime = 5000;
             AutoCounter[] counters = null;
 
@@ -503,9 +503,11 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             IReadOnlyList<ActivityMonitorSimpleCollector.Entry> logs = null;
             using( var d = TestHelper.CreateDomainHandler( nameof( reminder_helper_uses_pooled_ObservableReminders)+mode ) )
             {
-                void ReloadIfNeeded()
+                TimeSpan ReloadIfNeeded()
                 {
+                    var n = DateTime.UtcNow;
                     if( mode == "WithIntermediateSaves" ) d.Reload( TestHelper.Monitor );
+                    return DateTime.UtcNow - n;
                 }
 
                 using( TestHelper.Monitor.CollectEntries( entries => logs = entries, LogLevelFilter.Info ) )
@@ -517,8 +519,8 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                         r1.StartWork( "Hello!", 3 );
 
                     } ).Success.Should().BeTrue();
-                    ReloadIfNeeded();
-                    Thread.Sleep( 5 * 100 + 100 );
+                    TimeSpan reloadDelta = ReloadIfNeeded();
+                    Thread.Sleep( 5 * 100 + (int)reloadDelta.TotalMilliseconds );
                     ReloadIfNeeded();
                 }
                 logs.Select( l => l.Text ).Should().Contain( "TestReminder: Working: Hello! (count:3)", "The 2 other logs are on the domain monitor!" );
