@@ -3,7 +3,8 @@ using System;
 namespace CK.Observable
 {
     /// <summary>
-    /// Associates a version to a <see cref="TypeSerializationKind.TypeBased"/> class or struct.
+    /// Associates a version to a class or struct that handles its own serialization through a private Write( <see cref="BinarySerializer"/> )
+    /// method and a deserialization constructor that accepts a <see cref="IBinaryDeserializerContext"/> parameter.
     /// This attribute is required.
     /// </summary>
     [AttributeUsage(AttributeTargets.Class|AttributeTargets.Struct, AllowMultiple = false, Inherited = false)]

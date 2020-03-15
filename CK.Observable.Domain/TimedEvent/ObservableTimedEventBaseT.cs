@@ -9,17 +9,25 @@ using System.Threading.Tasks;
 namespace CK.Observable
 {
     /// <summary>
-    /// Base behavior for timed event management that implements the <see cref="Elapsed"/> event.
+    /// Base class for timed event management that implements the <see cref="Elapsed"/> event.
+    /// <see cref="ObservableTimer"/> and <see cref="ObservableReminder"/> are concrete specializations of this base class.
     /// </summary>
     [SerializationVersion( 0 )]
     public abstract class ObservableTimedEventBase<TEventArgs> : ObservableTimedEventBase where TEventArgs : ObservableTimedEventArgs
     {
         ObservableEventHandler<TEventArgs> _handlers;
 
+        /// <summary>
+        /// Initializes a new <see cref="ObservableTimedEventBase{TEventArgs}"/>.
+        /// </summary>
         protected ObservableTimedEventBase()
         {
         }
 
+        /// <summary>
+        /// Deserialization constructor.
+        /// </summary>
+        /// <param name="c">The deserialization context.</param>
         protected ObservableTimedEventBase( IBinaryDeserializerContext c )
             : base( c )
         {
@@ -27,6 +35,10 @@ namespace CK.Observable
             _handlers = new ObservableEventHandler<TEventArgs>( r );
         }
 
+        /// <summary>
+        /// Serialization writer.
+        /// </summary>
+        /// <param name="w">The serializer.</param>
         void Write( BinarySerializer w )
         {
             _handlers.Write( w );

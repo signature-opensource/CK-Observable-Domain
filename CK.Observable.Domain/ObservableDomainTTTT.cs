@@ -93,7 +93,6 @@ namespace CK.Observable
         /// <summary>
         /// Overridden to bind our typed roots.
         /// </summary>
-        /// <param name="monitor">The monitor to use.</param>
         protected internal override void OnLoaded() => BindRoots();
 
         void BindRoots()

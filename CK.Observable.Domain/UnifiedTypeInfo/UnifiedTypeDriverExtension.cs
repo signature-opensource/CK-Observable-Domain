@@ -2,8 +2,18 @@ using System;
 
 namespace CK.Observable
 {
+    /// <summary>
+    /// Extends <see cref="IUnifiedTypeDriver"/>.
+    /// </summary>
     public static class UnifiedTypeDriverExtension
     {
+        /// <summary>
+        /// Gets whether this unified driver handles serialization, deserialization and export
+        /// and that the <see cref="ITypeSerializationDriver.Type"/> and <see cref="IObjectExportTypeDriver.BaseType"/>
+        /// are the same.
+        /// </summary>
+        /// <param name="this">This driver.</param>
+        /// <returns>True if this is a valid and full driver.</returns>
         public static bool IsValidFullDriver( this IUnifiedTypeDriver @this )
         {
             return @this != null
@@ -15,8 +25,8 @@ namespace CK.Observable
 
         /// <summary>
         /// Checks that the unified driver handles serialization, deserialization and export
-        /// and that the <see cref="ITypeSerializationDriver.Type"/> and <see cref="IObjectExportTypeDriver.Type"/>
-        /// are the same.
+        /// and that the <see cref="ITypeSerializationDriver.Type"/> and <see cref="IObjectExportTypeDriver.BaseType"/>
+        /// are the same: throws an <see cref="ArgumentException"/> with a detailed message if it's not the case.
         /// </summary>
         /// <param name="this">This unified driver.</param>
         /// <returns>The type that is handled.</returns>

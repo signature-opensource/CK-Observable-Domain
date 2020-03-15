@@ -9,6 +9,9 @@ using System.Text;
 
 namespace CK.Observable
 {
+    /// <summary>
+    /// Deserializer for complex object graph.
+    /// </summary>
     public class BinaryDeserializer : CKBinaryReader, IBinaryDeserializer, IBinaryDeserializerImpl, ICtorBinaryDeserializer, IBinaryDeserializerContext
     {
         readonly IDeserializerResolver _drivers;
@@ -38,6 +41,14 @@ namespace CK.Observable
             }
         }
 
+        /// <summary>
+        /// Initializes a new <see cref="BinarySerializer"/> on a stream.
+        /// </summary>
+        /// <param name="stream">The stream to deserialize.</param>
+        /// <param name="services">Optional services.</param>
+        /// <param name="drivers"></param>
+        /// <param name="leaveOpen"></param>
+        /// <param name="encoding"></param>
         public BinaryDeserializer(
             Stream stream,
             IServiceProvider services = null,
@@ -161,7 +172,7 @@ namespace CK.Observable
         public bool IsDebugMode => _debugModeCounter > 0;
 
         /// <summary>
-        /// Updates the current debug mode that must have been written by <see cref="BinarySerializer.DebugWriteMode(bool)"/>.
+        /// Updates the current debug mode that must have been written by <see cref="BinarySerializer.DebugWriteMode(bool?)"/>.
         /// </summary>
         /// <returns>Whether the debug mode is currently active or not.</returns>
         public bool DebugReadMode()
@@ -302,6 +313,12 @@ namespace CK.Observable
             return _objects[idx];
         }
 
+        /// <summary>
+        /// Reads an instance of a type for which the desrializer id known.
+        /// </summary>
+        /// <typeparam name="T">The type to read.</typeparam>
+        /// <param name="driver">The driver to use.</param>
+        /// <returns>The instance read.</returns>
         public T Read<T>( IDeserializationDriver<T> driver )
         {
             if( driver == null ) throw new ArgumentNullException( nameof( driver ) );
@@ -408,6 +425,11 @@ namespace CK.Observable
             }
         }
 
+        /// <summary>
+        /// Dispose overload that, when <paramref name="disposing"/> is true, ensures
+        /// that post actions are called.
+        /// </summary>
+        /// <param name="disposing">True when coming from Dispose method, false from the finalizer.</param>
         protected override void Dispose( bool disposing )
         {
             base.Dispose( disposing );

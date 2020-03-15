@@ -1,5 +1,9 @@
 namespace CK.Observable
 {
+    /// <summary>
+    /// Strongly typed specialization of the <see cref="IObjectExportTypeDriver"/>.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
     public interface IObjectExportTypeDriver<in T> : IObjectExportTypeDriver
     {
         /// <summary>

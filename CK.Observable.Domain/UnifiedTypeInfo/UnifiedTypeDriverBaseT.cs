@@ -4,19 +4,36 @@ using System.Reflection;
 
 namespace CK.Observable
 {
+    /// <summary>
+    /// Base class that implements <see cref="IUnifiedTypeDriver{T}"/>.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
     public abstract class UnifiedTypeDriverBase<T> : IUnifiedTypeDriver<T>, ITypeSerializationDriver<T>, IDeserializationDriver<T>, IObjectExportTypeDriver<T>
     {
         readonly bool _isFinalType;
 
+        /// <summary>
+        /// Initializes a new unified driver.
+        /// </summary>
+        /// <param name="isFinalType">States whether this type can have subordinate types or not.</param>
         protected UnifiedTypeDriverBase( bool isFinalType = true )
         {
             _isFinalType = isFinalType;
         }
 
+        /// <summary>
+        /// Gets this unified driver as the serialization driver.
+        /// </summary>
         public ITypeSerializationDriver<T> SerializationDriver => this;
 
+        /// <summary>
+        /// Gets this unified driver as the deserialization driver.
+        /// </summary>
         public IDeserializationDriver<T> DeserializationDriver => this;
 
+        /// <summary>
+        /// Gets this unified driver as the export driver.
+        /// </summary>
         public IObjectExportTypeDriver<T> ExportDriver => this;
 
         ITypeSerializationDriver IUnifiedTypeDriver.SerializationDriver => this;
@@ -25,6 +42,9 @@ namespace CK.Observable
 
         IObjectExportTypeDriver IUnifiedTypeDriver.ExportDriver => this;
 
+        /// <summary>
+        /// Gets the type handled.
+        /// </summary>
         public Type Type => typeof( T );
 
         bool IObjectExportTypeDriver.IsDefaultBehavior => false;

@@ -2,6 +2,9 @@ using System;
 
 namespace CK.Observable
 {
+    /// <summary>
+    /// Finds <see cref="IObjectExportTypeDriver"/> for a type.
+    /// </summary>
     public interface IExporterResolver
     {
         /// <summary>

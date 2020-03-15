@@ -65,7 +65,7 @@ namespace CK.Observable
         public NormalizedPath FilePath => _filePath;
 
         /// <summary>
-        /// Loads the file if it exists (calls <see cref="MemoryTransactionProviderClient.LoadAndInitializeSnapshot(ObservableDomain, DateTime, Stream)"/>)).
+        /// Loads the file if it exists (calls base method <see cref="MemoryTransactionProviderClient.LoadAndInitializeSnapshot(IActivityMonitor, ObservableDomain, DateTime, Stream)"/>)).
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="d">The newly created domain.</param>

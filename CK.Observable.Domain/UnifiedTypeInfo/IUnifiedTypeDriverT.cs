@@ -1,5 +1,9 @@
 namespace CK.Observable
 {
+    /// <summary>
+    /// Unified driver of type gives access to Serialization, Deserialization and Export drivers for the type.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
     public interface IUnifiedTypeDriver<T> : IUnifiedTypeDriver
     {
         /// <summary>

@@ -33,6 +33,10 @@ namespace CK.Observable
             TimeManager.OnCreated( this );
         }
 
+        /// <summary>
+        /// Deserialization constructor.
+        /// </summary>
+        /// <param name="c">The deserialization context.</param>
         protected ObservableTimedEventBase( IBinaryDeserializerContext c )
             : this()
         {
@@ -93,9 +97,9 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Raised when this object is <see cref="Dispose"/>d.
-        /// Note that when the call to dispose is made by <see cref="ObservableDomain.Load"/>, this event is not
-        /// triggered.
+        /// Raised when this object is <see cref="Dispose()"/>d.
+        /// Note that when the call to dispose is made by <see cref="ObservableDomain.Load(IActivityMonitor, System.IO.Stream, bool, Encoding, int, bool)"/>,
+        /// this event is not triggered.
         /// </summary>
         public event SafeEventHandler<ObservableDomainEventArgs> Disposed
         {

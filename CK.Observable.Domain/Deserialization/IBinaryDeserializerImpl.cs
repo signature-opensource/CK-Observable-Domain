@@ -6,6 +6,7 @@ namespace CK.Observable
     /// Low level serialization API. This is intended for advanced scenarii: normal
     /// use of this library through type based serialization does not require direct
     /// use of these methods.
+    /// This interface is exposed through the <see cref="IBinaryDeserializer.ImplementationServices"/> propertY.
     /// </summary>
     public interface IBinaryDeserializerImpl 
     {
@@ -66,7 +67,7 @@ namespace CK.Observable
 
         /// <summary>
         /// Executes all the post deserialization actions that have been
-        /// registered by <see cref="ICtorBinaryDeserializer.OnPostDeserialization(Action)"/>
+        /// registered by <see cref="IBinaryDeserializerImpl.OnPostDeserialization(Action)"/>
         /// from deserialization constructors and clears the list.
         /// If not called explicitly, this is automatically called when the <see cref="IBinaryDeserializer"/>
         /// is disposed.

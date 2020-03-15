@@ -4,7 +4,12 @@ using System.Collections.Generic;
 
 namespace CK.Observable
 {
-    [SerializationVersionAttribute( 0 )]
+    /// <summary>
+    /// Implements a simple observable <see cref="Dictionary{TKey, TValue}"/>.
+    /// </summary>
+    /// <typeparam name="TKey">The type of the keys in the dictionary.</typeparam>
+    /// <typeparam name="TValue">The type of the values in the dictionary.</typeparam>
+    [SerializationVersion( 0 )]
     public class ObservableDictionary<TKey, TValue> : ObservableObject, IDictionary<TKey, TValue>, IReadOnlyDictionary<TKey, TValue>
     {
         readonly Dictionary<TKey, TValue> _map;
@@ -52,14 +57,19 @@ namespace CK.Observable
 
 
         /// <summary>
-        /// Initializes a new <see cref="ObservableDictionary{TKey, TValue}"/>.
+        /// Initializes a new empty <see cref="ObservableDictionary{TKey, TValue}"/>.
         /// </summary>
         public ObservableDictionary()
         {
             _map = new Dictionary<TKey, TValue>();
         }
 
-        protected ObservableDictionary( IBinaryDeserializerContext d ) : base( d )
+        /// <summary>
+        /// Deserialization contructor.
+        /// </summary>
+        /// <param name="d">The deserialization context.</param>
+        protected ObservableDictionary( IBinaryDeserializerContext d )
+            : base( d )
         {
             var r = d.StartReading();
             _map = (Dictionary<TKey, TValue>)r.ReadObject();
@@ -69,6 +79,10 @@ namespace CK.Observable
             _itemRemoved = new ObservableEventHandler<CollectionRemoveKeyEvent>( r );
         }
 
+        /// <summary>
+        /// Serialization writer.
+        /// </summary>
+        /// <param name="s">The serializer to use.</param>
         void Write( BinarySerializer s )
         {
             s.WriteObject( _map );
@@ -80,6 +94,15 @@ namespace CK.Observable
 
         internal override ObjectExportedKind ExportedKind => ObjectExportedKind.Map;
 
+        /// <summary>
+        /// Gets or sets the value associated with the specified key.
+        /// </summary>
+        /// <param name="key">The key of the value to get or set.</param>
+        /// <returns>
+        /// The value associated with the specified key. If the specified key is not found,
+        /// a get operation throws a <see cref="KeyNotFoundException"/>, and
+        /// a set operation creates a new element with the specified key.
+        /// </returns>
         public TValue this[TKey key]
         {
             get => _map[key];
@@ -98,10 +121,19 @@ namespace CK.Observable
            }
         }
 
+        /// <summary>
+        /// Gets a collection containing the keys in dictionary.
+        /// </summary>
         public Dictionary<TKey, TValue>.KeyCollection Keys => _map.Keys;
 
+        /// <summary>
+        /// Gets a collection containing the values in the dictionary.
+        /// </summary>
         public Dictionary<TKey, TValue>.ValueCollection Values => _map.Values;
 
+        /// <summary>
+        /// Gets the number of key/value pairs contained in the dictionary.
+        /// </summary>
         public int Count => _map.Count;
 
         bool ICollection<KeyValuePair<TKey, TValue>>.IsReadOnly => false;
@@ -114,6 +146,11 @@ namespace CK.Observable
 
         ICollection<TValue> IDictionary<TKey, TValue>.Values => _map.Values;
 
+        /// <summary>
+        /// Adds the specified key and value to the dictionary.
+        /// </summary>
+        /// <param name="key">The key of the element to add.</param>
+        /// <param name="value">The value of the element to add. The value can be null for reference types.</param>
         public void Add( TKey key, TValue value )
         {
             _map.Add( key, value );
@@ -123,6 +160,9 @@ namespace CK.Observable
 
         void ICollection<KeyValuePair<TKey, TValue>>.Add( KeyValuePair<TKey, TValue> item ) => Add( item.Key, item.Value );
 
+        /// <summary>
+        /// Removes all keys and values from the dictionary.
+        /// </summary>
         public void Clear()
         {
             if( _map.Count > 0 )
@@ -133,6 +173,11 @@ namespace CK.Observable
             }
         }
 
+        /// <summary>
+        /// Removes the value with the specified key from the dictionary.
+        /// </summary>
+        /// <param name="key">The key of the element to remove.</param>
+        /// <returns>true if the element is successfully found and removed; otherwise, false. This method returns false if key is not found in the dictionary.</returns>
         public bool Remove( TKey key )
         {
             if( _map.Remove( key ) )
@@ -158,12 +203,36 @@ namespace CK.Observable
 
         bool ICollection<KeyValuePair<TKey, TValue>>.Contains( KeyValuePair<TKey, TValue> item ) => ((IDictionary<TKey, TValue>)_map).Contains( item );
 
+        /// <summary>
+        /// Determines whether the dictionary contains the specified key.
+        /// </summary>
+        /// <param name="key">The key to locate in the dictionary.</param>
+        /// <returns>true if the dictionary contains an element with the specified key; otherwise, false.</returns>
         public bool ContainsKey( TKey key ) => _map.ContainsKey( key );
 
+        /// <summary>
+        /// Copies the key/value pairs to an array.
+        /// </summary>
+        /// <param name="array">The target array.</param>
+        /// <param name="arrayIndex">The index in the target array.</param>
         public void CopyTo( KeyValuePair<TKey, TValue>[] array, int arrayIndex ) => ((IDictionary<TKey, TValue>)_map).CopyTo( array, arrayIndex );
 
+        /// <summary>
+        /// Gets the enumerator.
+        /// </summary>
+        /// <returns>The enumerator.</returns>
         public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator() => _map.GetEnumerator();
 
+        /// <summary>
+        /// Gets the value associated with the specified key.
+        /// </summary>
+        /// <param name="key">The key of the value to get.</param>
+        /// <param name="value">
+        /// When this method returns, contains the value associated with the specified key,
+        /// if the key is found; otherwise, the default value for the type of the value parameter.
+        /// This parameter is passed uninitialized.
+        /// </param>
+        /// <returns>True if the dictionary contains an element with the specified key; otherwise, false.</returns>
         public bool TryGetValue( TKey key, out TValue value ) => _map.TryGetValue( key, out value );
 
         IEnumerator IEnumerable.GetEnumerator() => _map.GetEnumerator();

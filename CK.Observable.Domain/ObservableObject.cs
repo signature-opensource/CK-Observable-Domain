@@ -10,7 +10,7 @@ namespace CK.Observable
     /// <summary>
     /// Base class for all observable object.
     /// Observable objects are reference types that belong to a <see cref="ObservableDomain"/> and for
-    /// which properties changes and <see cref="Dispose"/> are tracked.
+    /// which properties changes and <see cref="Dispose()"/> are tracked.
     /// </summary>
     /// <remarks>
     /// </remarks>
@@ -24,8 +24,8 @@ namespace CK.Observable
         ObservableEventHandler<PropertyChangedEventArgs> _propertyChanged;
 
         /// <summary>
-        /// Raised when this object is <see cref="Dispose"/>d by the <see cref="Dispose(bool)"/> overload.
-        /// Note that when the call to dispose is made by <see cref="ObservableDomain.Load"/>, this event is not
+        /// Raised when this object is <see cref="Dispose()"/>d by the <see cref="Dispose(bool)"/> overload.
+        /// Note that when the call to dispose is made by <see cref="ObservableDomain.Load(IActivityMonitor, System.IO.Stream, bool, System.Text.Encoding, int, bool)"/>, this event is not
         /// triggered to avoid a useless (and potentially dangerous) snowball effect: eventually ALL <see cref="ObservableObject.Dispose(bool)"/>
         /// will be called during a reload.
         /// </summary>
@@ -171,12 +171,25 @@ namespace CK.Observable
         protected void RaiseStandardDomainEvent( ObservableEventHandler<EventMonitoredArgs> h ) => h.Raise( this, Domain.DefaultEventArgs );
 
         /// <summary>
+        /// Uses a pooled <see cref="ObservableReminder"/> to call the specified callback at the given time with the
+        /// associated <see cref="ObservableTimedEventBase.Tag"/> object.
+        /// </summary>
+        /// <param name="dueTimeUtc">The due time. Must be in Utc and not <see cref="Util.UtcMinValue"/> or <see cref="Util.UtcMaxValue"/>.</param>
+        /// <param name="callback">The callback method. Must not be null.</param>
+        /// <param name="tag">Optional tag that will be available on event argument's: <see cref="ObservableTimedEventBase.Tag"/>.</param>
+        protected void Remind( DateTime dueTimeUtc, SafeEventHandler<ObservableReminderEventArgs> callback, object tag = null )
+        {
+            Domain.TimeManager.Remind( dueTimeUtc, callback, tag );
+        }
+
+        /// <summary>
         /// Called before this object is disposed.
         /// Override to dispose other objects managed by this <see cref="ObservableObject"/>, making sure to call base.
         /// Implementation at this level raises the <see cref="Disposed"/> event:
         /// it must be called by overrides.
         /// <para>
-        /// Note that the Disposed event is raised only for explicit object disposing: a <see cref="ObservableDomain.Load"/> doesn't trigger the event.
+        /// Note that the Disposed event is raised only for explicit object disposing:
+        /// a <see cref="ObservableDomain.Load(IActivityMonitor, System.IO.Stream, bool, System.Text.Encoding, int, bool)"/> doesn't trigger the event.
         /// </para>
         /// </summary>
         /// <param name="shouldCleanup">

@@ -2,6 +2,9 @@ using System;
 
 namespace CK.Observable
 {
+    /// <summary>
+    /// Finds deserializer for the name of a type or a type.
+    /// </summary>
     public interface IDeserializerResolver
     {
         /// <summary>
@@ -12,7 +15,7 @@ namespace CK.Observable
         /// <param name="name">Name to resolve.</param>
         /// <param name="lastResort">
         /// Optional function that may provide a locally available Type.
-        /// If this function resturns null, the returned deserialization driver will be null.
+        /// If this function returns null, the returned deserialization driver will be null.
         /// </param>
         /// <returns>Null or the deserialization driver to use.</returns>
         IDeserializationDriver FindDriver( string name, Func<Type> lastResort = null );

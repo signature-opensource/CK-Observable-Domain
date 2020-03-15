@@ -2,6 +2,9 @@ using System;
 
 namespace CK.Observable
 {
+    /// <summary>
+    /// Finds a serializer for a type.
+    /// </summary>
     public interface ISerializerResolver
     {
         /// <summary>

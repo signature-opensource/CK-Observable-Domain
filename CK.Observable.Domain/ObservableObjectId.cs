@@ -147,8 +147,20 @@ namespace CK.Observable
             return uniquifier;
         }
 
-        public static bool operator ==( ObservableObjectId id1, ObservableObjectId id2 ) => id1.UniqueId == id2.UniqueId;
+        /// <summary>
+        /// Implements equality operator: uses the <see cref="UniqueId"/>.
+        /// </summary>
+        /// <param name="o1">The first object.</param>
+        /// <param name="o2">The second object.</param>
+        /// <returns>True if the <see cref="UniqueId"/> are the same.</returns>
+        public static bool operator ==( ObservableObjectId o1, ObservableObjectId o2 ) => o1.UniqueId == o2.UniqueId;
 
-        public static bool operator !=( ObservableObjectId id1, ObservableObjectId id2 ) => id1.UniqueId != id2.UniqueId;
+        /// <summary>
+        /// Implements inequality operator: uses the <see cref="UniqueId"/>.
+        /// </summary>
+        /// <param name="o1">The first object.</param>
+        /// <param name="o2">The second object.</param>
+        /// <returns>True if the <see cref="UniqueId"/> are different.</returns>
+        public static bool operator !=( ObservableObjectId o1, ObservableObjectId o2 ) => o1.UniqueId != o2.UniqueId;
     }
 }

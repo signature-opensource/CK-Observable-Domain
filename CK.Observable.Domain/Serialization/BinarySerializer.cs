@@ -9,6 +9,9 @@ using System.Text;
 
 namespace CK.Observable
 {
+    /// <summary>
+    /// Specializes <see cref="CKBinaryWriter"/> to be able to serialize objects graph.
+    /// </summary>
     public class BinarySerializer : CKBinaryWriter
     {
         readonly Dictionary<Type, TypeInfo> _types;
@@ -35,6 +38,7 @@ namespace CK.Observable
         /// Initializes a new <see cref="BinarySerializer"/> onto a stream.
         /// </summary>
         /// <param name="output">The stream to write to.</param>
+        /// <param name="drivers">Optional driver resolver to use. Uses <see cref="SerializerRegistry.Default"/> by default.</param>
         /// <param name="leaveOpen">True to leave the stram opened when disposing. False to close it.</param>
         /// <param name="encoding">Optional encoding for texts. Defaults to UTF-8.</param>
         public BinarySerializer(
@@ -178,6 +182,12 @@ namespace CK.Observable
             }
         }
 
+        /// <summary>
+        /// Writes an object with a already known serialization driver.
+        /// </summary>
+        /// <typeparam name="T">The type of the value to use.</typeparam>
+        /// <param name="o">The value to write.</param>
+        /// <param name="driver">The driver to use.</param>
         public void Write<T>( T o, ITypeSerializationDriver<T> driver )
         {
             if( driver == null ) throw new ArgumentNullException( nameof( driver ) );
@@ -321,6 +331,16 @@ namespace CK.Observable
             return false;
         }
 
+        /// <summary>
+        /// Magic yet simple helper to check the serialization implementation: the object (and potentially the whole graph behind)
+        /// is serialized then deserialized and the result of the deserialization is the serialized again.
+        /// Once this 3 steps have been done, the bytes that are the result of the first serialization are checked against the ones of the second serialization.
+        /// Teh 2 byte sequences must be exactly the same.
+        /// </summary>
+        /// <param name="o">The object to check.</param>
+        /// <param name="services">Optional services that deserialization may require.</param>
+        /// <param name="throwOnFailure">False to log silently fail and return false.</param>
+        /// <returns>True on success, fasle on error (if <paramref name="throwOnFailure"/> is false).</returns>
         public static bool IdempotenceCheck( object o, IServiceProvider services, bool throwOnFailure = true )
         {
             try

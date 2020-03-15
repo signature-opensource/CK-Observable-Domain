@@ -4,12 +4,24 @@ using System.Collections.Generic;
 
 namespace CK.Observable
 {
+    /// <summary>
+    /// Registers serialization drivers. This can be instanciated if needed but most often,
+    /// the <see cref="Default"/> registry is enough.
+    /// used 
+    /// </summary>
     public class SerializerRegistry : ISerializerResolver
     {
         readonly ConcurrentDictionary<Type, ITypeSerializationDriver> _types;
 
+        /// <summary>
+        /// Gets the default, shared, registry.
+        /// </summary>
         public static readonly SerializerRegistry Default = new SerializerRegistry();
 
+        /// <summary>
+        /// Initializes a new <see cref="SerializerRegistry"/> with preregistered
+        /// basic serialization drivers.
+        /// </summary>
         public SerializerRegistry()
         {
             _types = new ConcurrentDictionary<Type, ITypeSerializationDriver>();

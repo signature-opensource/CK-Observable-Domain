@@ -7,9 +7,9 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace CK.Observable
-{ 
+{
     /// <summary>
-    /// Timer object that raises its <see cref="ObservableTimedEventBase.Elapsed"/> event repeatedly.
+    /// Timer object that raises its <see cref="ObservableTimedEventBase{T}.Elapsed"/> event repeatedly.
     /// The event time is based on the <see cref="DueTimeUtc"/>: we try to always raise the event based on a multiple
     /// of the <see cref="IntervalMilliSeconds"/> from <see cref="DueTimeUtc"/>.
     /// </summary>
@@ -116,7 +116,7 @@ namespace CK.Observable
         public string Name { get; set; }
 
         /// <summary>
-        /// Gets or sets the interval, expressed in milliseconds, at which the <see cref="ObservableTimedEventBase.Elapsed"/> event must repeatedly fire.
+        /// Gets or sets the interval, expressed in milliseconds, at which the <see cref="ObservableTimedEventBase{T}.Elapsed"/> event must repeatedly fire.
         /// The value must be greater than zero.
         /// </summary>
         public int IntervalMilliSeconds
@@ -257,7 +257,7 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Overridden to return the <see cref="ObservableTimedEventBase.Name"/> of this reminder.
+        /// Overridden to return the <see cref="Name"/> of this timer.
         /// </summary>
         /// <returns>A readable string.</returns>
         public override string ToString() => $"{(IsDisposed ? "[Disposed]" : "")}ObservableTimer '{Name ?? "<no name>"}' ({IntervalMilliSeconds} ms)";

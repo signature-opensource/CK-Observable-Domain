@@ -57,7 +57,7 @@ namespace CK.Observable
         bool IsDebugMode { get; }
 
         /// <summary>
-        /// Updates the current debug mode that must have been written by <see cref="BinarySerializer.DebugWriteMode(bool)"/>.
+        /// Updates the current debug mode that must have been written by <see cref="BinarySerializer.DebugWriteMode(bool?)"/>.
         /// </summary>
         /// <returns>Whether the debug mode is currently active or not.</returns>
         bool DebugReadMode();

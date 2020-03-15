@@ -2,21 +2,10 @@ using System;
 
 namespace CK.Observable
 {
-    public enum ObservableEventType
-    {
-        None,
-        NewObject,
-        DisposedObject,
-        NewProperty,
-        PropertyChanged,
-        ListInsert,
-        CollectionClear,
-        ListRemoveAt,
-        ListSetAt,
-        CollectionRemoveKey,
-        CollectionMapSet
-    }
-
+    /// <summary>
+    /// Base class for all observable events. Such events are emitted by <see cref="ObservableDomain.Modify(Core.IActivityMonitor, Action, int)"/>
+    /// and are enough to fully synchronize a remote associated domain.
+    /// </summary>
     public abstract class ObservableEvent : EventArgs
     {
         static readonly string[] _exportCodes =
@@ -34,13 +23,24 @@ namespace CK.Observable
                 "M"   // CollectionMapSet
             };
 
-        public ObservableEvent( ObservableEventType type )
+        /// <summary>
+        /// Initializes a new <see cref="ObservableEvent"/>.
+        /// </summary>
+        /// <param name="type">The event type.</param>
+        protected ObservableEvent( ObservableEventType type )
         {
             EventType = type;
         }
 
+        /// <summary>
+        /// Gets the event type.
+        /// </summary>
         public ObservableEventType EventType { get; }
 
+        /// <summary>
+        /// Exports this event.
+        /// </summary>
+        /// <param name="e">The target exporter.</param>
         public void Export( ObjectExporter e )
         {
             e.Target.EmitStartObject( -1, ObjectExportedKind.List );
@@ -49,6 +49,11 @@ namespace CK.Observable
             e.Target.EmitEndObject( -1, ObjectExportedKind.List );
         }
 
+        /// <summary>
+        /// Helper methot to export an object.
+        /// </summary>
+        /// <param name="e">The target exporter.</param>
+        /// <param name="o">The object to export.</param>
         protected void ExportEventObject( ObjectExporter e, object o )
         {
             if( o is ObservableObject obs )
@@ -64,6 +69,11 @@ namespace CK.Observable
             }
         }
 
+        /// <summary>
+        /// Abstract method called by <see cref="Export(ObjectExporter)"/> that must export the
+        /// data specific the the concrete event.
+        /// </summary>
+        /// <param name="e">The target exporter.</param>
         protected abstract void ExportEventData( ObjectExporter e );
     }
 }

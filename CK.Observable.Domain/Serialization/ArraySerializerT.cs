@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 namespace CK.Observable
 {
@@ -30,7 +31,6 @@ namespace CK.Observable
         /// <summary>
         /// Writes any list content.
         /// </summary>
-        /// <typeparam name="T">The item type.</typeparam>
         /// <param name="w">The binary serializer to use. Must not be null.</param>
         /// <param name="count">The number of items. Must be 0 zero or positive.</param>
         /// <param name="items">The items. Can be null (in such case, <paramref name="count"/> must be zero).</param>

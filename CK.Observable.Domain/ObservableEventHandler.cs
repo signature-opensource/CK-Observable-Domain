@@ -18,7 +18,7 @@ namespace CK.Observable
         /// <summary>
         /// Deserializes the <see cref="ObservableEventHandler"/>.
         /// </summary>
-        /// <param name="c">The context.</param>
+        /// <param name="r">The context.</param>
         public ObservableEventHandler( IBinaryDeserializer r ) => _handler = new ObservableDelegate( r );
 
         /// <summary>

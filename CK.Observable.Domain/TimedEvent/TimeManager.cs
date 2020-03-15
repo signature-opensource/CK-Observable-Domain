@@ -28,7 +28,7 @@ namespace CK.Observable
 
         /// <summary>
         /// Default implementation that is available on <see cref="CurrentTimer"/> and can be specialized
-        /// and replaced as needed.
+        /// and replaced as needed... Well... If you really need it, which I strongly doubt.
         /// </summary>
         public class AutoTimer : IDisposable
         {
@@ -41,6 +41,10 @@ namespace CK.Observable
             readonly TrampolineWorkItem _fromWorkItem;
             int _onTimeLostFlag;
 
+            /// <summary>
+            /// Initializes a new <see cref="AutoTimer"/> dor a domain.
+            /// </summary>
+            /// <param name="domain">The associated domain.</param>
             public AutoTimer( ObservableDomain domain )
             {
                 Domain = domain ?? throw new ArgumentNullException( nameof( domain ) );
@@ -106,7 +110,7 @@ namespace CK.Observable
                     t.OnDueTimeAsync( m ).ContinueWith( r =>
                     {
                         // On success, unhandled exception or cancellation, we do nothing.
-                        // We only handle one case: if the write lock obtetion failed we need the trampoline
+                        // We only handle one case: if the write lock obtention failed we need the trampoline
                         // to retry asap.
                         if( r.IsFaulted ) m.Fatal( "Unhandled exception from AutoTimer.OnDueTimeAsync.", r.Exception );
                         else
@@ -162,7 +166,7 @@ namespace CK.Observable
             public ObservableDomain Domain { get; }
 
             /// <summary>
-            /// Simply calls <see cref="ObservableDomain.SafeModifyAsync"/> with the shared <see cref="ObservableDomain.ObtainDomainMonitor(int)"/>, null actions
+            /// Simply calls <see cref="ObservableDomain.SafeModifyAsync"/> with the shared <see cref="ObservableDomain.ObtainDomainMonitor(int, bool)"/>, null actions
             /// and 10 ms timeout: pending timed events are handled if any and if there is no current transaction: <see cref="TransactionResult.Empty"/> is
             /// returned if the write lock failed to be obtained.
             /// </summary>
@@ -241,7 +245,7 @@ namespace CK.Observable
         internal readonly ObservableDomain Domain;
 
         /// <summary>
-        /// Gets or sets whether exceptions raised by <see cref="ObservableTimedEventBase.Elapsed"/> callbacks
+        /// Gets or sets whether exceptions raised by <see cref="ObservableTimedEventBase{T}.Elapsed"/> callbacks
         /// are emitted as <see cref="Core.LogLevel.Warn"/> logs.
         /// <para>
         /// By default, exceptions stops the current transaction just like any uncaught exception during <see cref="ObservableDomain.Modify(IActivityMonitor, Action, int)"/>
@@ -254,7 +258,7 @@ namespace CK.Observable
         public bool IgnoreTimedEventException { get; set; }
 
         /// <summary>
-        /// Gets or sets the <see cref="AutoTimer"/> that must be used to ensure that <see cref="ObservableTimedEventBase.Elapsed"/> events
+        /// Gets or sets the <see cref="AutoTimer"/> that must be used to ensure that <see cref="ObservableTimedEventBase{T}.Elapsed"/> events
         /// are raised even when no activity occur on the domain.
         /// </summary>
         public AutoTimer CurrentTimer

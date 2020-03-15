@@ -5,12 +5,23 @@ using System.Collections.Generic;
 
 namespace CK.Observable
 {
+    /// <summary>
+    /// Registers deserialization drivers. This can be instanciated if needed but most often,
+    /// the <see cref="Default"/> registry is enough.
+    /// </summary>
     public class DeserializerRegistry : IDeserializerResolver
     {
         readonly ConcurrentDictionary<string, IDeserializationDriver> _drivers;
 
+        /// <summary>
+        /// Gets the default, shared, registry.
+        /// </summary>
         public static readonly DeserializerRegistry Default = new DeserializerRegistry();
 
+        /// <summary>
+        /// Initializes a new <see cref="DeserializerRegistry"/> with preregistered
+        /// basic deserialization drivers.
+        /// </summary>
         public DeserializerRegistry()
         {
             _drivers = new ConcurrentDictionary<string, IDeserializationDriver>();

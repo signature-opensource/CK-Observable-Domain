@@ -21,10 +21,10 @@ namespace CK.Observable
         ObservableEventHandler<ObservableDomainEventArgs> _disposed;
 
         /// <summary>
-        /// Raised when this object is <see cref="Dispose"/>d by <see cref="Dispose(bool)"/>.
-        /// Note that when the call to dispose is made by <see cref="ObservableDomain.Load"/>, this event is not
-        /// triggered to avoid a useless (and potentially dangerous) snowball effect: eventually ALL <see cref="InternalObject.Dispose(bool)"/>
-        /// will be called during a reload.
+        /// Raised when this object is <see cref="Dispose()"/>d by <see cref="Dispose(bool)"/>.
+        /// Note that when the call to dispose is made by <see cref="ObservableDomain.DoLoad(IActivityMonitor, BinaryDeserializer, string, bool)"/>,
+        /// this event is not triggered to avoid a useless (and potentially dangerous) snowball effect: eventually ALL <see cref="InternalObject.Dispose(bool)"/>
+        /// (with a false parameter) will be called during a reload.
         /// </summary>
         public event SafeEventHandler<ObservableDomainEventArgs> Disposed
         {
@@ -108,7 +108,7 @@ namespace CK.Observable
         /// </summary>
         /// <param name="dueTimeUtc">The due time. Must be in Utc and not <see cref="Util.UtcMinValue"/> or <see cref="Util.UtcMaxValue"/>.</param>
         /// <param name="callback">The callback method. Must not be null.</param>
-        /// <param name="tag">Optional tag that will be available on event argument's <see cref="ObservableReminderEventArgs.Reminder"/>.</param>
+        /// <param name="tag">Optional tag that will be available on event argument's: <see cref="ObservableTimedEventBase.Tag"/>.</param>
         protected void Remind( DateTime dueTimeUtc, SafeEventHandler<ObservableReminderEventArgs> callback, object tag = null )
         {
             Domain.TimeManager.Remind( dueTimeUtc, callback, tag );
@@ -144,7 +144,8 @@ namespace CK.Observable
         /// Implementation at this level raises the <see cref="Disposed"/> event:
         /// it must be called by overrides.
         /// <para>
-        /// Note that the Disposed event is raised only for explicit object disposing: a <see cref="ObservableDomain.Load"/> doesn't trigger the event.
+        /// Note that the Disposed event is raised only for explicit object disposing:
+        /// a <see cref="ObservableDomain.Load(IActivityMonitor, System.IO.Stream, bool, System.Text.Encoding, int, bool)"/> doesn't trigger the event.
         /// </para>
         /// </summary>
         /// <param name="shouldDisposeObjects">

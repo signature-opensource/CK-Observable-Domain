@@ -5,6 +5,9 @@ using System.Diagnostics;
 
 namespace CK.Observable
 {
+    /// <summary>
+    /// Descriptor for a potential <see cref="Type"/>.
+    /// </summary>
     public class TypeReadInfo
     {
         /// <summary>

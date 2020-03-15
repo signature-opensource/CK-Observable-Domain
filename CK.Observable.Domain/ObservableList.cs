@@ -171,8 +171,9 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Inserts multiple items at once (simple helper that calls <see cref="InsertRange(T)"/> for each of them).
+        /// Inserts multiple items at once (simple helper that calls <see cref="Insert(int,T)"/> for each of them).
         /// </summary>
+        /// <param name="index">Index of the insertion.</param>
         /// <param name="items">Set of items to append.</param>
         public void InsertRange( int index, IEnumerable<T> items )
         {

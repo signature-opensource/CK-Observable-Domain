@@ -2,6 +2,10 @@ using System.Runtime.CompilerServices;
 
 namespace CK.Observable
 {
+    /// <summary>
+    /// Specialized <see cref="IBinaryDeserializer"/> that is available from 
+    /// deserialization constructor (<see cref="IBinaryDeserializerContext"/>).
+    /// </summary>
     public interface ICtorBinaryDeserializer : IBinaryDeserializer
     {
         /// <summary>

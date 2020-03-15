@@ -276,7 +276,7 @@ namespace CK.Observable
             /// <summary>
             /// Called when a new object is being created.
             /// </summary>
-            /// <param name="o">The oobject itself.</param>
+            /// <param name="o">The object itself.</param>
             /// <param name="objectId">The assigned object identifier.</param>
             /// <param name="exporter">The export driver of the object. Can be null.</param>
             internal void OnNewObject( ObservableObject o, ObservableObjectId objectId, IObjectExportTypeDriver exporter )

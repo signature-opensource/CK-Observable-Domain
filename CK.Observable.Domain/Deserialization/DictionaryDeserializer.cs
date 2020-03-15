@@ -3,8 +3,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 namespace CK.Observable
 {
+
     public class DictionaryDeserializer<TKey,TValue> : IDeserializationDriver<Dictionary<TKey,TValue>>
     {
         readonly IDeserializationDriver<TKey> _key;
@@ -21,11 +24,11 @@ namespace CK.Observable
         public Dictionary<TKey, TValue> ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  ) => DoRead( r, _key, _value );
 
         /// <summary>
-        /// Reads a dictionary previously written by <see cref="DictionarySerializer{TKey, TValue}.Write(BinarySerializer, Dictionary{TKey, TValue}, ITypeSerializationDriver{TKey}, ITypeSerializationDriver{TValue})"/>.
+        /// Reads a dictionary previously written by <see cref="DictionarySerializer{TKey, TValue}.WriteDictionaryContent(BinarySerializer, int, IEnumerable{KeyValuePair{TKey, TValue}}, ITypeSerializationDriver{TKey}, ITypeSerializationDriver{TValue})"/>.
         /// </summary>
         /// <param name="r">The binary serializer. Must not be null.</param>
-        /// <param name="keyDeserialization">Already available key deserializer if known.</param>
-        /// <param name="valueDeserialization">Already available value deserializer if known.</param>
+        /// <param name="key">Already available key deserializer if known.</param>
+        /// <param name="value">Already available value deserializer if known.</param>
         /// <returns>The dictionary.</returns>
         public static Dictionary<TKey, TValue> Read( IBinaryDeserializer r, IDeserializationDriver<TKey> key = null, IDeserializationDriver<TValue> value = null )
         {
@@ -54,12 +57,12 @@ namespace CK.Observable
             return result;
         }
 
+
         /// <summary>
         /// Reads the content of a dictionary of <see cref="KeyValuePair{TKey, TValue}"/> that have been
         /// previously written by <see cref="DictionarySerializer{TKey, TValue}.WriteDictionaryContent(BinarySerializer, int, IEnumerable{KeyValuePair{TKey, TValue}}, ITypeSerializationDriver{TKey}, ITypeSerializationDriver{TValue})"/>.
         /// </summary>
-        /// <typeparam name="TKey">Type of the key.</typeparam>
-        /// <typeparam name="TValue">Type of the value.</typeparam>
+        /// <param name="r">The deserializer.</param>
         /// <param name="keyDeserialization">Already available key deserializer if known.</param>
         /// <param name="valueDeserialization">Already available value deserializer if known.</param>
         /// <returns>The dictionary content.</returns>

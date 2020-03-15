@@ -5,12 +5,23 @@ using System.Linq;
 
 namespace CK.Observable
 {
+    /// <summary>
+    /// Registers export drivers. This can be instanciated if needed but most often,
+    /// the <see cref="Default"/> registry is enough.
+    /// </summary>
     public class ExporterRegistry : IExporterResolver
     {
         readonly ConcurrentDictionary<Type, IObjectExportTypeDriver> _drivers;
 
+        /// <summary>
+        /// Gets the default, shared, registry.
+        /// </summary>
         public static readonly ExporterRegistry Default = new ExporterRegistry();
 
+        /// <summary>
+        /// Initializes a new <see cref="ExporterRegistry"/> with preregistered
+        /// basic export drivers.
+        /// </summary>
         public ExporterRegistry()
         {
             _drivers = new ConcurrentDictionary<Type, IObjectExportTypeDriver>();

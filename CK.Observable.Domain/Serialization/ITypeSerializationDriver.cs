@@ -3,7 +3,7 @@ using System;
 namespace CK.Observable
 {
     /// <summary>
-    /// Handles serialization for instances of a given type.
+    /// Handles serialization of instances of a given type.
     /// </summary>
     public interface ITypeSerializationDriver
     {

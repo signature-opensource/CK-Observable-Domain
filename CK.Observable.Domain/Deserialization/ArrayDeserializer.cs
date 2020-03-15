@@ -1,6 +1,8 @@
 using System;
 using System.Diagnostics;
 
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 namespace CK.Observable
 {
     public class ArrayDeserializer<T> : IDeserializationDriver<T[]>
@@ -39,13 +41,6 @@ namespace CK.Observable
             return result;
         }
 
-        /// <summary>
-        /// Reads an array of <typeparamref name="T"/> that have been previously written
-        /// by <see cref="ArraySerializer.WriteObjects" />.
-        /// </summary>
-        /// <typeparam name="T">Type of the item.</typeparam>
-        /// <param name="itemDeserialization">Item deserializer. Must not be null.</param>
-        /// <returns>The object array.</returns>
         public static T[] ReadArray( IBinaryDeserializer r, IDeserializationDriver<T> itemDeserialization )
         {
             if( r == null ) throw new ArgumentNullException( nameof( r ) );

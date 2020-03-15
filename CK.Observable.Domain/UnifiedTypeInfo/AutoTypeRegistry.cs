@@ -8,6 +8,9 @@ using System.Reflection;
 
 namespace CK.Observable
 {
+    /// <summary>
+    /// Maintains a set of automatically created internal object that implement <see cref="IUnifiedTypeDriver"/>.
+    /// </summary>
     public static class AutoTypeRegistry
     {
         static readonly ConcurrentDictionary<Type, IUnifiedTypeDriver> _drivers;
@@ -111,8 +114,8 @@ namespace CK.Observable
             }
 
             /// <summary>
-            /// Writes types in <see cref="TypePath"/> that has not been
-            /// written yet (they are unknown to the Serializer).
+            /// Writes types from this <see cref="Type"/> to the object base type
+            /// that have not been written yet (they are still unknown to the Serializer).
             /// </summary>
             /// <param name="s">The serializer.</param>
             void ITypeSerializationDriver.WriteTypeInformation( BinarySerializer s )
@@ -127,7 +130,7 @@ namespace CK.Observable
             }
 
             /// <summary>
-            /// Calls the Write methods on <see cref="TypePath"/>.
+            /// Calls the Write methods from base object type down to this one.
             /// </summary>
             /// <param name="w">The serializer.</param>
             /// <param name="o">The object instance.</param>
