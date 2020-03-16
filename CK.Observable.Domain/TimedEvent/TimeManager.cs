@@ -25,6 +25,7 @@ namespace CK.Observable
         ObservableTimedEventBase _last;
         AutoTimer _current;
         DateTime _currentNext;
+        int _totalEventRaised;
 
         /// <summary>
         /// Default implementation that is available on <see cref="CurrentTimer"/> and can be specialized
@@ -67,7 +68,8 @@ namespace CK.Observable
                 var ts = state as TrampolineWorkItem;
                 var t = ts?.Timer ?? (AutoTimer)state;
 
-                var m = t.Domain.ObtainDomainMonitor( 10, createAutonomousOnTimeout: false );
+                var domain = t.Domain;
+                var m = domain.ObtainDomainMonitor( 10, createAutonomousOnTimeout: false );
                 if( m != null )
                 {
                     // All this stuff is to do exactly what must be done. No more.
@@ -77,17 +79,17 @@ namespace CK.Observable
                     {
                         if( Interlocked.CompareExchange( ref t._onTimeLostFlag, 0, 1 ) == 1 )
                         {
-                            m.OpenDebug( $"Executing OnTime while a trampoline is pending on Domain '{t.Domain.DomainName}'." );
+                            m.OpenDebug( $"Executing OnTime while a trampoline is pending on Domain '{domain.DomainName}'." );
                         }
                         else
                         {
                             if( t._onTimeLostFlag < 0 )
                             {
-                                m.Debug( $"Skipped OnTime on disposed timer for '{t.Domain.DomainName}'." );
+                                m.Debug( $"Skipped OnTime on disposed timer for '{domain.DomainName}'." );
                                 m.Dispose();
                                 return;
                             }
-                            m.OpenDebug( $"Executing OnTime on Domain '{t.Domain.DomainName}'." );
+                            m.OpenDebug( $"Executing OnTime on Domain '{domain.DomainName}'." );
                         }
                     }
                     else
@@ -96,17 +98,18 @@ namespace CK.Observable
                         {
                             if( t._onTimeLostFlag == 0 )
                             {
-                                m.Debug( $"Skipped useless OnTime trampoline on Domain '{t.Domain.DomainName}'." );
+                                m.Debug( $"Skipped useless OnTime trampoline on Domain '{domain.DomainName}'." );
                             }
                             else
                             {
-                                m.Debug( $"Skipped useless OnTime trampoline on dispose Domain '{t.Domain.DomainName}'." );
+                                m.Debug( $"Skipped useless OnTime trampoline on dispose Domain '{domain.DomainName}'." );
                             }
                             m.Dispose();
                             return;
                         }
-                        m.OpenDebug( $"Executing trampoline OnTime on Domain '{t.Domain.DomainName}'." );
+                        m.OpenDebug( $"Executing trampoline OnTime on Domain '{domain.DomainName}'." );
                     }
+                    int eventRaisedCount = domain.TimeManager._totalEventRaised;
                     t.OnDueTimeAsync( m ).ContinueWith( r =>
                     {
                         // On success, unhandled exception or cancellation, we do nothing.
@@ -123,7 +126,7 @@ namespace CK.Observable
                             }
                         }
                         m.Dispose();
-                        t.RaiseWait();
+                        if( domain.TimeManager._totalEventRaised != eventRaisedCount ) t.RaiseWait();
                     }, TaskContinuationOptions.ExecuteSynchronously );
                 }
                 else trampolineRequired = true;
@@ -193,22 +196,37 @@ namespace CK.Observable
                 else
                 {
                     var delta = nextDueTimeUtc - DateTime.UtcNow;
-                    var ms = (long)Math.Ceiling( delta.TotalMilliseconds );
+                    var ms = (int)Math.Ceiling( delta.TotalMilliseconds );
                     if( ms <= 0 ) ms = 0;
-                    if( !_timer.Change( ms, Timeout.Infinite ) )
+                    if( SetNextDueDelay( monitor, ms ) )
                     {
-                        var msg = $"Timer.Change({ms}) failed.";
-                        monitor.Warn( msg );
-                        _timer.Change( Timeout.Infinite, Timeout.Infinite );
-                        if( !_timer.Change( ms, Timeout.Infinite ) )
-                        {
-                            monitor.Fatal( msg );
-                            return;
-                        }
+                        monitor.Debug( $"Timer set in {ms} ms ({_timer.GetHashCode()})." );
                     }
-                    monitor.Debug( $"Timer set in {ms} ms ({_timer.GetHashCode()})." );
                 }
             }
+
+            /// <summary>
+            /// Sets the timer next due time.
+            /// </summary>
+            /// <param name="monitor">The monitor to use.</param>
+            /// <param name="delay">The number of milliseconds.</param>
+            /// <returns>True on success, false on error.</returns>
+            public bool SetNextDueDelay( IActivityMonitor monitor, int delay )
+            {
+                if( !_timer.Change( delay, Timeout.Infinite ) )
+                {
+                    var msg = $"Timer.Change({delay}) failed.";
+                    monitor.Warn( msg );
+                    _timer.Change( Timeout.Infinite, Timeout.Infinite );
+                    if( !_timer.Change( delay, Timeout.Infinite ) )
+                    {
+                        monitor.Fatal( msg );
+                        return false;
+                    }
+                }
+                return true;
+            }
+
 
             /// <summary>
             /// Disposed the internal <see cref="Timer"/> object.
@@ -455,10 +473,11 @@ namespace CK.Observable
         /// Raises all timers' event for which <see cref="ObservableTimedEventBase.ExpectedDueTimeUtc"/> is below <paramref name="current"/>
         /// and returns the number of timers that have fired. 
         /// </summary>
+        /// <param name="m">The monitor: should be the Domain.Monitor that has been obtained by the AutoTimer.</param>
         /// <param name="current">The current time.</param>
         /// <param name="checkChanges">True to check timed event next due time.</param>
         /// <returns>The number of timers that have fired.</returns>
-        internal int RaiseElapsedEvent( DateTime current, bool checkChanges )
+        internal int RaiseElapsedEvent( IActivityMonitor m, DateTime current, bool checkChanges )
         {
             if( checkChanges ) DoApplyChanges();
             IsRaising = true;
@@ -470,13 +489,13 @@ namespace CK.Observable
                     var first = _activeEvents[1];
                     if( first.ExpectedDueTimeUtc <= current )
                     {
+                        _totalEventRaised++;
                         _changed.Remove( first );
-                        first.DoRaise( Domain.CurrentMonitor, current, !IgnoreTimedEventException );
-                        if( !_changed.Contains( first ) )
+                        first.DoRaise( m, current, !IgnoreTimedEventException );
+                        if( !_changed.Remove( first ) )
                         {
-                            first.OnAfterRaiseUnchanged( current, Domain.CurrentMonitor );
+                            first.OnAfterRaiseUnchanged( current, m );
                         }
-                        _changed.Remove( first );
                         if( !first.IsActive )
                         {
                             Deactivate( first );
@@ -486,14 +505,22 @@ namespace CK.Observable
                             if( first.ExpectedDueTimeUtc <= current )
                             {
                                 // 10 ms is a "very minimal" step: it is smaller than the approximate thread time slice (20 ms). 
-                                first.ForwardExpectedDueTime( Domain.CurrentMonitor, current.AddMilliseconds( 10 ) );
+                                first.ForwardExpectedDueTime( m, current.AddMilliseconds( 10 ) );
                             }
                             OnNextDueTimeUpdated( first );
                         }
-                        Domain.CurrentMonitor.Debug( $"{first}: ActiveIndex={first.ActiveIndex}." );
+                        m.Debug( $"{first}: ActiveIndex={first.ActiveIndex}." );
                         ++count;
                     }
-                    else break;
+                    else
+                    {
+                        if( count == 0 )
+                        {
+                            m.Debug( "Timer raised too early. Reset it." );
+                            CurrentTimer.SetNextDueTimeUtc( m, first.ExpectedDueTimeUtc );
+                        }
+                        break;
+                    }
                 }
                 return count;
             }

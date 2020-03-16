@@ -866,11 +866,11 @@ namespace CK.Observable
             Debug.Assert( t != null );
             try
             {
-                _timeManager.RaiseElapsedEvent( t.StartTime, false );
+                _timeManager.RaiseElapsedEvent( t.Monitor, t.StartTime, false );
                 if( actions != null )
                 {
                     actions();
-                    _timeManager.RaiseElapsedEvent( DateTime.UtcNow, true );
+                    _timeManager.RaiseElapsedEvent( t.Monitor, DateTime.UtcNow, true );
                 }
             }
             catch( Exception ex )

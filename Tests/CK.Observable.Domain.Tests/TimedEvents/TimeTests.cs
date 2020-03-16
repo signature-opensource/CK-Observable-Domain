@@ -403,10 +403,11 @@ namespace CK.Observable.Domain.Tests.TimedEvents
         [TestCase( 0 )]
         public void AutoTime_is_obviously_not_reentrant_and_has_a_safety_trampoline( int autoTimeFiredSleepTime )
         {
+            var monitor = TestHelper.Monitor;
             AutoTimeFiredSleepTime = autoTimeFiredSleepTime;
             AutoTimeFiredCount = 0;
 
-            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( AutoTime_is_obviously_not_reentrant_and_has_a_safety_trampoline ) ) )
+            using( var d = new ObservableDomain( monitor, nameof( AutoTime_is_obviously_not_reentrant_and_has_a_safety_trampoline ) ) )
             {
                 int current = 0, previous = 0, delta = 0;
                 void UpdateCount()
@@ -415,6 +416,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                     {
                         var c = AutoTimeFiredCount;
                         delta = c - (previous = current);
+                        monitor.Info( $"UpdateCount: Δ = " + delta );
                         current = c;
                     }
                 }
@@ -427,11 +429,11 @@ namespace CK.Observable.Domain.Tests.TimedEvents
 
                 d.TimeManager.CurrentTimer.WaitForNext();
                 UpdateCount();
-                delta.Should().BeGreaterThan( 0 );
+                delta.Should().BeGreaterThan( 0, "Since we called WaitForNext()." );
 
                 d.TimeManager.CurrentTimer.WaitForNext();
                 UpdateCount();
-                delta.Should().BeGreaterThan( 0 );
+                delta.Should().BeGreaterThan( 0, "Since we called WaitForNext() again!" );
 
                 using( d.AcquireReadLock() )
                 {
@@ -441,7 +443,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
 
                 d.TimeManager.CurrentTimer.WaitForNext();
                 UpdateCount();
-                delta.Should().BeGreaterThan( 0 );
+                delta.Should().BeGreaterThan( 0, "We blocked for 200 ms and called WaitForNext(): at least one Tick should have been raised." );
             }
         }
 
