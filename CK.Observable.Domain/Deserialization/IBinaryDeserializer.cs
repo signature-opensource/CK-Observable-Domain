@@ -11,6 +11,13 @@ namespace CK.Observable
     public interface IBinaryDeserializer : ICKBinaryReader
     {
         /// <summary>
+        /// Gets a global serialization version.
+        /// This version is handled by the concrete serializer and deserializer and applies
+        /// to all "intrinsic" objects that are handled by the code base.
+        /// </summary>
+        int SerializationVersion { get; }
+
+        /// <summary>
         /// Gets a configurable container of services available for constructor
         /// injection in the deserialized instances.
         /// </summary>

@@ -10,7 +10,6 @@ namespace CK.Observable
     /// be serializable) can be added. 
     /// This is a helper class that implements <see cref="SafeEventHandler"/> events.
     /// </summary>
-    [SerializationVersion(0)]
     public struct ObservableEventHandler
     {
         readonly ObservableDelegate _handler;

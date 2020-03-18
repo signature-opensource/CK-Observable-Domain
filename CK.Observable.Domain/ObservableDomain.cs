@@ -16,7 +16,7 @@ namespace CK.Observable
     /// <summary>
     /// Base class for any observable domain without strongly typed root. This class should not be specialized:
     /// you must use specialized <see cref="ObservableChannel{T}"/> or <see cref="ObservableDomain{T1, T2, T3, T4}"/>
-    /// for doamins with strongly typed roots.
+    /// for domains with strongly typed roots.
     /// </summary>
     public class ObservableDomain : IDisposable
     {
@@ -99,6 +99,9 @@ namespace CK.Observable
         InternalObject _lastInternalObject;
 
         ObservableObject[] _objects;
+        // There are few tracker objects and they typically have a long
+        // lifetime (as they're often roots for specific objects like sensors).
+        readonly List<IObservableDomainActionTracker> _trackers;
 
         /// <summary>
         /// Since we manage the array directly, this is
@@ -554,6 +557,7 @@ namespace CK.Observable
             _changeTracker = new ChangeTracker();
             _exposedObjects = new AllCollection( this );
             _roots = new List<ObservableRootObject>();
+            _trackers = new List<IObservableDomainActionTracker>();
             _timeManager = new TimeManager( this );
             DefaultEventArgs = new ObservableDomainEventArgs( this );
             // LockRecursionPolicy.NoRecursion: reentrancy must NOT be allowed.
@@ -867,10 +871,22 @@ namespace CK.Observable
             try
             {
                 _timeManager.RaiseElapsedEvent( t.Monitor, t.StartTime, false );
-                if( actions != null )
+                bool skipped = false;
+                foreach( var tracker in _trackers )
+                {
+                    if( !tracker.BeforeModify( t.Monitor, t.StartTime ) )
+                    {
+                        skipped = true;
+                        break;
+                    }
+                }
+                if( !skipped && actions != null )
                 {
                     actions();
-                    _timeManager.RaiseElapsedEvent( t.Monitor, DateTime.UtcNow, true );
+
+                    var now = DateTime.UtcNow;
+                    foreach( var tracker in _trackers ) tracker.AfterModify( t.Monitor, t.StartTime, now - t.StartTime );
+                    _timeManager.RaiseElapsedEvent( t.Monitor, now, true );
                 }
             }
             catch( Exception ex )
@@ -1045,7 +1061,7 @@ namespace CK.Observable
                 {
                     using( isWrite ? monitor.OpenInfo( $"Transacted saving domain ({_actualObjectCount} objects, {_internalObjectCount} internal objects)." ) : null )
                     {
-                        w.WriteSmallInt32( CurrentSerializationVersion ); // Version: 2 supports DebuMode, TimeManager & Internal objects.
+                        w.WriteSmallInt32( CurrentSerializationVersion ); // Version: 2 supports DebugMode, TimeManager & Internal objects.
                         w.DebugWriteMode( debugMode ? (bool?)debugMode : null );
                         w.Write( _currentObjectUniquifier );
                         w.Write( _domainSecret );
@@ -1129,6 +1145,7 @@ namespace CK.Observable
                 {
                     throw new InvalidDataException( $"Version must be between 0 and {CurrentSerializationVersion}. Version read: {version}." );
                 }
+                r.SerializationVersion = version;
                 _currentObjectUniquifier = 0;
                 if( version > 0 )
                 {
@@ -1335,6 +1352,7 @@ namespace CK.Observable
             else _firstInternalObject.Prev = o;
             _firstInternalObject = o;
             ++_internalObjectCount;
+            if( o is IObservableDomainActionTracker tracker ) _trackers.Add( tracker );
         }
 
         internal void Unregister( InternalObject o )
@@ -1345,6 +1363,11 @@ namespace CK.Observable
             if( _lastInternalObject == o ) _lastInternalObject = o.Prev;
             else o.Next.Prev = o.Prev;
             --_internalObjectCount;
+            if( o is IObservableDomainActionTracker tracker )
+            {
+                Debug.Assert( _trackers.Contains( tracker ) );
+                _trackers.Remove( tracker );
+            }
         }
 
         internal ObservableObjectId CreateId( int idx ) => new ObservableObjectId( idx, ObservableObjectId.ForwardUniquifier( ref _currentObjectUniquifier ) );
@@ -1374,7 +1397,10 @@ namespace CK.Observable
             {
                 _changeTracker.OnNewObject( o, id, o._exporter );
             }
+
             ++_actualObjectCount;
+            if( o is IObservableDomainActionTracker tracker ) _trackers.Add( tracker );
+
             return id;
         }
 
@@ -1390,6 +1416,11 @@ namespace CK.Observable
             _objects[o.OId.Index] = null;
             _freeList.Add( o.OId.Index );
             --_actualObjectCount;
+            if( o is IObservableDomainActionTracker tracker )
+            {
+                Debug.Assert( _trackers.Contains( tracker ) );
+                _trackers.Remove( tracker );
+            }
         }
 
         /// <summary>
@@ -1562,7 +1593,7 @@ namespace CK.Observable
                         if( originalTransactionSerialNumber != rewriteTransactionSerialNumber )
                         {
                             monitor.Error( $"TransactionSerialNumber changed (original: {originalTransactionSerialNumber}; rewrite: {rewriteTransactionSerialNumber})!" );
-                            monitor.Error( $"Did a timer fire?" );
+                            monitor.Error( $"Did a timer fired between the two Save calls? If yes, make sure that Timers and Reminders are slow enough or are disabled." );
                         }
                         if( useDebugMode )
                         {

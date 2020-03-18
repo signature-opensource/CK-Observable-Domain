@@ -165,6 +165,11 @@ namespace CK.Observable
             _postDeserializationActions.Clear();
         }
 
+        /// <summary>
+        /// Gets or sets the global serialization version (<see cref="IBinaryDeserializer.SerializationVersion"/>).
+        /// This should be set once at the start of the read.
+        /// </summary>
+        public int SerializationVersion { get; set; }
 
         /// <summary>
         /// Gets whether this deserializer is currently in debug mode.

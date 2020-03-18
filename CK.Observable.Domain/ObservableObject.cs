@@ -216,13 +216,13 @@ namespace CK.Observable
         /// <param name="propertyName">The name of the changed property.</param>
         /// <param name="before">The property previous value.</param>
         /// <param name="after">The new property value.</param>
-        public virtual void OnPropertyChanged( string propertyName, object before, object after )
+        protected virtual void OnPropertyChanged( string propertyName, object before, object after )
         {
             this.CheckDisposed();
             var ev = Domain.OnPropertyChanged( this, propertyName, before, after );
             if( ev != null )
             {
-                // Handles public event EventHandler propertyNameChanged;
+                // Handles public event EventHandler [propertyName]Changed;
                 // See https://stackoverflow.com/questions/14885325/eventinfo-getraisemethod-always-null
                 {
                     FieldInfo fNamedEv = GetType().GetField( propertyName + "Changed", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance );
