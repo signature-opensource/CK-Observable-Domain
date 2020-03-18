@@ -6,7 +6,7 @@ namespace CK.Observable.Domain.Tests.Sample
     [SerializationVersion(0)]
     public class Car : ObservableObject
     {
-        ObservableEventHandler<ObservableDomainEventArgs> _speedChanged;
+        ObservableEventHandler<ObservableDomainEventArgs> _testSpeedChanged;
 
         public Car( string name )
         {
@@ -19,33 +19,33 @@ namespace CK.Observable.Domain.Tests.Sample
         {
             var r = d.StartReading();
             Name = r.ReadNullableString();
-            Speed = r.ReadInt32();
+            TestSpeed = r.ReadInt32();
             Position = (Position)r.ReadObject();
-            _speedChanged = new ObservableEventHandler<ObservableDomainEventArgs>( r );
+            _testSpeedChanged = new ObservableEventHandler<ObservableDomainEventArgs>( r );
         }
 
         void Write( BinarySerializer w )
         {
             w.WriteNullableString( Name );
-            w.Write( Speed );
+            w.Write( TestSpeed );
             w.WriteObject( Position );
-            _speedChanged.Write( w );
+            _testSpeedChanged.Write( w );
         }
 
         public string Name { get; }
 
-        public int Speed { get; set; }
+        public int TestSpeed { get; set; }
 
         /// <summary>
-        /// Defining this event is enough: it will be automatically fired whenever Speed has changed.
+        /// Defining this event is enough: it will be automatically fired whenever TestSpeed has changed.
         /// The private field MUST be a <see cref="ObservableEventHandler"/>, a <see cref="ObservableEventHandler{EventMonitoredArgs}"/>
         /// or a <see cref="ObservableEventHandler{ObservableDomainEventArgs}"/> exacly named _[propName]Changed.
         /// This is fired before <see cref="ObservableObject.PropertyChanged"/> event with property's name.
         /// </summary>
-        public event SafeEventHandler<ObservableDomainEventArgs> SpeedChanged
+        public event SafeEventHandler<ObservableDomainEventArgs> TestSpeedChanged
         {
-            add => _speedChanged.Add( value, nameof( SpeedChanged ) );
-            remove => _speedChanged.Remove( value );
+            add => _testSpeedChanged.Add( value, nameof( TestSpeedChanged ) );
+            remove => _testSpeedChanged.Remove( value );
         }
 
         /// <summary>

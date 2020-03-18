@@ -138,14 +138,14 @@ namespace CK.Observable
             _commaNeeded = true;
         }
 
-        public void EmitStartMapEntry()
+        public void EmitStartList()
         {
             if( _commaNeeded ) _w.Write( ',' );
             _w.Write( '[' );
             _commaNeeded = false;
         }
 
-        public void EmitEndMapEntry()
+        public void EmitEndList()
         {
             _w.Write( ']' );
             _commaNeeded = true;

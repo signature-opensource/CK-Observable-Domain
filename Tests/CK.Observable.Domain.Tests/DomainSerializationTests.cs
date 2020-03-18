@@ -20,17 +20,17 @@ namespace CK.Observable.Domain.Tests
                 domain.Modify( TestHelper.Monitor, () =>
                 {
                     var car = new Car( "Hello" );
-                    car.Speed = 10;
+                    car.TestSpeed = 10;
                 } );
                 using( var d2 = TestHelper.SaveAndLoad( domain ) )
                 {
                     var c = d2.AllObjects.OfType<Car>().Single();
                     c.Name.Should().Be( "Hello" );
-                    c.Speed.Should().Be( 10 );
+                    c.TestSpeed.Should().Be( 10 );
 
                     var r = d2.Modify( TestHelper.Monitor, () =>
                     {
-                        c.Speed = 10000;
+                        c.TestSpeed = 10000;
                     } );
                     r.Events.Should().HaveCount( 1 );
                 }

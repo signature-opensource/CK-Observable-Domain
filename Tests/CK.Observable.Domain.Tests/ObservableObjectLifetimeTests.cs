@@ -38,7 +38,7 @@ namespace CK.Observable.Domain.Tests
                     result.Events.Should().HaveCount( 11 );
                     result.Commands.Should().BeEmpty();
                 }
-                d.Invoking( sut => sut.AllObjects.OfType<Car>().Single().Speed = 3 )
+                d.Invoking( sut => sut.AllObjects.OfType<Car>().Single().TestSpeed = 3 )
                  .Should().Throw<InvalidOperationException>().WithMessage( "A transaction is required." );
             }
         }

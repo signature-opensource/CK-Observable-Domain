@@ -42,12 +42,12 @@ namespace CK.Observable
             Target.EmitStartObject( num, ObjectExportedKind.Map );
             foreach( var kv in map )
             {
-                Target.EmitStartMapEntry();
+                Target.EmitStartList();
                 if( keyExporter == null ) ExportObject( kv.Key );
                 else Export( kv.Key, keyExporter );
                 if( valueExporter == null ) ExportObject( kv.Value );
                 else Export( kv.Value, valueExporter );
-                Target.EmitEndMapEntry();
+                Target.EmitEndList();
             }
             Target.EmitEndObject( num, ObjectExportedKind.Map );
         }

@@ -9,7 +9,7 @@ namespace CK.Observable
     /// Primary interface to implement actual behavior behind an observable domain.
     /// This is is intented to be implemented as a a chain of responsibility: Start,
     /// Commit and Failure should be propagated through a linked list (or tree structure)
-    /// of such managers.
+    /// of such clients.
     /// See <see cref="TransactionEventCollectorClient"/> or <see cref="MemoryTransactionProviderClient"/>
     /// for concrete implementations of transaction manager.
     /// </summary>

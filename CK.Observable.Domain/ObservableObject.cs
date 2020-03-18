@@ -236,10 +236,10 @@ namespace CK.Observable
                     }
                 }
                 {
-                    FieldInfo fNamedEv = GetType().GetField( '_' + propertyName.ToLowerInvariant() + "Changed", BindingFlags.NonPublic | BindingFlags.Instance );
+                    var fieldName = "_" + Char.ToLowerInvariant( propertyName[0] ) + propertyName.Substring( 1 ) + "Changed";
+                    FieldInfo fNamedEv = GetType().GetField( fieldName, BindingFlags.NonPublic | BindingFlags.Instance );
                     if( fNamedEv != null )
                     {
-
                         if( fNamedEv.FieldType == typeof( ObservableEventHandler ) )
                         {
                             var handler = (ObservableEventHandler)fNamedEv.GetValue( this );

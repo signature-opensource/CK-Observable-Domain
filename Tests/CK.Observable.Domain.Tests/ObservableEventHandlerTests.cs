@@ -227,63 +227,63 @@ namespace CK.Observable.Domain.Tests
                 {
                     TestCounter counter = new TestCounter();
                     Sample.Car c = new Sample.Car( "First Car" );
-                    c.SpeedChanged += counter.Increment;
+                    c.TestSpeedChanged += counter.Increment;
 
                     counter.Count.Should().Be( 0 );
-                    c.Speed = 89;
+                    c.TestSpeed = 89;
                     counter.Count.Should().Be( 1 );
                     counter.Dispose();
-                    c.Speed = 1;
+                    c.TestSpeed = 1;
                     counter.Count.Should().Be( 1 );
 
                     counter = new TestCounter();
                     var counter2 = new TestCounter();
-                    c.SpeedChanged += counter.Increment;
-                    c.SpeedChanged += counter2.Increment;
+                    c.TestSpeedChanged += counter.Increment;
+                    c.TestSpeedChanged += counter2.Increment;
                     counter.Count.Should().Be( 0 );
                     counter2.Count.Should().Be( 0 );
 
-                    c.Speed = 89;
+                    c.TestSpeed = 89;
                     counter.Count.Should().Be( 1 );
                     counter2.Count.Should().Be( 1 );
                     counter.Dispose();
-                    c.Speed = 1;
+                    c.TestSpeed = 1;
                     counter.Count.Should().Be( 1 );
                     counter2.Count.Should().Be( 2 );
                     counter2.Dispose();
-                    c.Speed = 2;
+                    c.TestSpeed = 2;
                     counter.Count.Should().Be( 1 );
                     counter2.Count.Should().Be( 2 );
 
                     counter = new TestCounter();
                     counter2 = new TestCounter();
                     var counter3 = new TestCounter();
-                    c.SpeedChanged += counter.Increment;
-                    c.SpeedChanged += counter2.Increment;
-                    c.SpeedChanged += counter3.Increment;
+                    c.TestSpeedChanged += counter.Increment;
+                    c.TestSpeedChanged += counter2.Increment;
+                    c.TestSpeedChanged += counter3.Increment;
                     counter.Count.Should().Be( 0 );
                     counter2.Count.Should().Be( 0 );
                     counter3.Count.Should().Be( 0 );
 
-                    c.Speed = 89;
+                    c.TestSpeed = 89;
                     counter.Count.Should().Be( 1 );
                     counter2.Count.Should().Be( 1 );
                     counter3.Count.Should().Be( 1 );
 
                     counter2.Dispose();
-                    c.Speed = 1;
+                    c.TestSpeed = 1;
                     counter.Count.Should().Be( 2 );
                     counter2.Count.Should().Be( 1 );
                     counter3.Count.Should().Be( 2 );
 
                     counter3.Dispose();
-                    c.Speed = 2;
+                    c.TestSpeed = 2;
                     counter.Count.Should().Be( 3 );
                     counter2.Count.Should().Be( 1 );
                     counter3.Count.Should().Be( 2 );
 
                     counter.Dispose();
-                    c.Speed = 3;
+                    c.TestSpeed = 3;
                     counter.Count.Should().Be( 3 );
                     counter2.Count.Should().Be( 1 );
                     counter3.Count.Should().Be( 2 );

@@ -89,3 +89,92 @@ public void Main()
     fileClient.Flush();
 }
 ```
+## PropertyChanged event, PropertyChanged.Fody & Safe events
+
+An  `ObservableObject` implements the `System.ComponentModel.INotifyPropertyChanged` that is the standard .Net way to track property changes.
+However we use it only because we support (and recommend) the use of PropertyChanged.Fody in any project that implements Observable objects:
+
+```xml
+  <ItemGroup>
+    <PackageReference Include="Fody" Version="6.1.1" PrivateAssets="all" />
+    <PackageReference Include="PropertyChanged.Fody" Version="3.2.6" PrivateAssets="all" />
+  </ItemGroup>
+```
+
+This Fody weaver automatically calls the OnPropertyChanged method when a property setter is called (you don't have to write this boilerplate code again and again).
+From here, the `ObservableObject` implementation takes the control and raises our *safe* event instead of the standard `INotifyPropertyChanged.PropertyChanged` event:
+this standard event MUST not be used!
+
+Below is the code of the `ObservableObject` of the 2 property changed events: the exposed, public one that is safe and the "condemned" one:
+
+```csharp
+/// <summary>
+/// Generic property changed safe event that can be used to track any change on observable properties (by name).
+/// This uses the standard <see cref="PropertyChangedEventArgs"/> event.
+/// </summary>
+public event SafeEventHandler<PropertyChangedEventArgs> PropertyChanged
+{
+    add
+    {
+        if( IsDisposed ) throw new ObjectDisposedException( ToString() );
+        _propertyChanged.Add( value, nameof( PropertyChanged ) );
+    }
+    remove => _propertyChanged.Remove( value );
+}
+
+event PropertyChangedEventHandler INotifyPropertyChanged.PropertyChanged
+{
+    add
+    {
+        throw new NotSupportedException( "INotifyPropertyChanged is supported only because PropertyChanged.Fody requires it. It must not be used." );
+    }
+    remove
+    {
+        throw new NotSupportedException( "INotifyPropertyChanged is supported only because PropertyChanged.Fody requires it. It must not be used." );
+    }
+}
+```
+There is a little bit more to this. Here, to locate the property that has changed, `PropertyChangedEventArgs.PropertyName` must be used which can be boring.
+If, for some (important) property, you want the developer to easily track any of its change, you can simply expose a specific named event. Below is the full 
+code of a property and its associated safe event (we are using PropertyChanged.Fody, so the property itself is minimalist):  
+
+```csharp
+[SerializationVersion(0)]
+public class Car : ObservableObject
+{
+    ObservableEventHandler<ObservableDomainEventArgs> _testSpeedChanged;
+
+    public int TestSpeed { get; set; }
+
+    public event SafeEventHandler<ObservableDomainEventArgs> TestSpeedChanged
+    {
+        add => _testSpeedChanged.Add( value, nameof( TestSpeedChanged ) );
+        remove => _testSpeedChanged.Remove( value );
+    }
+```
+
+Defining the event is enough: it will be automatically fired whenever TestSpeed has changed. However, it is important to notice:
+- The private field MUST be a `ObservableEventHandler`, a `ObservableEventHandler<EventMonitoredArgs>` or a `ObservableEventHandler<ObservableDomainEventArgs>` exacly named **`_[propName]Changed`**.
+- This event is raised before the generic `ObservableObject.PropertyChanged` event.
+- Don't forget the serialization support of the event!
+
+```csharp
+    protected Car( IBinaryDeserializerContext d ) : base( d )
+    {
+        var r = d.StartReading();
+        Name = r.ReadNullableString();
+        TestSpeed = r.ReadInt32();
+        _testSpeedChanged = new ObservableEventHandler<ObservableDomainEventArgs>( r );
+    }
+
+    void Write( BinarySerializer w )
+    {
+        w.WriteNullableString( Name );
+        w.Write( TestSpeed );
+        _testSpeedChanged.Write( w );
+    }
+}
+```
+
+
+

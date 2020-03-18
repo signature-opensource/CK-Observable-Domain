@@ -100,11 +100,12 @@ namespace CK.Observable
             }
             _buffer.GetStringBuilder().Clear();
             _exporter.Reset();
-            _exporter.Target.EmitStartObject( -1, ObjectExportedKind.Object );
-            _exporter.Target.EmitPropertyName( "N" );
-            _exporter.Target.EmitInt32( last.TransactionNumber );
-            _exporter.Target.EmitPropertyName( "E" );
-            _buffer.Write( "[" );
+            var t = _exporter.Target;
+            t.EmitStartObject( -1, ObjectExportedKind.Object );
+            t.EmitPropertyName( "N" );
+            t.EmitInt32( last.TransactionNumber );
+            t.EmitPropertyName( "E" );
+            t.EmitStartList();
             if( last.TransactionNumber == transactionNumber )
             {
                 _buffer.Write( last.ExportedEvents );
@@ -117,8 +118,8 @@ namespace CK.Observable
                     foreach( var ev in e.Events ) ev.Export( _exporter );
                 }
             }
-            _buffer.Write( "]" );
-            _exporter.Target.EmitEndObject( -1, ObjectExportedKind.Object );
+            t.EmitEndList();
+            t.EmitEndObject( -1, ObjectExportedKind.Object );
             return _buffer.GetStringBuilder().ToString();
         }
 
