@@ -65,7 +65,8 @@ namespace CK.Observable
         public NormalizedPath FilePath => _filePath;
 
         /// <summary>
-        /// Loads the file if it exists (calls base method <see cref="MemoryTransactionProviderClient.LoadAndInitializeSnapshot(IActivityMonitor, ObservableDomain, DateTime, Stream)"/>)).
+        /// Loads the file if it exists, calling base method
+        /// <see cref="MemoryTransactionProviderClient.LoadAndInitializeSnapshot(IActivityMonitor, ObservableDomain, DateTime, Stream)"/>)).
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="d">The newly created domain.</param>
@@ -76,8 +77,7 @@ namespace CK.Observable
             {
                 if( File.Exists( _filePath ) )
                 {
-                    using( var f = new FileStream( _filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096,
-                        FileOptions.SequentialScan ) )
+                    using( var f = new FileStream( _filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.SequentialScan ) )
                     {
                         LoadAndInitializeSnapshot( monitor, d, timeUtc, f );
                         _fileTransactionNumber = CurrentSerialNumber;
@@ -110,12 +110,12 @@ namespace CK.Observable
         /// <summary>
         /// Writes any pending snapshot to the disk if something changed.
         /// </summary>
-        /// <param name="m">The monitor to use</param>
+        /// <param name="monitor">The monitor to use.</param>
         /// <returns>
         /// True when the file was written, or when nothing has to be written.
-        /// False when an error occured while writing. This error was logged to <paramref name="m"/>.
+        /// False when an error occured while writing. This error was logged to the <paramref name="monitor"/>.
         /// </returns>
-        public bool Flush( IActivityMonitor m )
+        public bool Flush( IActivityMonitor monitor )
         {
             try
             {
@@ -128,7 +128,7 @@ namespace CK.Observable
             }
             catch( Exception e )
             {
-                m.Error( "Caught when writing ObservableDomain file", e );
+                monitor.Error( "Caught when writing ObservableDomain file", e );
                 return false;
             }
         }

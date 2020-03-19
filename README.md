@@ -77,15 +77,18 @@ It also provides an automatic roll-back feature: If an error happens while calli
 ```csharp
 public void Main()
 {
-    string path = @"C:\ObservableDomain.bin"; // This file contains or will contain the ObservableDomain objects
+    // This file contains or will contain the ObservableDomain objects.
+    string path = @"C:\ObservableDomain.bin"; 
     int fileSaveMs = 5000; // Save file every 5 seconds minimum
 
-    // The fileClient will load the domain, if applicable, and save the domain after you call Modify(), every 5 seconds.
+    // The fileClient will load the domain, if applicable, and will save the
+    // domain after you call Modify(), every 5 seconds.
     var fileClient = new FileTransactionProviderClient( path, fileSaveMs );
     var observableDomain = new ObservableDomain<MyApplicationRoot>( fileClient );
 
-    // If you don't plan on calling Modify() and still want to write the file (eg. on a clean shutdown),
-    // you can call Flush() before closing the application.
+    // If you don't plan on calling Modify() and still want to write
+    // the file (eg. on a clean shutdown), you can call Flush() before
+    // closing the application.
     fileClient.Flush();
 }
 ```
