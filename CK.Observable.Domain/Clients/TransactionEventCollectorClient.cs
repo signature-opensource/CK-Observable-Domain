@@ -106,7 +106,7 @@ namespace CK.Observable
             t.EmitInt32( last.TransactionNumber );
             t.EmitPropertyName( "E" );
             t.EmitStartList();
-            if( last.TransactionNumber == transactionNumber )
+            if( transactionNumber == last.TransactionNumber - 1 )
             {
                 _buffer.Write( last.ExportedEvents );
             }
@@ -138,7 +138,7 @@ namespace CK.Observable
             }
         }
 
-        void IObservableDomainClient.OnDomainCreated( IActivityMonitor monitor, ObservableDomain d, DateTime timeUtc ) => _next?.OnDomainCreated( monitor, d, timeUtc );
+        void IObservableDomainClient.OnDomainCreated( IActivityMonitor monitor, ObservableDomain d ) => _next?.OnDomainCreated( monitor, d );
 
         void IObservableDomainClient.OnTransactionCommit( in SuccessfulTransactionContext c )
         {

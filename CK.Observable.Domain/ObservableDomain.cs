@@ -18,7 +18,7 @@ namespace CK.Observable
     /// you must use specialized <see cref="ObservableChannel{T}"/> or <see cref="ObservableDomain{T1, T2, T3, T4}"/>
     /// for domains with strongly typed roots.
     /// </summary>
-    public class ObservableDomain : IDisposable
+    public class ObservableDomain : IObservableDomain, IDisposable
     {
         /// <summary>
         /// An artificial <see cref="CKExceptionData"/> that is added to
@@ -36,7 +36,7 @@ namespace CK.Observable
         /// <summary>
         /// Current serialization version.
         /// </summary>
-        public const int CurrentSerializationVersion = 2;
+        public const int CurrentSerializationVersion = 3;
 
         /// <summary>
         /// The length in bytes of the <see cref="SecretKey"/>.
@@ -94,6 +94,28 @@ namespace CK.Observable
         readonly List<int> _freeList;
         byte[] _domainSecret;
 
+        class InternalObjectCollection : IReadOnlyCollection<InternalObject>
+        {
+            readonly ObservableDomain _domain;
+
+            public InternalObjectCollection( ObservableDomain d ) => _domain = d;
+
+            public int Count => _domain._internalObjectCount;
+
+            public IEnumerator<InternalObject> GetEnumerator()
+            {
+                var o = _domain._firstInternalObject;
+                while( o != null )
+                {
+                    yield return o;
+                    o = o.Next;
+                }
+            }
+
+            IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+        }
+
+        readonly InternalObjectCollection _exposedInternalObjects;
         int _internalObjectCount;
         InternalObject _firstInternalObject;
         InternalObject _lastInternalObject;
@@ -125,6 +147,7 @@ namespace CK.Observable
 
         IObservableTransaction _currentTran;
         int _transactionSerialNumber;
+        DateTime _transactionCommitTimeUtc;
 
         // Available to objects.
         internal readonly ObservableDomainEventArgs DefaultEventArgs;
@@ -449,6 +472,7 @@ namespace CK.Observable
                 {
                     SuccessfulTransactionContext ctx = _domain._changeTracker.Commit( _domain, _domain.EnsurePropertyInfo, _startTime, nextTimerDueDate );
                     ++_domain._transactionSerialNumber;
+                    _domain._transactionCommitTimeUtc = ctx.CommitTimeUtc;
                     try
                     {
                         _domain.DomainClient?.OnTransactionCommit( ctx );
@@ -501,7 +525,7 @@ namespace CK.Observable
         /// <param name="deserializers">Optional deserializers handler.</param>
         public ObservableDomain( IActivityMonitor monitor,
                                  string domainName,
-                                 IObservableDomainClient client,
+                                 IObservableDomainClient? client,
                                  IExporterResolver exporters = null,
                                  ISerializerResolver serializers = null,
                                  IDeserializerResolver deserializers = null )
@@ -523,7 +547,7 @@ namespace CK.Observable
         /// <param name="deserializers">Optional deserializers handler.</param>
         public ObservableDomain( IActivityMonitor monitor,
                                  string domainName,
-                                 IObservableDomainClient client,
+                                 IObservableDomainClient? client,
                                  Stream s,
                                  bool leaveOpen = false,
                                  Encoding encoding = null,
@@ -533,12 +557,12 @@ namespace CK.Observable
             : this( monitor, domainName, client, false, exporters, serializers, deserializers )
         {
             Load( monitor, s, leaveOpen, encoding );
-            client?.OnDomainCreated( monitor, this, DateTime.UtcNow );
+            client?.OnDomainCreated( monitor, this );
         }
 
         ObservableDomain( IActivityMonitor monitor,
                           string domainName,
-                          IObservableDomainClient client,
+                          IObservableDomainClient? client,
                           bool callClientOnCreate,
                           IExporterResolver exporters,
                           ISerializerResolver serializers,
@@ -556,16 +580,19 @@ namespace CK.Observable
             _propertiesByIndex = new List<PropInfo>();
             _changeTracker = new ChangeTracker();
             _exposedObjects = new AllCollection( this );
+            _exposedInternalObjects = new InternalObjectCollection( this );
             _roots = new List<ObservableRootObject>();
             _trackers = new List<IObservableDomainActionTracker>();
             _timeManager = new TimeManager( this );
+            _transactionCommitTimeUtc = DateTime.UtcNow;
             DefaultEventArgs = new ObservableDomainEventArgs( this );
             // LockRecursionPolicy.NoRecursion: reentrancy must NOT be allowed.
             _lock = new ReaderWriterLockSlim( LockRecursionPolicy.NoRecursion );
             _saveLock = new Object();
             _domainMonitorLock = new Object();
 
-            if( callClientOnCreate ) client?.OnDomainCreated( monitor, this, DateTime.UtcNow );
+            if( callClientOnCreate ) client?.OnDomainCreated( monitor, this  );
+            // If the secret has not been restored, initializes a new one.
             if( _domainSecret == null ) _domainSecret = CreateSecret();
             monitor.Info( $"ObservableDomain {domainName} created." );
         }
@@ -662,18 +689,7 @@ namespace CK.Observable
         /// be used outside of <see cref="BeginTransaction"/> (or other <see cref="Modify"/>, <see cref="ModifyAsync"/> methods)
         /// or <see cref="AcquireReadLock"/> scopes.
         /// </summary>
-        public IEnumerable<InternalObject> AllInternalObjects
-        {
-            get
-            {
-                var o = _firstInternalObject;
-                while( o != null )
-                {
-                    yield return o;
-                    o = o.Next;
-                }
-            }
-        }
+        public IReadOnlyCollection<InternalObject> AllInternalObjects => _exposedInternalObjects;
 
         /// <summary>
         /// Gets the root observable objects that this domain contains.
@@ -685,9 +701,26 @@ namespace CK.Observable
 
         /// <summary>
         /// Gets the current transaction number.
-        /// Incremented each time a transaction successfuly ended.
+        /// Incremented each time a transaction successfuly ended, default to 0 until the first transaction commit.
         /// </summary>
         public int TransactionSerialNumber => _transactionSerialNumber;
+
+        /// <summary>
+        /// Gets the last commit time. Defaults to <see cref="DateTime.UtcNow"/> at the very beginning,
+        /// when no transaction has been comitted yet (and <see cref="TransactionSerialNumber"/> is 0).
+        /// </summary>
+        public DateTime TransactionCommitTimeUtc => _transactionCommitTimeUtc;
+
+        /// <summary>
+        /// Gets this domain name.
+        /// </summary>
+        public string DomainName { get; }
+
+        /// <summary>
+        /// Gets the secret key for this domain. It is a <see cref="System.Security.Cryptography.Rfc2898DeriveBytes"/> bytes
+        /// array of length <see cref="DomainSecretKeyLength"/> derived from <see cref="Guid.NewGuid()"/>.
+        /// </summary>
+        public ReadOnlySpan<byte> SecretKey => _domainSecret.AsSpan();
 
         class DomainActivityMonitor : ActivityMonitor, IDisposableActivityMonitor
         {
@@ -719,27 +752,16 @@ namespace CK.Observable
         internal IActivityMonitor CurrentMonitor => _currentTran.Monitor;
 
         /// <summary>
-        /// Gets this domain name.
-        /// </summary>
-        public string DomainName { get; }
-
-        /// <summary>
-        /// Gets the secret key for this domain. It is a <see cref="System.Security.Cryptography.Rfc2898DeriveBytes"/> bytes
-        /// array of length <see cref="DomainSecretKeyLength"/> derived from <see cref="Guid.NewGuid()"/>.
-        /// </summary>
-        public ReadOnlySpan<byte> SecretKey => _domainSecret.AsSpan();
-
-        /// <summary>
         /// Gets the associated client (head of the Chain of Responsibility).
-        /// Can be null.
         /// </summary>
-        public IObservableDomainClient DomainClient { get; }
+        public IObservableDomainClient? DomainClient { get; }
 
         /// <summary>
         /// <para>
         /// Acquires a single-threaded read lock on this <see cref="ObservableDomain"/>:
         /// until the returned disposable is disposed, objects can safely be read, and any attempt
         /// to call <see cref="BeginTransaction"/> from other threads will be blocked.
+        /// This immediately returns null if this domain is disposed.
         /// </para>
         /// <para>
         /// Changing threads (eg. by awaiting tasks) before the returned disposable is disposed
@@ -760,9 +782,10 @@ namespace CK.Observable
         /// When the current thread has not entered the lock in read mode.
         /// Can be caused by other threads trying to use this lock (eg. after awaiting a task).
         /// </exception>
-        /// <returns>A disposable that releases the read lock when disposed, or null if a timeout occurred.</returns>
+        /// <returns>A disposable that releases the read lock when disposed, or null if a timeout occurred (or this is disposed).</returns>
         public IDisposable AcquireReadLock( int millisecondsTimeout = -1 )
         {
+            CheckDisposed();
             if( !_lock.TryEnterReadLock( millisecondsTimeout ) ) return null;
             return Util.CreateDisposableAction( () => _lock.ExitReadLock() );
         }
@@ -777,7 +800,7 @@ namespace CK.Observable
         /// </summary>
         /// <param name="monitor">Monitor to use. Cannot be null.</param>
         /// <param name="millisecondsTimeout">
-        /// The maximum number of milliseconds to wait for a read access before giving up.
+        /// The maximum number of milliseconds to wait for a write access before giving up.
         /// Wait indefinitely by default.
         /// </param>
         /// <returns>The transaction object or null if the lock has not been taken.</returns>
@@ -797,7 +820,7 @@ namespace CK.Observable
         public IObservableTransaction BeginTransaction( IActivityMonitor monitor, int millisecondsTimeout = -1 )
         {
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
-            if( _disposed ) throw new ObjectDisposedException( ToString() );
+            CheckDisposed();
             if( !_lock.TryEnterWriteLock( millisecondsTimeout ) )
             {
                 monitor.Warn( $"Write lock not obtained in less than {millisecondsTimeout} ms." );
@@ -934,7 +957,7 @@ namespace CK.Observable
         /// Can be null: only pending timed events are executed if any.
         /// </param>
         /// <param name="millisecondsTimeout">
-        /// The maximum number of milliseconds to wait for a read access before giving up.
+        /// The maximum number of milliseconds to wait for a write access before giving up.
         /// Wait indefinitely by default.
         /// </param>
         /// <returns>
@@ -943,7 +966,7 @@ namespace CK.Observable
         public async Task<(TransactionResult, Exception)> SafeModifyAsync( IActivityMonitor monitor, Action actions, int millisecondsTimeout = -1 )
         {
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
-            if( _disposed ) throw new ObjectDisposedException( ToString() );
+            CheckDisposed();
             TransactionResult tr = TransactionResult.Empty;
             if( _lock.TryEnterWriteLock( millisecondsTimeout ) )
             {
@@ -970,7 +993,7 @@ namespace CK.Observable
         /// <returns>True on success, false if timeout occurred.</returns>
         public bool Export( TextWriter w, int milliSecondsTimeout = -1 )
         {
-            if( _disposed ) throw new ObjectDisposedException( ToString() );
+            CheckDisposed();
             if( !_lock.TryEnterReadLock( milliSecondsTimeout ) ) return false;
             try
             {
@@ -1039,7 +1062,7 @@ namespace CK.Observable
         {
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
             if( stream == null ) throw new ArgumentNullException( nameof( stream ) );
-            if( _disposed ) throw new ObjectDisposedException( ToString() );
+            CheckDisposed();
 
             // Since we only need the read lock, whenever multiple threads Save() concurrently,
             // the monitor (of the fake transaction) is at risk. This is why we secure the Save with its own lock: since
@@ -1061,13 +1084,16 @@ namespace CK.Observable
                 {
                     using( isWrite ? monitor.OpenInfo( $"Transacted saving domain ({_actualObjectCount} objects, {_internalObjectCount} internal objects)." ) : null )
                     {
-                        w.WriteSmallInt32( CurrentSerializationVersion ); // Version: 2 supports DebugMode, TimeManager & Internal objects.
+                        // Version 2: supports DebugMode, TimeManager & Internal objects.
+                        // Version 3: supports TransactionCommitTimeUtc.
+                        w.WriteSmallInt32( CurrentSerializationVersion ); 
                         w.DebugWriteMode( debugMode ? (bool?)debugMode : null );
                         w.Write( _currentObjectUniquifier );
                         w.Write( _domainSecret );
-                        if( debugMode ) monitor.Trace( $"Domain {DomainName}: Tran #{_transactionSerialNumber}, {_actualObjectCount} objects." );
+                        if( debugMode ) monitor.Trace( $"Domain {DomainName}: Tran #{_transactionSerialNumber} - {_transactionCommitTimeUtc:o}, {_actualObjectCount} objects." );
                         w.Write( DomainName );
                         w.Write( _transactionSerialNumber );
+                        w.Write( _transactionCommitTimeUtc );
                         w.Write( _actualObjectCount );
 
                         w.DebugWriteSentinel();
@@ -1163,6 +1189,7 @@ namespace CK.Observable
                     if( loaded != expectedName ) throw new InvalidDataException( $"Domain name mismatch: loading domain named '{loaded}' but expected '{expectedName}'." );
                 }
                 _transactionSerialNumber = r.ReadInt32();
+                if( version >= 3 ) _transactionCommitTimeUtc = r.ReadDateTime();
                 _actualObjectCount = r.ReadInt32();
 
                 r.DebugCheckSentinel();
@@ -1240,8 +1267,7 @@ namespace CK.Observable
                 OnLoaded();
                 if( callUpdateTimers )
                 {
-                    var next = _timeManager.ApplyChanges();
-                    if( next != Util.UtcMinValue ) _timeManager.SetNextDueTimeUtc( monitor, next );
+                    _timeManager.SetNextDueTimeUtc( monitor, _timeManager.ApplyChanges() );
                 }
             }
             finally
@@ -1266,17 +1292,17 @@ namespace CK.Observable
         /// The maximum number of milliseconds to wait for a read access before giving up.
         /// Wait indefinitely by default.
         /// </param>
-        /// <param name="callUpdateTimers">
-        /// By default, =<see cref="TimeManager"/> is sollicitated to apply timers and reminders due times, potentially calling <see cref="SafeModifyAsync(IActivityMonitor, Action, int)"/>
-        /// if needed.
+        /// <param name="updateAutoTimer">
+        /// By default, <see cref="TimeManager"/> is sollicitated to update the internal timer delay based
+        /// on the loaded timers and reminders configurations.
         /// </param>
         /// <returns>True on success, false if timeout occurred.</returns>
-        public bool Load( IActivityMonitor monitor, Stream stream, string expectedLoadedName, bool leaveOpen = false, Encoding encoding = null, int millisecondsTimeout = -1, bool callUpdateTimers = true )
+        public bool Load( IActivityMonitor monitor, Stream stream, string expectedLoadedName, bool leaveOpen = false, Encoding encoding = null, int millisecondsTimeout = -1, bool updateAutoTimer = true )
         {
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
             if( stream == null ) throw new ArgumentNullException( nameof( stream ) );
             if( expectedLoadedName == null ) throw new ArgumentNullException( nameof( expectedLoadedName ) );
-            if( _disposed ) throw new ObjectDisposedException( ToString() );
+            CheckDisposed();
             bool isWrite = _lock.IsWriteLockHeld;
             if( !isWrite && !_lock.TryEnterWriteLock( millisecondsTimeout ) ) return false;
             Debug.Assert( !isWrite || _currentTran != null, "isWrite => _currentTran != null" );
@@ -1288,7 +1314,7 @@ namespace CK.Observable
                 using( var d = new BinaryDeserializer( stream, null, _deserializers, leaveOpen, encoding ) )
                 {
                     d.Services.Add( this );
-                    DoLoad( monitor, d, expectedLoadedName, callUpdateTimers );
+                    DoLoad( monitor, d, expectedLoadedName, updateAutoTimer );
                     return true;
                 }
             }
@@ -1310,14 +1336,14 @@ namespace CK.Observable
         /// The maximum number of milliseconds to wait for a read access before giving up.
         /// Wait indefinitely by default.
         /// </param>
-        /// <param name="callUpdateTimers">
-        /// By default, =<see cref="TimeManager"/> is sollicitated to apply timers and reminders due times, potentially calling <see cref="SafeModifyAsync(IActivityMonitor, Action, int)"/>
-        /// if needed.
+        /// <param name="updateAutoTimer">
+        /// By default, <see cref="TimeManager"/> is sollicitated to update the internal timer delay based
+        /// on the loaded timers and reminders configurations.
         /// </param>
         /// <returns>True on success, false if timeout occurred.</returns>
-        public bool Load( IActivityMonitor monitor, Stream stream, bool leaveOpen = false, Encoding encoding = null, int millisecondsTimeout = -1, bool callUpdateTimers = true )
+        public bool Load( IActivityMonitor monitor, Stream stream, bool leaveOpen = false, Encoding encoding = null, int millisecondsTimeout = -1, bool updateAutoTimer = true )
         {
-            return Load( monitor, stream, DomainName, leaveOpen, encoding, millisecondsTimeout, callUpdateTimers );
+            return Load( monitor, stream, DomainName, leaveOpen, encoding, millisecondsTimeout, updateAutoTimer );
         }
 
         /// <summary>
@@ -1452,6 +1478,12 @@ namespace CK.Observable
             return _domainMonitor;
         }
 
+
+        void CheckDisposed()
+        {
+            if( _disposed ) throw new ObjectDisposedException( ToString() );
+        }
+
         /// <summary>
         /// 
         /// </summary>
@@ -1471,9 +1503,47 @@ namespace CK.Observable
                             Monitor.Exit( _domainMonitorLock );
                         }
                     }
-                    _timeManager.CurrentTimer?.Dispose();
+                    _timeManager.CurrentTimer.Dispose();
                     _lock.ExitWriteLock();
-                    _lock.Dispose();
+                    // There is a race condition here. AcquireReadLock, BeginTransaction (and others)
+                    // may have also seen a false _disposed and then try to acquire the lock.
+                    // If the race is won by this Dispose() thread, then the write lock is taken, released and
+                    // the lock itself is disposed...
+                    //
+                    // There is 2 possibilities:
+                    // 1 - If the other thread acquire the lock between the previous _lock.ExitWriteLock and
+                    //     the following _lock.Dispose(), the other threads may work on a disposed domain even
+                    //     if they had perfectly acquired the lock :(.
+                    // 2 - If the other thread continue their execution after the following _lock.Dispose(), they will
+                    //     try to acquire a disposed lock. An ObjectDisposedException should be thrown (that is somehow fine).
+                    //
+                    // The solution is to accept 2 (the disposed exception of the lock) and detect 1 by
+                    // checking _disposed after each acquire: if _disposed then we must release the lock and
+                    // throw the ObjectDisposedException...
+                    // However, the _lock.Dispose() call below MAY occur while a TryEnter has been succesful and before
+                    // the _disposed check and the release: this would result in an awful "Incorrect Lock Dispose" exception
+                    // since disposing a lock while it is held is an error.
+                    // ==> This solution that seems the cleanest and most reasonable one is not an option... 
+                    //
+                    // Another solution is to defer the actual Disposing. By using the timer for instance: the domain is "logically disposed"
+                    // but technically perfectly valid until a timer event calls a DoRealDispose(). If this call is made after a "long enough"
+                    // time, there is no more active thread in the domain since all the public API throws the ObjectDisposedException.
+                    //
+                    // Is this satisfyning? No. Did I miss something? May be.
+                    //
+                    // A third solution is simply to...
+                    //   - not Dispose the _lock (and rely on the Garbage Collector to clean it)...
+                    //   - ...and to implement the checks of the first solution.
+                    // And we can notice that by doing this:
+                    //  - there is no risk to acquire a disposed lock.
+                    //  - the domain is fully functionnal, except the AutoTimer that has been "disabled" (disposed right above): it may
+                    //    throw an ObjectDisposedException (and that is fine).
+                    //
+                    // And eventually, since the domain is "functionnal", what prevents the "race conditions" discussed here to "finish its job"?
+                    // Nothing...
+                    // So we'll do nothing. Except commenting the folowing line:
+                    //
+                    //_lock.Dispose();
                 }
             }
         }
@@ -1581,7 +1651,7 @@ namespace CK.Observable
                 var originalBytes = s.ToArray();
                 var originalTransactionSerialNumber = domain.TransactionSerialNumber;
                 s.Position = 0;
-                if( !domain.Load( monitor, s, true, millisecondsTimeout: milliSecondsTimeout, callUpdateTimers: false ) ) throw new Exception( "Reload failed: Unable to acquire lock." );
+                if( !domain.Load( monitor, s, true, millisecondsTimeout: milliSecondsTimeout, updateAutoTimer: false ) ) throw new Exception( "Reload failed: Unable to acquire lock." );
                 s.Position = 0;
                 if( !domain.Save( monitor, s, true, millisecondsTimeout: milliSecondsTimeout, debugMode: useDebugMode ) ) throw new Exception( "Second Save failed: Unable to acquire lock." );
                 var rewriteBytes = s.ToArray();

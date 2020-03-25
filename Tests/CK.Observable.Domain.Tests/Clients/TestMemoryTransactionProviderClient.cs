@@ -13,19 +13,19 @@ namespace CK.Observable.Domain.Tests.Clients
             _domainCreatedStream = domainCreatedStream;
         }
 
-        public override void OnDomainCreated( IActivityMonitor monitor, ObservableDomain d, DateTime timeUtc )
+        public override void OnDomainCreated( IActivityMonitor monitor, ObservableDomain d )
         {
             if( _domainCreatedStream != null )
             {
                 d.Load( monitor, _domainCreatedStream );
             }
-            base.OnDomainCreated( monitor, d, timeUtc );
+            base.OnDomainCreated( monitor, d );
         }
 
         public MemoryStream CreateStreamFromSnapshot()
         {
             MemoryStream ms = new MemoryStream();
-            WriteSnapshotTo( ms );
+            WriteSnapshot( ms, skipSnapshotHeader: true );
             ms.Position = 0;
             return ms;
         }

@@ -70,8 +70,7 @@ namespace CK.Observable
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="d">The newly created domain.</param>
-        /// <param name="timeUtc">The date time utc of the creation.</param>
-        public override void OnDomainCreated( IActivityMonitor monitor, ObservableDomain d, DateTime timeUtc )
+        public override void OnDomainCreated( IActivityMonitor monitor, ObservableDomain d )
         {
             lock( _fileLock )
             {
@@ -79,14 +78,14 @@ namespace CK.Observable
                 {
                     using( var f = new FileStream( _filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.SequentialScan ) )
                     {
-                        LoadAndInitializeSnapshot( monitor, d, timeUtc, f );
+                        LoadAndInitializeSnapshot( monitor, d, f );
                         _fileTransactionNumber = CurrentSerialNumber;
                     }
                 }
             }
-            RescheduleDueTime( timeUtc );
+            RescheduleDueTime( DateTime.UtcNow );
 
-            base.OnDomainCreated( monitor, d, timeUtc );
+            base.OnDomainCreated( monitor, d );
         }
 
         /// <inheritdoc />
@@ -105,7 +104,6 @@ namespace CK.Observable
                 RescheduleDueTime( c.CommitTimeUtc );
             }
         }
-
 
         /// <summary>
         /// Writes any pending snapshot to the disk if something changed.
@@ -148,7 +146,7 @@ namespace CK.Observable
                     {
                         using( var f = new FileStream( _tmpFilePath, FileMode.Create, FileAccess.Write, FileShare.Read, 4096, FileOptions.SequentialScan ) )
                         {
-                            WriteSnapshotTo( f );
+                            WriteSnapshot( f );
                         }
 
                         if( File.Exists( _filePath ) )

@@ -8,8 +8,8 @@ namespace CK.Observable
     /// <summary>
     /// Primary interface to implement actual behavior behind an observable domain.
     /// This is is intented to be implemented as a a chain of responsibility: Start,
-    /// Commit and Failure should be propagated through a linked list (or tree structure)
-    /// of such clients.
+    /// Commit and Failure should be synchronously propagated through a linked list
+    /// (or tree structure) of such clients.
     /// See <see cref="TransactionEventCollectorClient"/> or <see cref="MemoryTransactionProviderClient"/>
     /// for concrete implementations of transaction manager.
     /// </summary>
@@ -20,8 +20,7 @@ namespace CK.Observable
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="d">The newly created domain.</param>
-        /// <param name="timeUtc">The date time utc of the creation.</param>
-        void OnDomainCreated( IActivityMonitor monitor, ObservableDomain d, DateTime timeUtc );
+        void OnDomainCreated( IActivityMonitor monitor, ObservableDomain d );
 
         /// <summary>
         /// Called before a transaction starts.
@@ -33,6 +32,7 @@ namespace CK.Observable
 
         /// <summary>
         /// Called when a transaction ends successfully.
+        /// The domain's write lock is held while this is called. 
         /// </summary>
         /// <param name="context">The successful context.</param>
         void OnTransactionCommit( in SuccessfulTransactionContext context );
