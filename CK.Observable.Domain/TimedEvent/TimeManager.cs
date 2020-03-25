@@ -40,6 +40,9 @@ namespace CK.Observable
             // This is the shell for the trampoline state and the object used
             // for the RaiseWait().
             readonly TrampolineWorkItem _fromWorkItem;
+            // int.MinValue when this AutoTimer is disposed,
+            // 0 when no lost tick,
+            // 1 when a reentrant tick has been detected (a trampoline is waiting).
             int _onTimeLostFlag;
 
             /// <summary>
@@ -227,7 +230,6 @@ namespace CK.Observable
                 return true;
             }
 
-
             /// <summary>
             /// Disposed the internal <see cref="Timer"/> object.
             /// This is automatically called by <see cref="ObservableDomain.Dispose()"/> on the <see cref="TimeManager.CurrentTimer"/>:
@@ -238,7 +240,7 @@ namespace CK.Observable
                 if( _onTimeLostFlag >= 0 )
                 {
                     _onTimeLostFlag = int.MinValue;
-                    using( var waiter = new AutoResetEvent(false) )
+                    using( var waiter = new AutoResetEvent( false ) )
                     {
                         _timer.Dispose( waiter );
                         waiter.WaitOne();
@@ -336,7 +338,7 @@ namespace CK.Observable
             _firstFreeReminder = r;
         }
 
-        internal void Remind( DateTime dueTimeUtc, SafeEventHandler<ObservableReminderEventArgs> callback, object tag )
+        internal void Remind( DateTime dueTimeUtc, SafeEventHandler<ObservableReminderEventArgs> callback, object? tag )
         {
             // Utc is checked by the DueTimeUtc setter below.
             if( dueTimeUtc == Util.UtcMinValue || dueTimeUtc == Util.UtcMaxValue ) throw new ArgumentException( nameof( dueTimeUtc ), $"Must be a Utc DateTime, not UtcMinValue nor UtcMaxValue: {dueTimeUtc.ToString("o")}." );

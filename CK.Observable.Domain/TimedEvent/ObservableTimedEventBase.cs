@@ -15,7 +15,7 @@ namespace CK.Observable
     [SerializationVersion( 0 )]
     public abstract class ObservableTimedEventBase : IDisposableObject
     {
-        internal TimeManager TimeManager;
+        internal TimeManager? TimeManager;
         internal int ActiveIndex;
 
         /// <summary>
@@ -79,7 +79,7 @@ namespace CK.Observable
         /// must be associated to the event source without polluting the object model itself.
         /// This object must be serializable. This property is set to null after <see cref="Dispose"/> has been called.
         /// </summary>
-        public object Tag { get; set; }
+        public object? Tag { get; set; }
 
         internal abstract void DoRaise( IActivityMonitor monitor, DateTime current, bool throwException );
 

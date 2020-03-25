@@ -308,7 +308,7 @@ namespace CK.Observable
         /// </summary>
         /// <param name="t">Type to serialize. Can be null.</param>
         /// <returns>True if the type has been written, false if it was already serialized.</returns>
-        internal bool DoWriteSimpleType( Type t )
+        internal bool DoWriteSimpleType( Type? t )
         {
             if( t == null ) Write( (byte)0 );
             else if( t == typeof( object ) )

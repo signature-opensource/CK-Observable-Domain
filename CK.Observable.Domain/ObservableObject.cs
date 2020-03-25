@@ -177,19 +177,23 @@ namespace CK.Observable
         /// <param name="dueTimeUtc">The due time. Must be in Utc and not <see cref="Util.UtcMinValue"/> or <see cref="Util.UtcMaxValue"/>.</param>
         /// <param name="callback">The callback method. Must not be null.</param>
         /// <param name="tag">Optional tag that will be available on event argument's: <see cref="ObservableTimedEventBase.Tag"/>.</param>
-        protected void Remind( DateTime dueTimeUtc, SafeEventHandler<ObservableReminderEventArgs> callback, object tag = null )
+        protected void Remind( DateTime dueTimeUtc, SafeEventHandler<ObservableReminderEventArgs> callback, object? tag = null )
         {
             Domain.TimeManager.Remind( dueTimeUtc, callback, tag );
         }
 
         /// <summary>
         /// Called before this object is disposed.
-        /// Override to dispose other objects managed by this <see cref="ObservableObject"/>, making sure to call base.
-        /// Implementation at this level raises the <see cref="Disposed"/> event:
-        /// it must be called by overrides.
+        /// Override it to dispose other objects managed by this <see cref="ObservableObject"/> or to remove this object from any
+        /// knwon containers for instance.
         /// <para>
-        /// Note that the Disposed event is raised only for explicit object disposing:
-        /// a <see cref="ObservableDomain.Load(IActivityMonitor, System.IO.Stream, bool, System.Text.Encoding, int, bool)"/> doesn't trigger the event.
+        /// Please make sure to call base implementation since, at this level, it raises
+        /// the <see cref="Disposed"/> event.
+        /// </para>
+        /// <para>
+        /// Note that the Disposed event is raised only for explicit object disposing, ie. when <paramref name="shouldCleanup"/> is true:
+        /// a <see cref="ObservableDomain.Load(IActivityMonitor, System.IO.Stream, bool, System.Text.Encoding, int, bool)"/> doesn't trigger
+        /// the event (shouldCleanup is false).
         /// </para>
         /// </summary>
         /// <param name="shouldCleanup">

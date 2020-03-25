@@ -133,7 +133,7 @@ namespace CK.Observable
             return o;
         }
 
-        IBinaryDeserializerContext IBinaryDeserializerImpl.PushConstructorContext( TypeReadInfo info )
+        IBinaryDeserializerContext IBinaryDeserializerImpl.PushConstructorContext( TypeReadInfo? info )
         {
             _ctorContextStack.Push( info != null ? new ConstructorContext( info ) : null );
             return this;
