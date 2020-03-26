@@ -1,9 +1,13 @@
+using CK.Core;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace CK.Observable.League
 {
+    /// <summary>
+    /// Internal interface: this is what a <see cref="Domain"/> sees.
+    /// </summary>
     interface IManagedDomain
     {
         /// <summary>

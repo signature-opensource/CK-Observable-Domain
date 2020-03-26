@@ -1,3 +1,4 @@
+using CK.Core;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -10,6 +11,7 @@ namespace CK.Observable.League
     public class Coordinator : ObservableRootObject
     {
         readonly ObservableDictionary<string, Domain> _domains;
+        IManagedLeague? _league;
 
         internal Coordinator( ObservableDomain domain )
             : base( domain )
@@ -29,7 +31,21 @@ namespace CK.Observable.League
             w.WriteObject( _domains );
         }
 
-        internal ObservableLeague? ObservableLeague { get; set; }
+        /// <summary>
+        /// Gets the league. See <see cref="CoordinatorClient.League"/>.
+        /// </summary>
+        internal IManagedLeague League => _league!;
+
+        internal void FinalizeConstruct( IManagedLeague league ) => _league = league;
+
+        internal void Initialize( IActivityMonitor monitor, IManagedLeague league )
+        {
+            _league = league;
+            foreach( var d in _domains.Values )
+            {
+                d.Shell = league.RebindDomain( monitor, d.DomainName, d.RootTypes );
+            }
+        }
 
         /// <summary>
         /// Attemps to create a new domain.
@@ -42,15 +58,18 @@ namespace CK.Observable.League
         public Domain CreateDomain( string domainName, IEnumerable<string>? rootTypes )
         {
             if( String.IsNullOrWhiteSpace( domainName ) ) throw new ArgumentOutOfRangeException( nameof( domainName ) );
-            Debug.Assert( ObservableLeague != null );
+            Debug.Assert( _league != null );
             var roots = rootTypes?.ToArray() ?? Array.Empty<string>();
-            IManagedDomain shell = ObservableLeague!.CreateDomain( Monitor, domainName, roots );
+            IManagedDomain shell = _league!.CreateDomain( Monitor, domainName, roots );
             var d = new Domain( this, shell, roots );
             _domains.Add( domainName, d );
             return d;
         }
 
-        internal void RemoveDomain( Domain domain ) => _domains.Remove( domain.DomainName );
+        internal void OnDisposeDomain( Domain domain )
+        {
+            _domains.Remove( domain.DomainName );
+        }
 
         /// <summary>
         /// Gets the map of the <see cref="Domain"/>.

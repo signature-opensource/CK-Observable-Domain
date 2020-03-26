@@ -17,6 +17,7 @@ namespace CK.Observable.League
             Coordinator = coordinator;
             DomainName = shell.DomainName;
             RootTypes = rootTypes;
+            Options = shell.Options;
             Shell = shell;
         }
 
@@ -26,6 +27,7 @@ namespace CK.Observable.League
             Coordinator = (Coordinator)r.ReadObject();
             DomainName = r.ReadString();
             RootTypes = (string[])r.ReadObject();
+            Options = (ManagedDomainOptions)r.ReadObject();
         }
 
         void Write( BinarySerializer w )
@@ -33,6 +35,7 @@ namespace CK.Observable.League
             w.WriteObject( Coordinator );
             w.Write( DomainName );
             w.WriteObject( (string[])RootTypes );
+            w.WriteObject( Options );
         }
 
         internal IManagedDomain? Shell { get; set; }
@@ -72,7 +75,7 @@ namespace CK.Observable.League
         protected override void Dispose( bool shouldCleanup )
         {
             base.Dispose( shouldCleanup );
-            if( shouldCleanup ) Coordinator.RemoveDomain( this );
+            if( shouldCleanup ) Coordinator.OnDisposeDomain( this );
         }
 
     }

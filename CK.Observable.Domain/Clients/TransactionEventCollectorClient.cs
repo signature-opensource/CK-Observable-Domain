@@ -14,7 +14,7 @@ namespace CK.Observable
     /// </summary>
     public class TransactionEventCollectorClient : IObservableDomainClient
     {
-        readonly IObservableDomainClient _next;
+        readonly IObservableDomainClient? _next;
         readonly List<TransactionEvent> _events;
         readonly StringWriter _buffer;
         readonly ObjectExporter _exporter;
@@ -58,7 +58,7 @@ namespace CK.Observable
         /// Initializes a new <see cref="TransactionEventCollectorClient"/>.
         /// </summary>
         /// <param name="next">The next manager (can be null).</param>
-        public TransactionEventCollectorClient( IObservableDomainClient next = null )
+        public TransactionEventCollectorClient( IObservableDomainClient? next = null )
         {
             _next = next;
             _events = new List<TransactionEvent>();

@@ -124,7 +124,8 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Loads the domain and initializes the current snapshot.
+        /// Initializes the current snapshot withe the provided stream content and calls <see cref="DoLoadFromSnapshot(IActivityMonitor, ObservableDomain)"/>
+        /// to load the domain.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="d">The domain.</param>
@@ -138,7 +139,7 @@ namespace CK.Observable
             if( rawBytes[0] != 0 ) throw new InvalidDataException( "Invalid Snapshot version. Only 0 is currently supported." );
             _currentSnapshotKind = (CompressionKind)rawBytes[1];
             if( _currentSnapshotKind != CompressionKind.None && _currentSnapshotKind != CompressionKind.GZiped ) throw new InvalidDataException( "Invalid CompressionKind marker." );
-            DoLoadMemory( monitor, d );
+            DoLoadFromSnapshot( monitor, d );
             _snapshotSerialNumber = d.TransactionSerialNumber;
             _snapshotTimeUtc = d.TransactionCommitTimeUtc;
         }
@@ -192,7 +193,7 @@ namespace CK.Observable
             {
                 try
                 {
-                    DoLoadMemory( monitor, d );
+                    DoLoadFromSnapshot( monitor, d );
                     monitor.CloseGroup( "Success." );
                     return true;
                 }
@@ -204,7 +205,12 @@ namespace CK.Observable
             }
         }
 
-        void DoLoadMemory( IActivityMonitor monitor, ObservableDomain d )
+        /// <summary>
+        /// Loads the domain from the current snapshot memory.
+        /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
+        /// <param name="d">The domain to load.</param>
+        protected virtual void DoLoadFromSnapshot( IActivityMonitor monitor, ObservableDomain d )
         {
             long p = _memory.Position;
             _memory.Position = SnapshotHeaderLength;

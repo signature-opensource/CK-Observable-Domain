@@ -1,30 +1,47 @@
 using CK.Core;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
 namespace CK.Observable.League
 {
-    class CoordinatorClient : IObservableDomainClient
+    /// <summary>
+    /// The coordinator client is nearly the same as the other <see cref="StreamStoreClient"/> except
+    /// that it is definitely bound to the always loaded Coordinator domain, that it must rebind the <see cref="Domain.Shell"/>
+    /// to the managed domains on reload and that it handles some changes like the disposal of a Domain.
+    /// </summary>
+    internal class CoordinatorClient : StreamStoreClient
     {
-        public void OnDomainCreated( IActivityMonitor monitor, ObservableDomain d )
+        IManagedLeague? _league;
+
+        public CoordinatorClient( IActivityMonitor monitor, IStreamStore store )
+            : base( String.Empty, store, null )
         {
+            Domain = new ObservableDomain<Coordinator>( monitor, String.Empty, this );
         }
 
-        public void OnTransactionCommit( in SuccessfulTransactionContext context )
+        public ObservableDomain<Coordinator> Domain { get; }
+
+        /// <summary>
+        /// Gets the league. This is available (not null) once the initialization step
+        /// is done: a first (async) load from the store has been done, the <see cref="Coordinator.Domains"/>
+        /// have been associated to their shells and, eventually, the ObservableLeague itself is created.
+        /// </summary>
+        internal IManagedLeague League => _league!;
+
+        internal void FinalizeConstruct( IManagedLeague league )
         {
+            _league = league;
+            Domain.Root.FinalizeConstruct( league );
         }
 
-        public void OnTransactionFailure( IActivityMonitor monitor, ObservableDomain d, IReadOnlyList<CKExceptionData> errors )
+        protected override void DoLoadFromSnapshot( IActivityMonitor monitor, ObservableDomain d )
         {
-        }
-
-        public void OnTransactionStart( IActivityMonitor monitor, ObservableDomain d, DateTime timeUtc )
-        {
-        }
-        public void OnDomainDisposed( IActivityMonitor monitor, ObservableDomain d )
-        {
+            Debug.Assert( Domain == d );
+            base.DoLoadFromSnapshot( monitor, d );
+            if( _league != null ) Domain.Root.Initialize( monitor, _league );
         }
 
     }

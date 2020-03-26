@@ -13,7 +13,6 @@ namespace CK.Observable.League
         partial class Shell : IObservableDomainLoader, IObservableDomainShell, IManagedDomain
         {
             readonly StreamStoreClient _client;
-            readonly IReadOnlyList<string> _rootTypes;
             readonly SemaphoreSlim? _loadLock;
             Type? _domainType;
             int _refCount;
@@ -29,17 +28,17 @@ namespace CK.Observable.League
             internal Shell( IActivityMonitor monitor, string domainName, IStreamStore store, IReadOnlyList<string> rootTypes )
             {
                 _client = new StreamStoreClient( domainName, store );
-                _rootTypes = rootTypes;
-                if( _rootTypes.Count == 0 ) _domainType = typeof( ObservableDomain );
+                RootTypes = rootTypes;
+                if( RootTypes.Count == 0 ) _domainType = typeof( ObservableDomain );
                 else
                 {
                     bool success = true;
-                    Type[] types = new Type[_rootTypes.Count];
-                    for( int i = 0; i < _rootTypes.Count; ++i )
+                    Type[] types = new Type[RootTypes.Count];
+                    for( int i = 0; i < RootTypes.Count; ++i )
                     {
-                        if( (types[i] = SimpleTypeFinder.WeakResolver( _rootTypes[i], false )) == null )
+                        if( (types[i] = SimpleTypeFinder.WeakResolver( RootTypes[i], false )) == null )
                         {
-                            monitor.Error( $"Unable to resolve root type '{_rootTypes[i]}' for domain '{DomainName}'." );
+                            monitor.Error( $"Unable to resolve root type '{RootTypes[i]}' for domain '{DomainName}'." );
                             success = false;
                         }
                     }
@@ -58,6 +57,8 @@ namespace CK.Observable.League
             }
 
             public string DomainName => _client.DomainName;
+
+            public IReadOnlyList<string> RootTypes { get; }
 
             public bool IsLoadable => _domainType != null;
 
