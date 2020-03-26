@@ -12,8 +12,6 @@ namespace CK.Observable.League
     [SerializationVersion(0)]
     public sealed class Domain : ObservableObject
     {
-        ManagedDomainOptions _options;
-
         internal Domain( Coordinator coordinator, IManagedDomain shell, string[] rootTypes )
         {
             Coordinator = coordinator;
@@ -68,7 +66,7 @@ namespace CK.Observable.League
         void OnOptionsChanged( object before, object after )
         {
             if( IsDeserializing ) return;
-            Shell!.SetDomainOptions( Options );
+            Shell!.Options = Options;
         }
 
         protected override void Dispose( bool shouldCleanup )

@@ -22,10 +22,9 @@ namespace CK.Observable.League
         string DomainName { get; }
 
         /// <summary>
-        /// Sets the domain options.
+        /// Gets or sets the domain options.
         /// </summary>
-        /// <param name="o">Options.</param>
-        void SetDomainOptions( ManagedDomainOptions o );
+        ManagedDomainOptions Options { get; set; }
 
     }
 }

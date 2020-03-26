@@ -63,12 +63,16 @@ namespace CK.Observable.League
 
             public bool IsLoaded => _refCount != 0;
 
-            public void SetDomainOptions( ManagedDomainOptions o )
+            public ManagedDomainOptions Options
             {
-                _client.CompressionKind = o.CompressionKind;
-                _client.AutoSaveTime = o.AutoSaveTime;
-                _client.TransactClient.KeepDuration = o.ExportedEventKeepDuration;
-                _client.TransactClient.KeepLimit = o.ExportedEventKeepLimit;
+                get => new ManagedDomainOptions( _client.CompressionKind, _client.AutoSaveTime, _client.TransactClient.KeepDuration, _client.TransactClient.KeepLimit );
+                set 
+                {
+                    _client.CompressionKind = value.CompressionKind;
+                    _client.AutoSaveTime = value.AutoSaveTime;
+                    _client.TransactClient.KeepDuration = value.ExportedEventKeepDuration;
+                    _client.TransactClient.KeepLimit = value.ExportedEventKeepLimit;
+                }
             }
 
             async Task<(TransactionResult, Exception)> IObservableDomainShell.SafeModifyAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain>? actions, int millisecondsTimeout )

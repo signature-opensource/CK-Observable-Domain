@@ -16,10 +16,11 @@ namespace CK.Observable
     public interface IObservableDomainClient
     {
         /// <summary>
-        /// Called when the domain instance is created.
+        /// Called when the domain instance is created. It may be brand new (<see cref="IObservableDomain.TransactionSerialNumber"/> is 0)
+        /// or has been loaded from a stream (<see cref="IObservableDomain.TransactionSerialNumber"/> is greater than 0).
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
-        /// <param name="d">The newly created domain.</param>
+        /// <param name="d">The newly created or loaded domain.</param>
         void OnDomainCreated( IActivityMonitor monitor, ObservableDomain d );
 
         /// <summary>
@@ -46,5 +47,12 @@ namespace CK.Observable
         /// A necessarily non null list of errors with at least one error.
         /// </param>
         void OnTransactionFailure( IActivityMonitor monitor, ObservableDomain d, IReadOnlyList<CKExceptionData> errors );
+
+        /// <summary>
+        /// Called at the start of the <see cref="ObservableDomain.Dispose(IActivityMonitor)"/> while the write lock is held.
+        /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
+        /// <param name="d">The domain being disposed.</param>
+        void OnDomainDisposed( IActivityMonitor monitor, ObservableDomain d );
     }
 }

@@ -65,26 +65,29 @@ namespace CK.Observable
         public NormalizedPath FilePath => _filePath;
 
         /// <summary>
-        /// Loads the file if it exists, calling base method
-        /// <see cref="MemoryTransactionProviderClient.LoadAndInitializeSnapshot(IActivityMonitor, ObservableDomain, DateTime, Stream)"/>)).
+        /// If the <see cref="ObservableDomain.TransactionSerialNumber"/> is 0 and the file exists, the base method
+        /// <see cref="MemoryTransactionProviderClient.LoadAndInitializeSnapshot(IActivityMonitor, ObservableDomain, DateTime, Stream)"/>
+        /// is called: the snapshot is created from the file content and the domain is restored.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="d">The newly created domain.</param>
         public override void OnDomainCreated( IActivityMonitor monitor, ObservableDomain d )
         {
-            lock( _fileLock )
+            if( d.TransactionSerialNumber == 0 )
             {
-                if( File.Exists( _filePath ) )
+                lock( _fileLock )
                 {
-                    using( var f = new FileStream( _filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.SequentialScan ) )
+                    if( File.Exists( _filePath ) )
                     {
-                        LoadAndInitializeSnapshot( monitor, d, f );
-                        _fileTransactionNumber = CurrentSerialNumber;
+                        using( var f = new FileStream( _filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.SequentialScan ) )
+                        {
+                            LoadAndInitializeSnapshot( monitor, d, f );
+                            _fileTransactionNumber = CurrentSerialNumber;
+                        }
                     }
                 }
+                RescheduleDueTime( DateTime.UtcNow );
             }
-            RescheduleDueTime( DateTime.UtcNow );
-
             base.OnDomainCreated( monitor, d );
         }
 

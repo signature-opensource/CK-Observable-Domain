@@ -23,5 +23,9 @@ namespace CK.Observable.League
         public void OnTransactionStart( IActivityMonitor monitor, ObservableDomain d, DateTime timeUtc )
         {
         }
+        public void OnDomainDisposed( IActivityMonitor monitor, ObservableDomain d )
+        {
+        }
+
     }
 }

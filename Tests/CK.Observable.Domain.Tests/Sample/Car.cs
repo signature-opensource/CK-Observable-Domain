@@ -53,7 +53,9 @@ namespace CK.Observable.Domain.Tests.Sample
         /// Its type MUST be EventHandler BUT, a SafeEventHandler should be used whenever possible.
         /// This is fired before <see cref="ObservableObject.PropertyChanged"/> event with property's name.
         /// </summary>
+        #pragma warning disable 67 // The event 'PositionChanged' is never used.
         public event EventHandler PositionChanged;
+        #pragma warning restore 67
 
         public Position Position { get; set; }
 

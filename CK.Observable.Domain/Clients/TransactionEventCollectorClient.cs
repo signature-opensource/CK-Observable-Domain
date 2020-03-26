@@ -159,5 +159,9 @@ namespace CK.Observable
         {
             _next?.OnTransactionStart( monitor, d, timeUtc );
         }
+
+        void IObservableDomainClient.OnDomainDisposed( IActivityMonitor monitor, ObservableDomain d )
+        {
+        }
     }
 }

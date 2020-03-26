@@ -152,7 +152,7 @@ namespace CK.Observable
         // Available to objects.
         internal readonly ObservableDomainEventArgs DefaultEventArgs;
 
-        // A reusable domain monitor is created on-demand and is protecte dby an exclusive lock.
+        // A reusable domain monitor is created on-demand and is protected by an exclusive lock.
         DomainActivityMonitor _domainMonitor;
         readonly object _domainMonitorLock;
 
@@ -754,7 +754,7 @@ namespace CK.Observable
         /// <summary>
         /// Gets the associated client (head of the Chain of Responsibility).
         /// </summary>
-        public IObservableDomainClient? DomainClient { get; }
+        public IObservableDomainClient? DomainClient { get; private set; }
 
         /// <summary>
         /// <para>
@@ -842,6 +842,10 @@ namespace CK.Observable
             var group = m.OpenTrace( "Starting transaction." );
             try
             {
+                // This could throw and be handled just like other pre-transaction errors (client OnTransactionStart errors)
+                // meaning that it will be rethrown or captured and returned: SafeMofifiy/Modify work as specified.
+                // See DoDispose method for the discussion about disposal...
+                CheckDisposed();
                 var startTime = DateTime.UtcNow;
                 DomainClient?.OnTransactionStart( m, this, startTime );
                 return (_currentTran = new Transaction( this, m, startTime, group ), null);
@@ -1484,8 +1488,12 @@ namespace CK.Observable
             if( _disposed ) throw new ObjectDisposedException( ToString() );
         }
 
+
         /// <summary>
-        /// 
+        /// Disposes this domain.
+        /// This method calls <see cref="ObtainDomainMonitor(int, bool)"/>. If possible, use <see cref="Dispose(IActivityMonitor)"/> with
+        /// an available monitor.
+        /// As usual with Dispose methods, this can be called mulple times.
         /// </summary>
         public void Dispose()
         {
@@ -1494,57 +1502,92 @@ namespace CK.Observable
                 _lock.EnterWriteLock();
                 if( !_disposed )
                 {
-                    _disposed = true;
-                    if( _domainMonitor != null )
+                    using( var monitor = ObtainDomainMonitor() )
                     {
-                        if( Monitor.TryEnter( _domainMonitorLock, 0 ) )
-                        {
-                            _domainMonitor.MonitorEnd( "Domain disposed." );
-                            Monitor.Exit( _domainMonitorLock );
-                        }
+                        DoDispose( monitor );
                     }
-                    _timeManager.CurrentTimer.Dispose();
-                    _lock.ExitWriteLock();
-                    // There is a race condition here. AcquireReadLock, BeginTransaction (and others)
-                    // may have also seen a false _disposed and then try to acquire the lock.
-                    // If the race is won by this Dispose() thread, then the write lock is taken, released and
-                    // the lock itself is disposed...
-                    //
-                    // There is 2 possibilities:
-                    // 1 - If the other thread acquire the lock between the previous _lock.ExitWriteLock and
-                    //     the following _lock.Dispose(), the other threads may work on a disposed domain even
-                    //     if they had perfectly acquired the lock :(.
-                    // 2 - If the other thread continue their execution after the following _lock.Dispose(), they will
-                    //     try to acquire a disposed lock. An ObjectDisposedException should be thrown (that is somehow fine).
-                    //
-                    // The solution is to accept 2 (the disposed exception of the lock) and detect 1 by
-                    // checking _disposed after each acquire: if _disposed then we must release the lock and
-                    // throw the ObjectDisposedException...
-                    // However, the _lock.Dispose() call below MAY occur while a TryEnter has been succesful and before
-                    // the _disposed check and the release: this would result in an awful "Incorrect Lock Dispose" exception
-                    // since disposing a lock while it is held is an error.
-                    // ==> This solution that seems the cleanest and most reasonable one is not an option... 
-                    //
-                    // Another solution is to defer the actual Disposing. By using the timer for instance: the domain is "logically disposed"
-                    // but technically perfectly valid until a timer event calls a DoRealDispose(). If this call is made after a "long enough"
-                    // time, there is no more active thread in the domain since all the public API throws the ObjectDisposedException.
-                    //
-                    // Is this satisfyning? No. Did I miss something? May be.
-                    //
-                    // A third solution is simply to...
-                    //   - not Dispose the _lock (and rely on the Garbage Collector to clean it)...
-                    //   - ...and to implement the checks of the first solution.
-                    // And we can notice that by doing this:
-                    //  - there is no risk to acquire a disposed lock.
-                    //  - the domain is fully functionnal, except the AutoTimer that has been "disabled" (disposed right above): it may
-                    //    throw an ObjectDisposedException (and that is fine).
-                    //
-                    // And eventually, since the domain is "functionnal", what prevents the "race conditions" discussed here to "finish its job"?
-                    // Nothing...
-                    // So we'll do nothing. Except commenting the folowing line:
-                    //
-                    //_lock.Dispose();
                 }
+            }
+        }
+
+        /// <summary>
+        /// Disposes this domain.
+        /// If the <see cref="Dispose()"/> without parameters is called, the <see cref="ObtainDomainMonitor(int, bool)"/> is used:
+        /// if a monitor is available, it is better to use this overload.
+        /// As usual with Dispose methods, this can be called mulple times.
+        /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
+        public void Dispose( IActivityMonitor monitor )
+        {
+            if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
+            if( !_disposed )
+            {
+                _lock.EnterWriteLock();
+                if( !_disposed )
+                {
+                    DoDispose( monitor );
+                }
+            }
+        }
+
+        void DoDispose(IActivityMonitor monitor)
+        {
+            Debug.Assert( !_disposed );
+            Debug.Assert( _lock.IsWriteLockHeld );
+            using( monitor.OpenInfo( $"Disposing domain '{DomainName}'." ) )
+            {
+                DomainClient?.OnDomainDisposed( monitor, this );
+                DomainClient = null;
+                _disposed = true;
+                _timeManager.CurrentTimer.Dispose();
+                if( monitor != _domainMonitor && Monitor.TryEnter( _domainMonitorLock, 0 ) )
+                {
+                    if( _domainMonitor != null ) _domainMonitor.MonitorEnd( "Domain disposed." );
+                    Monitor.Exit( _domainMonitorLock );
+                }
+                _lock.ExitWriteLock();
+                // There is a race condition here. AcquireReadLock, BeginTransaction (and others)
+                // may have also seen a false _disposed and then try to acquire the lock.
+                // If the race is won by this Dispose() thread, then the write lock is taken, released and
+                // the lock itself should be disposed...
+                //
+                // There is 2 possibilities:
+                // 1 - If the other thread acquire the lock between the previous _lock.ExitWriteLock and
+                //     the following _lock.Dispose(), the other threads may work on a disposed domain even
+                //     if they had perfectly acquired the lock :(.
+                // 2 - If the other thread continue their execution after the following _lock.Dispose(), they will
+                //     try to acquire a disposed lock. An ObjectDisposedException should be thrown (that is somehow fine).
+                //
+                // The first solution seems be to accept 2 (the disposed exception of the lock) and to detect 1 by
+                // checking _disposed after each acquire: if _disposed then we must release the lock and
+                // throw the ObjectDisposedException...
+                // However, the _lock.Dispose() call below MAY occur while a TryEnter has been succesful and before
+                // the _disposed check and the release: this would result in an awful "Incorrect Lock Dispose" exception
+                // since disposing a lock while it is held is an error.
+                // ==> This solution that seems the cleanest and most reasonable one is NOT an option... 
+                //
+                // Another solution is to defer the actual Disposing. By using the timer for instance: the domain is "logically disposed"
+                // but technically perfectly valid until a timer event calls a DoRealDispose(). If this call is made after a "long enough"
+                // time, there is no more active thread in the domain since all the public API throws the ObjectDisposedException.
+                //
+                // Is this satisfyning? No. Did I miss something? May be.
+                //
+                // A third solution is simply to...
+                //   - not Dispose the _lock (and rely on the Garbage Collector to clean it)...
+                //   - ...and to implement the checks of the first solution.
+                // And we can notice that by doing this:
+                //  - there is no risk to acquire a disposed lock.
+                //  - the domain is 'technically' functionnal, except that:
+                //       - The AutoTimer has been disposed right above, it may throw an ObjectDisposedException and that is fine.
+                //       - The DomainClient has been set to null: no more side effect (like transaction rollback) can occur.
+                // ==> The domain doesn't act as expected anymore. We must throw an ObjectDisposedException to prevent such ambiguity.
+                //
+                // Conclusion:
+                //   - We only protect, inside the lock, the Modify action: readonly operations are free to run and end in this "in between".
+                //     The good place to call CheckDisposed() is in DoBeginTransaction().
+                //   - We comment the folowing line.
+                //
+                //_lock.Dispose();
             }
         }
 

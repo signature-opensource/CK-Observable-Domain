@@ -254,6 +254,10 @@ namespace CK.Observable
             }
         }
 
+        void IObservableDomainClient.OnDomainDisposed( IActivityMonitor monitor, ObservableDomain d )
+        {
+        }
+
         /// <summary>
         /// Returns the number of bytes, the transaction number and the time or "No snapshot.".
         /// </summary>
