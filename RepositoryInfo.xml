@@ -5,12 +5,6 @@
 
   <Branches>
     <Branch Name="develop" VersionName="develop" CIVersionMode="LastReleaseBased" />
-    <Branch Name="build" VersionName="build" CIVersionMode="LastReleaseBased" />
+    <Branch Name="fx/League" VersionName="league" CIVersionMode="ZeroTimed" />
   </Branches>
-  <IgnoreModifiedFiles>
-    <!-- These are modified by VSTS itself as part of NPM authentication -->
-    <Add>js/.npmrc</Add>
-    <Add>js/package.json</Add>
-    <Add>js/package-lock.json</Add>
-  </IgnoreModifiedFiles>
 </RepositoryInfo>
