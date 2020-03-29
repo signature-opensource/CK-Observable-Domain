@@ -14,9 +14,55 @@ namespace CK.Observable.League
         {
             readonly StreamStoreClient _client;
             readonly SemaphoreSlim? _loadLock;
+            readonly IActivityMonitor _initialMonitor;
             Type? _domainType;
             int _refCount;
             ObservableDomain? _domain;
+
+            class IndependentShell : IObservableDomainShell
+            {
+                readonly IObservableDomainShell _shell;
+                readonly IActivityMonitor _monitor;
+
+                public IndependentShell( Shell s, IActivityMonitor m )
+                {
+                    _shell = s;
+                    _monitor = m;
+                }
+
+                string IObservableDomainShell.DomainName => _shell.DomainName;
+
+                bool IObservableDomainShell.IsDestroyed => _shell.IsDestroyed;
+
+                ValueTask IObservableDomainShell.DisposeAsync( IActivityMonitor monitor ) => _shell.DisposeAsync( monitor );
+                
+                Task<TransactionResult> IObservableDomainShell.ModifyAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain>? actions, int millisecondsTimeout )
+                {
+                    return _shell.ModifyAsync( monitor, actions, millisecondsTimeout );
+                }
+
+                void IObservableDomainShell.Read( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> reader, int millisecondsTimeout )
+                {
+                    _shell.Read( monitor, reader, millisecondsTimeout );
+                }
+
+                T IObservableDomainShell.Read<T>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain, T> reader, int millisecondsTimeout )
+                {
+                    return _shell.Read( monitor, reader, millisecondsTimeout );
+                }
+
+                Task<(TransactionResult, Exception)> IObservableDomainShell.SafeModifyAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain>? actions, int millisecondsTimeout )
+                {
+                    return _shell.SafeModifyAsync( monitor, actions, millisecondsTimeout );
+                }
+
+                Task<bool> IObservableDomainShell.SaveAsync( IActivityMonitor monitor )
+                {
+                    return _shell.SaveAsync( monitor );
+                }
+
+                ValueTask IAsyncDisposable.DisposeAsync() => _shell.DisposeAsync( _monitor );
+            }
 
             /// <summary>
             /// Attempts to synthesize the domain type (from the root types).
@@ -27,9 +73,14 @@ namespace CK.Observable.League
             /// <param name="rootTypes">The root types.</param>
             internal Shell( IActivityMonitor monitor, string domainName, IStreamStore store, IReadOnlyList<string> rootTypes )
             {
+                _initialMonitor = monitor;
                 _client = new StreamStoreClient( domainName, store );
                 RootTypes = rootTypes;
-                if( RootTypes.Count == 0 ) _domainType = typeof( ObservableDomain );
+                if( RootTypes.Count == 0 )
+                {
+                    _domainType = typeof( ObservableDomain );
+                    _loadLock = new SemaphoreSlim( 1 );
+                }
                 else
                 {
                     bool success = true;
@@ -58,22 +109,40 @@ namespace CK.Observable.League
 
             public string DomainName => _client.DomainName;
 
+            public bool IsDestroyed { get; private set; }
+
             public IReadOnlyList<string> RootTypes { get; }
 
             public bool IsLoadable => _domainType != null;
 
             public bool IsLoaded => _refCount != 0;
 
+            internal bool ClosingLeague { get; set; }
+
             public ManagedDomainOptions Options
             {
-                get => new ManagedDomainOptions( _client.CompressionKind, _client.AutoSaveTime, _client.TransactClient.KeepDuration, _client.TransactClient.KeepLimit );
-                set 
+                get => new ManagedDomainOptions(
+                            c: _client.CompressionKind,
+                            snapshotSaveDelay: TimeSpan.FromMilliseconds( _client.SnapshotSaveDelay ),
+                            snapshotKeepDuration: _client.SnapshotKeepDuration,
+                            snapshotMaximalTotalKiB: _client.SnapshotMaximalTotalKiB,
+                            eventKeepDuration: _client.TransactClient.KeepDuration,
+                            eventKeepLimit: _client.TransactClient.KeepLimit );
+                set
                 {
                     _client.CompressionKind = value.CompressionKind;
-                    _client.AutoSaveTime = value.AutoSaveTime;
+                    _client.SnapshotSaveDelay = (int)value.SnapshotSaveDelay.TotalMilliseconds;
+                    _client.SnapshotKeepDuration = value.SnapshotKeepDuration;
+                    _client.SnapshotMaximalTotalKiB = value.SnapshotMaximalTotalKiB;
                     _client.TransactClient.KeepDuration = value.ExportedEventKeepDuration;
                     _client.TransactClient.KeepLimit = value.ExportedEventKeepLimit;
                 }
+            }
+
+            void IManagedDomain.Destroy( IActivityMonitor monitor, IManagedLeague league )
+            {
+                IsDestroyed = true;
+                league.OnDestroy( monitor, this );
             }
 
             async Task<(TransactionResult, Exception)> IObservableDomainShell.SafeModifyAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain>? actions, int millisecondsTimeout )
@@ -113,7 +182,7 @@ namespace CK.Observable.League
 
             public async Task<IObservableDomainShell?> LoadAsync( IActivityMonitor monitor )
             {
-                if( !IsLoadable ) return null;
+                if( !IsLoadable || IsDestroyed || ClosingLeague ) return null;
                 await _loadLock!.WaitAsync();
                 if( ++_refCount == 1 )
                 {
@@ -132,10 +201,16 @@ namespace CK.Observable.League
                     }
                 }
                 _loadLock.Release();
-                return _domain != null ? this : null;
+                if( _domain == null ) return null;
+                if( _initialMonitor == monitor ) return this;
+                return new IndependentShell( this, monitor );
             }
 
-            async Task IObservableDomainShell.DisposeAsync( IActivityMonitor monitor )
+            ValueTask IObservableDomainShell.DisposeAsync( IActivityMonitor monitor ) => DoShellDisposeAsync( monitor );
+
+            ValueTask IAsyncDisposable.DisposeAsync() => DoShellDisposeAsync( _initialMonitor );
+
+            async ValueTask DoShellDisposeAsync( IActivityMonitor monitor )
             {
                 if( !IsLoadable ) throw new ObjectDisposedException( nameof( IObservableDomainShell ) );
                 await _loadLock!.WaitAsync();
@@ -146,8 +221,8 @@ namespace CK.Observable.League
                     {
                         if( _domain != null )
                         {
-                            await _client.SaveAsync( monitor );
-                            _domain.Dispose();
+                            await( IsDestroyed ? _client.ArchiveAsync( monitor ) : _client.SaveAsync( monitor ) );
+                            _domain.Dispose( monitor );
                         }
                     }
                     finally

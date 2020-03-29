@@ -134,6 +134,13 @@ namespace CK.Observable
             }
         }
 
+        /// <summary>
+        /// Overidden to call <see cref="Flush(IActivityMonitor)"/>.
+        /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
+        /// <param name="d">The dispsed domain.</param>
+        public override void OnDomainDisposed( IActivityMonitor monitor, ObservableDomain d ) => Flush( monitor );
+
         private void RescheduleDueTime( DateTime relativeTimeUtc )
         {
             _nextDueTimeUtc = relativeTimeUtc + _minimumDueTimeSpan;

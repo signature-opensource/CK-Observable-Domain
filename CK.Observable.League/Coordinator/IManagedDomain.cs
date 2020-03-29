@@ -30,5 +30,11 @@ namespace CK.Observable.League
         /// </summary>
         ManagedDomainOptions Options { get; set; }
 
+        /// <summary>
+        /// Destroys the managed domain: the <see cref="Domain"/> has been disposed.
+        /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
+        /// <param name="league">The containing league.</param>
+        void Destroy( IActivityMonitor monitor, IManagedLeague league );
     }
 }

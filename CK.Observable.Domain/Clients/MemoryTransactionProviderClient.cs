@@ -124,7 +124,7 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Initializes the current snapshot withe the provided stream content and calls <see cref="DoLoadFromSnapshot(IActivityMonitor, ObservableDomain)"/>
+        /// Initializes the current snapshot with the provided stream content and calls <see cref="DoLoadFromSnapshot(IActivityMonitor, ObservableDomain)"/>
         /// to load the domain.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
@@ -260,7 +260,12 @@ namespace CK.Observable
             }
         }
 
-        void IObservableDomainClient.OnDomainDisposed( IActivityMonitor monitor, ObservableDomain d )
+        /// <summary>
+        /// Does nothing at this level.
+        /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
+        /// <param name="d">The disposed domain.</param>
+        public virtual void OnDomainDisposed( IActivityMonitor monitor, ObservableDomain d )
         {
         }
 

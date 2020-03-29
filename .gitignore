@@ -248,3 +248,4 @@ Tests/**/CKSetup-WorkingDir/
 CodeCakeBuilder/MemoryKey.*.txt
 CodeCakeBuilder/UnitTestsDone.*.txt
 /Tests/CK.Observable.Domain.Tests/TestTemp/
+/Tests/CK.Observable.League.Tests/TestStores/

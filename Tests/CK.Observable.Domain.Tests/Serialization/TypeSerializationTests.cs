@@ -24,7 +24,7 @@ namespace CK.Serialization.Tests
             Type backO = (Type)TestHelper.SaveAndLoad( t );
             backO.Should().BeSameAs( t );
 
-            Type backD = TestHelper.SaveAndLoad( t, ( type, w ) => w.Write( type, BasicTypeDrivers.DType.Default ), r => r.Read( BasicTypeDrivers.DType.Default ) );
+            Type backD = TestHelper.SaveAndLoad( t, ( type, w ) => BasicTypeDrivers.DType.Default.WriteData( w, type ), r => BasicTypeDrivers.DType.Default.ReadInstance( r, null ) );
             backD.Should().BeSameAs( t );
         }
     }

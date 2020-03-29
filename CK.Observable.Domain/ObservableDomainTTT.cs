@@ -37,7 +37,7 @@ namespace CK.Observable
         /// <param name="monitor">The monitor used to log the construction of this domain. Cannot be null.</param>
         /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
         /// <param name="client">The observable client (head of the Chain of Responsibility) to use. Can be null.</param>
-        public ObservableDomain( IActivityMonitor monitor, string domainName, IObservableDomainClient client )
+        public ObservableDomain( IActivityMonitor monitor, string domainName, IObservableDomainClient? client )
             : base( monitor, domainName, client )
         {
             if( AllRoots.Count != 0 ) BindRoots();

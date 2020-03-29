@@ -1,4 +1,5 @@
 using CK.Core;
+using CK.Text;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -23,11 +24,13 @@ namespace CK.Observable.League
             : base( d )
         {
             var r = d.StartReading();
+            r.DebugCheckSentinel();
             _domains = (ObservableDictionary<string, Domain>)r.ReadObject();
         }
 
         void Write( BinarySerializer w )
         {
+            w.DebugWriteSentinel();
             w.WriteObject( _domains );
         }
 
@@ -40,10 +43,26 @@ namespace CK.Observable.League
 
         internal void Initialize( IActivityMonitor monitor, IManagedLeague league )
         {
+            Debug.Assert( _domains.Values.All( d => d.Shell == null ) );
             _league = league;
+            List<Domain> failed = null;
             foreach( var d in _domains.Values )
             {
-                d.Shell = league.RebindDomain( monitor, d.DomainName, d.RootTypes );
+                try
+                {
+                    d.Initialize( league.RebindDomain( monitor, d.DomainName, d.RootTypes, d.Options ) );
+                }
+                catch( Exception ex )
+                {
+                    monitor.Error( $"Unable to bind to domain '{d.DomainName}'.", ex );
+                    if( failed == null ) failed = new List<Domain>();
+                    failed.Add( d );
+                }
+            }
+            if( failed.Count > 0 )
+            {
+                monitor.Warn( $"Domains '{failed.Select( d => d.DomainName ).Concatenate("', '")}' must be removed." );
+                foreach( var d in failed ) d.Dispose();
             }
         }
 
@@ -75,7 +94,6 @@ namespace CK.Observable.League
         /// Gets the map of the <see cref="Domain"/>.
         /// </summary>
         public IObservableReadOnlyDictionary<string, Domain> Domains => _domains;
-
 
     }
 }

@@ -121,8 +121,8 @@ namespace CK.Observable
         InternalObject _lastInternalObject;
 
         ObservableObject[] _objects;
-        // There are few tracker objects and they typically have a long
-        // lifetime (as they're often roots for specific objects like sensors).
+        /// There are few tracker objects and they typically have a long
+        /// lifetime (as they're often roots for specific objects like sensors).
         readonly List<IObservableDomainActionTracker> _trackers;
 
         /// <summary>
@@ -520,16 +520,8 @@ namespace CK.Observable
         /// <param name="monitor">The monitor used to log the construction of this domain. Cannot be null.</param>
         /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
         /// <param name="client">The observable client (head of the Chain of Responsibility) to use. Can be null.</param>
-        /// <param name="exporters">Optional exporters handler.</param>
-        /// <param name="serializers">Optional serializers handler.</param>
-        /// <param name="deserializers">Optional deserializers handler.</param>
-        public ObservableDomain( IActivityMonitor monitor,
-                                 string domainName,
-                                 IObservableDomainClient? client,
-                                 IExporterResolver exporters = null,
-                                 ISerializerResolver serializers = null,
-                                 IDeserializerResolver deserializers = null )
-            : this( monitor, domainName, client, true, exporters, serializers, deserializers )
+        public ObservableDomain( IActivityMonitor monitor, string domainName, IObservableDomainClient? client )
+            : this( monitor, domainName, client, true, exporters: null, serializers: null, deserializers: null )
         {
         }
 
@@ -591,9 +583,12 @@ namespace CK.Observable
             _saveLock = new Object();
             _domainMonitorLock = new Object();
 
-            if( callClientOnCreate ) client?.OnDomainCreated( monitor, this  );
-            // If the secret has not been restored, initializes a new one.
-            if( _domainSecret == null ) _domainSecret = CreateSecret();
+            if( callClientOnCreate )
+            {
+                client?.OnDomainCreated( monitor, this );
+                // If the secret has not been restored, initializes a new one.
+                if( _domainSecret == null ) _domainSecret = CreateSecret();
+            }
             monitor.Info( $"ObservableDomain {domainName} created." );
         }
 
@@ -721,6 +716,11 @@ namespace CK.Observable
         /// array of length <see cref="DomainSecretKeyLength"/> derived from <see cref="Guid.NewGuid()"/>.
         /// </summary>
         public ReadOnlySpan<byte> SecretKey => _domainSecret.AsSpan();
+
+        /// <summary>
+        /// Gets whether this domain has been disposed.
+        /// </summary>
+        public bool IsDisposed => _disposed;
 
         class DomainActivityMonitor : ActivityMonitor, IDisposableActivityMonitor
         {
@@ -936,7 +936,7 @@ namespace CK.Observable
         /// Can be null: only pending timed events are executed if any.
         /// </param>
         /// <param name="millisecondsTimeout">
-        /// The maximum number of milliseconds to wait for a read access before giving up.
+        /// The maximum number of milliseconds to wait for a write access before giving up.
         /// Wait indefinitely by default.
         /// </param>
         /// <returns>
@@ -1482,7 +1482,6 @@ namespace CK.Observable
             return _domainMonitor;
         }
 
-
         void CheckDisposed()
         {
             if( _disposed ) throw new ObjectDisposedException( ToString() );
@@ -1530,7 +1529,7 @@ namespace CK.Observable
             }
         }
 
-        void DoDispose(IActivityMonitor monitor)
+        void DoDispose( IActivityMonitor monitor )
         {
             Debug.Assert( !_disposed );
             Debug.Assert( _lock.IsWriteLockHeld );

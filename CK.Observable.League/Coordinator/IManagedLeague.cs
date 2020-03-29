@@ -11,7 +11,7 @@ namespace CK.Observable.League
     interface IManagedLeague
     {
         /// <summary>
-        /// Creates and adds a new domain.
+        /// Creates and adds a new domain: this is called by <see cref="Coordinator.CreateDomain(string, IEnumerable{string})"/>.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="name">The new domain name.</param>
@@ -19,6 +19,24 @@ namespace CK.Observable.League
         /// <returns>The managed domain.</returns>
         IManagedDomain CreateDomain( IActivityMonitor monitor, string name, IReadOnlyList<string> rootTypes );
 
-        IManagedDomain RebindDomain( IActivityMonitor monitor, string name, IReadOnlyList<string> rootTypes );
+        /// <summary>
+        /// Called when the <see cref="Coordinator"/> has been reloaded (from snapshot): this is called
+        /// to find the managed domain and ensure that its key information (the root types) are the same
+        /// (otherwise an exception is raised).
+        /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
+        /// <param name="name">The domain name that must be found or created.</param>
+        /// <param name="rootTypes">The root types that, if the managed domain already exist, must match.</param>
+        /// <param name="options">The options that must be applied for this domain.</param>
+        /// <returns>The managed domain.</returns>
+        IManagedDomain RebindDomain( IActivityMonitor monitor, string name, IReadOnlyList<string> rootTypes, ManagedDomainOptions options );
+
+        /// <summary>
+        /// Called whenever a domain is destroyed: the <see cref="Coordinator"/>'s <see cref="Domain"/> has been disposed.
+        /// The managed domain is removed from the domains.
+        /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
+        /// <param name="d">The destroyed domain.</param>
+        void OnDestroy( IActivityMonitor monitor, IManagedDomain d );
     }
 }

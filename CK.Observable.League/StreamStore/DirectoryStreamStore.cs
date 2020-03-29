@@ -1,4 +1,5 @@
 using CK.Core;
+using CK.Text;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -27,78 +28,114 @@ namespace CK.Observable
             _path = FileUtil.NormalizePathSeparator( _path, true );
         }
 
-        string GetFullPath( string fullName )
+        string GetFullPath( ref string name )
         {
-            if( String.IsNullOrEmpty( fullName ) ) throw new ArgumentNullException( nameof( fullName ) );
-            return _path + fullName.ToLowerInvariant();
+            if( String.IsNullOrEmpty( name ) ) throw new ArgumentNullException( nameof( name ) );
+            name = name.ToLowerInvariant();
+            return _path + name;
+        }
+        string GetFullWritePath( ref string name )
+        {
+            var p = GetFullPath( ref name );
+            if( FileUtil.IndexOfInvalidFileNameChars( name ) >= 0 ) throw new ArgumentException( "Invalid characters in name.", nameof( name ) );
+            return p;
         }
 
-        Task<bool> IStreamStore.ExistsAsync( string fullName )
+        Task<bool> IStreamStore.ExistsAsync( string name )
         {
-            return Task.FromResult( File.Exists( GetFullPath( fullName ) ) );
+            return Task.FromResult( File.Exists( GetFullPath( ref name ) ) );
         }
 
-        async Task<DateTime> IStreamStore.CreateAsync( string fullName, Func<Stream, Task> writer )
+        async Task<DateTime> IStreamStore.CreateAsync( string name, Func<Stream, Task> writer )
         {
-            fullName = GetFullPath( fullName );
+            var path = GetFullWritePath( ref name );
             try
             {
-                using( var output = new FileStream( fullName, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.SequentialScan|FileOptions.Asynchronous ) )
+                using( var output = new FileStream( path, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.SequentialScan|FileOptions.Asynchronous ) )
                 {
                     await writer( output );
                 }
-                return File.GetLastWriteTimeUtc( fullName );
+                return File.GetLastWriteTimeUtc( path );
             }
             catch( Exception )
             {
-                File.Delete( fullName );
+                File.Delete( path );
                 throw;
             }
         }
 
-        async Task<DateTime> IStreamStore.UpdateAsync( string fullName, Func<Stream, Task> writer, bool allowCreate, DateTime checkLastWriteTimeUtc )
+        async Task<DateTime> IStreamStore.UpdateAsync( string name, Func<Stream, Task> writer, bool allowCreate, DateTime checkLastWriteTimeUtc )
         {
-            fullName = GetFullPath( fullName );
-            bool exists = File.Exists( fullName );
-            if( !exists && !allowCreate ) throw new ArgumentException( $"'{fullName}' does not exist.", nameof( fullName ) );
+            var path = GetFullWritePath( ref name );
+            bool exists = File.Exists( path );
+            if( !exists && !allowCreate ) throw new ArgumentException( $"'{name}' does not exist in store '{_path}'.", nameof( name ) );
             if( exists )
             {
-                if( checkLastWriteTimeUtc != default && checkLastWriteTimeUtc != File.GetLastWriteTimeUtc( fullName ) )
+                if( checkLastWriteTimeUtc != default && checkLastWriteTimeUtc != File.GetLastWriteTimeUtc( path ) )
                 {
                     return Util.UtcMaxValue;
                 }
             }
-            using( var output = new FileStream( fullName, FileMode.Create, FileAccess.Write, FileShare.None, 4096, FileOptions.SequentialScan|FileOptions.Asynchronous ) )
+            string tempFilePath = Path.GetTempFileName();
+            using( var output = File.Open( tempFilePath, FileMode.Create ) )
             {
                 await writer( output );
+                await output.FlushAsync();
             }
-            return File.GetLastWriteTimeUtc( fullName );
+            if( exists )
+            {
+                var backupPath = _path + name + ".bak" + Path.DirectorySeparatorChar;
+                Directory.CreateDirectory( backupPath );
+                File.Replace( tempFilePath, path, FileUtil.EnsureUniqueTimedFile( backupPath, String.Empty, DateTime.UtcNow ), true );
+            }
+            else File.Move( tempFilePath, path );
+            return File.GetLastWriteTimeUtc( path );
         }
 
-        Task IStreamStore.DeleteAsync( string fullName )
+        Task IStreamStore.DeleteAsync( string name, bool archive )
         {
-            fullName = GetFullPath( fullName );
-            if( File.Exists( fullName ) ) File.Delete( fullName );
+            var path = GetFullWritePath( ref name );
+            if( File.Exists( path ) )
+            {
+                DoDelete( name, path, archive );
+            }
             return Task.CompletedTask;
         }
 
-        Task<Stream?> IStreamStore.OpenReadAsync( string fullName )
+        void DoDelete( string name, string path, bool archive )
         {
-            fullName = GetFullPath( fullName );
-            Stream? result = File.Exists( fullName )
-                                ? new FileStream( fullName, FileMode.Open, FileAccess.Read, FileShare.None, 4096, FileOptions.SequentialScan | FileOptions.Asynchronous )
+            var backupPath = _path + name + ".bak" + Path.DirectorySeparatorChar;
+            if( archive )
+            {
+                var archivePath = FileUtil.CreateUniqueTimedFolder( _path + "Archive" + Path.DirectorySeparatorChar, "-" + name, DateTime.UtcNow );
+                if( Directory.Exists( backupPath ) ) Directory.Move( backupPath, archivePath );
+                File.Move( path, Path.Combine( archivePath, name ) );
+            }
+            else
+            {
+                if( Directory.Exists( backupPath ) ) Directory.Delete( backupPath, true );
+                File.Delete( path );
+            }
+        }
+
+        Task<Stream?> IStreamStore.OpenReadAsync( string name )
+        {
+            var path = GetFullPath( ref name );
+            Stream? result = File.Exists( path )
+                                ? new FileStream( path, FileMode.Open, FileAccess.Read, FileShare.None, 4096, FileOptions.SequentialScan | FileOptions.Asynchronous )
                                 : null;
             return Task.FromResult( result );
         }
 
-        Task<int> IStreamStore.DeleteAsync( Func<string, bool> predicate )
+        Task<int> IStreamStore.DeleteAsync( Func<string, bool> predicate, bool archive )
         {
             int count = 0;
-            foreach( var e in Directory.EnumerateFiles( _path, "*", SearchOption.AllDirectories ) )
+            foreach( var path in Directory.EnumerateFiles( _path, "*", SearchOption.TopDirectoryOnly ) )
             {
-                if( predicate( e.Substring( _path.Length ) ) )
+                var name = path.Substring( _path.Length );
+                if( predicate( name ) )
                 {
-                    File.Delete( e );
+                    DoDelete( path, name, archive );
                     ++count;
                 }
             }

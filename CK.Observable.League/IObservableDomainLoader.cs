@@ -23,10 +23,17 @@ namespace CK.Observable.League
         bool IsLoaded { get; }
 
         /// <summary>
+        /// Gets whether this domain is destroyed (the <see cref="Coordinator"/>'s <see cref="Domain"/> has been disposed).
+        /// </summary>
+        bool IsDestroyed { get; }
+
+        /// <summary>
         /// Loads this domain (if it is not yet loaded) and returns a shell on which <see cref="IObservableDomainShell.DisposeAsync(IActivityMonitor)"/>
         /// must be called once the domain is not needed anymore.
+        /// If <see cref="IsDestroyed"/> is true or if the containing <see cref="ObservableLeague"/> is closing, or an error occurred,
+        /// then this returns null.
         /// </summary>
-        /// <returns>The shell to use. Null on error.</returns>
+        /// <returns>The shell to use. Null on error or if the domain is destroyed or the league is closing.</returns>
         Task<IObservableDomainShell?> LoadAsync( IActivityMonitor monitor );
 
     }

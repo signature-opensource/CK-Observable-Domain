@@ -15,7 +15,7 @@ namespace CK.Observable.League
         readonly string _storeName;
         int _savedTransactionNumber;
         DateTime _nextSave;
-        int _autoSaveTime;
+        int _snapshotSaveDelay;
 
         public StreamStoreClient( string domainName, IStreamStore store, IObservableDomainClient? next = null )
             : base( new TransactionEventCollectorClient( next ) )
@@ -42,27 +42,37 @@ namespace CK.Observable.League
         public IStreamStore StreamStore { get; }
 
         /// <summary>
-        /// See <see cref="ManagedDomainOptions.AutoSaveTime"/>.
+        /// See <see cref="ManagedDomainOptions.SnapshotSaveDelay"/>.
         /// </summary>
-        public int AutoSaveTime
+        public int SnapshotSaveDelay
         {
-            get => _autoSaveTime;
+            get => _snapshotSaveDelay;
             set
             {
-                if( _autoSaveTime != value )
+                if( _snapshotSaveDelay != value )
                 {
                     if( value < 0 )
                     {
-                        _autoSaveTime = -1;
+                        _snapshotSaveDelay = -1;
                         _nextSave = Util.UtcMaxValue;
                     }
                     else
                     {
-                        _nextSave = CurrentTimeUtc.AddMilliseconds( _autoSaveTime = value );
+                        _nextSave = CurrentTimeUtc.AddMilliseconds( _snapshotSaveDelay = value );
                     }
                 }
             }
         }
+
+        /// <summary>
+        /// See <see cref="ManagedDomainOptions.SnapshotKeepDuration"/>.
+        /// </summary>
+        public TimeSpan SnapshotKeepDuration { get; set; } = TimeSpan.FromDays( 2 );
+
+        /// <summary>
+        /// See <see cref="ManagedDomainOptions.SnapshotMaximalTotalKiB"/>.
+        /// </summary>
+        public int SnapshotMaximalTotalKiB { get; set; } = 10 * 1024;
 
         /// <summary>
         /// Overridden to FIRST create a snapshot and THEN call the next client.
@@ -102,20 +112,34 @@ namespace CK.Observable.League
         }
 
         /// <summary>
-        /// Saves the current snapshot if the <see cref="MemoryTransactionProviderClient.CurrentSerialNumber"/> has changed since the last save.
+        /// Saves the current snapshot if the <see cref="MemoryTransactionProviderClient.CurrentSerialNumber"/> has changed
+        /// since the last save.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <returns>True on success, false if an error occurred.</returns>
-        public async Task<bool> SaveAsync( IActivityMonitor monitor )
+        public Task<bool> SaveAsync( IActivityMonitor monitor ) => DoSaveAsync( monitor, false );
+
+        /// <summary>
+        /// Archives the persistent file in the store: the domain's file is no more available.
+        /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
+        public Task ArchiveAsync( IActivityMonitor monitor ) => DoSaveAsync( monitor, true );
+
+        async Task<bool> DoSaveAsync( IActivityMonitor monitor, bool sendToArchive )
         {
             if( _savedTransactionNumber != CurrentSerialNumber )
             {
                 try
                 {
-                    await StreamStore.CreateAsync( _storeName, WriteSnapshotAsync );
-                    if( _autoSaveTime >= 0 ) _nextSave = CurrentTimeUtc.AddMilliseconds( _autoSaveTime );
+                    await StreamStore.UpdateAsync( _storeName, WriteSnapshotAsync, true );
+                    if( _snapshotSaveDelay >= 0 ) _nextSave = CurrentTimeUtc.AddMilliseconds( _snapshotSaveDelay );
                     _savedTransactionNumber = CurrentSerialNumber;
-                    monitor.Trace( $"Domain '{_storeName}' saved." );
+                    if( sendToArchive )
+                    {
+                        await StreamStore.DeleteAsync( _storeName, true );
+                        monitor.Info( $"Domain '{_storeName}' saved and sent to archives." );
+                    }
+                    else monitor.Trace( $"Domain '{_storeName}' saved." );
                 }
                 catch( Exception ex )
                 {
@@ -125,6 +149,7 @@ namespace CK.Observable.League
             }
             return true;
         }
+
     }
 
 

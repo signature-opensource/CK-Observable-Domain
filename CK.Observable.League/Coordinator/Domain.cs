@@ -12,16 +12,19 @@ namespace CK.Observable.League
     [SerializationVersion(0)]
     public sealed class Domain : ObservableObject
     {
+        IManagedDomain? _shell;
+
         internal Domain( Coordinator coordinator, IManagedDomain shell, string[] rootTypes )
         {
             Coordinator = coordinator;
             DomainName = shell.DomainName;
             RootTypes = rootTypes;
             Options = shell.Options;
-            Shell = shell;
+            _shell = shell;
         }
 
         Domain( IBinaryDeserializerContext c )
+            : base( c )
         {
             var r = c.StartReading();
             Coordinator = (Coordinator)r.ReadObject();
@@ -38,7 +41,9 @@ namespace CK.Observable.League
             w.WriteObject( Options );
         }
 
-        internal IManagedDomain? Shell { get; set; }
+        internal IManagedDomain Shell => _shell!;
+
+        internal void Initialize( IManagedDomain shell ) => _shell = shell;
 
         /// <summary>
         /// Gets the coordinator.
@@ -48,7 +53,7 @@ namespace CK.Observable.League
         /// <summary>
         /// Gets whether the domain type can be resolved.
         /// </summary>
-        public bool IsLoadable => Shell!.IsLoadable;
+        public bool IsLoadable => Shell.IsLoadable;
 
         /// <summary>
         /// Gets the domain name.
@@ -69,13 +74,20 @@ namespace CK.Observable.League
         void OnOptionsChanged( object before, object after )
         {
             if( IsDeserializing ) return;
-            Shell!.Options = Options;
+            Shell.Options = Options;
         }
 
         protected override void Dispose( bool shouldCleanup )
         {
             base.Dispose( shouldCleanup );
-            if( shouldCleanup ) Coordinator.OnDisposeDomain( this );
+            if( shouldCleanup )
+            {
+                if( Shell != null )
+                {
+                    Shell.Destroy( Monitor, Coordinator.League );
+                }
+                Coordinator.OnDisposeDomain( this );
+            }
         }
 
     }

@@ -15,7 +15,9 @@ namespace CK.Observable
     public class BinarySerializer : CKBinaryWriter
     {
         readonly Dictionary<Type, TypeInfo> _types;
-        readonly Dictionary<object, int> _seen;
+        // This is a fix.
+        // Until the serialization is refactored...
+        readonly internal Dictionary<object, int> _seen;
         readonly ISerializerResolver _drivers;
         BinaryFormatter _binaryFormatter;
 
@@ -180,56 +182,6 @@ namespace CK.Observable
                 driver.WriteTypeInformation( this );
                 driver.WriteData( this, o );
             }
-        }
-
-        /// <summary>
-        /// Writes an object with a already known serialization driver.
-        /// </summary>
-        /// <typeparam name="T">The type of the value to use.</typeparam>
-        /// <param name="o">The value to write.</param>
-        /// <param name="driver">The driver to use.</param>
-        public void Write<T>( T o, ITypeSerializationDriver<T> driver )
-        {
-            if( driver == null ) throw new ArgumentNullException( nameof( driver ) );
-            if( o == null )
-            {
-                Write( (byte)SerializationMarker.Null );
-                return;
-            }
-            SerializationMarker marker;
-            Type t = o.GetType();
-            int idxSeen = -1;
-            // This is awful. Drivers need to be the actual handler of the full
-            // serialization/deserialization process, including instance tracking,
-            // regardless of the struct/class kind of the objects.
-            // New object pools from CK.Core should definitly help for this.
-            if( t.IsClass && t != typeof( string ) )
-            {
-                if( typeof( Type ).IsAssignableFrom( t ) )
-                {
-                    marker = SerializationMarker.Type;
-                }
-                else
-                {
-                    if( _seen.TryGetValue( o, out var num ) )
-                    {
-                        Write( (byte)SerializationMarker.Reference );
-                        Write( num );
-                        return;
-                    }
-                    idxSeen = _seen.Count;
-                    _seen.Add( o, _seen.Count );
-                    if( t == typeof( object ) )
-                    {
-                        Write( (byte)SerializationMarker.EmptyObject );
-                        return;
-                    }
-                    marker = SerializationMarker.Object;
-                }
-            }
-            else marker = SerializationMarker.Struct;
-            Write( (byte)marker );
-            driver.WriteData( this, o );
         }
 
         /// <summary>
