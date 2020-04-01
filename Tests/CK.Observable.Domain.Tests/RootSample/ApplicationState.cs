@@ -3,8 +3,7 @@ namespace CK.Observable.Domain.Tests.RootSample
     [SerializationVersion(0)]
     public class ApplicationState : ObservableRootObject
     {
-        protected ApplicationState( ObservableDomain domain )
-            : base( domain )
+        public ApplicationState()
         {
             ToDoNumbers = new ObservableList<int>();
             Products = new ObservableDictionary<string, ProductInfo>();

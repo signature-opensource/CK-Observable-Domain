@@ -27,9 +27,8 @@ namespace CK.Observable.League
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="name">The domain name that must be found or created.</param>
         /// <param name="rootTypes">The root types that, if the managed domain already exist, must match.</param>
-        /// <param name="options">The options that must be applied for this domain.</param>
         /// <returns>The managed domain.</returns>
-        IManagedDomain RebindDomain( IActivityMonitor monitor, string name, IReadOnlyList<string> rootTypes, ManagedDomainOptions options );
+        IManagedDomain RebindDomain( IActivityMonitor monitor, string name, IReadOnlyList<string> rootTypes );
 
         /// <summary>
         /// Called whenever a domain is destroyed: the <see cref="Coordinator"/>'s <see cref="Domain"/> has been disposed.

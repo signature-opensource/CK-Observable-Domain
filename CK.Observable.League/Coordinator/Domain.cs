@@ -43,7 +43,11 @@ namespace CK.Observable.League
 
         internal IManagedDomain Shell => _shell!;
 
-        internal void Initialize( IManagedDomain shell ) => _shell = shell;
+        internal void Initialize( IManagedDomain shell )
+        {
+            _shell = shell;
+            shell.Options = Options;
+        }
 
         /// <summary>
         /// Gets the coordinator.

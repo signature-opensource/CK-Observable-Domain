@@ -14,8 +14,7 @@ namespace CK.Observable.League
         readonly ObservableDictionary<string, Domain> _domains;
         IManagedLeague? _league;
 
-        internal Coordinator( ObservableDomain domain )
-            : base( domain )
+        public Coordinator()
         {
             _domains = new ObservableDictionary<string, Domain>();
         }
@@ -50,7 +49,7 @@ namespace CK.Observable.League
             {
                 try
                 {
-                    d.Initialize( league.RebindDomain( monitor, d.DomainName, d.RootTypes, d.Options ) );
+                    d.Initialize( league.RebindDomain( monitor, d.DomainName, d.RootTypes ) );
                 }
                 catch( Exception ex )
                 {

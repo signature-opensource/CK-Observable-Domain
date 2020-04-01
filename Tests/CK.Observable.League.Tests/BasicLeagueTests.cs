@@ -34,7 +34,8 @@ namespace CK.Observable.League.Tests
         {
             var store = CreateStore( nameof( empty_league_serialization ) );
             var league = await ObservableLeague.LoadAsync( TestHelper.Monitor, store );
-            await league.ModifyCoordinatorAsync( TestHelper.Monitor, ( m, d ) => d.Root.CreateDomain( "First", new [] { typeof(Model.School).AssemblyQualifiedName } ) );
+            await league.Coordinator.ModifyAsync( TestHelper.Monitor, ( m, d ) => d.Root.CreateDomain( "First", new [] { typeof(Model.School).AssemblyQualifiedName } ) );
+            // Using the non generic IObservableDomain.
             await using( var f = await league.Find( "First" ).LoadAsync( TestHelper.Monitor ) )
             {
                 await f.ModifyAsync( TestHelper.Monitor, ( m, d ) => ((IObservableDomain<Model.School>)d).Root.Persons.Add( new Model.Person() { FirstName = "A" } ) );
@@ -42,12 +43,13 @@ namespace CK.Observable.League.Tests
             await league.CloseAsync( TestHelper.Monitor );
 
             var league2 = await ObservableLeague.LoadAsync( TestHelper.Monitor, store );
-            league2.Read( TestHelper.Monitor, ( m, d ) => d.Root.Domains.Count ).Should().Be( 1 );
+            league2.Coordinator.Read( TestHelper.Monitor, ( m, d ) => d.Root.Domains.Count ).Should().Be( 1 );
             var first2 = league2.Find( "First" );
             first2.Should().NotBeNull();
-            await using( var f = await first2.LoadAsync( TestHelper.Monitor ) )
+            // Using the strongly typed IObservableDomain<T>.
+            await using( var f = await first2.LoadAsync<Model.School>( TestHelper.Monitor ) )
             {
-                f.Read( TestHelper.Monitor, ( m, d ) => ((Model.School)d.AllRoots[0]).Persons[0].FirstName ).Should().Be( "A" );
+                f.Read( TestHelper.Monitor, ( m, d ) => d.Root.Persons[0].FirstName ).Should().Be( "A" );
             }
             await league2.CloseAsync( TestHelper.Monitor );
         }
@@ -59,7 +61,7 @@ namespace CK.Observable.League.Tests
             var league = await ObservableLeague.LoadAsync( TestHelper.Monitor, store );
 
             league.Find( "FirstDomain" ).Should().BeNull();
-            await league.ModifyCoordinatorAsync( TestHelper.Monitor, ( m, d ) => d.Root.CreateDomain( "FirstDomain", null ) );
+            await league.Coordinator.ModifyAsync( TestHelper.Monitor, ( m, d ) => d.Root.CreateDomain( "FirstDomain", null ) );
 
             var loader = league.Find( "FirstDomain" );
             loader.Should().NotBeNull();
@@ -91,6 +93,118 @@ namespace CK.Observable.League.Tests
                 } );
             }
 
+        }
+
+        [SerializationVersion(0)]
+        class Root1 : ObservableRootObject
+        {
+            public Root1()
+            {
+            }
+
+            Root1( IBinaryDeserializerContext ctx )
+                : base( ctx )
+            {
+                var r = ctx.StartReading();
+            }
+
+            void Write( BinarySerializer w )
+            {
+            }
+        }
+
+        [SerializationVersion(0)]
+        class Root2 : ObservableRootObject
+        {
+            public Root2()
+            {
+            }
+
+            Root2( IBinaryDeserializerContext ctx )
+                : base( ctx )
+            {
+                var r = ctx.StartReading();
+            }
+
+            void Write( BinarySerializer w )
+            {
+            }
+        }
+
+        [SerializationVersion(0)]
+        class Root3 : ObservableRootObject
+        {
+            public Root3()
+            {
+            }
+
+            Root3( IBinaryDeserializerContext ctx )
+                : base( ctx )
+            {
+                var r = ctx.StartReading();
+            }
+
+            void Write( BinarySerializer w )
+            {
+            }
+        }
+
+        [SerializationVersion(0)]
+        class Root4 : ObservableRootObject
+        {
+            public Root4()
+            {
+            }
+
+            Root4( IBinaryDeserializerContext ctx )
+                : base( ctx )
+            {
+                var r = ctx.StartReading();
+            }
+
+            void Write( BinarySerializer w )
+            {
+            }
+        }
+
+
+        [Test]
+        public async Task up_to_4_typed_roots_are_supported()
+        {
+            var store = CreateStore( nameof( up_to_4_typed_roots_are_supported ) );
+            var league = await ObservableLeague.LoadAsync( TestHelper.Monitor, store );
+
+            var roots = new[] { typeof( Root1 ), typeof( Root2 ), typeof( Root3 ), typeof( Root4 ) };
+
+            await league.Coordinator.ModifyAsync( TestHelper.Monitor, ( m, d ) =>
+            {
+                Domain newOne = d.Root.CreateDomain( "4Roots", roots.Select( t => t.AssemblyQualifiedName ) );
+                newOne.DomainName.Should().Be( "4Roots" );
+                newOne.RootTypes.Should().BeEquivalentTo( roots.Select( t => t.AssemblyQualifiedName ) );
+            } );
+
+            await Check4RootsDomain( league );
+            await league.CloseAsync( TestHelper.Monitor );
+
+            var league2 = await ObservableLeague.LoadAsync( TestHelper.Monitor, store );
+
+            await Check4RootsDomain( league2 );
+
+            await league2.CloseAsync( TestHelper.Monitor );
+        }
+
+        static async Task Check4RootsDomain( ObservableLeague theLeague )
+        {
+            await using( var d = await theLeague["4Roots"].LoadAsync<Root1, Root2, Root3, Root4>( TestHelper.Monitor ) )
+            {
+                d.Read( TestHelper.Monitor, ( m, d ) =>
+                {
+                    d.Root1.Should().BeOfType<Root1>();
+                    d.Root2.Should().BeOfType<Root2>();
+                    d.Root3.Should().BeOfType<Root3>();
+                    d.Root4.Should().BeOfType<Root4>();
+                } );
+            }
         }
     }
 }

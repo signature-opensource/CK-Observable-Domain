@@ -13,7 +13,7 @@ namespace CK.Observable
     /// <typeparam name="T1">Type of the first root object.</typeparam>
     /// <typeparam name="T2">Type of the second root object.</typeparam>
     /// <typeparam name="T3">Type of the third root object.</typeparam>
-    public sealed class ObservableDomain<T1, T2, T3> : ObservableDomain
+    public sealed class ObservableDomain<T1, T2, T3> : ObservableDomain, IObservableDomain<T1, T2, T3>
         where T1 : ObservableRootObject
         where T2 : ObservableRootObject
         where T3 : ObservableRootObject

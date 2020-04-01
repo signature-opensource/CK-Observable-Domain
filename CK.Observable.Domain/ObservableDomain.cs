@@ -43,8 +43,6 @@ namespace CK.Observable
         /// </summary>
         public const int DomainSecretKeyLength = 512;
 
-        static readonly Type[] _observableRootCtorParameters = new Type[] { typeof( ObservableDomain ) };
-
         class PropInfo
         {
             public readonly PropertyChangedEventArgs EventArg;
@@ -662,10 +660,7 @@ namespace CK.Observable
         /// <returns>The instance.</returns>
         private protected T AddRoot<T>( InitializationTransaction initializationContext ) where T : ObservableRootObject
         {
-            var o = (T)typeof( T ).GetConstructor( BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-                                                    null,
-                                                    _observableRootCtorParameters,
-                                                    null ).Invoke( new[] { this } );
+            var o = Activator.CreateInstance<T>();
             _roots.Add( o );
             return o;
         }

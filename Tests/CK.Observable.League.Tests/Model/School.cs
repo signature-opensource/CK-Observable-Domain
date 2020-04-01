@@ -7,8 +7,7 @@ namespace CK.Observable.League.Tests.Model
     [SerializationVersion(0)]
     public class School : ObservableRootObject
     {
-        public School( ObservableDomain d )
-            : base( d )
+        public School()
         {
             Persons = new ObservableList<Person>();
         }

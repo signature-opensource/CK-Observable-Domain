@@ -79,7 +79,7 @@ namespace CK.Observable
         /// Constructor for specialized instance with an explicit <see cref="ObservableDomain"/>.
         /// </summary>
         /// <param name="domain">The domain to which this object belong.</param>
-        protected ObservableObject( ObservableDomain domain )
+        ObservableObject( ObservableDomain domain )
         {
             if( domain == null ) throw new ArgumentNullException( nameof( domain ) );
             Domain = domain;

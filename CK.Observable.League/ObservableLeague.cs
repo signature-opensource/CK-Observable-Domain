@@ -9,7 +9,10 @@ using System.Threading.Tasks;
 
 namespace CK.Observable.League
 {
-    public partial class ObservableLeague : IManagedLeague
+    /// <summary>
+    /// Primary object that manages a bunch of <see cref="ObservableDomain"/>.
+    /// </summary>
+    public partial class ObservableLeague : IManagedLeague, IObservableDomainAccess<Coordinator>
     {
         readonly ConcurrentDictionary<string, Shell> _domains;
         readonly IStreamStore _streamStore;
@@ -49,7 +52,7 @@ namespace CK.Observable.League
                 var domains = new ConcurrentDictionary<string, Shell>( StringComparer.OrdinalIgnoreCase );
                 foreach( var d in client.Domain.Root.Domains.Values )
                 {
-                    var shell = new Shell( monitor, d.DomainName, store, d.RootTypes ) { Options = d.Options };
+                    var shell = Shell.Create( monitor, d.DomainName, store, d.RootTypes );
                     d.Initialize( shell );
                     domains.TryAdd( d.DomainName, shell );
                 }
@@ -66,18 +69,23 @@ namespace CK.Observable.League
         /// Finds an existing domain.
         /// </summary>
         /// <param name="domainName">The domain name to find.</param>
-        /// <returns>The managed domain or null.</returns>
+        /// <returns>The managed domain or null if not found.</returns>
         public IObservableDomainLoader? Find( string domainName ) => _domains.TryGetValue( domainName, out Shell shell ) ? shell : null;
 
         /// <summary>
-        /// Reads the coordinator domain by protecting the <paramref name="reader"/> function in a <see cref="ObservableDomain.AcquireReadLock(int)"/>.
+        /// Shortcut of <see cref="Find(string)"/>.
         /// </summary>
-        /// <param name="monitor">The monitor to use.</param>
-        /// <param name="reader">The reader function.</param>
-        /// <param name="millisecondsTimeout">
-        /// The maximum number of milliseconds to wait for a read access before giving up. Wait indefinitely by default.
-        /// </param>
-        public void ReadCoordinator( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<Coordinator>> reader, int millisecondsTimeout = -1 )
+        /// <param name="domainName">The domain name to find.</param>
+        /// <returns>The managed domain or null if not found.</returns>
+        public IObservableDomainLoader? this[ string domainName ] => Find( domainName );
+
+        /// <summary>
+        /// Gets the acess to the Coordinator domain.
+        /// </summary>
+        public IObservableDomainAccess<Coordinator> Coordinator => this;
+
+        #region Coordinator: IObservableDomainAccess<Coordinator>.
+        void IObservableDomainAccess<Coordinator>.Read( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<Coordinator>> reader, int millisecondsTimeout )
         {
             using( _coordinator.Domain.AcquireReadLock( millisecondsTimeout ) )
             {
@@ -85,17 +93,7 @@ namespace CK.Observable.League
             }
         }
 
-        /// <summary>
-        /// Reads the domain by protecting the <paramref name="reader"/> function in a <see cref="ObservableDomain.AcquireReadLock(int)"/>.
-        /// </summary>
-        /// <typeparam name="T">The type of the information to read.</typeparam>
-        /// <param name="monitor">The monitor to use.</param>
-        /// <param name="reader">The reader function that projects read information into a <typeparamref name="T"/>.</param>
-        /// <param name="millisecondsTimeout">
-        /// The maximum number of milliseconds to wait for a read access before giving up. Wait indefinitely by default.
-        /// </param>
-        /// <returns>The information.</returns>
-        public T Read<T>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<Coordinator>, T> reader, int millisecondsTimeout = -1 )
+        T IObservableDomainAccess<Coordinator>.Read<T>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<Coordinator>, T> reader, int millisecondsTimeout )
         {
             using( _coordinator.Domain.AcquireReadLock( millisecondsTimeout ) )
             {
@@ -103,37 +101,16 @@ namespace CK.Observable.League
             }
         }
 
-        /// <summary>
-        /// Enables <see cref="Coordinator"/> domain edition.
-        /// Any exceptions raised by <see cref="IObservableDomainClient.OnTransactionStart(IActivityMonitor,ObservableDomain, DateTime)"/> (at the start
-        /// of the process) and by <see cref="TransactionResult.PostActions"/> (after the successful commit or the failure) are thrown by this method.
-        /// </summary>
-        /// <param name="monitor">The monitor to use.</param>
-        /// <param name="actions">The actions to execute inside the Coordinator's domain transaction.</param>
-        /// <param name="millisecondsTimeout">The maximum number of milliseconds to wait for a write access before giving up. Wait indefinitely by default.</param>
-        /// <returns>
-        /// The transaction result from <see cref="ObservableDomain.Modify"/>.
-        /// <see cref="TransactionResult.Empty"/> when the lock has not been taken before <paramref name="millisecondsTimeout"/>.
-        /// </returns>
-        public Task<TransactionResult> ModifyCoordinatorAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<Coordinator>> actions, int millisecondsTimeout = -1 )
+        Task<TransactionResult> IObservableDomainAccess<Coordinator>.ModifyAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<Coordinator>> actions, int millisecondsTimeout )
         {
             return _coordinator.Domain.ModifyAsync( monitor, () => actions.Invoke( monitor, _coordinator.Domain ), millisecondsTimeout );
         }
 
-        /// <summary>
-        /// Enables <see cref="Coordinator"/> domain edition.
-        /// This never throws: any exception outside the action's transaction is caught, logged and returned.
-        /// </summary>
-        /// <param name="monitor">The monitor to use.</param>
-        /// <param name="actions">The actions to execute inside the ObservableDomain's transaction.</param>
-        /// <param name="millisecondsTimeout">The maximum number of milliseconds to wait for a write access before giving up. Wait indefinitely by default.</param>
-        /// <returns>
-        /// Returns the transaction result (that may be <see cref="TransactionResult.Empty"/>) and any exception outside of the observable transaction itself.
-        /// </returns>
-        public Task<(TransactionResult, Exception)> SafeModifyCoordinatorAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<Coordinator>> actions, int millisecondsTimeout )
+        Task<(TransactionResult, Exception)> IObservableDomainAccess<Coordinator>.SafeModifyAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<Coordinator>> actions, int millisecondsTimeout )
         {
             return _coordinator.Domain.SafeModifyAsync( monitor, () => actions.Invoke( monitor, _coordinator.Domain ), millisecondsTimeout );
         }
+        #endregion
 
         /// <summary>
         /// Closes this league. The coordinator's domain is saved and disposed and 
@@ -158,21 +135,20 @@ namespace CK.Observable.League
         {
             Debug.Assert( !_coordinator.Domain.IsDisposed, "Domain.Dispose requires the Write lock." );
             return _domains.AddOrUpdate( name,
-                                         new Shell( monitor, name, _streamStore, rootTypes ),
+                                         Shell.Create( monitor, name, _streamStore, rootTypes ),
                                          ( n, s ) => throw new Exception( $"Internal error: domain name '{n}' already exists." ) );
         }
 
-        IManagedDomain IManagedLeague.RebindDomain( IActivityMonitor monitor, string name, IReadOnlyList<string> rootTypes, ManagedDomainOptions options )
+        IManagedDomain IManagedLeague.RebindDomain( IActivityMonitor monitor, string name, IReadOnlyList<string> rootTypes )
         {
             return _domains.AddOrUpdate( name,
-                                         n => new Shell( monitor, name, _streamStore, rootTypes ) { Options = options },
+                                         n => Shell.Create( monitor, name, _streamStore, rootTypes ),
                                          ( n, s ) =>
                                          {
                                              if( !s.RootTypes.SequenceEqual( rootTypes ) )
                                              {
                                                  throw new Exception( $"Unable to rebind domain named '{n}', root types differ: existing are '{s.RootTypes.Concatenate()}', reloaded ones want to be '{rootTypes.Concatenate()}'." );
                                              }
-                                             s.Options = options;
                                              return s;
                                          } );
         }

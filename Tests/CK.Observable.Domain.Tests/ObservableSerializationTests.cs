@@ -181,11 +181,10 @@ namespace CK.Observable.Domain.Tests
             public ObservableList<string> SomeList { get; set; }
             public ObservableList<CustomObservable> CustomObservableList { get; set; }
 
-            protected CustomRoot( ObservableDomain domain ) : base( domain )
-            {
-            }
+            public CustomRoot() { }
 
-            protected CustomRoot( IBinaryDeserializerContext d ) : base( d )
+            CustomRoot( IBinaryDeserializerContext d )
+                : base( d )
             {
                 var r = d.StartReading();
                 ImmutablesById = (ObservableDictionary<string, CustomImmutable>)r.ReadObject();
