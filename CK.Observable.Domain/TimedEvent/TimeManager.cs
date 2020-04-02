@@ -172,11 +172,11 @@ namespace CK.Observable
             public ObservableDomain Domain { get; }
 
             /// <summary>
-            /// Simply calls <see cref="ObservableDomain.SafeModifyAsync"/> with the shared <see cref="ObservableDomain.ObtainDomainMonitor(int, bool)"/>, null actions
+            /// Simply calls <see cref="ObservableDomain.ModifyNoThrowAsync"/> with the shared <see cref="ObservableDomain.ObtainDomainMonitor(int, bool)"/>, null actions
             /// and 10 ms timeout: pending timed events are handled if any and if there is no current transaction: <see cref="TransactionResult.Empty"/> is
             /// returned if the write lock failed to be obtained.
             /// </summary>
-            protected virtual Task<(TransactionResult, Exception)> OnDueTimeAsync( IActivityMonitor m ) => Domain.SafeModifyAsync( m, null, 10 );
+            protected virtual Task<(TransactionResult, Exception)> OnDueTimeAsync( IActivityMonitor m ) => Domain.ModifyNoThrowAsync( m, null, 10 );
 
             /// <summary>
             /// Must do whatever is needed to call back this <see cref="OnDueTimeAsync(IActivityMonitor)"/> at <paramref name="nextDueTimeUtc"/> (or

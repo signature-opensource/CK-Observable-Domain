@@ -63,6 +63,11 @@ namespace CK.Observable.League
         public bool IsLoadable => Shell.IsLoadable;
 
         /// <summary>
+        /// Gets or sets whether this domain is currently loaded.
+        /// </summary>
+        public bool IsLoaded { get; internal set; }
+
+        /// <summary>
         /// Gets the domain name.
         /// </summary>
         public string DomainName { get; }

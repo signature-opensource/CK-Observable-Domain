@@ -31,7 +31,6 @@ namespace CK.Observable.League
         /// <param name="actions">
         /// The actions to execute on the <see cref="IObservableDomain"/> protected by a transaction (any unhandled errors automatically
         /// trigger a rollback and the <see cref="TransactionResult.Success"/> is false).
-        /// Can be null: only pending timed events are executed if any.
         /// </param>
         /// <param name="millisecondsTimeout">
         /// The maximum number of milliseconds to wait for a read access before giving up.
@@ -41,16 +40,27 @@ namespace CK.Observable.League
         /// The transaction result from <see cref="ObservableDomain.Modify"/>. <see cref="TransactionResult.Empty"/> when the
         /// lock has not been taken before <paramref name="millisecondsTimeout"/>.
         /// </returns>
-        Task<TransactionResult> ModifyAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain>? actions, int millisecondsTimeout = -1 );
+        Task<TransactionResult> ModifyAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> actions, int millisecondsTimeout = -1 );
 
         /// <summary>
-        /// Same as <see cref="ModifyAsync"/> except that it Will never throw: any exception raised
+        /// Same as <see cref="ModifyAsync"/> except that it will always throw on any error.
+        /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
+        /// <param name="actions">The actions to execute on the <see cref="IObservableDomain"/>.</param>
+        /// <param name="millisecondsTimeout">
+        /// The maximum number of milliseconds to wait for a read access before giving up. Wait indefinitely by default.
+        /// </param>
+        /// <returns>The awaitable.</returns>
+        Task ModifyThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> actions, int millisecondsTimeout = -1 );
+
+        /// <summary>
+        /// Same as <see cref="ModifyAsync"/> except that it will never throw: any exception raised
         /// by <see cref="IObservableDomainClient.OnTransactionStart(IActivityMonitor, ObservableDomain, DateTime)"/>
         /// or <see cref="TransactionResult.ExecutePostActionsAsync(IActivityMonitor, bool)"/> is logged and returned.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="actions">
-        /// The actions to execute on the <see cref="IObservableDomain"/>. Can be null: only pending timed events are executed if any.
+        /// The actions to execute on the <see cref="IObservableDomain"/>.
         /// </param>
         /// <param name="millisecondsTimeout">
         /// The maximum number of milliseconds to wait for a read access before giving up. Wait indefinitely by default.
@@ -58,7 +68,7 @@ namespace CK.Observable.League
         /// <returns>
         /// Returns the transaction result (that may be <see cref="TransactionResult.Empty"/>) and any exception outside of the observable transaction itself.
         /// </returns>
-        Task<(TransactionResult, Exception)> SafeModifyAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain>? actions, int millisecondsTimeout = -1 );
+        Task<(TransactionResult, Exception)> ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> actions, int millisecondsTimeout = -1 );
 
         /// <summary>
         /// Reads the domain by protecting the <paramref name="reader"/> function in a <see cref="ObservableDomain.AcquireReadLock(int)"/>.

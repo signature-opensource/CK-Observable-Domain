@@ -12,7 +12,7 @@ namespace CK.Observable.League
     /// <summary>
     /// Primary object that manages a bunch of <see cref="ObservableDomain"/>.
     /// </summary>
-    public partial class ObservableLeague : IManagedLeague, IObservableDomainAccess<Coordinator>
+    public partial class ObservableLeague : IManagedLeague
     {
         readonly ConcurrentDictionary<string, Shell> _domains;
         readonly IStreamStore _streamStore;
@@ -52,7 +52,7 @@ namespace CK.Observable.League
                 var domains = new ConcurrentDictionary<string, Shell>( StringComparer.OrdinalIgnoreCase );
                 foreach( var d in client.Domain.Root.Domains.Values )
                 {
-                    var shell = Shell.Create( monitor, d.DomainName, store, d.RootTypes );
+                    var shell = Shell.Create( monitor, client, d.DomainName, store, d.RootTypes );
                     d.Initialize( shell );
                     domains.TryAdd( d.DomainName, shell );
                 }
@@ -82,35 +82,8 @@ namespace CK.Observable.League
         /// <summary>
         /// Gets the acess to the Coordinator domain.
         /// </summary>
-        public IObservableDomainAccess<Coordinator> Coordinator => this;
+        public IObservableDomainAccess<Coordinator> Coordinator => _coordinator;
 
-        #region Coordinator: IObservableDomainAccess<Coordinator>.
-        void IObservableDomainAccess<Coordinator>.Read( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<Coordinator>> reader, int millisecondsTimeout )
-        {
-            using( _coordinator.Domain.AcquireReadLock( millisecondsTimeout ) )
-            {
-                reader.Invoke( monitor, _coordinator.Domain );
-            }
-        }
-
-        T IObservableDomainAccess<Coordinator>.Read<T>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<Coordinator>, T> reader, int millisecondsTimeout )
-        {
-            using( _coordinator.Domain.AcquireReadLock( millisecondsTimeout ) )
-            {
-                return reader( monitor, _coordinator.Domain );
-            }
-        }
-
-        Task<TransactionResult> IObservableDomainAccess<Coordinator>.ModifyAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<Coordinator>> actions, int millisecondsTimeout )
-        {
-            return _coordinator.Domain.ModifyAsync( monitor, () => actions.Invoke( monitor, _coordinator.Domain ), millisecondsTimeout );
-        }
-
-        Task<(TransactionResult, Exception)> IObservableDomainAccess<Coordinator>.SafeModifyAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<Coordinator>> actions, int millisecondsTimeout )
-        {
-            return _coordinator.Domain.SafeModifyAsync( monitor, () => actions.Invoke( monitor, _coordinator.Domain ), millisecondsTimeout );
-        }
-        #endregion
 
         /// <summary>
         /// Closes this league. The coordinator's domain is saved and disposed and 
@@ -135,14 +108,14 @@ namespace CK.Observable.League
         {
             Debug.Assert( !_coordinator.Domain.IsDisposed, "Domain.Dispose requires the Write lock." );
             return _domains.AddOrUpdate( name,
-                                         Shell.Create( monitor, name, _streamStore, rootTypes ),
+                                         Shell.Create( monitor, _coordinator, name, _streamStore, rootTypes ),
                                          ( n, s ) => throw new Exception( $"Internal error: domain name '{n}' already exists." ) );
         }
 
         IManagedDomain IManagedLeague.RebindDomain( IActivityMonitor monitor, string name, IReadOnlyList<string> rootTypes )
         {
             return _domains.AddOrUpdate( name,
-                                         n => Shell.Create( monitor, name, _streamStore, rootTypes ),
+                                         n => Shell.Create( monitor, _coordinator, name, _streamStore, rootTypes ),
                                          ( n, s ) =>
                                          {
                                              if( !s.RootTypes.SequenceEqual( rootTypes ) )

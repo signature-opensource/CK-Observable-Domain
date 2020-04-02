@@ -26,6 +26,32 @@ namespace CK.Observable
         public bool Success => Errors.Count == 0 && ClientError == null;
 
         /// <summary>
+        /// Checks that <see cref="Success"/> is true otherwise throw an exception.
+        /// </summary>
+        public void ThrowOnTransactionFailure()
+        {
+            if( !Success )
+            {
+                if( ClientError != null )
+                {
+                    if( Errors.Count > 0 )
+                    {
+                        throw new Exception( $"There has been {Errors.Count} error(s) during the transaction and one of the domain client failed during the OnTransactionFailure call. See logs for details." );
+                    }
+                    throw new Exception( $"An exception has been thrown by Domain a client during the OnTransactionCommit call. See logs for details.", CKException.CreateFrom( ClientError ) );
+                }
+                if( Errors.Count > 0 )
+                {
+                    if( Errors.Count == 1 )
+                    {
+                        throw new Exception( $"There has been {Errors.Count} error(s) during the transaction. See logs for details.", CKException.CreateFrom( Errors[0] ) );
+                    }
+                    throw new Exception( $"There has been {Errors.Count} error(s) during the transaction. See logs for details." );
+                }
+            }
+        }
+
+        /// <summary>
         /// Gets the start time (UTC) of the transaction.
         /// This is <see cref="Util.UtcMinValue"/> if and only if this result is the <see cref="Empty"/> object.
         /// </summary>

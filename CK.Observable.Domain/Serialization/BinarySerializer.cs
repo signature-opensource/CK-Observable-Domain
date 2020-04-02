@@ -287,7 +287,7 @@ namespace CK.Observable
         /// Magic yet simple helper to check the serialization implementation: the object (and potentially the whole graph behind)
         /// is serialized then deserialized and the result of the deserialization is the serialized again.
         /// Once this 3 steps have been done, the bytes that are the result of the first serialization are checked against the ones of the second serialization.
-        /// Teh 2 byte sequences must be exactly the same.
+        /// The 2 byte sequences must be exactly the same.
         /// </summary>
         /// <param name="o">The object to check.</param>
         /// <param name="services">Optional services that deserialization may require.</param>

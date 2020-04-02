@@ -946,6 +946,24 @@ namespace CK.Observable
         }
 
         /// <summary>
+        /// Same as <see cref="ModifyAsync(IActivityMonitor, Action, int)"/> but calls <see cref="TransactionResult.ThrowOnTransactionFailure()"/>:
+        /// this methods always throw on ay error.
+        /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
+        /// <param name="actions">
+        /// The actions to execute inside the ObservableDomain's current transaction.
+        /// Can be null: only pending timed events are executed if any.
+        /// </param>
+        /// <param name="millisecondsTimeout">
+        /// The maximum number of milliseconds to wait for a write access before giving up.
+        /// Wait indefinitely by default.
+        /// </param>
+        public async Task ModifyThrowAsync( IActivityMonitor monitor, Action actions, int millisecondsTimeout = -1 )
+        {
+            (await ModifyAsync( monitor, actions, millisecondsTimeout )).ThrowOnTransactionFailure();
+        }
+
+        /// <summary>
         /// Safe version of <see cref="ModifyAsync(IActivityMonitor, Action, int)"/> that will never throw: any exception raised
         /// by <see cref="IObservableDomainClient.OnTransactionStart(IActivityMonitor, ObservableDomain, DateTime)"/>
         /// or <see cref="TransactionResult.ExecutePostActionsAsync(IActivityMonitor, bool)"/> is logged and returned.
@@ -962,7 +980,7 @@ namespace CK.Observable
         /// <returns>
         /// Returns the transaction result (that may be <see cref="TransactionResult.Empty"/>) and any exception outside of the observable transaction itself.
         /// </returns>
-        public async Task<(TransactionResult, Exception)> SafeModifyAsync( IActivityMonitor monitor, Action actions, int millisecondsTimeout = -1 )
+        public async Task<(TransactionResult, Exception)> ModifyNoThrowAsync( IActivityMonitor monitor, Action actions, int millisecondsTimeout = -1 )
         {
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
             CheckDisposed();
@@ -1479,7 +1497,7 @@ namespace CK.Observable
 
         void CheckDisposed()
         {
-            if( _disposed ) throw new ObjectDisposedException( ToString() );
+            if( _disposed ) throw new ObservableDomainDisposedException( DomainName );
         }
 
 
