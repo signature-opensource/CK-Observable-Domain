@@ -13,6 +13,7 @@ namespace CK.Observable.League
     public sealed class Domain : ObservableObject
     {
         IManagedDomain? _shell;
+        string? _displayName;
 
         internal Domain( Coordinator coordinator, IManagedDomain shell, string[] rootTypes )
         {
@@ -29,6 +30,7 @@ namespace CK.Observable.League
             var r = c.StartReading();
             Coordinator = (Coordinator)r.ReadObject();
             DomainName = r.ReadString();
+            _displayName = r.ReadNullableString();
             RootTypes = (string[])r.ReadObject();
             Options = (ManagedDomainOptions)r.ReadObject();
         }
@@ -37,6 +39,7 @@ namespace CK.Observable.League
         {
             w.WriteObject( Coordinator );
             w.Write( DomainName );
+            w.WriteNullableString( _displayName );
             w.WriteObject( (string[])RootTypes );
             w.WriteObject( Options );
         }
@@ -65,6 +68,16 @@ namespace CK.Observable.League
         public string DomainName { get; }
 
         /// <summary>
+        /// Gets or sets a display name for this domain.
+        /// Never null or empty: defaults to <see cref="DomainName"/>.
+        /// </summary>
+        public string DomainDisplayName
+        {
+            get => _displayName ?? DomainName;
+            set =>  _displayName = String.IsNullOrWhiteSpace( value ) ? null : value;
+        }
+
+        /// <summary>
         /// Gets or sets the managed domain options.
         /// </summary>
         public ManagedDomainOptions Options { get; set; }
@@ -75,10 +88,12 @@ namespace CK.Observable.League
         /// </summary>
         public IReadOnlyList<string> RootTypes { get; }
 
-        void OnOptionsChanged( object before, object after )
+        /// <summary>
+        /// Tracks <see cref="Options"/> changes to synchronize the <see cref="ObservableLeague.Shell"/>.
+        /// </summary>
+        void OnOptionsChanged()
         {
-            if( IsDeserializing ) return;
-            Shell.Options = Options;
+            if( _shell != null ) _shell.Options = Options;
         }
 
         protected override void Dispose( bool shouldCleanup )

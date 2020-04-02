@@ -26,20 +26,20 @@ namespace CK.Observable.League
 
         /// <summary>
         /// Gets the minimum time span during which snapshot files for this domain must be kept.
-        /// Recent snapshots will not be deleted (even if <see cref="MaximumTotalKbToKeep"/> applies).
-        /// Setting both this and <see cref="MaximumTotalKbToKeep"/> to 0 suppress any archive cleanup.
+        /// Recent snapshots will not be deleted (even if <see cref="SnapshotMaximalTotalKiB"/> applies).
+        /// Setting both this and SnapshotMaximalTotalKiB to 0 suppress any archive cleanup.
         /// Defaults to 2 days.
         /// </summary>
-        public TimeSpan SnapshotKeepDuration { get; }
+        public readonly TimeSpan SnapshotKeepDuration;
 
         /// <summary>
         /// Gets the maximum size snapshot files for this domain can use, in Kibibyte.
         /// Snapshot files within <see cref="SnapshotKeepDuration"/> will not be deleted, even if their cumulative
         /// size exceeds this value.
-        /// Setting both this and <see cref="MaximumTotalKbToKeep"/> to 0 suppress any file cleanup.
+        /// Setting both this and SnapshotKeepDuration to 0 suppress any file cleanup.
         /// Defaults to 10 Mebibyte.
         /// </summary>
-        public int SnapshotMaximalTotalKiB { get; }
+        public readonly int SnapshotMaximalTotalKiB;
 
         /// <summary>
         /// Gets or sets the maximum time during which events are kept.
@@ -104,7 +104,7 @@ namespace CK.Observable.League
         /// Value semantic hash code.
         /// </summary>
         /// <returns>The hash code.</returns>
-        public override int GetHashCode() => Util.Hash.Combine( Util.Hash.StartValue, CompressionKind, SnapshotSaveDelay, SnapshotMaximalTotalKiB, SnapshotKeepDuration, ExportedEventKeepDuration, ExportedEventKeepLimit ).GetHashCode();
+        public override int GetHashCode() => HashCode.Combine( CompressionKind, SnapshotSaveDelay, SnapshotMaximalTotalKiB, SnapshotKeepDuration, ExportedEventKeepDuration, ExportedEventKeepLimit );
 
         /// <summary>
         /// Value semantic equality.
@@ -114,6 +114,8 @@ namespace CK.Observable.League
         public bool Equals( ManagedDomainOptions other ) => ExportedEventKeepLimit == other.ExportedEventKeepLimit
                                                             && ExportedEventKeepDuration == other.ExportedEventKeepDuration
                                                             && SnapshotSaveDelay == other.SnapshotSaveDelay
-                                                            && CompressionKind == other.CompressionKind;
+                                                            && CompressionKind == other.CompressionKind
+                                                            && SnapshotKeepDuration == other.SnapshotKeepDuration
+                                                            && SnapshotMaximalTotalKiB == other.SnapshotMaximalTotalKiB;
     }
 }

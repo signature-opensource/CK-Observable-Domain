@@ -34,7 +34,7 @@ namespace CK.Observable.League.Tests
         {
             var store = CreateStore( nameof( empty_league_serialization ) );
             var league = await ObservableLeague.LoadAsync( TestHelper.Monitor, store );
-            await league.Coordinator.ModifyAsync( TestHelper.Monitor, ( m, d ) => d.Root.CreateDomain( "First", new [] { typeof(Model.School).AssemblyQualifiedName } ) );
+            await league.Coordinator.ModifyAsync( TestHelper.Monitor, ( m, d ) => d.Root.CreateDomain( "First", typeof(Model.School).AssemblyQualifiedName ) );
             // Using the non generic IObservableDomain.
             await using( var f = await league.Find( "First" ).LoadAsync( TestHelper.Monitor ) )
             {
@@ -60,14 +60,14 @@ namespace CK.Observable.League.Tests
             var store = CreateStore( nameof( simple_play_with_first_domain ) );
             var league = await ObservableLeague.LoadAsync( TestHelper.Monitor, store );
 
-            league.Find( "FirstDomain" ).Should().BeNull();
-            await league.Coordinator.ModifyAsync( TestHelper.Monitor, ( m, d ) => d.Root.CreateDomain( "FirstDomain", null ) );
+            league.Find( "FirstDomain" ).Should().BeNull( "Empty store. Not created yet." );
+            await league.Coordinator.ModifyAsync( TestHelper.Monitor, ( m, d ) => d.Root.CreateDomain( "FirstDomain", typeof(Model.School).AssemblyQualifiedName ) );
 
             var loader = league.Find( "FirstDomain" );
             loader.Should().NotBeNull();
             loader.IsDestroyed.Should().BeFalse();
             loader.IsLoaded.Should().BeFalse();
-            await using( var shell = await loader.LoadAsync( TestHelper.Monitor ) )
+            await using( var shell = await loader.LoadAsync<Model.School>( TestHelper.Monitor ) )
             {
                 shell.Should().BeSameAs( loader, "Since the ActivityMonitor is the same, the loader is the shell." );
 
@@ -77,22 +77,40 @@ namespace CK.Observable.League.Tests
                 afterClosing.Should().BeNull( "league has been closed." );
                 (await loader.LoadAsync( TestHelper.Monitor )).Should().BeNull( "league has been closed." );
 
-                await shell.ModifyAsync( TestHelper.Monitor, ( m, d ) => new Model.Person() { FirstName = "X", LastName = "Y", Age = 22 } );
+                await shell.ModifyAsync( TestHelper.Monitor, ( m, d ) =>
+                {
+                    d.Root.Persons.Add( new Model.Person() { FirstName = "X", LastName = "Y", Age = 22 } );
+                } );
             }
 
             var league2 = await ObservableLeague.LoadAsync( TestHelper.Monitor, store );
             var loader2 = league2.Find( "FirstDomain" );
-            await using( var shell2 = await loader2.LoadAsync( TestHelper.Monitor ) )
+            await using( var shell2 = await loader2.LoadAsync<Model.School>( TestHelper.Monitor ) )
             {
                 shell2.Read( TestHelper.Monitor, ( m, d ) =>
                 {
-                    var p = (Model.Person)d.AllObjects.Single();
+                    var p = d.Root.Persons[0];
                     p.FirstName.Should().Be( "X" );
                     p.LastName.Should().Be( "Y" );
                     p.Age.Should().Be( 22 );
                 } );
-            }
+                // We dispose the Domain in the Coordinator domain: it is now marked as Destroyed.
+                await league2.Coordinator.ModifyAsync( TestHelper.Monitor, ( m, d ) =>
+                {
+                    d.Root.Domains["FirstDomain"].Dispose();
+                } );
+                shell2.IsDestroyed.Should().BeTrue( "The loader and shells expose the IsDestroyed marker." );
+                loader2.IsDestroyed.Should().BeTrue();
 
+                league2.Find( "FirstDomain" ).Should().BeNull( "One cannot Find a destroyed domain anymore..." );
+                (await loader2.LoadAsync( TestHelper.Monitor )).Should().BeNull( "...and cannot obtain new shells to play with them." );
+
+                await shell2.ModifyAsync( TestHelper.Monitor, ( m, d ) => d.Root.Persons[0].Age = 42 );
+                shell2.Read( TestHelper.Monitor, ( m, d ) =>
+                {
+                    d.Root.Persons[0].Age.Should().Be( 42, "Existing shells CAN continue to work with Destroyed domains." );
+                } );
+            }
         }
 
         [SerializationVersion(0)]
@@ -166,7 +184,6 @@ namespace CK.Observable.League.Tests
             {
             }
         }
-
 
         [Test]
         public async Task up_to_4_typed_roots_are_supported()

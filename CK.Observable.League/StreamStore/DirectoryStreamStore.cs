@@ -41,6 +41,11 @@ namespace CK.Observable
             return p;
         }
 
+        string GetBackupFolder( string name )
+        {
+            return _path + name + ".bak";
+        }
+
         Task<bool> IStreamStore.ExistsAsync( string name )
         {
             return Task.FromResult( File.Exists( GetFullPath( ref name ) ) );
@@ -84,9 +89,9 @@ namespace CK.Observable
             }
             if( exists )
             {
-                var backupPath = _path + name + ".bak" + Path.DirectorySeparatorChar;
+                string backupPath = GetBackupFolder( name );
                 Directory.CreateDirectory( backupPath );
-                File.Replace( tempFilePath, path, FileUtil.EnsureUniqueTimedFile( backupPath, String.Empty, DateTime.UtcNow ), true );
+                File.Replace( tempFilePath, path, FileUtil.EnsureUniqueTimedFile( backupPath + Path.DirectorySeparatorChar, String.Empty, DateTime.UtcNow ), true );
             }
             else File.Move( tempFilePath, path );
             return File.GetLastWriteTimeUtc( path );
@@ -104,11 +109,14 @@ namespace CK.Observable
 
         void DoDelete( string name, string path, bool archive )
         {
-            var backupPath = _path + name + ".bak" + Path.DirectorySeparatorChar;
+            var backupPath = GetBackupFolder( name );
             if( archive )
             {
                 var archivePath = FileUtil.CreateUniqueTimedFolder( _path + "Archive" + Path.DirectorySeparatorChar, "-" + name, DateTime.UtcNow );
-                if( Directory.Exists( backupPath ) ) Directory.Move( backupPath, archivePath );
+                if( Directory.Exists( backupPath ) )
+                {
+                    Directory.Move( backupPath, Path.Combine( archivePath, Path.GetFileName( backupPath ) ) );
+                }
                 File.Move( path, Path.Combine( archivePath, name ) );
             }
             else

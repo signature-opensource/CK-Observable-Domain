@@ -127,13 +127,16 @@ namespace CK.Observable.League
 
         async Task<bool> DoSaveAsync( IActivityMonitor monitor, bool sendToArchive )
         {
-            if( _savedTransactionNumber != CurrentSerialNumber )
+            if( _savedTransactionNumber != CurrentSerialNumber || sendToArchive )
             {
                 try
                 {
-                    await StreamStore.UpdateAsync( _storeName, WriteSnapshotAsync, true );
-                    if( _snapshotSaveDelay >= 0 ) _nextSave = CurrentTimeUtc.AddMilliseconds( _snapshotSaveDelay );
-                    _savedTransactionNumber = CurrentSerialNumber;
+                    if( _savedTransactionNumber != CurrentSerialNumber )
+                    {
+                        await StreamStore.UpdateAsync( _storeName, WriteSnapshotAsync, true );
+                        if( _snapshotSaveDelay >= 0 ) _nextSave = CurrentTimeUtc.AddMilliseconds( _snapshotSaveDelay );
+                        _savedTransactionNumber = CurrentSerialNumber;
+                    }
                     if( sendToArchive )
                     {
                         await StreamStore.DeleteAsync( _storeName, true );

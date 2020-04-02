@@ -84,6 +84,17 @@ namespace CK.Observable.League
             return d;
         }
 
+        /// <summary>
+        /// Attemps to create a new domain.
+        /// Tests whether the domain type can be resolved: the root types must be available (this triggers any required assembly load).
+        /// If the domain type cannot be resolved, this method returns null.
+        /// </summary>
+        /// <param name="name">The new domain name.</param>
+        /// <param name="rootTypes">The root types.</param>
+        /// <returns>The new domain or null on error.</returns>
+        public Domain CreateDomain( string domainName, params string[] rootTypes ) => CreateDomain( domainName, (IEnumerable<string>)rootTypes );
+
+
         internal void OnDisposeDomain( Domain domain )
         {
             _domains.Remove( domain.DomainName );
