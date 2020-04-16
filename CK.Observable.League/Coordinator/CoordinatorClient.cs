@@ -2,11 +2,12 @@ using CK.Core;
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace CK.Observable.League
 {
     /// <summary>
-    /// The coordinator client is nearly the same as the other <see cref="StreamStoreClient"/> except
+    /// The coordinator client is nearly the same as its base <see cref="StreamStoreClient"/> except
     /// that it is definitely bound to the always loaded Coordinator domain, that it must rebind the <see cref="Domain.Shell"/>
     /// to the managed domains on reload and that it handles some changes like the disposal of a Domain.
     /// </summary>
@@ -21,6 +22,29 @@ namespace CK.Observable.League
         }
 
         public ObservableDomain<Coordinator> Domain { get; }
+
+        public override void OnTransactionCommit( in SuccessfulTransactionContext c )
+        {
+            base.OnTransactionCommit( c );
+            Domain d = null;
+            foreach( var e in c.Events )
+            {
+                if( e is NewObjectEvent n && n.Object is Domain dN )
+                {
+                    d = dN;
+                    break;
+                }
+                if( e is PropertyChangedEvent p && p.PropertyName == nameof( CK.Observable.League.Domain.Options ) && p.Object is Domain dP )
+                {
+                    d = dP;
+                    break;
+                }
+            }
+            if( d != null )
+            {
+                c.AddPostAction( m => d.Shell.SynchronizeOptionsAsync( m, d.Options, hasActiveTimedEvents: null ) );
+            }
+        }
 
         /// <summary>
         /// Gets the league. This is available (not null) once the initialization step
@@ -63,6 +87,7 @@ namespace CK.Observable.League
         {
             return Domain.ModifyAsync( monitor, () => actions.Invoke( monitor, Domain ), millisecondsTimeout );
         }
+        
         Task IObservableDomainAccess<Coordinator>.ModifyThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<Coordinator>> actions, int millisecondsTimeout )
         {
             return Domain.ModifyThrowAsync( monitor, () => actions.Invoke( monitor, Domain ), millisecondsTimeout );

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace CK.Observable.League
 {
@@ -20,6 +21,7 @@ namespace CK.Observable.League
             Coordinator = coordinator;
             DomainName = shell.DomainName;
             RootTypes = rootTypes;
+            // This enables the Shell/Client to centralize the default values of the Options.
             Options = shell.Options;
             _shell = shell;
         }
@@ -33,6 +35,7 @@ namespace CK.Observable.League
             _displayName = r.ReadNullableString();
             RootTypes = (string[])r.ReadObject();
             Options = (ManagedDomainOptions)r.ReadObject();
+            HasActiveTimedEvents = r.ReadBoolean();
         }
 
         void Write( BinarySerializer w )
@@ -42,14 +45,19 @@ namespace CK.Observable.League
             w.WriteNullableString( _displayName );
             w.WriteObject( (string[])RootTypes );
             w.WriteObject( Options );
+            w.Write( HasActiveTimedEvents );
         }
 
         internal IManagedDomain Shell => _shell!;
 
+        /// <summary>
+        /// This is called when the League is initially loaded
+        /// or reloaded from its snapshot.
+        /// </summary>
+        /// <param name="shell">The associated shell.</param>
         internal void Initialize( IManagedDomain shell )
         {
             _shell = shell;
-            shell.Options = Options;
         }
 
         /// <summary>
@@ -63,7 +71,7 @@ namespace CK.Observable.League
         public bool IsLoadable => Shell.IsLoadable;
 
         /// <summary>
-        /// Gets or sets whether this domain is currently loaded.
+        /// Gets whether this domain is currently loaded.
         /// </summary>
         public bool IsLoaded { get; internal set; }
 
@@ -88,18 +96,19 @@ namespace CK.Observable.League
         public ManagedDomainOptions Options { get; set; }
 
         /// <summary>
+        /// Internal information that is managed by the Shell.
+        /// This handles the case when this <see cref="ManagedDomainOptions.LoadOption"/> is <see cref="DomainPreLoadOption.Default"/>.
+        /// This is serialized so that when reloading a League, we know that the actual ObservableDomain
+        /// must be pre loaded. When the ObservableDomain is loaded, this is updated by
+        /// <see cref="ObservableLeague.DomainClient.OnTransactionCommit(in SuccessfulTransactionContext)"/>.
+        /// </summary>
+        internal bool HasActiveTimedEvents { get; set; }
+
+        /// <summary>
         /// Gets the types' assembly qualified names of the root objects (if any).
         /// There can be up to 4 typed roots. This list is empty if this is an untyped domain.
         /// </summary>
         public IReadOnlyList<string> RootTypes { get; }
-
-        /// <summary>
-        /// Tracks <see cref="Options"/> changes to synchronize the <see cref="ObservableLeague.Shell"/>.
-        /// </summary>
-        void OnOptionsChanged()
-        {
-            if( _shell != null ) _shell.Options = Options;
-        }
 
         protected override void Dispose( bool shouldCleanup )
         {
@@ -113,6 +122,7 @@ namespace CK.Observable.League
                 Coordinator.OnDisposeDomain( this );
             }
         }
+
 
     }
 }

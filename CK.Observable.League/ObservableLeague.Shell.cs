@@ -12,7 +12,7 @@ namespace CK.Observable.League
     {
         class Shell : IObservableDomainLoader, IObservableDomainShell, IManagedDomain
         {
-            readonly private protected StreamStoreClient Client;
+            readonly private protected DomainClient Client;
             readonly SemaphoreSlim? _loadLock;
             readonly IActivityMonitor _initialMonitor;
             readonly IObservableDomainAccess<Coordinator> _coordinator;
@@ -20,6 +20,9 @@ namespace CK.Observable.League
             Type[] _rootTypes;
             int _refCount;
             ObservableDomain? _domain;
+            bool _hasActiveTimedEvents;
+            bool _preLoaded;
+            DomainPreLoadOption _loadOption;
 
             private protected class IndependentShell : IObservableDomainShell
             {
@@ -41,9 +44,9 @@ namespace CK.Observable.League
                     return Shell.SaveAsync( monitor );
                 }
 
-                ValueTask IObservableDomainShellBase.DisposeAsync( IActivityMonitor monitor ) => Shell.DisposeAsync( monitor );
+                ValueTask<bool> IObservableDomainShellBase.DisposeAsync( IActivityMonitor monitor ) => Shell.DisposeAsync( monitor );
 
-                ValueTask IAsyncDisposable.DisposeAsync() => Shell.DisposeAsync( _monitor );
+                ValueTask IAsyncDisposable.DisposeAsync() => Shell.DisposeAsync( _monitor ).AsNonGenericValueTask();
 
                 Task<TransactionResult> IObservableDomainShell.ModifyAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> actions, int millisecondsTimeout )
                 {
@@ -90,7 +93,7 @@ namespace CK.Observable.League
                 _rootTypes = rootTypes;
                 RootTypes = rootTypeNames;
                 _initialMonitor = monitor;
-                Client = new StreamStoreClient( domainName, store );
+                Client = new DomainClient( domainName, store, this );
             }
 
             /// <summary>
@@ -134,7 +137,7 @@ namespace CK.Observable.League
                         return (Shell)Activator.CreateInstance( shellType, monitor, coordinator, domainName, store, rootTypeNames, rootTypes );
                     }
                 }
-                // The domainType is null if the type resilution failed.
+                // The domainType is null if the type resolution failed.
                 return new Shell( monitor, coordinator, domainName, store, rootTypeNames, rootTypes, domainType );
             }
 
@@ -148,26 +151,29 @@ namespace CK.Observable.League
 
             public bool IsLoaded => _refCount != 0;
 
-            internal bool ClosingLeague { get; set; }
+            internal bool ClosingLeague { get; private set; }
 
+            internal ValueTask OnClosingLeagueAsync( IActivityMonitor monitor )
+            {
+                ClosingLeague = true;
+                return _preLoaded ? DoShellDisposeAsync( monitor ).AsNonGenericValueTask() : default; 
+            }
+
+            /// <summary>
+            /// Gets or sets the options. This is set directly when the <see cref="Coordinator"/>'s <see cref="Domain.Options"/>
+            /// value changes.
+            /// The different values are hold by this Client or directly by this shell.
+            /// </summary>
             public ManagedDomainOptions Options
             {
                 get => new ManagedDomainOptions(
+                            loadOption: _loadOption,
                             c: Client.CompressionKind,
                             snapshotSaveDelay: TimeSpan.FromMilliseconds( Client.SnapshotSaveDelay ),
                             snapshotKeepDuration: Client.SnapshotKeepDuration,
                             snapshotMaximalTotalKiB: Client.SnapshotMaximalTotalKiB,
                             eventKeepDuration: Client.TransactClient.KeepDuration,
                             eventKeepLimit: Client.TransactClient.KeepLimit );
-                set
-                {
-                    Client.CompressionKind = value.CompressionKind;
-                    Client.SnapshotSaveDelay = (int)value.SnapshotSaveDelay.TotalMilliseconds;
-                    Client.SnapshotKeepDuration = value.SnapshotKeepDuration;
-                    Client.SnapshotMaximalTotalKiB = value.SnapshotMaximalTotalKiB;
-                    Client.TransactClient.KeepDuration = value.ExportedEventKeepDuration;
-                    Client.TransactClient.KeepLimit = value.ExportedEventKeepLimit;
-                }
             }
 
             void IManagedDomain.Destroy( IActivityMonitor monitor, IManagedLeague league )
@@ -176,6 +182,32 @@ namespace CK.Observable.League
                 league.OnDestroy( monitor, this );
             }
 
+            public Task SynchronizeOptionsAsync( IActivityMonitor monitor, ManagedDomainOptions? options, bool? hasActiveTimedEvents )
+            {
+                if( options != null )
+                {
+                    _loadOption = options.LoadOption;
+                    Client.CompressionKind = options.CompressionKind;
+                    Client.SnapshotSaveDelay = (int)options.SnapshotSaveDelay.TotalMilliseconds;
+                    Client.SnapshotKeepDuration = options.SnapshotKeepDuration;
+                    Client.SnapshotMaximalTotalKiB = options.SnapshotMaximalTotalKiB;
+                    Client.TransactClient.KeepDuration = options.ExportedEventKeepDuration;
+                    Client.TransactClient.KeepLimit = options.ExportedEventKeepLimit;
+                }
+                if( hasActiveTimedEvents.HasValue ) _hasActiveTimedEvents = hasActiveTimedEvents.Value;
+                bool shouldBeLoaded = ShouldBeLoaded;
+                if( _preLoaded != shouldBeLoaded )
+                {
+                    _preLoaded = shouldBeLoaded;
+                    return shouldBeLoaded ? DoShellLoadAsync( monitor ) : DoShellDisposeAsync( monitor ).AsTask();
+                }
+                return Task.CompletedTask;
+            }
+
+            internal bool ShouldBeLoaded => IsLoadable
+                                && (_loadOption == DomainPreLoadOption.Always
+                                    || (_loadOption == DomainPreLoadOption.Default && _hasActiveTimedEvents));
+
             protected ObservableDomain LoadedDomain => _domain!;
 
             Task<bool> IObservableDomainShellBase.SaveAsync( IActivityMonitor m )
@@ -183,15 +215,20 @@ namespace CK.Observable.League
                 return Client.SaveAsync( m );
             }
 
-            ValueTask IObservableDomainShellBase.DisposeAsync( IActivityMonitor monitor ) => DoShellDisposeAsync( monitor );
+            ValueTask<bool> IObservableDomainShellBase.DisposeAsync( IActivityMonitor monitor ) => DoShellDisposeAsync( monitor );
 
-            ValueTask IAsyncDisposable.DisposeAsync() => DoShellDisposeAsync( _initialMonitor );
+            ValueTask IAsyncDisposable.DisposeAsync() => DoShellDisposeAsync( _initialMonitor ).AsNonGenericValueTask();
 
-            async ValueTask DoShellDisposeAsync( IActivityMonitor monitor )
+            async ValueTask<bool> DoShellDisposeAsync( IActivityMonitor monitor )
             {
                 if( !IsLoadable ) throw new ObjectDisposedException( nameof( IObservableDomainShell ) );
                 await _loadLock!.WaitAsync();
-                if( --_refCount < 0 ) throw new ObjectDisposedException( nameof( IObservableDomainShell ) );
+                if( --_refCount < 0 )
+                {
+                    _loadLock.Release();
+                    throw new ObjectDisposedException( nameof( IObservableDomainShell ) );
+                }
+                bool disposedDomain = false;
                 if( _refCount == 0 )
                 {
                     try
@@ -203,13 +240,19 @@ namespace CK.Observable.League
                             {
                                 try
                                 {
-                                    await _coordinator.ModifyThrowAsync( monitor, ( m, d ) => d.Root.Domains[DomainName].IsLoaded = false );
+                                    await _coordinator.ModifyThrowAsync( monitor, ( m, d ) =>
+                                    {
+                                        var domain = d.Root.Domains[DomainName];
+                                        domain.IsLoaded = false;
+                                        domain.HasActiveTimedEvents = _hasActiveTimedEvents;
+                                    } );
                                 }
                                 catch( ObservableDomainDisposedException ex ) when( ex.DomainName == String.Empty )
                                 {
                                     monitor.Debug( "Race condition on Coordinator disposal vs. unload." );
                                 }
                             }
+                            disposedDomain = true;
                             _domain.Dispose( monitor );
                         }
                     }
@@ -219,6 +262,7 @@ namespace CK.Observable.League
                     }
                 }
                 _loadLock.Release();
+                return disposedDomain;
             }
 
             /// <summary>
@@ -229,6 +273,15 @@ namespace CK.Observable.League
             public async Task<IObservableDomainShell?> LoadAsync( IActivityMonitor monitor )
             {
                 if( !IsLoadable || IsDestroyed || ClosingLeague ) return null;
+                await DoShellLoadAsync( monitor );
+                if( _domain == null ) return null;
+                if( _initialMonitor == monitor ) return this;
+                return CreateIndependentShell( monitor );
+            }
+
+            async Task<bool> DoShellLoadAsync( IActivityMonitor monitor )
+            {
+                bool updateDone = false;
                 await _loadLock!.WaitAsync();
                 if( ++_refCount == 1 )
                 {
@@ -237,8 +290,15 @@ namespace CK.Observable.League
                     {
                         var d = CreateDomain( monitor );
                         await Client.InitializeAsync( monitor, d );
+                        await _coordinator.ModifyThrowAsync( monitor, ( m, d ) =>
+                        {
+                            var domain = d.Root.Domains[DomainName];
+                            domain.IsLoaded = true;
+                            domain.HasActiveTimedEvents = _hasActiveTimedEvents;
+                        } );
+                        updateDone = true;
+                        // On success only:
                         _domain = d;
-                        await _coordinator.ModifyThrowAsync( monitor, ( m, d ) => d.Root.Domains[DomainName].IsLoaded = true );
                     }
                     catch( Exception ex )
                     {
@@ -248,9 +308,7 @@ namespace CK.Observable.League
                     }
                 }
                 _loadLock.Release();
-                if( _domain == null ) return null;
-                if( _initialMonitor == monitor ) return this;
-                return CreateIndependentShell( monitor );
+                return updateDone;
             }
 
             private protected virtual ObservableDomain CreateDomain( IActivityMonitor monitor ) => new ObservableDomain( monitor, DomainName, Client );

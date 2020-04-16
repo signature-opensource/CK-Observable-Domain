@@ -42,7 +42,7 @@ namespace CK.Observable.League
         /// The domain is unloaded if this is the last released shell.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
-        /// <returns>The awaitable.</returns>
-        ValueTask DisposeAsync( IActivityMonitor monitor );
+        /// <returns>True if the managed domain has actually be unloaded (ie. disposed)..</returns>
+        ValueTask<bool> DisposeAsync( IActivityMonitor monitor );
     }
 }

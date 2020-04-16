@@ -12,7 +12,7 @@ namespace CK.Observable.League.Tests
     {
         readonly static NormalizedPath TestFolder = TestHelper.TestProjectFolder.AppendPart( "TestStores" );
 
-        static DirectoryStreamStore CreateStore( string name )
+        public static DirectoryStreamStore CreateStore( string name )
         {
             var p = TestFolder.AppendPart( name );
             TestHelper.CleanupFolder( p );

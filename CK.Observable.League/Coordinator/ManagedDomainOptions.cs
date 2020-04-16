@@ -6,12 +6,16 @@ using System.Text;
 namespace CK.Observable.League
 {
     /// <summary>
-    /// Immutable definition of snapshot options: <see cref="CompressionKind"/>, <see cref="SnapshotSaveDelay"/>, <see cref="ExportedEventKeepDuration"/>
-    /// and <see cref="ExportedEventKeepLimit"/>.
+    /// Immutable definition of options for domains managed in a <see cref="ObservableLeague"/>.
     /// </summary>
     [SerializationVersion( 0 )]
-    public class ManagedDomainOptions : IEquatable<ManagedDomainOptions>
+    public sealed class ManagedDomainOptions : IEquatable<ManagedDomainOptions>
     {
+        /// <summary>
+        /// Gets the <see cref="DomainPreLoadOption"/> configuration.
+        /// </summary>
+        public readonly DomainPreLoadOption LoadOption;
+
         /// <summary>
         /// The Snapshot compression kind.
         /// </summary>
@@ -48,15 +52,49 @@ namespace CK.Observable.League
         public readonly TimeSpan ExportedEventKeepDuration;
 
         /// <summary>
-        /// Gets or sets the minimum number of transaction events that are kept, regardless of <see cref="KeepDuration"/>.
+        /// Gets or sets the minimum number of transaction events that are kept, regardless of <see cref="ExportedEventKeepDuration"/>.
         /// Default to 100.
         /// </summary>
         public readonly int ExportedEventKeepLimit;
 
         /// <summary>
+        /// Returns a new immutable option with an updated <see cref="LoadOption"/>.
+        /// </summary>
+        /// <param name="loadOption">The load option.</param>
+        /// <returns>This or a new option instance.</returns>
+        public ManagedDomainOptions SetLoadOption( DomainPreLoadOption loadOption ) => LoadOption == loadOption ? this : new ManagedDomainOptions
+            (
+                loadOption,
+                CompressionKind,
+                SnapshotSaveDelay,
+                SnapshotKeepDuration,
+                SnapshotMaximalTotalKiB,
+                ExportedEventKeepDuration,
+                ExportedEventKeepLimit 
+            );
+
+        /// <summary>
+        /// Returns a new immutable option with an updated <see cref="CompressionKind"/>.
+        /// </summary>
+        /// <param name="k">The compression kind.</param>
+        /// <returns>This or a new option instance.</returns>
+        public ManagedDomainOptions SetCompressionKind( CompressionKind k ) => CompressionKind == k ? this : new ManagedDomainOptions
+            (
+                LoadOption,
+                k,
+                SnapshotSaveDelay,
+                SnapshotKeepDuration,
+                SnapshotMaximalTotalKiB,
+                ExportedEventKeepDuration,
+                ExportedEventKeepLimit 
+            );
+
+
+        /// <summary>
         /// Initializes a new <see cref="ManagedDomainOptions"/>.
         /// </summary>
         public ManagedDomainOptions(
+            DomainPreLoadOption loadOption,
             CompressionKind c,
             TimeSpan snapshotSaveDelay,
             TimeSpan snapshotKeepDuration,
@@ -64,6 +102,7 @@ namespace CK.Observable.League
             TimeSpan eventKeepDuration,
             int eventKeepLimit)
         {
+            LoadOption = loadOption;
             CompressionKind = c;
             SnapshotSaveDelay = snapshotSaveDelay;
             SnapshotKeepDuration = snapshotKeepDuration;
@@ -72,9 +111,10 @@ namespace CK.Observable.League
             ExportedEventKeepLimit = eventKeepLimit;
         }
 
-        internal ManagedDomainOptions( IBinaryDeserializerContext ctx )
+        ManagedDomainOptions( IBinaryDeserializerContext ctx )
         {
             var r = ctx.StartReading();
+            LoadOption = r.ReadEnum<DomainPreLoadOption>();
             CompressionKind = r.ReadEnum<CompressionKind>();
             SnapshotSaveDelay = r.ReadTimeSpan();
             SnapshotKeepDuration = r.ReadTimeSpan();
@@ -85,6 +125,7 @@ namespace CK.Observable.League
 
         void Write( BinarySerializer w )
         {
+            w.WriteEnum( LoadOption );
             w.WriteEnum( CompressionKind );
             w.Write( SnapshotSaveDelay );
             w.Write( SnapshotKeepDuration );
@@ -104,18 +145,19 @@ namespace CK.Observable.League
         /// Value semantic hash code.
         /// </summary>
         /// <returns>The hash code.</returns>
-        public override int GetHashCode() => HashCode.Combine( CompressionKind, SnapshotSaveDelay, SnapshotMaximalTotalKiB, SnapshotKeepDuration, ExportedEventKeepDuration, ExportedEventKeepLimit );
+        public override int GetHashCode() => HashCode.Combine( LoadOption, CompressionKind, SnapshotSaveDelay, SnapshotKeepDuration, SnapshotMaximalTotalKiB, ExportedEventKeepDuration, ExportedEventKeepLimit );
 
         /// <summary>
         /// Value semantic equality.
         /// </summary>
         /// <param name="obj">The other object.</param>
         /// <returns>True on equal, false otherwise.</returns>
-        public bool Equals( ManagedDomainOptions other ) => ExportedEventKeepLimit == other.ExportedEventKeepLimit
-                                                            && ExportedEventKeepDuration == other.ExportedEventKeepDuration
-                                                            && SnapshotSaveDelay == other.SnapshotSaveDelay
+        public bool Equals( ManagedDomainOptions other ) => LoadOption == other.LoadOption
                                                             && CompressionKind == other.CompressionKind
+                                                            && SnapshotSaveDelay == other.SnapshotSaveDelay
                                                             && SnapshotKeepDuration == other.SnapshotKeepDuration
-                                                            && SnapshotMaximalTotalKiB == other.SnapshotMaximalTotalKiB;
+                                                            && SnapshotMaximalTotalKiB == other.SnapshotMaximalTotalKiB
+                                                            && ExportedEventKeepDuration == other.ExportedEventKeepDuration
+                                                            && ExportedEventKeepLimit == other.ExportedEventKeepLimit;
     }
 }

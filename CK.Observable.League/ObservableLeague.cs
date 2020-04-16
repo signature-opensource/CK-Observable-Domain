@@ -11,6 +11,9 @@ namespace CK.Observable.League
 {
     /// <summary>
     /// Primary object that manages a bunch of <see cref="ObservableDomain"/>.
+    /// To interact with existing domains, a <see cref="IObservableDomainLoader"/> must be obtained
+    /// thanks to the <see cref="this[string]"/> accessor (or the more explicit <see cref="Find(string)"/> method).
+    /// Creation and destruction of domains are under control of the <see cref="Coordinator"/> domain.
     /// </summary>
     public partial class ObservableLeague : IManagedLeague
     {
@@ -50,13 +53,21 @@ namespace CK.Observable.League
                 await client.InitializeAsync( monitor, client.Domain );
                 // No need to acquire a read lock here.
                 var domains = new ConcurrentDictionary<string, Shell>( StringComparer.OrdinalIgnoreCase );
-                foreach( var d in client.Domain.Root.Domains.Values )
+                IEnumerable<Domain> observableDomains = client.Domain.Root.Domains.Values;
+                foreach( var d in observableDomains )
                 {
                     var shell = Shell.Create( monitor, client, d.DomainName, store, d.RootTypes );
                     d.Initialize( shell );
                     domains.TryAdd( d.DomainName, shell );
                 }
-                return new ObservableLeague( store, client, domains );
+                // Shells have been created: we can create the whole structure.
+                var o = new ObservableLeague( store, client, domains );
+                // And immediately loads the domains that need to be.
+                foreach( var d in observableDomains )
+                {
+                    await d.Shell.SynchronizeOptionsAsync( monitor, d.Options, d.HasActiveTimedEvents );
+                }
+                return o;
             }
             catch( Exception ex )
             {
@@ -80,7 +91,7 @@ namespace CK.Observable.League
         public IObservableDomainLoader? this[ string domainName ] => Find( domainName );
 
         /// <summary>
-        /// Gets the acess to the Coordinator domain.
+        /// Gets the access to the Coordinator domain.
         /// </summary>
         public IObservableDomainAccess<Coordinator> Coordinator => _coordinator;
 
@@ -99,14 +110,17 @@ namespace CK.Observable.League
                 // Since this saves the snapshot, there is no risk here.
                 await _coordinator.SaveAsync( monitor );
                 // Setting the flag is safe as well as clearing the concurrent dictionary.
-                foreach( var shell in _domains.Values ) shell.ClosingLeague = true;
+                foreach( var shell in _domains.Values )
+                {
+                    await shell.OnClosingLeagueAsync( monitor );
+                }
                 _domains.Clear();
             }
         }
 
         IManagedDomain IManagedLeague.CreateDomain( IActivityMonitor monitor, string name, IReadOnlyList<string> rootTypes )
         {
-            Debug.Assert( !_coordinator.Domain.IsDisposed, "Domain.Dispose requires the Write lock." );
+            Debug.Assert( !_coordinator.Domain.IsDisposed );
             return _domains.AddOrUpdate( name,
                                          Shell.Create( monitor, _coordinator, name, _streamStore, rootTypes ),
                                          ( n, s ) => throw new Exception( $"Internal error: domain name '{n}' already exists." ) );

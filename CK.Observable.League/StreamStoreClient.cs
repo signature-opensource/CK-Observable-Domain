@@ -9,8 +9,10 @@ namespace CK.Observable.League
     /// <summary>
     /// This is the primary, first client. It handles the transaction snapshot and
     /// associates a <see cref="TransactClient"/> as its direct next client.
+    /// It is specialized by <see cref="CoordinatorClient"/> for the coordinator domain
+    /// and <see cref="ObservableLeague.DomainClient"/> for the other ones.
     /// </summary>
-    class StreamStoreClient : MemoryTransactionProviderClient
+    abstract class StreamStoreClient : MemoryTransactionProviderClient
     {
         readonly string _storeName;
         int _savedTransactionNumber;

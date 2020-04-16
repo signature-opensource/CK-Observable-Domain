@@ -8,6 +8,10 @@ using System.Text;
 
 namespace CK.Observable.League
 {
+    /// <summary>
+    /// The coordinator is the root object that exposes the current <see cref="Domains"/> of
+    /// a <see cref="ObservableLeague"/> and allows to manage them.
+    /// </summary>
     [SerializationVersion( 0 )]
     public class Coordinator : ObservableRootObject
     {
@@ -23,47 +27,18 @@ namespace CK.Observable.League
             : base( d )
         {
             var r = d.StartReading();
-            r.DebugCheckSentinel();
             _domains = (ObservableDictionary<string, Domain>)r.ReadObject();
         }
 
         void Write( BinarySerializer w )
         {
-            w.DebugWriteSentinel();
             w.WriteObject( _domains );
         }
 
         /// <summary>
-        /// Gets the league. See <see cref="CoordinatorClient.League"/>.
+        /// Gets the map of the existing <see cref="Domain"/>.
         /// </summary>
-        internal IManagedLeague League => _league!;
-
-        internal void FinalizeConstruct( IManagedLeague league ) => _league = league;
-
-        internal void Initialize( IActivityMonitor monitor, IManagedLeague league )
-        {
-            Debug.Assert( _domains.Values.All( d => d.Shell == null ) );
-            _league = league;
-            List<Domain> failed = null;
-            foreach( var d in _domains.Values )
-            {
-                try
-                {
-                    d.Initialize( league.RebindDomain( monitor, d.DomainName, d.RootTypes ) );
-                }
-                catch( Exception ex )
-                {
-                    monitor.Error( $"Unable to bind to domain '{d.DomainName}'.", ex );
-                    if( failed == null ) failed = new List<Domain>();
-                    failed.Add( d );
-                }
-            }
-            if( failed.Count > 0 )
-            {
-                monitor.Warn( $"Domains '{failed.Select( d => d.DomainName ).Concatenate("', '")}' must be removed." );
-                foreach( var d in failed ) d.Dispose();
-            }
-        }
+        public IObservableReadOnlyDictionary<string, Domain> Domains => _domains;
 
         /// <summary>
         /// Attemps to create a new domain.
@@ -101,9 +76,37 @@ namespace CK.Observable.League
         }
 
         /// <summary>
-        /// Gets the map of the <see cref="Domain"/>.
+        /// Gets the league. See <see cref="CoordinatorClient.League"/>.
         /// </summary>
-        public IObservableReadOnlyDictionary<string, Domain> Domains => _domains;
+        internal IManagedLeague League => _league!;
+
+        internal void FinalizeConstruct( IManagedLeague league ) => _league = league;
+
+        internal void Initialize( IActivityMonitor monitor, IManagedLeague league )
+        {
+            Debug.Assert( _domains.Values.All( d => d.Shell == null ) );
+            _league = league;
+            List<Domain> failed = null;
+            foreach( var d in _domains.Values )
+            {
+                try
+                {
+                    d.Initialize( league.RebindDomain( monitor, d.DomainName, d.RootTypes ) );
+                }
+                catch( Exception ex )
+                {
+                    monitor.Error( $"Unable to bind to domain '{d.DomainName}'.", ex );
+                    if( failed == null ) failed = new List<Domain>();
+                    failed.Add( d );
+                }
+            }
+            if( failed.Count > 0 )
+            {
+                monitor.Warn( $"Domains '{failed.Select( d => d.DomainName ).Concatenate("', '")}' must be removed." );
+                foreach( var d in failed ) d.Dispose();
+            }
+        }
+
 
     }
 }
