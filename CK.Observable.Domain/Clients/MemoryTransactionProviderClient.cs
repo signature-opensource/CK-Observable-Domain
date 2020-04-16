@@ -234,7 +234,7 @@ namespace CK.Observable
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="d">The associated domain.</param>
-        protected void CreateSnapshot( IActivityMonitor monitor, ObservableDomain d )
+        protected void CreateSnapshot( IActivityMonitor monitor, IObservableDomain d )
         {
             using( monitor.OpenTrace( $"Creating snapshot." ) )
             {

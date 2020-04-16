@@ -1,5 +1,6 @@
 using CK.Core;
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -13,22 +14,26 @@ namespace CK.Observable
     /// <summary>
     /// Timer management implements the support for <see cref="ObservableTimedEventBase"/>.
     /// </summary>
-    public sealed class TimeManager
+    public sealed class TimeManager : ITimeManager
     {
         int _activeCount;
-        int _count;
         ObservableTimedEventBase[] _activeEvents;
+        int _count;
+        int _timerCount;
         // Tracking is basic: any change are tracked with a simple hash set.
         readonly HashSet<ObservableTimedEventBase> _changed;
         readonly List<ObservableTimedEventBase> _changedCleanupBuffer;
+        readonly TimedEventCollection _exposedTimedEvents;
+        readonly TimerCollection _exposedTimers;
+        readonly ReminderCollection _exposedReminders;
         ObservableTimedEventBase _first;
         ObservableTimedEventBase _last;
-        AutoTimer _current;
+        AutoTimer _autoTimer;
         DateTime _currentNext;
         int _totalEventRaised;
 
         /// <summary>
-        /// Default implementation that is available on <see cref="CurrentTimer"/> and can be specialized
+        /// Default implementation that is available on <see cref="Timer"/> and can be specialized
         /// and replaced as needed... Well... If you really need it, which I strongly doubt.
         /// </summary>
         public class AutoTimer : IDisposable
@@ -167,7 +172,7 @@ namespace CK.Observable
 
             /// <summary>
             /// Gets the domain to which this timer is bound.
-            /// Note that this <see cref="AutoTimer"/> may not be the <see cref="TimeManager.CurrentTimer"/> of the domain.
+            /// Note that this <see cref="AutoTimer"/> may not be the <see cref="TimeManager.Timer"/> of the domain.
             /// </summary>
             public ObservableDomain Domain { get; }
 
@@ -231,8 +236,8 @@ namespace CK.Observable
             }
 
             /// <summary>
-            /// Disposed the internal <see cref="Timer"/> object.
-            /// This is automatically called by <see cref="ObservableDomain.Dispose()"/> on the <see cref="TimeManager.CurrentTimer"/>:
+            /// Disposed the internal <see cref="System.Threading.Timer"/> object.
+            /// This is automatically called by <see cref="ObservableDomain.Dispose()"/> on the <see cref="TimeManager.Timer"/>:
             /// this must be called only when explicit AutoTimer are created/assigned.
             /// </summary>
             public void Dispose()
@@ -255,8 +260,11 @@ namespace CK.Observable
             _activeEvents = new ObservableTimedEventBase[16];
             _changed = new HashSet<ObservableTimedEventBase>();
             _changedCleanupBuffer = new List<ObservableTimedEventBase>();
-            _current = new AutoTimer( Domain );
+            _autoTimer = new AutoTimer( Domain );
             _currentNext = Util.UtcMinValue;
+            _exposedTimedEvents = new TimedEventCollection( this );
+            _exposedTimers = new TimerCollection( this );
+            _exposedReminders = new ReminderCollection( this );
         }
 
         /// <summary>
@@ -281,44 +289,118 @@ namespace CK.Observable
         /// Gets or sets the <see cref="AutoTimer"/> that must be used to ensure that <see cref="ObservableTimedEventBase{T}.Elapsed"/> events
         /// are raised even when no activity occur on the domain.
         /// </summary>
-        public AutoTimer CurrentTimer
+        /// <remarks>
+        /// Setting this to another timer than the default one must be motivated by reasons that we (the authors) can hardly imagine.
+        /// If it happens, do not hesitate to contact us!
+        /// </remarks>
+        public AutoTimer Timer
         {
-            get => _current;
+            get => _autoTimer;
             set
             {
-                if( value == null ) throw new ArgumentNullException( nameof( CurrentTimer ) );
-                if( _current != value )
+                if( value == null ) throw new ArgumentNullException( nameof( Timer ) );
+                if( _autoTimer != value )
                 {
                     _currentNext = Util.UtcMinValue;
-                    _current = value;
+                    _autoTimer = value;
                 }
             }
         }
 
-        /// <summary>
-        /// Gets the set of <see cref="ObservableTimer"/>.
-        /// </summary>
-        public IEnumerable<ObservableTimer> Timers => AllObservableTimedEvents.OfType<ObservableTimer>();
+        /// <inheritdoc/>
+        public DateTime NextDueTimeUtc => _currentNext;
 
-        /// <summary>
-        /// Gets the set of <see cref="ObservableReminder"/>.
-        /// </summary>
-        public IEnumerable<ObservableReminder> Reminders => AllObservableTimedEvents.OfType<ObservableReminder>();
+        /// <inheritdoc/>
+        public int ActiveTimedEventsCount => _activeCount;
 
-        /// <summary>
-        /// Gets the set of all the <see cref="ObservableTimedEventBase"/>.
-        /// </summary>
-        public IEnumerable<ObservableTimedEventBase> AllObservableTimedEvents
+        class TimerCollection : IReadOnlyCollection<ObservableTimer>
         {
-            get
+            readonly TimeManager _timeManager;
+
+            public TimerCollection( TimeManager m ) => _timeManager = m;
+
+            public int Count => _timeManager._timerCount;
+
+            public IEnumerator<ObservableTimer> GetEnumerator()
             {
-                var o = _first;
+                var o = _timeManager._first;
+                while( o != null )
+                {
+                    if( o is ObservableTimer t ) yield return t;
+                    o = o.Next;
+                }
+            }
+
+            IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+        }
+
+        class ReminderCollection : IReadOnlyCollection<ObservableReminder>
+        {
+            readonly TimeManager _timeManager;
+
+            public ReminderCollection( TimeManager m ) => _timeManager = m;
+
+            public int Count => _timeManager._count - _timeManager._timerCount;
+
+            public IEnumerator<ObservableReminder> GetEnumerator()
+            {
+                var o = _timeManager._first;
+                while( o != null )
+                {
+                    if( o is ObservableReminder r ) yield return r;
+                    o = o.Next;
+                }
+            }
+
+            IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+        }
+
+        class TimedEventCollection : IReadOnlyCollection<ObservableTimedEventBase>
+        {
+            readonly TimeManager _timeManager;
+
+            public TimedEventCollection( TimeManager m ) => _timeManager = m;
+
+            public int Count => _timeManager._count;
+
+            public IEnumerator<ObservableTimedEventBase> GetEnumerator()
+            {
+                var o = _timeManager._first;
                 while( o != null )
                 {
                     yield return o;
                     o = o.Next;
                 }
             }
+
+            IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+        }
+
+        /// <inheritdoc/>
+        public IReadOnlyCollection<ObservableTimer> Timers => _exposedTimers;
+
+        /// <inheritdoc/>
+        public IReadOnlyCollection<ObservableReminder> Reminders => _exposedReminders;
+
+        /// <inheritdoc/>
+        public IReadOnlyCollection<ObservableTimedEventBase> AllObservableTimedEvents => _exposedTimedEvents;
+
+        /// <summary>
+        /// Uses a pooled <see cref="ObservableReminder"/> to call the specified callback at the given time with the
+        /// associated <see cref="ObservableTimedEventBase.Tag"/> object.
+        /// </summary>
+        /// <param name="dueTimeUtc">The due time. Must be in Utc and not <see cref="Util.UtcMinValue"/> or <see cref="Util.UtcMaxValue"/>.</param>
+        /// <param name="callback">The callback method. Must not be null.</param>
+        /// <param name="tag">Optional tag that will be available on event argument's: <see cref="ObservableTimedEventBase.Tag"/>.</param>
+        public void Remind( DateTime dueTimeUtc, SafeEventHandler<ObservableReminderEventArgs> callback, object? tag )
+        {
+            // Utc is checked by the DueTimeUtc setter below.
+            if( dueTimeUtc == Util.UtcMinValue || dueTimeUtc == Util.UtcMaxValue ) throw new ArgumentException( nameof( dueTimeUtc ), $"Must be a Utc DateTime, not UtcMinValue nor UtcMaxValue: {dueTimeUtc.ToString( "o" )}." );
+            if( callback == null ) throw new ArgumentNullException( nameof( callback ) );
+            var r = GetPooledReminder();
+            r.Elapsed += callback;
+            r.Tag = tag;
+            r.DueTimeUtc = dueTimeUtc;
         }
 
         ObservableReminder _firstFreeReminder;
@@ -338,24 +420,13 @@ namespace CK.Observable
             _firstFreeReminder = r;
         }
 
-        internal void Remind( DateTime dueTimeUtc, SafeEventHandler<ObservableReminderEventArgs> callback, object? tag )
-        {
-            // Utc is checked by the DueTimeUtc setter below.
-            if( dueTimeUtc == Util.UtcMinValue || dueTimeUtc == Util.UtcMaxValue ) throw new ArgumentException( nameof( dueTimeUtc ), $"Must be a Utc DateTime, not UtcMinValue nor UtcMaxValue: {dueTimeUtc.ToString("o")}." );
-            if( callback == null ) throw new ArgumentNullException( nameof( callback ) );
-            var r = GetPooledReminder();
-            r.Elapsed += callback;
-            r.Tag = tag;
-            r.DueTimeUtc = dueTimeUtc;
-        }
-
         internal void SetNextDueTimeUtc( IActivityMonitor m, DateTime nextDueTimeUtc )
         {
             if( _currentNext != nextDueTimeUtc )
             {
                 try
                 {
-                    _current.SetNextDueTimeUtc( m, nextDueTimeUtc );
+                    _autoTimer.SetNextDueTimeUtc( m, nextDueTimeUtc );
                     _currentNext = nextDueTimeUtc;
                 }
                 catch( Exception ex )
@@ -367,16 +438,18 @@ namespace CK.Observable
 
         internal void OnCreated( ObservableTimedEventBase t )
         {
+            Debug.Assert( t is ObservableTimer || t is ObservableReminder );
             if( (t.Next = _first) == null ) _last = t;
             _first = t;
             _changed.Add( t );
             ++_count;
+            if( t is ObservableTimer ) ++_timerCount;
         }
 
         internal void OnPreDisposed( ObservableTimedEventBase t )
         {
             Domain.CheckBeforeDispose( t );
-            if( t.ActiveIndex != 0 ) Deactivate( t ); 
+            if( t.ActiveIndex != 0 ) Deactivate( t );
         }
 
         internal void OnDisposed( ObservableTimedEventBase t )
@@ -387,6 +460,7 @@ namespace CK.Observable
             else t.Next.Prev = t.Prev;
             _changed.Add( t );
             --_count;
+            if( t is ObservableTimer ) --_timerCount;
         }
 
         internal void OnChanged( ObservableTimedEventBase t ) => _changed.Add( t );
@@ -405,12 +479,13 @@ namespace CK.Observable
 
         internal void Load( IActivityMonitor m, BinaryDeserializer r )
         {
-            Debug.Assert( _count == 0 && _first == null && _last == null && _activeCount == 0 );
+            Debug.Assert( _count == 0 && _timerCount == 0 && _first == null && _last == null && _activeCount == 0 );
             int version = r.ReadNonNegativeSmallInt32();
             int count = r.ReadNonNegativeSmallInt32();
             while( --count >= 0 )
             {
-                r.ReadObject();
+                object o = r.ReadObject();
+                if( o is ObservableTimer ) ++_timerCount;
             }
         }
 
@@ -426,9 +501,9 @@ namespace CK.Observable
         {
             Debug.Assert( _activeEvents[0] == null );
             Array.Clear( _activeEvents, 1, _activeCount );
-            _count = _activeCount = 0;
+            _timerCount = _count = _activeCount = 0;
             _first = _last = null;
-            _current.SetNextDueTimeUtc( monitor, Util.UtcMinValue );
+            _autoTimer.SetNextDueTimeUtc( monitor, Util.UtcMinValue );
             _firstFreeReminder = null;
         }
 
@@ -519,7 +594,7 @@ namespace CK.Observable
                         if( count == 0 )
                         {
                             m.Debug( "Timer raised too early. Reset it." );
-                            CurrentTimer.SetNextDueTimeUtc( m, first.ExpectedDueTimeUtc );
+                            Timer.SetNextDueTimeUtc( m, first.ExpectedDueTimeUtc );
                         }
                         break;
                     }

@@ -11,17 +11,18 @@ namespace CK.Observable
     /// </summary>
     public readonly struct SuccessfulTransactionContext
     {
+        readonly ObservableDomain _domain;
         readonly List<Func<IActivityMonitor, Task>> _postActions;
 
         /// <summary>
         /// Gets the monitor to use.
         /// </summary>
-        public IActivityMonitor Monitor => Domain.CurrentMonitor;
+        public IActivityMonitor Monitor => _domain.CurrentMonitor;
 
         /// <summary>
         /// Gets the observable domain.
         /// </summary>
-        public ObservableDomain Domain { get; }
+        public IObservableDomain Domain => _domain;
 
         /// <summary>
         /// Gets the start time (UTC) of the transaction.
@@ -70,7 +71,7 @@ namespace CK.Observable
         internal SuccessfulTransactionContext( ObservableDomain d, IReadOnlyList<ObservableEvent> e, IReadOnlyList<ObservableCommand> c, DateTime startTime, DateTime nextDueTime )
         {
             _postActions = new List<Func<IActivityMonitor, Task>>();
-            Domain = d;
+            _domain = d;
             NextDueTimeUtc = nextDueTime;
             StartTimeUtc = startTime;
             CommitTimeUtc = DateTime.UtcNow;

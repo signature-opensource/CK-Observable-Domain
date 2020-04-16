@@ -1062,19 +1062,7 @@ namespace CK.Observable
             return Export( w, millisecondsTimeout ) ? w.ToString() : null;
         }
 
-        /// <summary>
-        /// Saves <see cref="AllObjects"/> of this domain.
-        /// </summary>
-        /// <param name="monitor">The monitor to use. Cannot be null.</param>
-        /// <param name="stream">The output stream.</param>
-        /// <param name="leaveOpen">True to leave the stream opened.</param>
-        /// <param name="debugMode">True to activate <see cref="BinarySerializer.IsDebugMode"/>.</param>
-        /// <param name="encoding">Optional encoding for characters. Defaults to UTF-8.</param>
-        /// <param name="millisecondsTimeout">
-        /// The maximum number of milliseconds to wait for a read access before giving up.
-        /// Wait indefinitely by default.
-        /// </param>
-        /// <returns>True on success, false if timeout occurred.</returns>
+        /// <inheritdoc/>
         public bool Save( IActivityMonitor monitor, Stream stream, bool leaveOpen = false, bool debugMode = false, Encoding encoding = null, int millisecondsTimeout = -1 )
         {
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
@@ -1472,6 +1460,8 @@ namespace CK.Observable
         /// </summary>
         public TimeManager TimeManager => _timeManager;
 
+        ITimeManager IObservableDomain.TimeManager => _timeManager;
+
         /// <summary>
         /// Obtains a monitor that is bound to this domain (it must be disposed once done with it).
         /// This implementation creates a new dedicated <see cref="IDisposableActivityMonitor"/> once and caches it
@@ -1551,7 +1541,7 @@ namespace CK.Observable
                 DomainClient?.OnDomainDisposed( monitor, this );
                 DomainClient = null;
                 _disposed = true;
-                _timeManager.CurrentTimer.Dispose();
+                _timeManager.Timer.Dispose();
                 if( monitor != _domainMonitor && Monitor.TryEnter( _domainMonitorLock, 0 ) )
                 {
                     if( _domainMonitor != null ) _domainMonitor.MonitorEnd( "Domain disposed." );
@@ -1582,7 +1572,7 @@ namespace CK.Observable
                 // but technically perfectly valid until a timer event calls a DoRealDispose(). If this call is made after a "long enough"
                 // time, there is no more active thread in the domain since all the public API throws the ObjectDisposedException.
                 //
-                // Is this satisfyning? No. Did I miss something? May be.
+                // Is this satisfying? No. Did I miss something? May be.
                 //
                 // A third solution is simply to...
                 //   - not Dispose the _lock (and rely on the Garbage Collector to clean it)...
