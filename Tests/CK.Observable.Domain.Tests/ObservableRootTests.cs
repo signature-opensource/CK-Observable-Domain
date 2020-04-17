@@ -36,7 +36,7 @@ namespace CK.Observable.Domain.Tests
                 {
                     d.Root.ToDoNumbers.Add( 42 );
                 } );
-                string t1 = eventCollector.WriteEventsFrom( 0 );
+                string t1 = eventCollector.WriteJSONEventsFrom( 0 );
                 t1.Should().Be( @"{""N"":1,""E"":[[""I"",1,0,42]]}", "Initial root objects instanciations are not exposed." );
 
                 using( var d2 = SaveAndLoad( d ) )

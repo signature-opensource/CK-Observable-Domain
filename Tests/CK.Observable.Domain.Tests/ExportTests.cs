@@ -1,6 +1,7 @@
 using CK.Core;
 using CK.Observable.Domain.Tests.Sample;
 using FluentAssertions;
+using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using System;
 using System.Linq;
@@ -29,7 +30,7 @@ namespace CK.Observable.Domain.Tests
                 {
                     car.Dispose();
                 } );
-                string firstEvents = eventCollector.WriteEventsFrom( 1 );
+                string firstEvents = eventCollector.WriteJSONEventsFrom( 1 );
 
                 d.Modify( TestHelper.Monitor, () =>
                 {
@@ -42,7 +43,7 @@ namespace CK.Observable.Domain.Tests
                     // value.
                     m.FirstName = "Paulo!";
                 } );
-                string secondEvents = eventCollector.WriteEventsFrom( 2 );
+                string secondEvents = eventCollector.WriteJSONEventsFrom( 2 );
 
                 Console.WriteLine( initial );
                 Console.WriteLine( firstEvents );
@@ -70,21 +71,21 @@ namespace CK.Observable.Domain.Tests
                 } ).Should().NotBeNull( "A null list of events is because an error occurred." );
 
                 d.TransactionSerialNumber.Should().Be( 1, "Even if nothing changed, TransactionNumber is incremented." );
-                eventCollector.WriteEventsFrom( 0 ).Should().Be( @"{""N"":1,""E"":[]}", "No event occured." );
+                eventCollector.WriteJSONEventsFrom( 0 ).Should().Be( @"{""N"":1,""E"":[]}", "No event occured." );
 
                 d.Modify( TestHelper.Monitor, () =>
                 {
                     new Car( "Hello!" );
                 } ).Should().NotBeNull( "A null list of events is because an error occurred." );
 
-                string t2 = eventCollector.WriteEventsFrom( 0 );
+                string t2 = eventCollector.WriteJSONEventsFrom( 0 );
 
                 d.Modify( TestHelper.Monitor, () =>
                 {
                     d.AllObjects.Single().Dispose();
                 } ).Should().NotBeNull();
 
-                string t3 = eventCollector.WriteEventsFrom( 2 );
+                string t3 = eventCollector.WriteJSONEventsFrom( 2 );
 
                 d.Modify( TestHelper.Monitor, () =>
                 {
@@ -92,7 +93,7 @@ namespace CK.Observable.Domain.Tests
 
                 } ).Should().NotBeNull();
 
-                string t4 = eventCollector.WriteEventsFrom( 3 );
+                string t4 = eventCollector.WriteJSONEventsFrom( 3 );
 
                 d.Modify( TestHelper.Monitor, () =>
                 {
@@ -101,7 +102,7 @@ namespace CK.Observable.Domain.Tests
 
                 } ).Should().NotBeNull();
 
-                string t5 = eventCollector.WriteEventsFrom( 4 );
+                string t5 = eventCollector.WriteJSONEventsFrom( 4 );
 
                 d.Modify( TestHelper.Monitor, () =>
                 {
@@ -110,7 +111,7 @@ namespace CK.Observable.Domain.Tests
 
                 } ).Should().NotBeNull();
 
-                string t6 = eventCollector.WriteEventsFrom( 5 );
+                string t6 = eventCollector.WriteJSONEventsFrom( 5 );
 
                 d.Modify( TestHelper.Monitor, () =>
                 {
@@ -121,7 +122,7 @@ namespace CK.Observable.Domain.Tests
 
                 } ).Should().NotBeNull();
 
-                string t7 = eventCollector.WriteEventsFrom( 6 );
+                string t7 = eventCollector.WriteJSONEventsFrom( 6 );
 
                 d.Modify( TestHelper.Monitor, () =>
                 {
@@ -129,7 +130,7 @@ namespace CK.Observable.Domain.Tests
                     l[0] = "Three";
                 } ).Should().NotBeNull();
 
-                string t8 = eventCollector.WriteEventsFrom( 7 );
+                string t8 = eventCollector.WriteJSONEventsFrom( 7 );
 
             }
         }
@@ -152,7 +153,7 @@ namespace CK.Observable.Domain.Tests
                     var g2 = d.AllObjects.OfType<Garage>().Single( g => g.CompanyName == null );
                     g2.CompanyName = "Signature Code";
                 } );
-                string t1 = eventCollector.WriteEventsFrom( 1 );
+                string t1 = eventCollector.WriteJSONEventsFrom( 1 );
 
                 d.Modify( TestHelper.Monitor, () =>
                 {
@@ -160,21 +161,28 @@ namespace CK.Observable.Domain.Tests
                     g2.Cars.Clear();
                     var newOne = new Mechanic( g2 ) { FirstName = "X", LastName = "Y" };
                 } );
-                string t2 = eventCollector.WriteEventsFrom( 2 );
+                string t2 = eventCollector.WriteJSONEventsFrom( 2 );
 
                 d.Modify( TestHelper.Monitor, () =>
                 {
                     var spi = d.AllObjects.OfType<Mechanic>().Single( m => m.LastName == "Spinelli" );
                     spi.Dispose();
                 } );
-                string t3 = eventCollector.WriteEventsFrom( 3 );
+                string t3 = eventCollector.WriteJSONEventsFrom( 3 );
 
                 d.Modify( TestHelper.Monitor, () =>
                 {
                     var g1 = d.AllObjects.OfType<Garage>().Single( g => g.CompanyName == "Boite" );
                     g1.ReplacementCar.Remove( g1.Cars[0] );
                 } );
-                string t4 = eventCollector.WriteEventsFrom( 3 );
+                string t4 = eventCollector.WriteJSONEventsFrom( 4 );
+
+                string t2to4 = eventCollector.WriteJSONEventsFrom( 2 );
+                var combined = JObject.Parse( t2to4 )["E"].AsEnumerable();
+                var oneByOne = new JArray( JObject.Parse( t2 )["E"].AsEnumerable()
+                                            .Concat( JObject.Parse( t3 )["E"].AsEnumerable() )
+                                            .Concat( JObject.Parse( t4 )["E"].AsEnumerable() ) );
+                combined.ToString().Should().Be( oneByOne.ToString() );
             }
         }
 
@@ -211,7 +219,7 @@ namespace CK.Observable.Domain.Tests
                 } );
                 d.Root.ProductStateList[1].OId.Index.Should().Be( 6, "Product n°2 OId.Index is 6." );
 
-                string t1 = eventCollector.WriteEventsFrom( 1 );
+                string t1 = eventCollector.WriteJSONEventsFrom( 1 );
                 // p2 is the object n°5.
                 t1.Should().Contain( @"[""N"",6,""""]" );
                 // p2.ExtraData is exported as a Map.
@@ -225,7 +233,7 @@ namespace CK.Observable.Domain.Tests
                     d.Root.SkipToNextProduct();
                     d.Root.CurrentProductState.Name.Should().Be( "Product n°1" );
                 } );
-                string t2 = eventCollector.WriteEventsFrom( 2 );
+                string t2 = eventCollector.WriteJSONEventsFrom( 2 );
                 // Switch to Product n°1 (OId is 7).
                 t2.Should().Contain( @"[""C"",0,1,{""="":7}]" );
             }

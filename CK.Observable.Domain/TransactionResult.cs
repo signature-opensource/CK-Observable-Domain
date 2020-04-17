@@ -95,14 +95,26 @@ namespace CK.Observable
 
         /// <summary>
         /// Exposes all post actions that must be executed.
+        /// This is always empty if an error occured during the transaction itself (<see cref="IObservableDomainClient.OnTransactionFailure"/>
+        /// has been called).
+        /// <para>
+        /// There may be post actions in this list if a <see cref="ClientError"/> exists (when the transaction succeeds
+        /// but <see cref="IObservableDomainClient.OnTransactionCommit(in SuccessfulTransactionContext)"/> raised an error).
+        /// Whether they must be executed (with <see cref="ExecutePostActionsAsync"/>) or must be ignored is a decision that must be
+        /// handled by the application. 
+        /// </para>
         /// </summary>
         public IReadOnlyList<Func<IActivityMonitor, Task>> PostActions => (IReadOnlyList<Func<IActivityMonitor, Task>>)_rawPostActions
                                                                             ?? Array.Empty<Func<IActivityMonitor, Task>>();
 
         /// <summary>
         /// Attempts to executes all registered <see cref="PostActions"/> if any.
-        /// By default, on error, nothing is done (except logging the error, and by default raising the exception again) and
+        /// By default, if an error is raised by one action, nothing is done (except logging the error, and by default raising the exception again) and
         /// the culprit is let as the first next action to execute.
+        /// <para>
+        /// Note that there may be post actions to execute even if a <see cref="ClientError"/> exists.
+        /// Whether they must be executed or ignored is a decision that must be handled by the application. 
+        /// </para>
         /// </summary>
         /// <param name="m">The monitor to use.</param>
         /// <param name="throwException">Set it to false to log any exception and return it instead of rethrowing it.</param>
@@ -164,6 +176,11 @@ namespace CK.Observable
             ClientError = data;
         }
 
+        /// <summary>
+        /// Returns a new TransactionResult with everything from this one but with a <see cref="ClientError"/>.
+        /// </summary>
+        /// <param name="ex"></param>
+        /// <returns></returns>
         internal TransactionResult WithClientError( Exception ex ) => new TransactionResult( this, CKExceptionData.CreateFrom( ex ) );
 
 
