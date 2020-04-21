@@ -100,7 +100,7 @@ namespace CK.Observable.League.Tests
                 {
                     d.TimeManager.AllObservableTimedEvents.Should().BeEmpty();
 
-                    d.TimeManager.Remind( DateTime.UtcNow.AddMilliseconds( 100 ), OnTimer, null );
+                    d.TimeManager.Remind( DateTime.UtcNow.AddMilliseconds( 400 ), OnTimer, null );
 
                     d.TimeManager.AllObservableTimedEvents.Should().HaveCount( 1 );
                     d.TimeManager.Timers.Should().BeEmpty();
@@ -113,7 +113,7 @@ namespace CK.Observable.League.Tests
             loader.IsLoaded.Should().BeTrue( "An active timed event keep the domain in memory." );
             OnTimerCalled.Should().BeFalse( "The reminder has not fired yet." );
 
-            await Task.Delay( 100 );
+            await Task.Delay( 490 );
             OnTimerCalled.Should().BeTrue( "The reminder has eventually fired." );
             loader.IsLoaded.Should().BeFalse( "The reminder fired: there is no more need to keep the domain in memory." );
         }
