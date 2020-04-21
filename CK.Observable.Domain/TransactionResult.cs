@@ -105,14 +105,12 @@ namespace CK.Observable
         /// Gets whether at least one post actions has been enlisted thanks to <see cref="SuccessfulTransactionContext.AddPostAction(Func{PostActionContext, Task})"/>
         /// and <see cref="ExecutePostActionsAsync(IActivityMonitor, bool)"/> has not been called yet.
         /// </summary>
-        public bool HasPostActions => _postActions != null;
+        public bool HasPostActions => _postActions != null && _postActions.ActionCount > 0;
 
         /// <summary>
         /// Attempts to execute all registered post actions if any.
         /// <para>
         /// Note that there may be post actions to execute even if a <see cref="ClientError"/> exists.
-        /// Whether they must be executed or ignored is a decision that must be handled by the consumer of this result: by
-        /// default, <see cref="ObservableDomain.ModifyAsync(IActivityMonitor, Action, int)"/> doesn't call this method if a Client error occurred. 
         /// </para>
         /// </summary>
         /// <param name="m">The monitor to use.</param>
@@ -137,7 +135,7 @@ namespace CK.Observable
             Events = c.Events;
             Commands = c.Commands;
             Errors = Array.Empty<CKExceptionData>();
-            if( c._postActions.ActionCount > 0 ) _postActions = c._postActions;
+            _postActions = c._postActions;
         }
 
         internal TransactionResult( IReadOnlyList<CKExceptionData> errors, DateTime startTime, DateTime nextDueTime )

@@ -944,7 +944,7 @@ namespace CK.Observable
         public async Task<TransactionResult> ModifyAsync( IActivityMonitor monitor, Action actions, int millisecondsTimeout = -1 )
         {
             var tr = Modify( monitor, actions, millisecondsTimeout );
-            if( tr.Success ) await tr.ExecutePostActionsAsync( monitor, throwException: true );
+            await tr.ExecutePostActionsAsync( monitor, throwException: true );
             return tr;
         }
 
@@ -1011,11 +1011,8 @@ namespace CK.Observable
                 Debug.Assert( (tEx.Item1 != null) != (tEx.Item2 != null), "The IObservableTransaction XOR IObservableDomainClient.OnTransactionStart() exception." );
                 if( tEx.Item2 != null ) return (tr, tEx.Item2);
                 tr = DoModifyAndCommit( actions, tEx.Item1 );
-                Debug.Assert( tr.Errors.Count != 0 || !tr.HasPostActions, "Errors => No post actions." );
-                if( tr.Success )
-                {
-                    postActionError = await tr.ExecutePostActionsAsync( monitor, throwException: false );
-                }
+                Debug.Assert( tr.Errors.Count == 0 || !tr.HasPostActions, "Transaction Errors => No post actions." );
+                postActionError = await tr.ExecutePostActionsAsync( monitor, throwException: false );
             }
             else monitor.Warn( $"WriteLock not obtained in {millisecondsTimeout} ms (returning TransactionResult.Empty)." );
             return (tr, postActionError );

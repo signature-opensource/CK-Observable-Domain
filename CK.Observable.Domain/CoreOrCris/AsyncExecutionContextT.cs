@@ -64,7 +64,7 @@ namespace CK.Observable
         /// <summary>
         /// Gets the monitor to use.
         /// </summary>
-        public IActivityMonitor Monitor { get; }
+        public IActivityMonitor Monitor => _monitor;
 
         /// <summary>
         /// Gets the registerer. Actions and/or error handlers can be registered
