@@ -110,7 +110,7 @@ namespace CK.Observable
         /// <returns>The JSON object.</returns>
         public string WriteJSONEventsFrom( int transactionNumber )
         {
-            if( _events.Count == 0 || transactionNumber < _events[0].TransactionNumber )
+            if( _events.Count == 0 || transactionNumber < _events[0].TransactionNumber-1 )
             {
                 // A full export is required.
                 return "{\"N\":-1,\"E\":null}";
