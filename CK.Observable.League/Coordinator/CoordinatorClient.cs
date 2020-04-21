@@ -42,7 +42,7 @@ namespace CK.Observable.League
             }
             if( d != null )
             {
-                c.AddPostAction( m => d.Shell.SynchronizeOptionsAsync( m, d.Options, hasActiveTimedEvents: null ) );
+                c.PostActions.Add( ctx => d.Shell.SynchronizeOptionsAsync( ctx.Monitor, d.Options, hasActiveTimedEvents: null ) );
             }
         }
 

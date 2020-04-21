@@ -12,7 +12,7 @@ namespace CK.Observable
     /// </summary>
     public class TransactionResult
     {
-        List<Func<IActivityMonitor, Task>> _rawPostActions;
+        ActionRegisterer<PostActionContext> _postActions;
 
         /// <summary>
         /// The empty transaction result is used when absolutely nothing happened. It has no events and no commands,
@@ -24,6 +24,14 @@ namespace CK.Observable
         /// Gets whether <see cref="Errors"/> is empty and <see cref="ClientError"/> is null.
         /// </summary>
         public bool Success => Errors.Count == 0 && ClientError == null;
+
+        /// <summary>
+        /// Gets whether the <see cref="ClientError"/> is critical: it is the call to <see cref="IObservableDomainClient.OnTransactionCommit"/>
+        /// that failed.
+        /// This lets the system in an instable, dangerous, state since the transaction has terminated without errors and some external
+        /// impacts may have been executed before the error occurred so that rolling back the transaction may not be a brilliant idea.
+        /// </summary>
+        public bool IsCriticalError => Errors.Count == 0 && ClientError != null;
 
         /// <summary>
         /// Checks that <see cref="Success"/> is true otherwise throw an exception.
@@ -91,54 +99,34 @@ namespace CK.Observable
         /// Gets the error that occured during the call to <see cref="IObservableDomainClient.OnTransactionCommit"/> (when <see cref="Errors"/>
         /// is empty) or <see cref="IObservableDomainClient.OnTransactionFailure"/> (when <see cref="Errors"/> is NOT empty).
         /// </summary>
-        public CKExceptionData ClientError { get; }
+        public CKExceptionData ClientError { get; private set; }
 
         /// <summary>
-        /// Exposes all post actions that must be executed.
-        /// This is always empty if an error occured during the transaction itself (<see cref="IObservableDomainClient.OnTransactionFailure"/>
-        /// has been called).
-        /// <para>
-        /// There may be post actions in this list if a <see cref="ClientError"/> exists (when the transaction succeeds
-        /// but <see cref="IObservableDomainClient.OnTransactionCommit(in SuccessfulTransactionContext)"/> raised an error).
-        /// Whether they must be executed (with <see cref="ExecutePostActionsAsync"/>) or must be ignored is a decision that must be
-        /// handled by the application. 
-        /// </para>
+        /// Gets whether at least one post actions has been enlisted thanks to <see cref="SuccessfulTransactionContext.AddPostAction(Func{PostActionContext, Task})"/>
+        /// and <see cref="ExecutePostActionsAsync(IActivityMonitor, bool)"/> has not been called yet.
         /// </summary>
-        public IReadOnlyList<Func<IActivityMonitor, Task>> PostActions => (IReadOnlyList<Func<IActivityMonitor, Task>>)_rawPostActions
-                                                                            ?? Array.Empty<Func<IActivityMonitor, Task>>();
+        public bool HasPostActions => _postActions != null;
 
         /// <summary>
-        /// Attempts to executes all registered <see cref="PostActions"/> if any.
-        /// By default, if an error is raised by one action, nothing is done (except logging the error, and by default raising the exception again) and
-        /// the culprit is let as the first next action to execute.
+        /// Attempts to execute all registered post actions if any.
         /// <para>
         /// Note that there may be post actions to execute even if a <see cref="ClientError"/> exists.
-        /// Whether they must be executed or ignored is a decision that must be handled by the application. 
+        /// Whether they must be executed or ignored is a decision that must be handled by the consumer of this result: by
+        /// default, <see cref="ObservableDomain.ModifyAsync(IActivityMonitor, Action, int)"/> doesn't call this method if a Client error occurred. 
         /// </para>
         /// </summary>
         /// <param name="m">The monitor to use.</param>
         /// <param name="throwException">Set it to false to log any exception and return it instead of rethrowing it.</param>
         /// <returns>The exception (if <paramref name="throwException"/> is false).</returns>
-        public async Task<Exception> ExecutePostActionsAsync( IActivityMonitor m, bool throwException = true )
+        public Task<Exception> ExecutePostActionsAsync( IActivityMonitor m, bool throwException = true )
         {
-            if( _rawPostActions != null && _rawPostActions.Count > 0 )
+            var actions = System.Threading.Interlocked.Exchange( ref _postActions, null );
+            if( actions != null )
             {
-                try
-                {
-                    while( _rawPostActions.Count > 0 )
-                    {
-                        await _rawPostActions[0].Invoke( m );
-                        _rawPostActions.RemoveAt( 0 );
-                    }
-                }
-                catch( Exception ex )
-                {
-                    m.Error( ex );
-                    if( throwException ) throw;
-                    return ex;
-                }
+                var ctx = new PostActionContext( m, actions, this );
+                return ctx.ExecuteAsync( throwException );
             }
-            return null;
+            return Task.FromResult<Exception>( null );
         }
 
         internal TransactionResult( SuccessfulTransactionContext c )
@@ -149,7 +137,7 @@ namespace CK.Observable
             Events = c.Events;
             Commands = c.Commands;
             Errors = Array.Empty<CKExceptionData>();
-            _rawPostActions = c.RawPostActions;
+            if( c._postActions.ActionCount > 0 ) _postActions = c._postActions;
         }
 
         internal TransactionResult( IReadOnlyList<CKExceptionData> errors, DateTime startTime, DateTime nextDueTime )
@@ -163,26 +151,11 @@ namespace CK.Observable
             Commands = Array.Empty<ObservableCommand>();
         }
 
-        TransactionResult( in TransactionResult r, CKExceptionData data )
+        internal TransactionResult SetClientError( Exception ex )
         {
-            Debug.Assert( r.ClientError == null, "ClientError occur at most once." );
-            StartTimeUtc = r.StartTimeUtc;
-            CommitTimeUtc = r.CommitTimeUtc;
-            NextDueTimeUtc = r.NextDueTimeUtc;
-            Events = r.Events;
-            Commands = r.Commands;
-            Errors = r.Errors;
-            _rawPostActions = r._rawPostActions;
-            ClientError = data;
+            ClientError = CKExceptionData.CreateFrom( ex );
+            return this;
         }
-
-        /// <summary>
-        /// Returns a new TransactionResult with everything from this one but with a <see cref="ClientError"/>.
-        /// </summary>
-        /// <param name="ex"></param>
-        /// <returns></returns>
-        internal TransactionResult WithClientError( Exception ex ) => new TransactionResult( this, CKExceptionData.CreateFrom( ex ) );
-
 
     }
 }

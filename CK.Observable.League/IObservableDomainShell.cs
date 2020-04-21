@@ -20,7 +20,11 @@ namespace CK.Observable.League
     public interface IObservableDomainShell : IObservableDomainShellBase
     {
         /// <summary>
-        /// Modifies this ObservableDomain in a transaction (any unhandled errors automatically
+        /// Modifies this ObservableDomain and then executes any pending post-actions.
+        /// Any exceptions raised by <see cref="IObservableDomainClient.OnTransactionStart(IActivityMonitor,ObservableDomain, DateTime)"/> (at the start of the process)
+        /// and by <see cref="TransactionResult.PostActions"/> (after the successful commit or the failure) are thrown by this method.
+
+        /// Modifies this ObservableDomain in a transaction (any unhandled errors inside the transaction automatically
         /// trigger a rollback and the <see cref="TransactionResult.Success"/> is false) and then executes any pending post-actions.
         /// <para>
         /// Any exceptions raised by <see cref="IObservableDomainClient.OnTransactionStart(IActivityMonitor,ObservableDomain, DateTime)"/> (at the start of the process)

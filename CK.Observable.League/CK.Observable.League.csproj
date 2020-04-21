@@ -6,6 +6,11 @@
     <LangVersion>8.0</LangVersion>
     <Nullable>annotations</Nullable>
   </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="Connection\**" />
+    <EmbeddedResource Remove="Connection\**" />
+    <None Remove="Connection\**" />
+  </ItemGroup>
   
   <ItemGroup>
     <PackageReference Include="Fody" PrivateAssets="all" />

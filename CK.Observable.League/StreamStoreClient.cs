@@ -83,7 +83,8 @@ namespace CK.Observable.League
         public override void OnTransactionCommit( in SuccessfulTransactionContext c )
         {
             CreateSnapshot( c.Monitor, c.Domain );
-            if( c.CommitTimeUtc >= _nextSave ) c.AddPostAction( SaveAsync );
+            // We always save the snapshot (and there is no compensation for this of course).
+            if( c.CommitTimeUtc >= _nextSave ) c.PostActions.Add( ctx => SaveAsync( ctx.Monitor ) );
             Next?.OnTransactionCommit( c );
         }
 

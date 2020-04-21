@@ -463,7 +463,7 @@ namespace CK.Observable
                     catch( Exception ex )
                     {
                         Monitor.Error( "Error in IObservableTransactionManager.OnTransactionFailure.", ex );
-                        _result = _result.WithClientError( ex );
+                        _result.SetClientError( ex );
                     }
                 }
                 else
@@ -473,13 +473,14 @@ namespace CK.Observable
                     _domain._transactionCommitTimeUtc = ctx.CommitTimeUtc;
                     try
                     {
-                        _domain.DomainClient?.OnTransactionCommit( ctx );
                         _result = new TransactionResult( ctx );
+                        _domain.DomainClient?.OnTransactionCommit( ctx );
                     }
                     catch( Exception ex )
                     {
-                        Monitor.Fatal( "Error in IObservableTransactionManager.OnTransactionCommit.", ex );
-                        _result = new TransactionResult( ctx ).WithClientError( ex );
+                        Monitor.Fatal( "Error in IObservableTransactionManager.OnTransactionCommit. This is a Critical error since the Domain state integrity may be compromised.", ex );
+                        _result.SetClientError( ex );
+                        //WatchDog
                     }
                 }
                 var next = _result.NextDueTimeUtc;
@@ -837,8 +838,8 @@ namespace CK.Observable
             var group = m.OpenTrace( "Starting transaction." );
             try
             {
-                // This could throw and be handled just like other pre-transaction errors (client OnTransactionStart errors)
-                // meaning that it will be rethrown or captured and returned: SafeMofifiy/Modify work as specified.
+                // This could throw and be handled just like other pre-transaction errors (when a buggy client throws during OnTransactionStart).
+                // Depending on throwException parameter, it will be rethrown or returned (returning the exception is for MofifyNoThrow).
                 // See DoDispose method for the discussion about disposal...
                 CheckDisposed();
                 var startTime = DateTime.UtcNow;
@@ -917,13 +918,15 @@ namespace CK.Observable
                 t.AddError( CKExceptionData.CreateFrom( ex ) );
             }
             // The transaction commit updates the timers to return the NextDueTime.
-            return t.Commit();
+            var result = t.Commit();
+
+            return result;
         }
 
         /// <summary>
-        /// Modifies this ObservableDomain and then executes any pending post-actions.
+        /// Modifies this ObservableDomain and executes the <see cref="TransactionResult.PostActions"/>.
         /// Any exceptions raised by <see cref="IObservableDomainClient.OnTransactionStart(IActivityMonitor,ObservableDomain, DateTime)"/> (at the start of the process)
-        /// and by <see cref="TransactionResult.PostActions"/> (after the successful commit or the failure) are thrown by this method.
+        /// and by <see cref="TransactionResult.PostActions"/> (after the successful commit) are thrown by this method.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="actions">
@@ -941,7 +944,7 @@ namespace CK.Observable
         public async Task<TransactionResult> ModifyAsync( IActivityMonitor monitor, Action actions, int millisecondsTimeout = -1 )
         {
             var tr = Modify( monitor, actions, millisecondsTimeout );
-            await tr.ExecutePostActionsAsync( monitor, throwException: true );
+            if( tr.Success ) await tr.ExecutePostActionsAsync( monitor, throwException: true );
             return tr;
         }
 
@@ -963,10 +966,26 @@ namespace CK.Observable
             (await ModifyAsync( monitor, actions, millisecondsTimeout )).ThrowOnTransactionFailure();
         }
 
+        public class WatchDog
+        {
+            public virtual Task OnCriticalErrorAsync( IActivityMonitor monitor, ObservableDomain domain, TransactionResult result )
+            {
+                return Task.CompletedTask;
+            }
+
+
+        }
+
         /// <summary>
         /// Safe version of <see cref="ModifyAsync(IActivityMonitor, Action, int)"/> that will never throw: any exception raised
         /// by <see cref="IObservableDomainClient.OnTransactionStart(IActivityMonitor, ObservableDomain, DateTime)"/>
-        /// or <see cref="TransactionResult.ExecutePostActionsAsync(IActivityMonitor, bool)"/> is logged and returned.
+        /// or <see cref="TransactionResult.ExecutePostActionsAsync(IActivityMonitor, bool)"/> is logged and returned along with the
+        /// transaction result itself.
+        /// <para>
+        /// If this method can, of course, be called from the application code, it has been designed to be called from background threads,
+        /// typically from the <see cref="TimeManager.AutoTimer"/> and all exceptions must be properly handled "under the hood".
+        /// Reacting to these "background errors" is the responsibility of the associated <see cref="WatchDog"/>.
+        /// </para>
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="actions">
@@ -985,15 +1004,21 @@ namespace CK.Observable
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
             CheckDisposed();
             TransactionResult tr = TransactionResult.Empty;
+            Exception postActionError = null;
             if( _lock.TryEnterWriteLock( millisecondsTimeout ) )
             {
                 var tEx = DoBeginTransaction( monitor, false );
-                Debug.Assert( (tEx.Item1 != null) != (tEx.Item2 != null), "IObservableTransaction XOR IObservableDomainClient.OnTransactionStart() exception." );
+                Debug.Assert( (tEx.Item1 != null) != (tEx.Item2 != null), "The IObservableTransaction XOR IObservableDomainClient.OnTransactionStart() exception." );
                 if( tEx.Item2 != null ) return (tr, tEx.Item2);
                 tr = DoModifyAndCommit( actions, tEx.Item1 );
+                Debug.Assert( tr.Errors.Count != 0 || !tr.HasPostActions, "Errors => No post actions." );
+                if( tr.Success )
+                {
+                    postActionError = await tr.ExecutePostActionsAsync( monitor, throwException: false );
+                }
             }
             else monitor.Warn( $"WriteLock not obtained in {millisecondsTimeout} ms (returning TransactionResult.Empty)." );
-            return (tr, await tr.ExecutePostActionsAsync( monitor, throwException: false ));
+            return (tr, postActionError );
         }
 
         /// <summary>

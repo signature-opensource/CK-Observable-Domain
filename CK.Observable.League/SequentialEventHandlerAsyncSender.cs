@@ -4,10 +4,10 @@ using System.Threading.Tasks;
 
 namespace CK.Core
 {
-
     /// <summary>
     /// Async event handler that can be combined into a <see cref="SequentialEventHandlerAsyncSender{T}"/>.
     /// </summary>
+    /// <typeparam name="T">The type of the event argument.</typeparam>
     /// <param name="monitor">The monitor that must be used to log activities.</param>
     /// <param name="sender">The source of the event.</param>
     /// <param name="e">Non null event data.</param>
