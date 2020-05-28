@@ -17,7 +17,7 @@ namespace CK.Observable
     /// </summary>
     public abstract class AsyncExecutionContext<TThis> : IAsyncDisposable where TThis : AsyncExecutionContext<TThis>
     {
-        readonly ActionRegisterer<TThis> _reg;
+        readonly ActionRegistrar<TThis> _reg;
         readonly IActivityMonitor _monitor;
         IDictionary<object, object> _memory;
         readonly bool _callMemoryDisposable;
@@ -28,10 +28,10 @@ namespace CK.Observable
         /// </summary>
         /// <param name="monitor">The monitor that must be used.</param>
         /// <param name="registerer">Optional existing registerer.</param>
-        public AsyncExecutionContext( IActivityMonitor monitor, ActionRegisterer<TThis>? registerer = null )
+        public AsyncExecutionContext( IActivityMonitor monitor, ActionRegistrar<TThis>? registerer = null )
         {
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
-            _reg = (registerer ?? new ActionRegisterer<TThis>()).AcquireOnce( this );
+            _reg = (registerer ?? new ActionRegistrar<TThis>()).AcquireOnce( this );
             _callMemoryDisposable = true;
             _monitor = monitor;
         }
@@ -45,7 +45,7 @@ namespace CK.Observable
         /// True to call <see cref="IAsyncDisposable.DisposeAsync"/> or <see cref="IDisposable.Dispose"/> on
         /// all disposable <see cref="Memory"/>'s values.
         /// </param>
-        public AsyncExecutionContext( IActivityMonitor monitor, ActionRegisterer<TThis>? registerer, IDictionary<object, object> externalMemory, bool callMemoryDisposable )
+        public AsyncExecutionContext( IActivityMonitor monitor, ActionRegistrar<TThis>? registerer, IDictionary<object, object> externalMemory, bool callMemoryDisposable )
             : this( monitor, registerer )
         {
             if( externalMemory == null ) throw new ArgumentNullException( nameof( externalMemory ) );
@@ -70,7 +70,7 @@ namespace CK.Observable
         /// Gets the registerer. Actions and/or error handlers can be registered
         /// even when <see cref="ExecuteAsync(bool, bool)"/> has been called.
         /// </summary>
-        public ActionRegisterer<TThis> Registerer { get; }
+        public ActionRegistrar<TThis> Registerer { get; }
 
         /// <summary>
         /// Executes the currently enlisted actions, optionaly in reverse order.

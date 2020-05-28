@@ -8,7 +8,7 @@ namespace CK.Observable
     /// Registerer for asynchronous and synchronous actions and error handlers
     /// that operates on a <typeparamref name="T"/> parameter.
     /// </summary>
-    public interface IActionRegisterer<T>
+    public interface IActionRegistrar<T>
     {
         /// <summary>
         /// Adds a new asynchronous action.
@@ -91,5 +91,32 @@ namespace CK.Observable
         /// </summary>
         /// <param name="errorHandler">The error handler to register.</param>
         void OnError( Action<T, Exception> errorHandler );
+
+        /// <summary>
+        /// Registers a new asynchronous final handler.
+        /// This will be called after success or error handlers. Any exception thrown by this handler
+        /// will be logged and ignored. A final handler is not allowed to register any
+        /// new action, success or error handler but it can register another final handler if needed.
+        /// </summary>
+        /// <param name="finalHandler">The final handler to register.</param>
+        void Finally( Func<T, Task> finalHandler );
+
+        /// <summary>
+        /// Registers a new asynchronous final handler. 
+        /// This will be called after success or error handlers. Any exception thrown by this handler
+        /// will be logged and ignored. A final handler is not allowed to register any
+        /// new action, success or error handler but it can register another final handler if needed.
+        /// </summary>
+        /// <param name="finalHandler">The final handler to register.</param>
+        void Finally( Func<T, ValueTask> finalHandler );
+
+        /// <summary>
+        /// Registers a new synchronous final handler. 
+        /// This will be called after success or error handlers. Any exception thrown by this handler
+        /// will be logged and ignored. A final handler is not allowed to register any
+        /// new action, success or error handler but it can register another final handler if needed.
+        /// </summary>
+        /// <param name="finalHandler">The final handler to register.</param>
+        void Finally( Action<T> finalHandler );
     }
 }

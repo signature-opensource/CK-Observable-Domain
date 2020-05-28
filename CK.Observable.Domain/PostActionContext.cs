@@ -12,7 +12,7 @@ namespace CK.Observable
     /// </summary>
     public class PostActionContext : AsyncExecutionContext<PostActionContext>
     {
-        internal PostActionContext( IActivityMonitor monitor, ActionRegisterer<PostActionContext> actions, TransactionResult result )
+        internal PostActionContext( IActivityMonitor monitor, ActionRegistrar<PostActionContext> actions, TransactionResult result )
             : base( monitor, actions )
         {
             TransactionResult = result;

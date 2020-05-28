@@ -12,7 +12,7 @@ namespace CK.Observable
     public readonly struct SuccessfulTransactionContext
     {
         readonly ObservableDomain _domain;
-        internal readonly ActionRegisterer<PostActionContext> _postActions;
+        internal readonly ActionRegistrar<PostActionContext> _postActions;
 
         /// <summary>
         /// Gets the monitor to use.
@@ -55,11 +55,11 @@ namespace CK.Observable
         /// Registers a new action that must be executed.
         /// </summary>
         /// <param name="action"></param>
-        public IActionRegisterer<PostActionContext> PostActions => _postActions;
+        public IActionRegistrar<PostActionContext> PostActions => _postActions;
 
         internal SuccessfulTransactionContext( ObservableDomain d, IReadOnlyList<ObservableEvent> e, IReadOnlyList<ObservableCommand> c, DateTime startTime, DateTime nextDueTime )
         {
-            _postActions = new ActionRegisterer<PostActionContext>();
+            _postActions = new ActionRegistrar<PostActionContext>();
             _domain = d;
             NextDueTimeUtc = nextDueTime;
             StartTimeUtc = startTime;

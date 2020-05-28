@@ -12,7 +12,7 @@ namespace CK.Observable
     /// </summary>
     public class TransactionResult
     {
-        ActionRegisterer<PostActionContext> _postActions;
+        ActionRegistrar<PostActionContext> _postActions;
 
         /// <summary>
         /// The empty transaction result is used when absolutely nothing happened. It has no events and no commands,

@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 namespace CK.Observable
 {
     /// <summary>
-    /// Implementation of <see cref="IActionRegisterer{T}"/> that is handled by <see cref="AsyncExecutionContext{T}"/>.
+    /// Implementation of <see cref="IActionRegistrar{T}"/> that is handled by <see cref="AsyncExecutionContext{T}"/>.
     /// </summary>
-    public class ActionRegisterer<T> : IActionRegisterer<T>
+    public class ActionRegistrar<T> : IActionRegistrar<T>
     {
         // Internal storage is based on Task to minimise the risks:
         // returned Tasks can safely be awaited multiple times.
@@ -22,7 +22,7 @@ namespace CK.Observable
         static readonly string _errorStep = "Currently handling error.";
         string _handlingStep;
         
-        internal ActionRegisterer<T> AcquireOnce( object owner )
+        internal ActionRegistrar<T> AcquireOnce( object owner )
         {
             if( Interlocked.Exchange( ref _owner, owner ) == null ) return this;
             throw new InvalidOperationException();
@@ -31,7 +31,7 @@ namespace CK.Observable
         /// <summary>
         /// Initializes a new empty registerer.
         /// </summary>
-        public ActionRegisterer()
+        public ActionRegistrar()
         {
             _actions = new List<Func<T, Task>>();
         }
