@@ -28,11 +28,11 @@ namespace CodeCake
         public void Pack()
         {
             var nugetInfo = _globalInfo.ArtifactTypes.OfType<NuGetArtifactType>().Single();
-            var settings = new DotNetCorePackSettings().AddVersionArguments( _globalInfo.GitInfo, c =>
+            var settings = new DotNetCorePackSettings().AddVersionArguments( _globalInfo.BuildInfo, c =>
             {
                 c.NoBuild = true;
                 c.IncludeSymbols = true;
-                c.Configuration = _globalInfo.BuildConfiguration;
+                c.Configuration = _globalInfo.BuildInfo.BuildConfiguration;
                 c.OutputDirectory = _globalInfo.ReleasesFolder.Path;
             } );
             foreach( var p in nugetInfo.GetNuGetArtifacts() )
@@ -102,7 +102,7 @@ namespace CodeCake
 
             protected override IEnumerable<ILocalArtifact> GetLocalArtifacts()
             {
-                return _solution.ProjectsToPublish.Select( p => new NuGetArtifact( p, GlobalInfo.Version ) );
+                return _solution.ProjectsToPublish.Select( p => new NuGetArtifact( p, GlobalInfo.BuildInfo.Version ) );
             }
         }
     }
