@@ -1,9 +1,8 @@
-using CK.Core;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace CK.Observable.Domain
+namespace CK.Core
 {
 
     /// <summary>

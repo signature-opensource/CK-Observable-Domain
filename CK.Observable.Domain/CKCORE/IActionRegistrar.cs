@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace CK.Observable
+namespace CK.Core
 {
     /// <summary>
     /// Registerer for asynchronous and synchronous actions and error handlers

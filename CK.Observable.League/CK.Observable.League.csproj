@@ -13,8 +13,8 @@
   </ItemGroup>
   
   <ItemGroup>
-    <PackageReference Include="Fody" PrivateAssets="all" />
-    <PackageReference Include="PropertyChanged.Fody" PrivateAssets="all" />
+    <PackageReference Include="Fody" PrivateAssets="all" Version="6.2.0" />
+    <PackageReference Include="PropertyChanged.Fody" PrivateAssets="all" Version="3.2.8" />
     <ProjectReference Include="..\CK.Observable.Domain\CK.Observable.Domain.csproj" />
   </ItemGroup>
 

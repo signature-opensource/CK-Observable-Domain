@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CK.Observable
+namespace CK.Core
 {
     /// <summary>
     /// Implementation of <see cref="IActionRegistrar{T}"/> that is handled by <see cref="AsyncExecutionContext{T}"/>.
@@ -15,11 +15,13 @@ namespace CK.Observable
         internal readonly List<Func<T, Task>> _actions;
         internal List<Func<T, Task>> _onSuccess;
         internal List<Func<T, Exception, Task>> _onError;
+        internal List<Func<T, Task>> _onFinally;
         // A registerer can can be owned by zero or one ExecutionContext, and only once.
         object _owner;
 
         static readonly string _successStep = "Currently handling success.";
         static readonly string _errorStep = "Currently handling error.";
+        static readonly string _finallyStep = "Currently handling finalization.";
         string _handlingStep;
         
         internal ActionRegistrar<T> AcquireOnce( object owner )
@@ -169,29 +171,80 @@ namespace CK.Observable
             _onError.Add( ( c, ex ) => { errorHandler( c, ex ); return Task.CompletedTask; } );
         }
 
+        /// <summary>
+        /// Registers a new asynchronous finalization handler: this can be called during the execution of any action, success or error handler
+        /// by <see cref="AsyncExecutionContext{T}.ExecuteAsync"/> and even while executing another finalization handler (even if it is
+        /// not recommended). 
+        /// </summary>
+        /// <param name="finalHandler">The final handler to register.</param>
+        public void Finally( Func<T, Task> finalHandler )
+        {
+            GuardFinally( finalHandler == null );
+            _onFinally.Add( finalHandler );
+        }
+
+        /// <summary>
+        /// Registers a new asynchronous finalization handler: this can be called during the execution of any action, success or error handler
+        /// by <see cref="AsyncExecutionContext{T}.ExecuteAsync"/> and even while executing another finalization handler (even if it is
+        /// not recommended). 
+        /// </summary>
+        /// <param name="finalHandler">The final handler to register.</param>
+        public void Finally( Func<T, ValueTask> finalHandler )
+        {
+            GuardFinally( finalHandler == null );
+            _onFinally.Add( c => finalHandler( c ).AsTask() );
+        }
+
+        /// <summary>
+        /// Registers a new synchronous finalization handler: this can be called during the execution of any action, success or error handler
+        /// by <see cref="AsyncExecutionContext{T}.ExecuteAsync"/> and even while executing another finalization handler (even if it is
+        /// not recommended). 
+        /// </summary>
+        /// <param name="finalHandler">The final handler to register.</param>
+        public void Finally( Action<T> finalHandler )
+        {
+            GuardFinally( finalHandler == null );
+            _onFinally.Add( c => { finalHandler( c ); return Task.CompletedTask; } );
+        }
+
         internal void SetHandlingError() => _handlingStep = _errorStep;
         internal void SetHandlingSuccess() => _handlingStep = _successStep;
+        internal void SetHandlingFinally() => _handlingStep = _finallyStep;
         internal void ClearHandling() => _handlingStep = null;
 
         void GuardAdd( bool nullArg )
         {
             if( nullArg ) throw new ArgumentNullException( "action" );
-            if( _handlingStep != null ) throw new InvalidOperationException( _handlingStep );
+            if( _handlingStep != null )
+            {
+                throw new InvalidOperationException( _handlingStep );
+            }
         }
 
         void GuardSucces( bool nullArg )
         {
             if( nullArg ) throw new ArgumentNullException( "handler" );
-            if( ReferenceEquals( _handlingStep, _errorStep ) ) throw new InvalidOperationException( _handlingStep );
+            if( ReferenceEquals( _handlingStep, _errorStep ) || ReferenceEquals( _handlingStep, _finallyStep ) )
+            {
+                throw new InvalidOperationException( _handlingStep );
+            }
             if( _onSuccess == null ) _onSuccess = new List<Func<T, Task>>();
         }
 
         void GuardError( bool nullArg )
         {
             if( nullArg ) throw new ArgumentNullException( "errorHandler" );
-            if( ReferenceEquals( _handlingStep, _successStep ) ) throw new InvalidOperationException( _handlingStep );
+            if( ReferenceEquals( _handlingStep, _successStep ) || ReferenceEquals( _handlingStep, _finallyStep ) )
+            {
+                throw new InvalidOperationException( _handlingStep );
+            }
             if( _onError == null ) _onError = new List<Func<T, Exception, Task>>();
         }
 
+        void GuardFinally( bool nullArg )
+        {
+            if( nullArg ) throw new ArgumentNullException( "finalHandler" );
+            if( _onFinally == null ) _onFinally = new List<Func<T, Task>>();
+        }
     }
 }

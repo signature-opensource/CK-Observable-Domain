@@ -1,9 +1,8 @@
-using CK.Core;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace CK.Observable
+namespace CK.Core
 {
     /// <summary>
     /// Simple execution context for asynchronous (and synchronous) actions that provide them with a shared <see cref="Memory"/>,
@@ -27,11 +26,11 @@ namespace CK.Observable
         /// Initializes an asynchronous execution context.
         /// </summary>
         /// <param name="monitor">The monitor that must be used.</param>
-        /// <param name="registerer">Optional existing registerer.</param>
-        public AsyncExecutionContext( IActivityMonitor monitor, ActionRegistrar<TThis>? registerer = null )
+        /// <param name="registrar">Optional existing registerer.</param>
+        public AsyncExecutionContext( IActivityMonitor monitor, ActionRegistrar<TThis>? registrar = null )
         {
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
-            _reg = (registerer ?? new ActionRegistrar<TThis>()).AcquireOnce( this );
+            _reg = (registrar ?? new ActionRegistrar<TThis>()).AcquireOnce( this );
             _callMemoryDisposable = true;
             _monitor = monitor;
         }
@@ -67,10 +66,10 @@ namespace CK.Observable
         public IActivityMonitor Monitor => _monitor;
 
         /// <summary>
-        /// Gets the registerer. Actions and/or error handlers can be registered
+        /// Gets the registrar. Actions, error, success and/or finally handlers can be registered
         /// even when <see cref="ExecuteAsync(bool, bool)"/> has been called.
         /// </summary>
-        public ActionRegistrar<TThis> Registerer { get; }
+        public ActionRegistrar<TThis> Registrar { get; }
 
         /// <summary>
         /// Executes the currently enlisted actions, optionaly in reverse order.
@@ -139,6 +138,14 @@ namespace CK.Observable
                 }
                 finally
                 {
+                    if( _reg._onFinally == null ) _monitor.Trace( "There is no registered final handler." );
+                    else
+                    {
+                        using( _monitor.OpenTrace( $"Calling {_reg._onFinally.Count} final handlers." ) )
+                        {
+                            await RaiseFinally( _reg._onFinally );
+                        }
+                    }
                     _executing = false;
                 }
             }
@@ -191,6 +198,32 @@ namespace CK.Observable
                         }
                     }
                     errors.RemoveRange( 0, roundCount );
+                }
+            }
+            _reg.ClearHandling();
+        }
+
+        async Task RaiseFinally( List<Func<TThis, Task>> final )
+        {
+            _reg.SetHandlingFinally();
+            int roundNumber = 0;
+            int roundCount;
+            while( (roundCount = final.Count) > 0 )
+            {
+                using( Monitor.OpenTrace( $"Executing Final handlers round n°{++roundNumber} with {roundCount} handlers." ) )
+                {
+                    for( int i = 0; i < roundCount; ++i )
+                    {
+                        try
+                        {
+                            await final[i].Invoke( (TThis)this );
+                        }
+                        catch( Exception ex )
+                        {
+                            _monitor.Error( "While executing final handler. This is ignored.", ex );
+                        }
+                    }
+                    final.RemoveRange( 0, roundCount );
                 }
             }
             _reg.ClearHandling();
