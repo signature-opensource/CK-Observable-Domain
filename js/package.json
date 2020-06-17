@@ -34,12 +34,12 @@
     "@types/mocha": "^5.2.5",
     "@types/node": "^10.9.4",
     "chai": "^4.1.2",
-    "mocha": "^5.2.0",
+    "mocha": "^8.0.1",
     "rimraf": "^2.6.3",
     "ts-node": "^7.0.1",
     "typescript": "^3.0.3"
   },
   "dependencies": {
-    "@signature/json-graph-serializer": "0.0.3"
+    "@signature/json-graph-serializer": "0.0.4"
   }
 }
