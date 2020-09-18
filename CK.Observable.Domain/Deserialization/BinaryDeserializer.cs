@@ -21,14 +21,14 @@ namespace CK.Observable
         readonly List<object> _objects;
 
         readonly List<Action> _postDeserializationActions;
-        readonly Stack<ConstructorContext> _ctorContextStack;
-        TypeReadInfo _currentCtorReadInfo;
-        BinaryFormatter _binaryFormatter;
+        readonly Stack<ConstructorContext?> _ctorContextStack;
+        TypeReadInfo? _currentCtorReadInfo;
+        BinaryFormatter? _binaryFormatter;
 
         int _debugModeCounter;
         int _debugSentinel;
-        string _lastWriteSentinel;
-        string _lastReadSentinel;
+        string? _lastWriteSentinel;
+        string? _lastReadSentinel;
 
         class ConstructorContext
         {
@@ -55,7 +55,7 @@ namespace CK.Observable
             IServiceProvider? services = null,
             IDeserializerResolver? drivers = null,
             bool leaveOpen = false,
-            Encoding encoding = null )
+            Encoding? encoding = null )
             : base( stream, encoding ?? Encoding.UTF8, leaveOpen )
         {
             Services = new SimpleServiceContainer( services );
@@ -63,7 +63,7 @@ namespace CK.Observable
             _typeInfos = new Dictionary<string, TypeReadInfo>();
             _objects = new List<object>();
             _postDeserializationActions = new List<Action>();
-            _ctorContextStack = new Stack<ConstructorContext>();
+            _ctorContextStack = new Stack<ConstructorContext?>();
             _drivers = drivers ?? DeserializerRegistry.Default;
             _objectReadTypeInfo = new TypeReadInfo( _drivers );
         }
@@ -199,11 +199,11 @@ namespace CK.Observable
         /// </summary>
         /// <param name="fileName">Current file name used to build the <see cref="InvalidDataException"/> message if sentinel cannot be read back.</param>
         /// <param name="line">Current line number used to build the <see cref="InvalidDataException"/> message if sentinel cannot be read back.</param>
-        public void DebugCheckSentinel( [CallerFilePath]string fileName = null, [CallerLineNumber] int line = 0 )
+        public void DebugCheckSentinel( [CallerFilePath]string? fileName = null, [CallerLineNumber] int line = 0 )
         {
             if( !IsDebugMode ) return;
             bool success = false;
-            Exception e = null;
+            Exception? e = null;
             try
             {
                 success = ReadInt32() == 987654321
@@ -231,8 +231,8 @@ namespace CK.Observable
         public void ReadString( string expected )
         {
             if( String.IsNullOrWhiteSpace( expected ) ) throw new ArgumentException( "Must not be empty or whitespace.", nameof(expected) );
-            string read = null;
-            Exception e = null;
+            string? read = null;
+            Exception? e = null;
             try
             {
                 read = ReadString();

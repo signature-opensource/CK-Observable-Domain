@@ -19,7 +19,7 @@ namespace CK.Observable
         // Until the serialization is refactored...
         readonly internal Dictionary<object, int> _seen;
         readonly ISerializerResolver _drivers;
-        BinaryFormatter _binaryFormatter;
+        BinaryFormatter? _binaryFormatter;
 
         int _debugModeCounter;
         int _debugSentinel;
@@ -45,9 +45,9 @@ namespace CK.Observable
         /// <param name="encoding">Optional encoding for texts. Defaults to UTF-8.</param>
         public BinarySerializer(
             Stream output,
-            ISerializerResolver drivers = null,
+            ISerializerResolver? drivers = null,
             bool leaveOpen = false,
-            Encoding encoding = null )
+            Encoding? encoding = null )
             : base( output, encoding ?? Encoding.UTF8, leaveOpen )
         {
             _types = new Dictionary<Type, TypeInfo>();
@@ -220,7 +220,7 @@ namespace CK.Observable
         /// </summary>
         /// <param name="fileName">Current file name that wrote the data. Used to build the <see cref="InvalidDataException"/> message if sentinel cannot be read back.</param>
         /// <param name="line">Current line number that wrote the data. Used to build the <see cref="InvalidDataException"/> message if sentinel cannot be read back.</param>
-        public void DebugWriteSentinel( [CallerFilePath]string fileName = null, [CallerLineNumber] int line = 0 )
+        public void DebugWriteSentinel( [CallerFilePath]string? fileName = null, [CallerLineNumber] int line = 0 )
         {
             if( IsDebugMode )
             {

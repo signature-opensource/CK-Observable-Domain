@@ -24,8 +24,8 @@ namespace CK.Observable
         /// ExpectedDueTimeUtc is the actual due time that is considered by the TimeManager.
         /// </summary>
         internal DateTime ExpectedDueTimeUtc;
-        internal ObservableTimedEventBase Next;
-        internal ObservableTimedEventBase Prev;
+        internal ObservableTimedEventBase? Next;
+        internal ObservableTimedEventBase? Prev;
 
         ObservableEventHandler<ObservableDomainEventArgs> _disposed;
 
@@ -42,6 +42,7 @@ namespace CK.Observable
         protected ObservableTimedEventBase( IBinaryDeserializerContext c )
             : this()
         {
+            Debug.Assert( TimeManager != null );
             var r = c.StartReading();
             ActiveIndex = r.ReadInt32();
             ExpectedDueTimeUtc = r.ReadDateTime();
@@ -74,7 +75,7 @@ namespace CK.Observable
         /// Gets the domain to which this timed even belongs.
         /// Null when <see cref="IsDisposed"/> is true.
         /// </summary>
-        public ObservableDomain Domain => TimeManager?.Domain;
+        public ObservableDomain? Domain => TimeManager?.Domain;
 
         /// <summary>
         /// Gets or sets an associated object that can be useful for simple scenario where a state

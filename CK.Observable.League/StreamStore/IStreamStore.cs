@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 namespace CK.Observable
 {
     /// <summary>
-    /// Baic abstraction for storages. 
+    /// Basic abstraction for storages. 
     /// </summary>
     public interface IStreamStore
     {

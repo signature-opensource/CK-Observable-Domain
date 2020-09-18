@@ -20,7 +20,6 @@ namespace CK.Observable.League
         readonly ConcurrentDictionary<string, Shell> _domains;
         readonly IStreamStore _streamStore;
         readonly CoordinatorClient _coordinator;
-        SequentialEventHandlerAsyncSender<(string DomainName, string JsonEvent)> _jsonEvents;
 
         ObservableLeague( IStreamStore streamStore, CoordinatorClient coordinator, ConcurrentDictionary<string, Shell> domains )
         {
@@ -29,12 +28,6 @@ namespace CK.Observable.League
             _coordinator = coordinator;
             // Associates the league to the coordinator. This finalizes the initialization of the league. 
             _coordinator.FinalizeConstruct( this );
-        }
-
-        public event SequentialEventHandlerAsync<(string DomainName, string JsonEvent)> JsonDomainEvents
-        {
-            add => _jsonEvents.Add( value );
-            remove => _jsonEvents.Remove( value );
         }
 
         /// <summary>
@@ -88,13 +81,12 @@ namespace CK.Observable.League
         /// </summary>
         /// <param name="domainName">The domain name to find.</param>
         /// <returns>The managed domain or null if not found.</returns>
-        public IObservableDomainLoader? this[ string domainName ] => Find( domainName );
+        public IObservableDomainLoader? this[string domainName] => Find( domainName );
 
         /// <summary>
         /// Gets the access to the Coordinator domain.
         /// </summary>
         public IObservableDomainAccess<Coordinator> Coordinator => _coordinator;
-
 
         /// <summary>
         /// Closes this league. The coordinator's domain is saved and disposed and 

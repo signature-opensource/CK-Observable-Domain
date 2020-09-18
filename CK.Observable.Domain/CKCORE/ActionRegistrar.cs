@@ -22,7 +22,7 @@ namespace CK.Core
         static readonly string _successStep = "Currently handling success.";
         static readonly string _errorStep = "Currently handling error.";
         static readonly string _finallyStep = "Currently handling finalization.";
-        string _handlingStep;
+        string? _handlingStep;
         
         internal ActionRegistrar<T> AcquireOnce( object owner )
         {
@@ -62,7 +62,7 @@ namespace CK.Core
         public void Add( Func<T, ValueTask> action )
         {
             GuardAdd( action == null );
-            _actions.Add( c => action( c ).AsTask() );
+            _actions.Add( c => action!( c ).AsTask() );
         }
 
         /// <summary>
@@ -73,7 +73,7 @@ namespace CK.Core
         public void Add( Action<T> action )
         {
             GuardAdd( action == null );
-            _actions.Add( c => { action( c ); return Task.CompletedTask; } );
+            _actions.Add( c => { action!( c ); return Task.CompletedTask; } );
         }
 
         /// <summary>
@@ -85,7 +85,7 @@ namespace CK.Core
         public void Add( IEnumerable<object> actions )
         {
             GuardAdd( actions == null );
-            foreach( var a in actions )
+            foreach( var a in actions! )
             {
                 switch( a )
                 {
@@ -120,7 +120,7 @@ namespace CK.Core
         public void OnSuccess( Func<T, ValueTask> handler )
         {
             GuardSucces( handler == null );
-            _onSuccess.Add( c => handler( c ).AsTask() );
+            _onSuccess.Add( c => handler!( c ).AsTask() );
         }
 
         /// <summary>
@@ -133,7 +133,7 @@ namespace CK.Core
         public void OnSuccess( Action<T> handler )
         {
             GuardSucces( handler == null );
-            _onSuccess.Add( c => { handler( c ); return Task.CompletedTask; } );
+            _onSuccess.Add( c => { handler!( c ); return Task.CompletedTask; } );
         }
 
         /// <summary>
@@ -157,7 +157,7 @@ namespace CK.Core
         public void OnError( Func<T, Exception, ValueTask> errorHandler )
         {
             GuardError( errorHandler == null );
-            _onError.Add( ( c, ex ) => errorHandler( c, ex ).AsTask() );
+            _onError.Add( ( c, ex ) => errorHandler!( c, ex ).AsTask() );
         }
 
         /// Registers a new synchronous error handler: this can be called during the execution of any action
@@ -168,7 +168,7 @@ namespace CK.Core
         public void OnError( Action<T, Exception> errorHandler )
         {
             GuardError( errorHandler == null );
-            _onError.Add( ( c, ex ) => { errorHandler( c, ex ); return Task.CompletedTask; } );
+            _onError.Add( ( c, ex ) => { errorHandler!( c, ex ); return Task.CompletedTask; } );
         }
 
         /// <summary>
@@ -192,7 +192,7 @@ namespace CK.Core
         public void Finally( Func<T, ValueTask> finalHandler )
         {
             GuardFinally( finalHandler == null );
-            _onFinally.Add( c => finalHandler( c ).AsTask() );
+            _onFinally.Add( c => finalHandler!( c ).AsTask() );
         }
 
         /// <summary>
@@ -204,7 +204,7 @@ namespace CK.Core
         public void Finally( Action<T> finalHandler )
         {
             GuardFinally( finalHandler == null );
-            _onFinally.Add( c => { finalHandler( c ); return Task.CompletedTask; } );
+            _onFinally.Add( c => { finalHandler!( c ); return Task.CompletedTask; } );
         }
 
         internal void SetHandlingError() => _handlingStep = _errorStep;

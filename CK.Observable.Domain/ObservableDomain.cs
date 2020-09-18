@@ -70,7 +70,7 @@ namespace CK.Observable
         }
 
         [ThreadStatic]
-        internal static ObservableDomain CurrentThreadDomain;
+        internal static ObservableDomain? CurrentThreadDomain;
 
         internal readonly IExporterResolver _exporters;
         readonly ISerializerResolver _serializers;
@@ -115,10 +115,10 @@ namespace CK.Observable
 
         readonly InternalObjectCollection _exposedInternalObjects;
         int _internalObjectCount;
-        InternalObject _firstInternalObject;
-        InternalObject _lastInternalObject;
+        InternalObject? _firstInternalObject;
+        InternalObject? _lastInternalObject;
 
-        ObservableObject[] _objects;
+        ObservableObject?[] _objects;
         /// There are few tracker objects and they typically have a long
         /// lifetime (as they're often roots for specific objects like sensors).
         readonly List<IObservableDomainActionTracker> _trackers;
@@ -143,7 +143,7 @@ namespace CK.Observable
         /// </summary>
         List<ObservableRootObject> _roots;
 
-        IObservableTransaction _currentTran;
+        IObservableTransaction? _currentTran;
         int _transactionSerialNumber;
         DateTime _transactionCommitTimeUtc;
 
@@ -173,9 +173,9 @@ namespace CK.Observable
                 _d = d;
             }
 
-            public ObservableObject this[long id] => this[new ObservableObjectId( id, false )];
+            public ObservableObject? this[long id] => this[new ObservableObjectId( id, false )];
 
-            public ObservableObject this[ObservableObjectId id]
+            public ObservableObject? this[ObservableObjectId id]
             {
                 get
                 {
@@ -185,7 +185,7 @@ namespace CK.Observable
                         if( idx < _d._objectsListCount )
                         {
                             var o = _d._objects[idx];
-                            if( o.OId == id ) return o;
+                            if( o != null && o.OId == id ) return o;
                         }
                     }
                     return null;
@@ -194,14 +194,14 @@ namespace CK.Observable
 
             public int Count => _d._actualObjectCount;
 
-            public T Get<T>( ObservableObjectId id, bool throwOnTypeMismacth = true ) where T : ObservableObject
+            public T? Get<T>( ObservableObjectId id, bool throwOnTypeMismacth = true ) where T : ObservableObject
             {
                 var o = this[id];
                 if( o == null ) return null;
                 return throwOnTypeMismacth ? (T)o : o as T;
             }
 
-            public T Get<T>( long id, bool throwOnTypeMismacth = true ) where T : ObservableObject => Get<T>( new ObservableObjectId( id, false ) );
+            public T? Get<T>( long id, bool throwOnTypeMismacth = true ) where T : ObservableObject => Get<T>( new ObservableObjectId( id, false ) );
 
             public IEnumerator<ObservableObject> GetEnumerator() => _d._objects.Take( _d._objectsListCount )
                                                                                .Where( o => o != null )
@@ -235,14 +235,14 @@ namespace CK.Observable
             }
 
             readonly List<ObservableEvent> _changeEvents;
-            readonly Dictionary<ObservableObject, List<PropertyInfo>> _newObjects;
+            readonly Dictionary<ObservableObject, List<PropertyInfo>?> _newObjects;
             readonly Dictionary<long, PropChanged> _propChanged;
             readonly List<ObservableCommand> _commands;
 
             public ChangeTracker()
             {
                 _changeEvents = new List<ObservableEvent>();
-                _newObjects = new Dictionary<ObservableObject, List<PropertyInfo>>( PureObjectRefEqualityComparer<ObservableObject>.Default );
+                _newObjects = new Dictionary<ObservableObject, List<PropertyInfo>?>( PureObjectRefEqualityComparer<ObservableObject>.Default );
                 _propChanged = new Dictionary<long, PropChanged>();
                 _commands = new List<ObservableCommand>();
             }
@@ -541,10 +541,10 @@ namespace CK.Observable
                                  IObservableDomainClient? client,
                                  Stream s,
                                  bool leaveOpen = false,
-                                 Encoding encoding = null,
-                                 IExporterResolver exporters = null,
-                                 ISerializerResolver serializers = null,
-                                 IDeserializerResolver deserializers = null )
+                                 Encoding? encoding = null,
+                                 IExporterResolver? exporters = null,
+                                 ISerializerResolver? serializers = null,
+                                 IDeserializerResolver? deserializers = null )
             : this( monitor, domainName, client, false, exporters, serializers, deserializers )
         {
             Load( monitor, s, leaveOpen, encoding );
@@ -555,9 +555,9 @@ namespace CK.Observable
                           string domainName,
                           IObservableDomainClient? client,
                           bool callClientOnCreate,
-                          IExporterResolver exporters,
-                          ISerializerResolver serializers,
-                          IDeserializerResolver deserializers )
+                          IExporterResolver? exporters,
+                          ISerializerResolver? serializers,
+                          IDeserializerResolver? deserializers )
         {
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
             DomainName = domainName ?? throw new ArgumentNullException( nameof( domainName ) );
@@ -565,7 +565,7 @@ namespace CK.Observable
             _serializers = serializers ?? SerializerRegistry.Default;
             _deserializers = deserializers ?? DeserializerRegistry.Default;
             DomainClient = client;
-            _objects = new ObservableObject[512];
+            _objects = new ObservableObject?[512];
             _freeList = new List<int>();
             _properties = new Dictionary<string, PropInfo>();
             _propertiesByIndex = new List<PropInfo>();
@@ -720,9 +720,9 @@ namespace CK.Observable
 
         class DomainActivityMonitor : ActivityMonitor, IDisposableActivityMonitor
         {
-            readonly ObservableDomain _domain;
+            readonly ObservableDomain? _domain;
 
-            public DomainActivityMonitor( string topic, ObservableDomain domain, int timeout )
+            public DomainActivityMonitor( string topic, ObservableDomain? domain, int timeout )
                 : base( $"Observable domain '{topic}'." )
             {
                 if( (_domain = domain) == null ) this.Error( $"Failed to obtain the locked domain monitor in less than {timeout} ms." );
@@ -745,8 +745,14 @@ namespace CK.Observable
         /// <summary>
         /// Gets the monitor to use (from the current transaction).
         /// </summary>
-        internal IActivityMonitor CurrentMonitor => _currentTran.Monitor;
-
+        internal IActivityMonitor CurrentMonitor
+        {
+            get
+            {
+                Debug.Assert( _currentTran != null );
+                return _currentTran.Monitor;
+            }
+        }
         /// <summary>
         /// Gets the associated client (head of the Chain of Responsibility).
         /// </summary>
@@ -779,7 +785,7 @@ namespace CK.Observable
         /// Can be caused by other threads trying to use this lock (eg. after awaiting a task).
         /// </exception>
         /// <returns>A disposable that releases the read lock when disposed, or null if a timeout occurred (or this is disposed).</returns>
-        public IDisposable AcquireReadLock( int millisecondsTimeout = -1 )
+        public IDisposable? AcquireReadLock( int millisecondsTimeout = -1 )
         {
             CheckDisposed();
             if( !_lock.TryEnterReadLock( millisecondsTimeout ) ) return null;
@@ -813,7 +819,7 @@ namespace CK.Observable
         /// forgets to call this EnsureWriteMode() before any modification will quickly enter the concurrency hell...
         /// </para>
         /// </remarks>
-        public IObservableTransaction BeginTransaction( IActivityMonitor monitor, int millisecondsTimeout = -1 )
+        public IObservableTransaction? BeginTransaction( IActivityMonitor monitor, int millisecondsTimeout = -1 )
         {
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
             CheckDisposed();
@@ -926,7 +932,7 @@ namespace CK.Observable
         /// <summary>
         /// Modifies this ObservableDomain and executes the <see cref="TransactionResult.PostActions"/>.
         /// Any exceptions raised by <see cref="IObservableDomainClient.OnTransactionStart(IActivityMonitor,ObservableDomain, DateTime)"/> (at the start of the process)
-        /// and by <see cref="TransactionResult.PostActions"/> (after the successful commit) are thrown by this method.
+        /// and by <see cref="TransactionResult.PostActions"/> (after the successful commit or failed transaction) are thrown by this method.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="actions">
@@ -950,7 +956,7 @@ namespace CK.Observable
 
         /// <summary>
         /// Same as <see cref="ModifyAsync(IActivityMonitor, Action, int)"/> but calls <see cref="TransactionResult.ThrowOnTransactionFailure()"/>:
-        /// this methods always throw on ay error.
+        /// this methods always throw on any error.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="actions">
@@ -966,16 +972,6 @@ namespace CK.Observable
             (await ModifyAsync( monitor, actions, millisecondsTimeout )).ThrowOnTransactionFailure();
         }
 
-        public class WatchDog
-        {
-            public virtual Task OnCriticalErrorAsync( IActivityMonitor monitor, ObservableDomain domain, TransactionResult result )
-            {
-                return Task.CompletedTask;
-            }
-
-
-        }
-
         /// <summary>
         /// Safe version of <see cref="ModifyAsync(IActivityMonitor, Action, int)"/> that will never throw: any exception raised
         /// by <see cref="IObservableDomainClient.OnTransactionStart(IActivityMonitor, ObservableDomain, DateTime)"/>
@@ -983,8 +979,7 @@ namespace CK.Observable
         /// transaction result itself.
         /// <para>
         /// If this method can, of course, be called from the application code, it has been designed to be called from background threads,
-        /// typically from the <see cref="TimeManager.AutoTimer"/> and all exceptions must be properly handled "under the hood".
-        /// Reacting to these "background errors" is the responsibility of the associated <see cref="WatchDog"/>.
+        /// typically from the <see cref="TimeManager.AutoTimer"/>.
         /// </para>
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
@@ -1078,14 +1073,14 @@ namespace CK.Observable
         /// Wait indefinitely by default.
         /// </param>
         /// <returns>The state as a string or null if timeout occurred.</returns>
-        public string ExportToString( int millisecondsTimeout = -1 )
+        public string? ExportToString( int millisecondsTimeout = -1 )
         {
             var w = new StringWriter();
             return Export( w, millisecondsTimeout ) ? w.ToString() : null;
         }
 
         /// <inheritdoc/>
-        public bool Save( IActivityMonitor monitor, Stream stream, bool leaveOpen = false, bool debugMode = false, Encoding encoding = null, int millisecondsTimeout = -1 )
+        public bool Save( IActivityMonitor monitor, Stream stream, bool leaveOpen = false, bool debugMode = false, Encoding? encoding = null, int millisecondsTimeout = -1 )
         {
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
             if( stream == null ) throw new ArgumentNullException( nameof( stream ) );
@@ -1324,7 +1319,7 @@ namespace CK.Observable
         /// on the loaded timers and reminders configurations.
         /// </param>
         /// <returns>True on success, false if timeout occurred.</returns>
-        public bool Load( IActivityMonitor monitor, Stream stream, string expectedLoadedName, bool leaveOpen = false, Encoding encoding = null, int millisecondsTimeout = -1, bool updateAutoTimer = true )
+        public bool Load( IActivityMonitor monitor, Stream stream, string expectedLoadedName, bool leaveOpen = false, Encoding? encoding = null, int millisecondsTimeout = -1, bool updateAutoTimer = true )
         {
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
             if( stream == null ) throw new ArgumentNullException( nameof( stream ) );
@@ -1368,7 +1363,7 @@ namespace CK.Observable
         /// on the loaded timers and reminders configurations.
         /// </param>
         /// <returns>True on success, false if timeout occurred.</returns>
-        public bool Load( IActivityMonitor monitor, Stream stream, bool leaveOpen = false, Encoding encoding = null, int millisecondsTimeout = -1, bool updateAutoTimer = true )
+        public bool Load( IActivityMonitor monitor, Stream stream, bool leaveOpen = false, Encoding? encoding = null, int millisecondsTimeout = -1, bool updateAutoTimer = true )
         {
             return Load( monitor, stream, DomainName, leaveOpen, encoding, millisecondsTimeout, updateAutoTimer );
         }
@@ -1494,7 +1489,7 @@ namespace CK.Observable
         /// </para>
         /// </summary>
         /// <returns>The cached monitor bound to this timer or null if <paramref name="createAutonomousOnTimeout"/> was false and the monitor has not been obtained.</returns>
-        public IDisposableActivityMonitor ObtainDomainMonitor( int milliSecondTimeout = LockedDomainMonitorTimeout, bool createAutonomousOnTimeout = true )
+        public IDisposableActivityMonitor? ObtainDomainMonitor( int milliSecondTimeout = LockedDomainMonitorTimeout, bool createAutonomousOnTimeout = true )
         {
             if( !Monitor.TryEnter( _domainMonitorLock, milliSecondTimeout ) )
             {
@@ -1621,7 +1616,7 @@ namespace CK.Observable
             _changeTracker.OnSendCommand( new ObservableCommand( o, command ) );
         }
 
-        internal PropertyChangedEventArgs OnPropertyChanged( ObservableObject o, string propertyName, object before, object after )
+        internal PropertyChangedEventArgs? OnPropertyChanged( ObservableObject o, string propertyName, object before, object after )
         {
             if( _deserializing
                 || o._exporter == null
@@ -1648,42 +1643,42 @@ namespace CK.Observable
             return p;
         }
 
-        internal ListRemoveAtEvent OnListRemoveAt( ObservableObject o, int index )
+        internal ListRemoveAtEvent? OnListRemoveAt( ObservableObject o, int index )
         {
             if( _deserializing ) return null;
             CheckWriteLock( o ).CheckDisposed();
             return _changeTracker.OnListRemoveAt( o, index );
         }
 
-        internal ListSetAtEvent OnListSetAt( ObservableObject o, int index, object value )
+        internal ListSetAtEvent? OnListSetAt( ObservableObject o, int index, object value )
         {
             if( _deserializing ) return null;
             CheckWriteLock( o ).CheckDisposed();
             return _changeTracker.OnListSetAt( o, index, value );
         }
 
-        internal CollectionClearEvent OnCollectionClear( ObservableObject o )
+        internal CollectionClearEvent? OnCollectionClear( ObservableObject o )
         {
             if( _deserializing ) return null;
             CheckWriteLock( o ).CheckDisposed();
             return _changeTracker.OnCollectionClear( o );
         }
 
-        internal ListInsertEvent OnListInsert( ObservableObject o, int index, object item )
+        internal ListInsertEvent? OnListInsert( ObservableObject o, int index, object item )
         {
             if( _deserializing ) return null;
             CheckWriteLock( o ).CheckDisposed();
             return _changeTracker.OnListInsert( o, index, item );
         }
 
-        internal CollectionMapSetEvent OnCollectionMapSet( ObservableObject o, object key, object value )
+        internal CollectionMapSetEvent? OnCollectionMapSet( ObservableObject o, object key, object value )
         {
             if( _deserializing ) return null;
             CheckWriteLock( o ).CheckDisposed();
             return _changeTracker.OnCollectionMapSet( o, key, value );
         }
 
-        internal CollectionRemoveKeyEvent OnCollectionRemoveKey( ObservableObject o, object key )
+        internal CollectionRemoveKeyEvent? OnCollectionRemoveKey( ObservableObject o, object key )
         {
             if( _deserializing ) return null;
             CheckWriteLock( o ).CheckDisposed();

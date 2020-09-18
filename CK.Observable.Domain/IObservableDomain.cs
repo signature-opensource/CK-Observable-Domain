@@ -70,6 +70,6 @@ namespace CK.Observable
         /// Wait indefinitely by default.
         /// </param>
         /// <returns>True on success, false if timeout occurred.</returns>
-        bool Save( IActivityMonitor monitor, Stream stream, bool leaveOpen = false, bool debugMode = false, Encoding encoding = null, int millisecondsTimeout = -1 );
+        bool Save( IActivityMonitor monitor, Stream stream, bool leaveOpen = false, bool debugMode = false, Encoding? encoding = null, int millisecondsTimeout = -1 );
     }
 }
