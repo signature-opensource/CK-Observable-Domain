@@ -9,7 +9,6 @@
     </IgnoreModifiedFiles>
     <Branches>
       <Branch Name="develop" CIVersionMode="LastReleaseBased" VersionName="develop" />
-      <Branch Name="fx/League" CIVersionMode="LastReleaseBased" VersionName="explo" />
     </Branches>
   </SimpleGitVersion>
 </RepositoryInfo>
