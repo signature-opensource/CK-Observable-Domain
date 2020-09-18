@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   
-  <Sdk Name="Microsoft.Build.CentralPackageVersions" Version="2.0.52" />
+  <Sdk Name="Microsoft.Build.CentralPackageVersions" Version="2.0.79" />
   
   <Import Project="..\..\Common\Shared.props" />
   
@@ -11,13 +11,13 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <PackageReference Include="CK.Testing.Monitoring" Version="0.18.0" />
-    <PackageReference Include="FluentAssertions" Version="5.10.3" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.6.1" />
-    <PackageReference Include="NUnit" Version="3.12.0" />
-    <PackageReference Include="NUnit3TestAdapter" PrivateAssets="all" Version="3.16.1" />
-    <PackageReference Include="Fody" PrivateAssets="all" Version="6.2.6" />
-    <PackageReference Include="PropertyChanged.Fody" PrivateAssets="all" Version="3.2.9" />
+    <PackageReference Include="CK.Testing.Monitoring" />
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="NUnit" />
+    <PackageReference Include="NUnit3TestAdapter" PrivateAssets="all" />
+    <PackageReference Include="Fody" PrivateAssets="all" />
+    <PackageReference Include="PropertyChanged.Fody" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>

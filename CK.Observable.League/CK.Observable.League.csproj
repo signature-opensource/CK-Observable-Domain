@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   
-  <Sdk Name="Microsoft.Build.CentralPackageVersions" Version="2.0.52" />
+  <Sdk Name="Microsoft.Build.CentralPackageVersions" Version="2.0.79" />
   
   <Import Project="..\Common\Shared.props" />
   
@@ -16,8 +16,8 @@
   </ItemGroup>
   
   <ItemGroup>
-    <PackageReference Include="Fody" PrivateAssets="all" Version="6.2.6" />
-    <PackageReference Include="PropertyChanged.Fody" PrivateAssets="all" Version="3.2.9" />
+    <PackageReference Include="Fody" PrivateAssets="all" />
+    <PackageReference Include="PropertyChanged.Fody" PrivateAssets="all" />
     <ProjectReference Include="..\CK.Observable.Domain\CK.Observable.Domain.csproj" />
   </ItemGroup>
 

@@ -19,6 +19,8 @@
        TODO: When using SourceLink, we should follow the guidelines here: https://github.com/dotnet/sourcelink#using-source-link-in-net-projects
              (only for packages that are ultimately uploaded to nuget.org). -->
     <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
+    <!-- Using Microsoft.Build.CentralPackageVersions: this avoids the Packages.props at the root of the repository. -->
+    <CentralPackagesFile>$(MSBuildThisFileDirectory)CentralPackages.props</CentralPackagesFile>
   </PropertyGroup>
   <ItemGroup>
     <SourceRoot Include="$(SolutionDir)" />
