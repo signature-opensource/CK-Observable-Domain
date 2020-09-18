@@ -11,11 +11,13 @@ namespace CK.Observable
 
     /// <summary>
     /// Base behavior for timed event that handles internal timer data and basic life cycle aspects.
+    /// Concrete specializations are <see cref="ObservableTimer"/> and <see cref="ObservableReminder"/>.
+    /// Note that <see cref="IsActive"/> can be false.
     /// </summary>
     [SerializationVersion( 0 )]
     public abstract class ObservableTimedEventBase : IDisposableObject
     {
-        internal TimeManager TimeManager;
+        internal TimeManager? TimeManager;
         internal int ActiveIndex;
 
         /// <summary>
@@ -79,7 +81,11 @@ namespace CK.Observable
         /// must be associated to the event source without polluting the object model itself.
         /// This object must be serializable. This property is set to null after <see cref="Dispose"/> has been called.
         /// </summary>
-        public object Tag { get; set; }
+        /// <remarks>
+        /// This is a facility, just an easy way to associate data to a timer or a reminder. This should be used with care
+        /// as systematic use of this association may denote a lack of modeling.
+        /// </remarks>
+        public object? Tag { get; set; }
 
         internal abstract void DoRaise( IActivityMonitor monitor, DateTime current, bool throwException );
 

@@ -10,7 +10,7 @@ namespace CK.Observable.Domain.Tests.Clients
 
         public bool TestBehavior__ThrowOnWrite { get; set; }
 
-        public TestObservableRootObject( ObservableDomain domain ) : base( domain )
+        public TestObservableRootObject()
         {
         }
 

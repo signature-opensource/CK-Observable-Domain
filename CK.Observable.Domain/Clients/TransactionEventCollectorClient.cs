@@ -14,10 +14,12 @@ namespace CK.Observable
     /// </summary>
     public class TransactionEventCollectorClient : IObservableDomainClient
     {
-        readonly IObservableDomainClient _next;
+        readonly IObservableDomainClient? _next;
         readonly List<TransactionEvent> _events;
         readonly StringWriter _buffer;
         readonly ObjectExporter _exporter;
+        TimeSpan _keepDuration;
+        int _keepLimit;
 
         /// <summary>
         /// Representation of a successful transaction.
@@ -58,14 +60,14 @@ namespace CK.Observable
         /// Initializes a new <see cref="TransactionEventCollectorClient"/>.
         /// </summary>
         /// <param name="next">The next manager (can be null).</param>
-        public TransactionEventCollectorClient( IObservableDomainClient next = null )
+        public TransactionEventCollectorClient( IObservableDomainClient? next = null )
         {
             _next = next;
             _events = new List<TransactionEvent>();
             _buffer = new StringWriter();
             _exporter = new ObjectExporter( new JSONExportTarget( _buffer ) );
-            KeepDuration = TimeSpan.FromHours( 1 );
-            KeepLimit = 100;
+            KeepDuration = TimeSpan.FromMinutes( 5 );
+            KeepLimit = 2;
         }
 
         /// <summary>
@@ -74,25 +76,45 @@ namespace CK.Observable
         public IReadOnlyList<TransactionEvent> TransactionEvents => _events;
 
         /// <summary>
-        /// Gets or sets the maximum time during which events are kept.
-        /// Defaults to one hour.
+        /// Gets or sets the maximum time during which events are kept, regardless of <see cref="KeepLimit"/>.
+        /// Defaults to 5 minutes. Must be <see cref="TimeSpan.Zero"/> or positive.
         /// </summary>
-        public TimeSpan KeepDuration { get; set; }
+        public TimeSpan KeepDuration
+        {
+            get => _keepDuration;
+            set
+            {
+                if( value < TimeSpan.Zero ) throw new ArgumentOutOfRangeException();
+                _keepDuration = value;
+            }
+        }
 
         /// <summary>
         /// Gets or sets the minimum number of transaction events that are kept, regardless of <see cref="KeepDuration"/>.
-        /// Default to 100.
+        /// Defaults to 2, the minimum is 1.
         /// </summary>
-        public int KeepLimit { get; set; }
+        public int KeepLimit
+        {
+            get => _keepLimit;
+            set
+            {
+                if( value < 1 ) throw new ArgumentOutOfRangeException();
+                _keepLimit = value;
+            }
+        }
 
         /// <summary>
         /// Generates a JSON object that contains all the events from a specified transaction number.
         /// </summary>
         /// <param name="transactionNumber">The transaction number.</param>
         /// <returns>The JSON object.</returns>
-        public string WriteEventsFrom( int transactionNumber )
+        public string WriteJSONEventsFrom( int transactionNumber )
         {
-            if( _events.Count == 0 ) throw new InvalidOperationException( "OnTransactionCommit has not been called yet." );
+            if( _events.Count == 0 || transactionNumber < _events[0].TransactionNumber-1 )
+            {
+                // A full export is required.
+                return "{\"N\":-1,\"E\":null}";
+            }
             var last = _events[_events.Count - 1];
             if( transactionNumber >= last.TransactionNumber )
             {
@@ -106,16 +128,19 @@ namespace CK.Observable
             t.EmitInt32( last.TransactionNumber );
             t.EmitPropertyName( "E" );
             t.EmitStartList();
-            if( last.TransactionNumber == transactionNumber )
+            if( transactionNumber == last.TransactionNumber - 1 )
             {
                 _buffer.Write( last.ExportedEvents );
             }
             else
             {
+                bool atLeastOne = false;
                 foreach( var e in _events )
                 {
                     if( e.TransactionNumber <= transactionNumber ) continue;
-                    foreach( var ev in e.Events ) ev.Export( _exporter );
+                    if( atLeastOne ) _buffer.Write( "," );
+                    else atLeastOne = true;
+                    _buffer.Write( e.ExportedEvents );
                 }
             }
             t.EmitEndList();
@@ -138,7 +163,7 @@ namespace CK.Observable
             }
         }
 
-        void IObservableDomainClient.OnDomainCreated( IActivityMonitor monitor, ObservableDomain d, DateTime timeUtc ) => _next?.OnDomainCreated( monitor, d, timeUtc );
+        void IObservableDomainClient.OnDomainCreated( IActivityMonitor monitor, ObservableDomain d ) => _next?.OnDomainCreated( monitor, d );
 
         void IObservableDomainClient.OnTransactionCommit( in SuccessfulTransactionContext c )
         {
@@ -158,6 +183,10 @@ namespace CK.Observable
         void IObservableDomainClient.OnTransactionStart( IActivityMonitor monitor, ObservableDomain d, DateTime timeUtc )
         {
             _next?.OnTransactionStart( monitor, d, timeUtc );
+        }
+
+        void IObservableDomainClient.OnDomainDisposed( IActivityMonitor monitor, ObservableDomain d )
+        {
         }
     }
 }

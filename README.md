@@ -18,11 +18,8 @@ public class MyApplicationRoot : ObservableRootObject
 {
     public string MyStateProperty { get; set; }
 
-    public MyApplicationRoot( ObservableDomain domain ) : base( domain )
-    {
-    }
-
-    public MyApplicationRoot( IBinaryDeserializerContext d ) : base( d )
+    MyApplicationRoot( IBinaryDeserializerContext d )
+      : base( d )
     {
         var r = d.StartReading();
         // Deserialize your properties here. Mind the order!
@@ -43,19 +40,22 @@ public class MyApplicationRoot : ObservableRootObject
 public void Main()
 {
     // The generic ObservableDomain takes a class type - that is your ObservableRootObject.
-    var observableDomain = new ObservableDomain<MyApplicationRoot>();
+    // Such strongly typed domain can have up to 4 roots.
+    var d = new ObservableDomain<MyApplicationRoot>();
+
     // When using Modify(), you hold a write lock, and can change properties.
-    observableDomain.Modify( () =>
+    TransactionResult tr = d.Modify( () =>
     {
-        observableDomain.Root.MyStateProperty = "Hello world";
+        d.Root.MyStateProperty = "Hello world";
     } );
-    // At the end of Modify), a Transaction is created, with all the events that happened inside it.
-    // In this case, the value of property "MyStateProperty" changed. That is an event.
+    // At the end of Modify, a Transaction is created, with all the events that happened inside it.
+    // In modifier above, the value of property "MyStateProperty" changed: there is an event for it.
+    Debug.Assert( tr.Success, "The transaction succeeded." );
 
     // If you want to read safely from your objects, you can acquire and release a disposable read-only lock.
-    using( observableDomain.AcquireReadLock() )
+    using( d.AcquireReadLock() )
     {
-        Debug.Assert( observableDomain.Root.MyStateProperty == "Hello world" );
+        Debug.Assert( d.Root.MyStateProperty == "Hello world" );
     }
 }
 ```
@@ -70,22 +70,25 @@ This opens up features like `ObservableDomain` persistence and event transmissio
 
 ### File persistence: `FileTransactionProviderClient`
 
-This client loads and saves the `ObservableDomain` to a single file.
+This client loads and saves the `ObservableDomain` from/to a single file.
 
 It also provides an automatic roll-back feature: If an error happens while calling `Modify()`, the entire `ObservableDomain` will be reloaded from the last successful call to `Modify()`.
 
 ```csharp
 public void Main()
 {
-    string path = @"C:\ObservableDomain.bin"; // This file contains or will contain the ObservableDomain objects
+    // This file contains or will contain the ObservableDomain objects.
+    string path = @"C:\ObservableDomain.bin"; 
     int fileSaveMs = 5000; // Save file every 5 seconds minimum
 
-    // The fileClient will load the domain, if applicable, and save the domain after you call Modify(), every 5 seconds.
+    // The fileClient will load the domain, if applicable, and will save the
+    // domain after you call Modify(), every 5 seconds.
     var fileClient = new FileTransactionProviderClient( path, fileSaveMs );
     var observableDomain = new ObservableDomain<MyApplicationRoot>( fileClient );
 
-    // If you don't plan on calling Modify() and still want to write the file (eg. on a clean shutdown),
-    // you can call Flush() before closing the application.
+    // If you don't plan on calling Modify() and still want to write
+    // the file (eg. on a clean shutdown), you can call Flush() before
+    // closing the application.
     fileClient.Flush();
 }
 ```

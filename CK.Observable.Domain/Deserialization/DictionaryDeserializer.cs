@@ -80,8 +80,8 @@ namespace CK.Observable
             var result = new KeyValuePair<TKey, TValue>[len];
             for( int i = 0; i < len; ++i )
             {
-                TKey k = monoTypeKey ? r.Read( keyDeserialization ) : (TKey)r.ReadObject();
-                TValue v = monoTypeVal ? r.Read( valueDeserialization ) : (TValue)r.ReadObject();
+                TKey k = monoTypeKey ? keyDeserialization.ReadInstance( r, null ) : (TKey)r.ReadObject();
+                TValue v = monoTypeVal ? valueDeserialization.ReadInstance( r, null ) : (TValue)r.ReadObject();
                 result[i] = new KeyValuePair<TKey, TValue>( k, v );
             }
             return result;

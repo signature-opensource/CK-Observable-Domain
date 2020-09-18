@@ -10,18 +10,18 @@ namespace CK.Observable
         /// Gets the serialization driver.
         /// Null if no serialization driver is available.
         /// </summary>
-        new ITypeSerializationDriver<T> SerializationDriver { get; }
+        new ITypeSerializationDriver<T>? SerializationDriver { get; }
 
         /// <summary>
         /// Gets the deserialization driver.
         /// Null if no deserialization driver is available.
         /// </summary>
-        new IDeserializationDriver<T> DeserializationDriver { get; }
+        new IDeserializationDriver<T>? DeserializationDriver { get; }
 
         /// <summary>
         /// Gets the export driver.
         /// Null if no export driver is available.
         /// </summary>
-        new IObjectExportTypeDriver<T> ExportDriver { get; }
+        new IObjectExportTypeDriver<T>? ExportDriver { get; }
     }
 }

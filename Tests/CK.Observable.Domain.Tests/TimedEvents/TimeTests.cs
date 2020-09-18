@@ -92,8 +92,8 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             using( TestHelper.Monitor.CollectEntries( e => entries = e, LogLevelFilter.Info ) )
             using( var d = new ObservableDomain( TestHelper.Monitor, nameof( timed_event_trigger_at_the_start_of_the_Modify ) ) )
             {
-                var autoTimer = d.TimeManager.CurrentTimer;
-                d.TimeManager.CurrentTimer = new FakeAutoTimer( d );
+                var autoTimer = d.TimeManager.Timer;
+                d.TimeManager.Timer = new FakeAutoTimer( d );
                 autoTimer.Dispose();
 
                 d.Modify( TestHelper.Monitor, () =>
@@ -139,7 +139,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 TestHelper.Monitor.Trace( $"new AutoCounter( 100 ) done. Waiting {waitTime} ms." );
                 Thread.Sleep( waitTime );
                 TestHelper.Monitor.Trace( $"End of Waiting." );
-                d.TimeManager.CurrentTimer.WaitForNext();
+                d.TimeManager.Timer.WaitForNext();
                 using( d.AcquireReadLock() )
                 {
                     TestHelper.Monitor.Trace( $"counter.Count = {counter.Count}." );
@@ -276,7 +276,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 } ).Success.Should().BeTrue();
 
                 Thread.Sleep( 50 );
-                d.TimeManager.CurrentTimer.WaitForNext();
+                d.TimeManager.Timer.WaitForNext();
 
                 int secondaryValue = 0;
                 using( TestHelper.Monitor.OpenInfo( "Having slept during 50 ms: now creating Secondary by Save/Load the primary domain." ) )
@@ -298,7 +298,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                     }
                 }
                 // Wait for next tick...
-                d.TimeManager.CurrentTimer.WaitForNext();
+                d.TimeManager.Timer.WaitForNext();
 
                 using( TestHelper.Monitor.OpenInfo( "Checking value on Primary domain." ) )
                 {
@@ -330,7 +330,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
 
                 TestHelper.Monitor.Info( $"Waiting for {testTime} ms." );
                 Thread.Sleep( testTime );
-                d.TimeManager.CurrentTimer.WaitForNext();
+                d.TimeManager.Timer.WaitForNext();
 
                 tranResult = d.Modify( TestHelper.Monitor, () =>
                 {
@@ -427,11 +427,11 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                     t.Elapsed += AutoTime_has_trampoline_OnTimer;
                 } ).Success.Should().BeTrue();
 
-                d.TimeManager.CurrentTimer.WaitForNext();
+                d.TimeManager.Timer.WaitForNext();
                 UpdateCount();
                 delta.Should().BeGreaterThan( 0, "Since we called WaitForNext()." );
 
-                d.TimeManager.CurrentTimer.WaitForNext();
+                d.TimeManager.Timer.WaitForNext();
                 UpdateCount();
                 delta.Should().BeGreaterThan( 0, "Since we called WaitForNext() again!" );
 
@@ -441,7 +441,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                     Thread.Sleep( 200 );
                 }
 
-                d.TimeManager.CurrentTimer.WaitForNext();
+                d.TimeManager.Timer.WaitForNext();
                 UpdateCount();
                 delta.Should().BeGreaterThan( 0, "We blocked for 200 ms and called WaitForNext(): at least one Tick should have been raised." );
             }

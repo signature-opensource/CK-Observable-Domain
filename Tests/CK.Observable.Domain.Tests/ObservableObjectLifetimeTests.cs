@@ -45,10 +45,6 @@ namespace CK.Observable.Domain.Tests
 
         class JustAnObservableObject : ObservableObject
         {
-            public JustAnObservableObject( ObservableDomain d )
-                : base( d )
-            {
-            }
             public int Speed { get; set; }
 
             void Export( ObjectExporter e )
@@ -57,24 +53,6 @@ namespace CK.Observable.Domain.Tests
 
         }
 
-        [Test]
-        public void concurrent_accesses_are_detected()
-        {
-            using( var d = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
-            {
-                using( d.BeginTransaction( TestHelper.Monitor ) )
-                {
-                    Action concurrent = () => Parallel.For( 0, 20, i =>
-                    {
-                        var c = new JustAnObservableObject( d );
-                        System.Threading.Thread.Sleep( 2 );
-                    } );
-                    concurrent.Should()
-                                .Throw<AggregateException>()
-                                .WithInnerException<InvalidOperationException>().WithMessage( "Concurrent access: no lock has been acquired." );
-                }
-            }
-        }
 
         [Test]
         public void Export_can_NOT_be_called_within_a_transaction_because_of_LockRecursionPolicy_NoRecursion()

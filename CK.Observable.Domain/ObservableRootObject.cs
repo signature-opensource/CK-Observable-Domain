@@ -11,11 +11,10 @@ namespace CK.Observable
     public class ObservableRootObject : ObservableObject
     {
         /// <summary>
-        /// Initializes a new root of a domain.
+        /// Initializes a new root for the current domain that is retrieved automatically: it
+        /// is the last one on the current thread that has started a transaction (see <see cref="ObservableDomain.BeginTransaction"/>).
         /// </summary>
-        /// <param name="domain">The holding domain.</param>
-        protected ObservableRootObject( ObservableDomain domain )
-            : base( domain )
+        protected ObservableRootObject()
         {
         }
 

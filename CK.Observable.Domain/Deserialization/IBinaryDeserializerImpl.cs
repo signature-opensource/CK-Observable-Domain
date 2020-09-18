@@ -57,7 +57,7 @@ namespace CK.Observable
         /// </summary>
         /// <param name="info">The type read information.</param>
         /// <returns>The deserializer context to use.</returns>
-        IBinaryDeserializerContext PushConstructorContext( TypeReadInfo info );
+        IBinaryDeserializerContext PushConstructorContext( TypeReadInfo? info );
 
         /// <summary>
         /// Pops a previously pushed constructor context. Must be called after the call

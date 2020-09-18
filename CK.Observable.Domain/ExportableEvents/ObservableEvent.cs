@@ -38,7 +38,9 @@ namespace CK.Observable
         public ObservableEventType EventType { get; }
 
         /// <summary>
-        /// Exports this event.
+        /// Exports this event: this is a <see cref="ObjectExportedKind.List"/> with
+        /// the <see cref="EventType"/> as a string and then the result of
+        /// the <see cref="ExportEventData"/> call.
         /// </summary>
         /// <param name="e">The target exporter.</param>
         public void Export( ObjectExporter e )

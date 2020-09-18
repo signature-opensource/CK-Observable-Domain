@@ -30,7 +30,7 @@ namespace CK.Observable
         class AutoTypeDriver : IUnifiedTypeDriver, ITypeSerializationDriver, IDeserializationDriver, IObjectExportTypeDriver
         {
             readonly Type _type;
-            readonly AutoTypeDriver _baseType;
+            readonly AutoTypeDriver? _baseType;
             readonly AutoTypeDriver[] _typePath;
 
             // Serialization.
@@ -45,8 +45,8 @@ namespace CK.Observable
             readonly ConstructorInfo _ctor;
 
             // Export.
-            readonly MethodInfo _exporter;
-            readonly MethodInfo _exporterBase;
+            readonly MethodInfo? _exporter;
+            readonly MethodInfo? _exporterBase;
             readonly IReadOnlyList<PropertyInfo> _exportableProperties;
             readonly bool _isExportable;
 
@@ -57,11 +57,11 @@ namespace CK.Observable
 
             bool ITypeSerializationDriver.IsFinalType => _type.IsSealed || _type.IsValueType;
 
-            public ITypeSerializationDriver SerializationDriver => _writer != null ? this : null;
+            public ITypeSerializationDriver? SerializationDriver => _writer != null ? this : null;
 
-            public IDeserializationDriver DeserializationDriver => _ctor != null ? this : null;
+            public IDeserializationDriver? DeserializationDriver => _ctor != null ? this : null;
 
-            public IObjectExportTypeDriver ExportDriver => _isExportable ? this : null;
+            public IObjectExportTypeDriver? ExportDriver => _isExportable ? this : null;
 
             IReadOnlyList<PropertyInfo> IObjectExportTypeDriver.ExportableProperties => _exportableProperties;
 
@@ -80,12 +80,12 @@ namespace CK.Observable
             /// Null if the type has been previously written by an external driver.
             /// </param>
             /// <returns>The new instance.</returns>
-            object IDeserializationDriver.ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo ) 
+            object IDeserializationDriver.ReadInstance( IBinaryDeserializer r, TypeReadInfo? readInfo ) 
             {
                 return DoReadInstance( r, readInfo );
             }
 
-            protected object DoReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo )
+            protected object DoReadInstance( IBinaryDeserializer r, TypeReadInfo? readInfo )
             {
                 var ctx = r.ImplementationServices.PushConstructorContext( readInfo );
 
@@ -106,7 +106,7 @@ namespace CK.Observable
                     inner.Throw();
                 }
                 r.ImplementationServices.PopConstructorContext();
-                if( r.IsDebugMode )
+                if( r.IsDebugMode && readInfo != null )
                 {
                     r.ReadString( "After: " + readInfo.DescribeAutoTypePathItem( readInfo ) );
                 }
@@ -120,11 +120,11 @@ namespace CK.Observable
             /// <param name="s">The serializer.</param>
             void ITypeSerializationDriver.WriteTypeInformation( BinarySerializer s )
             {
-                var tInfo = this;
+                AutoTypeDriver? tInfo = this;
                 while( s.DoWriteSimpleType( tInfo?.Type ) )
                 {
-                    Debug.Assert( tInfo._version >= 0 );
-                    s.WriteSmallInt32( tInfo._version );
+                    Debug.Assert( tInfo != null && tInfo._version >= 0 );
+                    s.WriteSmallInt32( tInfo!._version );
                     tInfo = tInfo._baseType;
                 }
             }

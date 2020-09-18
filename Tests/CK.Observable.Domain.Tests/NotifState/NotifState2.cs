@@ -13,7 +13,7 @@ namespace Signature.Process.Dispatching
 
         public BarcodeScannerState BarcodeScanner { get; }
 
-        public NotificationState2( ObservableDomain domain ) : base( domain )
+        public NotificationState2()
         {
             BarcodeScanner = new BarcodeScannerState();
             ProductDispatchErrors = new ObservableChannel<DispatchProductResult>();

@@ -1,5 +1,6 @@
 using CK.Core;
 using CK.Text;
+using System;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -10,7 +11,8 @@ namespace CK.Observable
     /// <see cref="ObservableDomain"/> with a strongly typed <see cref="Root"/>.
     /// </summary>
     /// <typeparam name="T">Type of the root object.</typeparam>
-    public sealed class ObservableDomain<T> : ObservableDomain where T : ObservableRootObject
+    public sealed class ObservableDomain<T> : ObservableDomain, IObservableDomain<T>
+        where T : ObservableRootObject
     {
         /// <summary>
         /// Initializes a new <see cref="ObservableDomain{T}"/> without any <see cref="ObservableDomain.DomainClient"/>.
@@ -32,7 +34,7 @@ namespace CK.Observable
         /// <param name="monitor">The monitor used to log the construction of this domain. Cannot be null.</param>
         /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
         /// <param name="client">The observable client (head of the Chain of Responsibility) to use. Can be null.</param>
-        public ObservableDomain( IActivityMonitor monitor, string domainName, IObservableDomainClient client )
+        public ObservableDomain( IActivityMonitor monitor, string domainName, IObservableDomainClient? client )
             : base( monitor, domainName, client )
         {
             if( AllRoots.Count != 0 ) BindRoots();

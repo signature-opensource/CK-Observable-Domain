@@ -19,7 +19,7 @@ namespace Signature.Process.Dispatching
 
         public BarcodeScannerState BarcodeScanner { get; }
 
-        public NotificationState( ObservableDomain domain ) : base( domain )
+        public NotificationState()
         {
             _productDispatchErrors = new ObservableList<Notification<DispatchProductResult>>();
             _exceptions = new ObservableList<Notification<CKExceptionData>>();

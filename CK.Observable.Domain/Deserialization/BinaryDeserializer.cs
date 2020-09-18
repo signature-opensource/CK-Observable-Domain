@@ -19,6 +19,7 @@ namespace CK.Observable
         readonly List<string> _typesIdx;
         readonly Dictionary<string, TypeReadInfo> _typeInfos;
         readonly List<object> _objects;
+
         readonly List<Action> _postDeserializationActions;
         readonly Stack<ConstructorContext> _ctorContextStack;
         TypeReadInfo _currentCtorReadInfo;
@@ -51,8 +52,8 @@ namespace CK.Observable
         /// <param name="encoding"></param>
         public BinaryDeserializer(
             Stream stream,
-            IServiceProvider services = null,
-            IDeserializerResolver drivers = null,
+            IServiceProvider? services = null,
+            IDeserializerResolver? drivers = null,
             bool leaveOpen = false,
             Encoding encoding = null )
             : base( stream, encoding ?? Encoding.UTF8, leaveOpen )
@@ -133,7 +134,7 @@ namespace CK.Observable
             return o;
         }
 
-        IBinaryDeserializerContext IBinaryDeserializerImpl.PushConstructorContext( TypeReadInfo info )
+        IBinaryDeserializerContext IBinaryDeserializerImpl.PushConstructorContext( TypeReadInfo? info )
         {
             _ctorContextStack.Push( info != null ? new ConstructorContext( info ) : null );
             return this;
@@ -316,44 +317,6 @@ namespace CK.Observable
                 throw new InvalidDataException( $"Unable to resolve reference {idx}. Object has not been created or has not been registered." );
             }
             return _objects[idx];
-        }
-
-        /// <summary>
-        /// Reads an instance of a type for which the desrializer id known.
-        /// </summary>
-        /// <typeparam name="T">The type to read.</typeparam>
-        /// <param name="driver">The driver to use.</param>
-        /// <returns>The instance read.</returns>
-        public T Read<T>( IDeserializationDriver<T> driver )
-        {
-            if( driver == null ) throw new ArgumentNullException( nameof( driver ) );
-            var b = (SerializationMarker)ReadByte();
-            switch( b )
-            {
-                case SerializationMarker.Null: return default( T );
-                case SerializationMarker.Reference: return (T)ReadReference();
-                case SerializationMarker.EmptyObject:
-                    {
-                        var o = new object();
-                        _objects.Add( o );
-                        return (T)o;
-                    }
-                case SerializationMarker.Type:
-                case SerializationMarker.Object:
-                case SerializationMarker.Struct:
-                    {
-                        return driver.ReadInstance( this, null );
-                    }
-                case SerializationMarker.ObjectBinaryFormatter:
-                case SerializationMarker.StructBinaryFormatter:
-                    {
-                        if( _binaryFormatter == null ) _binaryFormatter = new BinaryFormatter();
-                        object result = _binaryFormatter.Deserialize( BaseStream );
-                        if( b == SerializationMarker.ObjectBinaryFormatter ) _objects.Add( result );
-                        return (T)result;
-                    }
-                default: throw new InvalidDataException();
-            }
         }
 
         /// <summary>

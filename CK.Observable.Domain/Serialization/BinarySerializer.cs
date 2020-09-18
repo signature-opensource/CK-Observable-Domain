@@ -15,7 +15,9 @@ namespace CK.Observable
     public class BinarySerializer : CKBinaryWriter
     {
         readonly Dictionary<Type, TypeInfo> _types;
-        readonly Dictionary<object, int> _seen;
+        // This is a fix.
+        // Until the serialization is refactored...
+        readonly internal Dictionary<object, int> _seen;
         readonly ISerializerResolver _drivers;
         BinaryFormatter _binaryFormatter;
 
@@ -183,56 +185,6 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Writes an object with a already known serialization driver.
-        /// </summary>
-        /// <typeparam name="T">The type of the value to use.</typeparam>
-        /// <param name="o">The value to write.</param>
-        /// <param name="driver">The driver to use.</param>
-        public void Write<T>( T o, ITypeSerializationDriver<T> driver )
-        {
-            if( driver == null ) throw new ArgumentNullException( nameof( driver ) );
-            if( o == null )
-            {
-                Write( (byte)SerializationMarker.Null );
-                return;
-            }
-            SerializationMarker marker;
-            Type t = o.GetType();
-            int idxSeen = -1;
-            // This is awful. Drivers need to be the actual handler of the full
-            // serialization/deserialization process, including instance tracking,
-            // regardless of the struct/class kind of the objects.
-            // New object pools from CK.Core should definitly help for this.
-            if( t.IsClass && t != typeof( string ) )
-            {
-                if( typeof( Type ).IsAssignableFrom( t ) )
-                {
-                    marker = SerializationMarker.Type;
-                }
-                else
-                {
-                    if( _seen.TryGetValue( o, out var num ) )
-                    {
-                        Write( (byte)SerializationMarker.Reference );
-                        Write( num );
-                        return;
-                    }
-                    idxSeen = _seen.Count;
-                    _seen.Add( o, _seen.Count );
-                    if( t == typeof( object ) )
-                    {
-                        Write( (byte)SerializationMarker.EmptyObject );
-                        return;
-                    }
-                    marker = SerializationMarker.Object;
-                }
-            }
-            else marker = SerializationMarker.Struct;
-            Write( (byte)marker );
-            driver.WriteData( this, o );
-        }
-
-        /// <summary>
         /// Gets whether this serializer is currently in debug mode.
         /// Initially defaults to false.
         /// </summary>
@@ -308,7 +260,7 @@ namespace CK.Observable
         /// </summary>
         /// <param name="t">Type to serialize. Can be null.</param>
         /// <returns>True if the type has been written, false if it was already serialized.</returns>
-        internal bool DoWriteSimpleType( Type t )
+        internal bool DoWriteSimpleType( Type? t )
         {
             if( t == null ) Write( (byte)0 );
             else if( t == typeof( object ) )
@@ -335,7 +287,7 @@ namespace CK.Observable
         /// Magic yet simple helper to check the serialization implementation: the object (and potentially the whole graph behind)
         /// is serialized then deserialized and the result of the deserialization is the serialized again.
         /// Once this 3 steps have been done, the bytes that are the result of the first serialization are checked against the ones of the second serialization.
-        /// Teh 2 byte sequences must be exactly the same.
+        /// The 2 byte sequences must be exactly the same.
         /// </summary>
         /// <param name="o">The object to check.</param>
         /// <param name="services">Optional services that deserialization may require.</param>

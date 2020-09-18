@@ -55,7 +55,7 @@ namespace CK.Observable
                 {
                     foreach( var i in items )
                     {
-                        w.Write( i, itemSerializer );
+                        itemSerializer.WriteData( w, i );
                         if( --count == 0 ) break;
                     }
                     if( count > 0 ) throw new ArgumentException( $"Not enough items: missing {count} items.", nameof( count ) );

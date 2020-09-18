@@ -1,4 +1,4 @@
-﻿
+
 <RepositoryInfo>
 
   <SimpleGitVersion StartingVersion="v0.6.0">
@@ -9,7 +9,6 @@
     </IgnoreModifiedFiles>
     <Branches>
       <Branch Name="develop" CIVersionMode="LastReleaseBased" VersionName="develop" />
-      <Branch Name="build" CIVersionMode="LastReleaseBased" VersionName="build" />
     </Branches>
   </SimpleGitVersion>
 </RepositoryInfo>

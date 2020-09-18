@@ -50,11 +50,12 @@ namespace CK.Observable.Domain.Tests.Sample
 
         /// <summary>
         /// Defining this event is enough: it will be automatically fired whenever Position has changed.
-        /// Its type MUST be EventHandler BUT, a SafeEventHandler should be used whenever possible:
-        /// see <see cref="InternalObject."/>
+        /// Its type MUST be EventHandler BUT, a SafeEventHandler should be used whenever possible.
         /// This is fired before <see cref="ObservableObject.PropertyChanged"/> event with property's name.
         /// </summary>
+        #pragma warning disable 67 // The event 'PositionChanged' is never used.
         public event EventHandler PositionChanged;
+        #pragma warning restore 67
 
         public Position Position { get; set; }
 

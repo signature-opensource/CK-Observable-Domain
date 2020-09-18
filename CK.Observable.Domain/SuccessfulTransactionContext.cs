@@ -11,17 +11,18 @@ namespace CK.Observable
     /// </summary>
     public readonly struct SuccessfulTransactionContext
     {
-        readonly List<Func<IActivityMonitor, Task>> _postActions;
+        readonly ObservableDomain _domain;
+        internal readonly ActionRegistrar<PostActionContext> _postActions;
 
         /// <summary>
         /// Gets the monitor to use.
         /// </summary>
-        public IActivityMonitor Monitor => Domain.CurrentMonitor;
+        public IActivityMonitor Monitor => _domain.CurrentMonitor;
 
         /// <summary>
         /// Gets the observable domain.
         /// </summary>
-        public ObservableDomain Domain { get; }
+        public IObservableDomain Domain => _domain;
 
         /// <summary>
         /// Gets the start time (UTC) of the transaction.
@@ -51,26 +52,15 @@ namespace CK.Observable
         public IReadOnlyList<ObservableCommand> Commands { get; }
 
         /// <summary>
-        /// Exposes all post actions that must be executed and has been registered so far.
-        /// </summary>
-        public IReadOnlyList<Func<IActivityMonitor, Task>> PostActions => _postActions;
-
-        internal List<Func<IActivityMonitor, Task>> RawPostActions => _postActions;
-
-        /// <summary>
         /// Registers a new action that must be executed.
         /// </summary>
         /// <param name="action"></param>
-        public void AddPostAction( Func<IActivityMonitor, Task> action )
-        {
-            if( action == null ) throw new ArgumentNullException( nameof( action ) );
-            _postActions.Add( action );
-        }
+        public IActionRegistrar<PostActionContext> PostActions => _postActions;
 
         internal SuccessfulTransactionContext( ObservableDomain d, IReadOnlyList<ObservableEvent> e, IReadOnlyList<ObservableCommand> c, DateTime startTime, DateTime nextDueTime )
         {
-            _postActions = new List<Func<IActivityMonitor, Task>>();
-            Domain = d;
+            _postActions = new ActionRegistrar<PostActionContext>();
+            _domain = d;
             NextDueTimeUtc = nextDueTime;
             StartTimeUtc = startTime;
             CommitTimeUtc = DateTime.UtcNow;

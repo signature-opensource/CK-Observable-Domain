@@ -10,7 +10,7 @@ namespace CK.Observable
     /// <typeparam name="TKey">The type of the keys in the dictionary.</typeparam>
     /// <typeparam name="TValue">The type of the values in the dictionary.</typeparam>
     [SerializationVersion( 0 )]
-    public class ObservableDictionary<TKey, TValue> : ObservableObject, IDictionary<TKey, TValue>, IReadOnlyDictionary<TKey, TValue>
+    public class ObservableDictionary<TKey, TValue> : ObservableObject, IDictionary<TKey, TValue>, IObservableReadOnlyDictionary<TKey, TValue>
     {
         readonly Dictionary<TKey, TValue> _map;
         ObservableEventHandler<CollectionMapSetEvent> _itemSet;
@@ -35,7 +35,6 @@ namespace CK.Observable
             add => _itemAdded.Add( value, nameof( ItemAdded ) );
             remove => _itemAdded.Remove( value );
         }
-
 
         /// <summary>
         /// Raised by <see cref="Clear"/>.

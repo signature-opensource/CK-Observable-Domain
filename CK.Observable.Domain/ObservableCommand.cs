@@ -3,7 +3,9 @@ using System;
 namespace CK.Observable
 {
     /// <summary>
-    /// Very simple command encapsulation: there is no constraint on the command type.
+    /// Very simple command encapsulation: there is no constraint on the command type: the payload's type must be considered.
+    /// These objects are wrappers arount the actual payload object provided to <see cref="ObservableObject.SendCommand(object)"/>
+    /// or <see cref="InternalObject.SendCommand(object)"/>. They are exposed on <see cref="TransactionResult.Commands"/>.
     /// </summary>
     public readonly struct ObservableCommand
     {

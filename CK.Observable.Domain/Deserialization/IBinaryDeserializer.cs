@@ -39,12 +39,12 @@ namespace CK.Observable
         /// <returns>The Type.</returns>
         Type ReadType( bool throwIfMissing = true );
 
-        /// <summary>
-        /// Reads an object previously written by <see cref="BinarySerializer.Write{T}(T,ITypeSerializationDriver{T})"/>.
-        /// </summary>
-        /// <param name="driver">The deserialization driver.</param>
-        /// <returns>The object read, possibly in an intermediate state.</returns>
-        T Read<T>( IDeserializationDriver<T> driver );
+        ///// <summary>
+        ///// Reads an object previously written by <see cref="BinarySerializer.Write{T}(T,ITypeSerializationDriver{T})"/>.
+        ///// </summary>
+        ///// <param name="driver">The deserialization driver.</param>
+        ///// <returns>The object read, possibly in an intermediate state.</returns>
+        //T Read<T>( IDeserializationDriver<T> driver );
 
         /// <summary>
         /// Gets a set of low level methods and helpers.

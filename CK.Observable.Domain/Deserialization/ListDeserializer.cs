@@ -41,7 +41,7 @@ namespace CK.Observable
             var result = r.ImplementationServices.TrackObject( new List<T>( len ) );
             if( r.ReadBoolean() )
             {
-                for( int i = 0; i < len; ++i ) result.Add( r.Read( itemDeserialization ) );
+                for( int i = 0; i < len; ++i ) result.Add( itemDeserialization.ReadInstance( r, null ) );
             }
             else
             {

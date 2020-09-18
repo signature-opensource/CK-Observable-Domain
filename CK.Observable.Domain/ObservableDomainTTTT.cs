@@ -13,7 +13,7 @@ namespace CK.Observable
     /// <typeparam name="T2">Type of the second root object.</typeparam>
     /// <typeparam name="T3">Type of the third root object.</typeparam>
     /// <typeparam name="T4">Type of the fourth root object.</typeparam>
-    public sealed class ObservableDomain<T1, T2, T3, T4> : ObservableDomain
+    public sealed class ObservableDomain<T1, T2, T3, T4> : ObservableDomain, IObservableDomain<T1, T2, T3, T4>
         where T1 : ObservableRootObject
         where T2 : ObservableRootObject
         where T3 : ObservableRootObject
@@ -37,7 +37,7 @@ namespace CK.Observable
         /// <param name="monitor">The monitor used to log the construction of this domain. Cannot be null.</param>
         /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
         /// <param name="client">The observable client (head of the Chain of Responsibility) to use. Can be null.</param>
-        public ObservableDomain( IActivityMonitor monitor, string domainName, IObservableDomainClient client )
+        public ObservableDomain( IActivityMonitor monitor, string domainName, IObservableDomainClient? client )
             : base( monitor, domainName, client )
         {
             if( AllRoots.Count != 0 ) BindRoots();

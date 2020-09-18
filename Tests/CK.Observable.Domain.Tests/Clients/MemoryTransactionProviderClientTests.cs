@@ -25,7 +25,7 @@ namespace CK.Observable.Domain.Tests.Clients
             transactionResult.Events.Should().NotBeEmpty();
             client.CurrentSerialNumber.Should().NotBe( -1, "There should have been a snapshot taken." );
             client.CurrentSerialNumber.Should().NotBe( int.MaxValue, "There should not have been a restore from stream." );
-            client.HasSnapshot.Should().BeTrue();
+            client.CompressionKind.Should().Be( CompressionKind.None );
             client.CurrentTimeUtc.Should().BeWithin( TimeSpan.FromSeconds( 2 ) );
         }
 

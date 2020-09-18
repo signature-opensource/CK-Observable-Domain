@@ -65,28 +65,30 @@ namespace CK.Observable
         public NormalizedPath FilePath => _filePath;
 
         /// <summary>
-        /// Loads the file if it exists (calls base method <see cref="MemoryTransactionProviderClient.LoadAndInitializeSnapshot(IActivityMonitor, ObservableDomain, DateTime, Stream)"/>)).
+        /// If the <see cref="ObservableDomain.TransactionSerialNumber"/> is 0 and the file exists, the base method
+        /// <see cref="MemoryTransactionProviderClient.LoadAndInitializeSnapshot(IActivityMonitor, ObservableDomain, DateTime, Stream)"/>
+        /// is called: the snapshot is created from the file content and the domain is restored.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="d">The newly created domain.</param>
-        /// <param name="timeUtc">The date time utc of the creation.</param>
-        public override void OnDomainCreated( IActivityMonitor monitor, ObservableDomain d, DateTime timeUtc )
+        public override void OnDomainCreated( IActivityMonitor monitor, ObservableDomain d )
         {
-            lock( _fileLock )
+            if( d.TransactionSerialNumber == 0 )
             {
-                if( File.Exists( _filePath ) )
+                lock( _fileLock )
                 {
-                    using( var f = new FileStream( _filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096,
-                        FileOptions.SequentialScan ) )
+                    if( File.Exists( _filePath ) )
                     {
-                        LoadAndInitializeSnapshot( monitor, d, timeUtc, f );
-                        _fileTransactionNumber = CurrentSerialNumber;
+                        using( var f = new FileStream( _filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.SequentialScan ) )
+                        {
+                            LoadAndInitializeSnapshot( monitor, d, f );
+                            _fileTransactionNumber = CurrentSerialNumber;
+                        }
                     }
                 }
+                RescheduleDueTime( DateTime.UtcNow );
             }
-            RescheduleDueTime( timeUtc );
-
-            base.OnDomainCreated( monitor, d, timeUtc );
+            base.OnDomainCreated( monitor, d );
         }
 
         /// <inheritdoc />
@@ -106,16 +108,15 @@ namespace CK.Observable
             }
         }
 
-
         /// <summary>
         /// Writes any pending snapshot to the disk if something changed.
         /// </summary>
-        /// <param name="m">The monitor to use</param>
+        /// <param name="monitor">The monitor to use.</param>
         /// <returns>
         /// True when the file was written, or when nothing has to be written.
-        /// False when an error occured while writing. This error was logged to <paramref name="m"/>.
+        /// False when an error occured while writing. This error was logged to the <paramref name="monitor"/>.
         /// </returns>
-        public bool Flush( IActivityMonitor m )
+        public bool Flush( IActivityMonitor monitor )
         {
             try
             {
@@ -128,10 +129,17 @@ namespace CK.Observable
             }
             catch( Exception e )
             {
-                m.Error( "Caught when writing ObservableDomain file", e );
+                monitor.Error( "Caught when writing ObservableDomain file", e );
                 return false;
             }
         }
+
+        /// <summary>
+        /// Overidden to call <see cref="Flush(IActivityMonitor)"/>.
+        /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
+        /// <param name="d">The dispsed domain.</param>
+        public override void OnDomainDisposed( IActivityMonitor monitor, ObservableDomain d ) => Flush( monitor );
 
         private void RescheduleDueTime( DateTime relativeTimeUtc )
         {
@@ -148,7 +156,7 @@ namespace CK.Observable
                     {
                         using( var f = new FileStream( _tmpFilePath, FileMode.Create, FileAccess.Write, FileShare.Read, 4096, FileOptions.SequentialScan ) )
                         {
-                            WriteSnapshotTo( f );
+                            WriteSnapshot( f );
                         }
 
                         if( File.Exists( _filePath ) )

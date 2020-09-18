@@ -57,7 +57,7 @@ namespace CK.Observable
 
         void ITypeSerializationDriver.WriteData( BinarySerializer w, object o ) => WriteData( w, (T)o );
 
-        object IDeserializationDriver.ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  ) => ReadInstance( r, readInfo );
+        object? IDeserializationDriver.ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  ) => ReadInstance( r, readInfo );
 
         string IDeserializationDriver.AssemblyQualifiedName => typeof( T ).AssemblyQualifiedName;
 
