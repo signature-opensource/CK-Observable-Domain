@@ -10,7 +10,7 @@ namespace CK.Observable.League
     /// This is the primary, first client. It handles the transaction snapshot and
     /// associates a <see cref="TransactClient"/> as its direct next client.
     /// It is specialized by <see cref="CoordinatorClient"/> for the coordinator domain
-    /// and <see cref="ObservableLeague.DomainClient"/> for the other ones.
+    /// and <see cref="ObservableLeague.DomainClient"/> for the all the other domains.
     /// </summary>
     abstract class StreamStoreClient : MemoryTransactionProviderClient
     {
@@ -83,7 +83,7 @@ namespace CK.Observable.League
         public override void OnTransactionCommit( in SuccessfulTransactionContext c )
         {
             CreateSnapshot( c.Monitor, c.Domain );
-            // We always save the snapshot (and there is no compensation for this of course).
+            // We save the snapshot if we must (and there is no compensation for this of course).
             if( c.CommitTimeUtc >= _nextSave ) c.PostActions.Add( ctx => SaveAsync( ctx.Monitor ) );
             Next?.OnTransactionCommit( c );
         }

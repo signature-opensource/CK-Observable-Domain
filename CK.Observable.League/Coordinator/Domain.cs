@@ -117,7 +117,7 @@ namespace CK.Observable.League
             {
                 if( Shell != null )
                 {
-                    Shell.Destroy( Monitor, Coordinator.League );
+                    Shell.Destroy( Domain.Monitor, Coordinator.League );
                 }
                 Coordinator.OnDisposeDomain( this );
             }

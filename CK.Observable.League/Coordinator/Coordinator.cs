@@ -53,7 +53,7 @@ namespace CK.Observable.League
             if( String.IsNullOrWhiteSpace( domainName ) ) throw new ArgumentOutOfRangeException( nameof( domainName ) );
             Debug.Assert( _league != null );
             var roots = rootTypes?.ToArray() ?? Array.Empty<string>();
-            IManagedDomain shell = _league!.CreateDomain( Monitor, domainName, roots );
+            IManagedDomain shell = _league!.CreateDomain( Domain.Monitor, domainName, roots );
             var d = new Domain( this, shell, roots );
             _domains.Add( domainName, d );
             return d;

@@ -66,7 +66,7 @@ namespace CK.Observable
         /// <param name="item">The item to send. May be null for reference type.</param>
         public void Send( T item )
         {
-            var e = Domain.OnListInsert( this, 0, item );
+            var e = ActualDomain.OnListInsert( this, 0, item );
             if( e != null && _itemSent.HasHandlers ) _itemSent.Raise( this, e );
         }
 

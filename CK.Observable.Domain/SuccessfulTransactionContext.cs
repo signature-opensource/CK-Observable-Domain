@@ -47,14 +47,13 @@ namespace CK.Observable
 
         /// <summary>
         /// Gets the commands that the transaction generated (all the commands
-        /// sent via <see cref="ObservableObject.SendCommand"/>.
+        /// sent via <see cref="DomainView.SendCommand(object)"/>.
         /// </summary>
         public IReadOnlyList<ObservableCommand> Commands { get; }
 
         /// <summary>
-        /// Registers a new action that must be executed.
+        /// Registrar for actions (that can be synchronous as well as asynchronous) that must be executed.
         /// </summary>
-        /// <param name="action"></param>
         public IActionRegistrar<PostActionContext> PostActions => _postActions;
 
         internal SuccessfulTransactionContext( ObservableDomain d, IReadOnlyList<ObservableEvent> e, IReadOnlyList<ObservableCommand> c, DateTime startTime, DateTime nextDueTime )

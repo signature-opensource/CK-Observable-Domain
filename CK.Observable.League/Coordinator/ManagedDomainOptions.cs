@@ -47,7 +47,7 @@ namespace CK.Observable.League
 
         /// <summary>
         /// Gets or sets the maximum time during which events are kept.
-        /// Defaults to one hour.
+        /// Defaults to 5 minutes.
         /// </summary>
         public readonly TimeSpan ExportedEventKeepDuration;
 

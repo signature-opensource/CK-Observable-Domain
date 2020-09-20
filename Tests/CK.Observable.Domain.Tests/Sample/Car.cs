@@ -10,7 +10,7 @@ namespace CK.Observable.Domain.Tests.Sample
 
         public Car( string name )
         {
-            Monitor.Info( $"Creating Car '{name}'." );
+            Domain.Monitor.Info( $"Creating Car '{name}'." );
             Name = name;
         }
 
@@ -65,8 +65,8 @@ namespace CK.Observable.Domain.Tests.Sample
 
         void OnCurrentMechanicChanged( object before, object after )
         {
-            if( IsDeserializing ) return;
-            Monitor.Info( $"{ToString()} is now repaired by: {CurrentMechanic?.ToString() ?? "null"}." );
+            if( Domain.IsDeserializing ) return;
+            Domain.Monitor.Info( $"{ToString()} is now repaired by: {CurrentMechanic?.ToString() ?? "null"}." );
             if( CurrentMechanic != null ) CurrentMechanic.CurrentCar = this;
             else ((Mechanic)before).CurrentCar = null;
         }

@@ -108,7 +108,7 @@ namespace CK.Observable
                     var current = _list[index];
                     if( !EqualityComparer<T>.Default.Equals( current, value ) )
                     {
-                        var e = Domain.OnListSetAt( this, index, value );
+                        var e = ActualDomain.OnListSetAt( this, index, value );
                         _list[index] = value;
                         if( e != null && _itemSet.HasHandlers ) _itemSet.Raise( this, e );
                     }
@@ -131,7 +131,7 @@ namespace CK.Observable
         /// <param name="item">Item to add.</param>
         public void Add( T item )
         {
-            var e = Domain.OnListInsert( this, _list.Count, item );
+            var e = ActualDomain.OnListInsert( this, _list.Count, item );
             _list.Add( item );
             if( e != null && _itemInserted.HasHandlers ) _itemInserted.Raise( this, e );
         }
@@ -152,7 +152,7 @@ namespace CK.Observable
         {
             if( _list.Count > 0 )
             {
-                var e = Domain.OnCollectionClear( this );
+                var e = ActualDomain.OnCollectionClear( this );
                 _list.Clear();
                 if( e != null && _collectionCleared.HasHandlers ) _collectionCleared.Raise( this, e );
             }
@@ -165,7 +165,7 @@ namespace CK.Observable
         /// <param name="item">The item to insert.</param>
         public void Insert( int index, T item )
         {
-            var e = Domain.OnListInsert( this, index, item );
+            var e = ActualDomain.OnListInsert( this, index, item );
             _list.Insert( index, item );
             if( e != null && _itemInserted.HasHandlers ) _itemInserted.Raise( this, e );
         }
@@ -202,7 +202,7 @@ namespace CK.Observable
         /// <param name="index">The index to remove.</param>
         public void RemoveAt( int index )
         {
-            var e = Domain.OnListRemoveAt( this, index );
+            var e = ActualDomain.OnListRemoveAt( this, index );
             _list.RemoveAt( index );
             if( e != null && _itemRemovedAt.HasHandlers ) _itemRemovedAt.Raise( this, e );
         }

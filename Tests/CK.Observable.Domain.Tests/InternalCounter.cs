@@ -49,7 +49,7 @@ namespace CK.Observable.Domain.Tests
 
         public void Increment( object sender, EventMonitoredArgs e )
         {
-            Monitor.Should().BeSameAs( e.Monitor, "InternalObject provides the transaction monitor." );
+            Domain.Monitor.Should().BeSameAs( e.Monitor, "InternalObject provides the transaction monitor." );
             Count++;
             e.Monitor.Info( $"Incremented Count = {Count}." );
         }

@@ -15,7 +15,7 @@ namespace CK.Observable
     [SerializationVersion( 0 )]
     public abstract class InternalObject : IDisposableObject
     {
-        internal ObservableDomain Domain;
+        internal ObservableDomain ActualDomain;
         internal InternalObject Next;
         internal InternalObject Prev;
         ObservableEventHandler<ObservableDomainEventArgs> _disposed;
@@ -53,8 +53,8 @@ namespace CK.Observable
         protected InternalObject( ObservableDomain domain )
         {
             if( domain == null ) throw new ArgumentNullException( nameof( domain ) );
-            Domain = domain;
-            Domain.Register( this );
+            ActualDomain = domain;
+            ActualDomain.Register( this );
         }
 
         /// <summary>
@@ -65,9 +65,9 @@ namespace CK.Observable
         {
             var r = d.StartReading();
             Debug.Assert( r.CurrentReadInfo.Version == 0 );
-            Domain = r.Services.GetService<ObservableDomain>( throwOnNull: true );
+            ActualDomain = r.Services.GetService<ObservableDomain>( throwOnNull: true );
             _disposed = new ObservableEventHandler<ObservableDomainEventArgs>( r );
-            Domain.Register( this );
+            ActualDomain.Register( this );
         }
 
         void Write( BinarySerializer w )
@@ -76,65 +76,30 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Gives access to the monitor to use.
+        /// Gets a safe view on the domain to which this internal object belongs.
         /// </summary>
-        protected IActivityMonitor Monitor => Domain?.CurrentMonitor;
-
-        /// <summary>
-        /// Sends a command to the external world. Commands are enlisted
-        /// into <see cref="TransactionResult.Commands"/> (when the transaction succeeds)
-        /// and can be processed by any <see cref="IObservableDomainClient"/>.
-        /// </summary>
-        /// <param name="command">Any command description.</param>
-        protected void SendCommand( object command )
-        {
-            Domain.SendCommand( this, command );
-        }
-
-        /// <summary>
-        /// Helper that raises a standard event from this internal object with a reusable <see cref="ObservableDomainEventArgs"/> instance.
-        /// </summary>
-        protected void RaiseStandardDomainEvent( ObservableEventHandler<ObservableDomainEventArgs> h ) => h.Raise( this, Domain.DefaultEventArgs );
-
-        /// <summary>
-        /// Helper that raises a standard event from this internal object with a reusable <see cref="EventMonitoredArgs"/> instance (that is the
-        /// shared <see cref="ObservableDomainEventArgs"/> instance).
-        /// </summary>
-        protected void RaiseStandardDomainEvent( ObservableEventHandler<EventMonitoredArgs> h ) => h.Raise( this, Domain.DefaultEventArgs );
-
-        /// <summary>
-        /// Uses a pooled <see cref="ObservableReminder"/> to call the specified callback at the given time with the
-        /// associated <see cref="ObservableTimedEventBase.Tag"/> object.
-        /// </summary>
-        /// <param name="dueTimeUtc">The due time. Must be in Utc and not <see cref="Util.UtcMinValue"/> or <see cref="Util.UtcMaxValue"/>.</param>
-        /// <param name="callback">The callback method. Must not be null.</param>
-        /// <param name="tag">Optional tag that will be available on event argument's: <see cref="ObservableTimedEventBase.Tag"/>.</param>
-        protected void Remind( DateTime dueTimeUtc, SafeEventHandler<ObservableReminderEventArgs> callback, object tag = null )
-        {
-            Domain.TimeManager.Remind( dueTimeUtc, callback, tag );
-        }
+        /// <remarks>
+        /// Useful properties and methods (like the <see cref="DomainView.Monitor"/> or <see cref="DomainView.SendCommand"/> )
+        /// are exposed by this accessor so that the interface of the observable object is not polluted by infrastructure concerns.
+        /// </remarks>
+        protected DomainView Domain => new DomainView( this, ActualDomain ?? throw new ObjectDisposedException( GetType().Name ) );
 
         /// <summary>
         /// Gets whether this object has been disposed.
         /// </summary>
-        public bool IsDisposed => Domain == null;
-
-        /// <summary>
-        /// Gets whether the domain is being deserialized.
-        /// </summary>
-        protected bool IsDeserializing => Domain?.IsDeserializing ?? false;
+        public bool IsDisposed => ActualDomain == null;
 
         /// <summary>
         /// Disposes this object (can be called multiple times).
         /// </summary>
         public void Dispose()
         {
-            if( Domain != null )
+            if( ActualDomain != null )
             {
-                Domain.CheckBeforeDispose( this );
+                ActualDomain.CheckBeforeDispose( this );
                 Dispose( true );
-                Domain.Unregister( this );
-                Domain = null;
+                ActualDomain.Unregister( this );
+                ActualDomain = null;
             }
         }
 
@@ -155,13 +120,15 @@ namespace CK.Observable
         /// </param>
         protected internal virtual void Dispose( bool shouldDisposeObjects )
         {
-            if( shouldDisposeObjects )
+            // Since this method id protected and can be called by external code,
+            // we (safely) check that we are not already disposed.
+            if( shouldDisposeObjects && ActualDomain != null )
             {
-                RaiseStandardDomainEvent( _disposed );
+                _disposed.Raise( this, ActualDomain.DefaultEventArgs );
             }
             else
             {
-                Domain = null;
+                ActualDomain = null;
             }
         }
 

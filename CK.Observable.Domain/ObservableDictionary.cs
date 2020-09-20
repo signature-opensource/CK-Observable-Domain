@@ -112,7 +112,7 @@ namespace CK.Observable
                     if( !EqualityComparer<TValue>.Default.Equals( value, exists ) )
                     {
                         _map[key] = value;
-                        CollectionMapSetEvent e = Domain.OnCollectionMapSet( this, key, value );
+                        CollectionMapSetEvent e = ActualDomain.OnCollectionMapSet( this, key, value );
                         if( e != null && _itemSet.HasHandlers ) _itemSet.Raise( this, e );
                     }
                 }
@@ -153,7 +153,7 @@ namespace CK.Observable
         public void Add( TKey key, TValue value )
         {
             _map.Add( key, value );
-            CollectionMapSetEvent e = Domain.OnCollectionMapSet( this, key, value );
+            CollectionMapSetEvent e = ActualDomain.OnCollectionMapSet( this, key, value );
             if( e != null && _itemAdded.HasHandlers ) _itemAdded.Raise( this, e );
         }
 
@@ -167,7 +167,7 @@ namespace CK.Observable
             if( _map.Count > 0 )
             {
                 _map.Clear();
-                CollectionClearEvent e = Domain.OnCollectionClear( this );
+                CollectionClearEvent e = ActualDomain.OnCollectionClear( this );
                 if( e != null && _collectionCleared.HasHandlers ) _collectionCleared.Raise( this, e );
             }
         }
@@ -181,7 +181,7 @@ namespace CK.Observable
         {
             if( _map.Remove( key ) )
             {
-                CollectionRemoveKeyEvent e = Domain.OnCollectionRemoveKey( this, key );
+                CollectionRemoveKeyEvent e = ActualDomain.OnCollectionRemoveKey( this, key );
                 if( e != null && _itemRemoved.HasHandlers ) _itemRemoved.Raise( this, e );
                 return true;
             }
@@ -193,7 +193,7 @@ namespace CK.Observable
             // Removing a pair from a dictionary also checks the value equality.
             if( ((IDictionary<TKey, TValue>)_map).Remove( item ) )
             {
-                CollectionRemoveKeyEvent e = Domain.OnCollectionRemoveKey( this, item.Key );
+                CollectionRemoveKeyEvent e = ActualDomain.OnCollectionRemoveKey( this, item.Key );
                 if( e != null && _itemRemoved.HasHandlers ) _itemRemoved.Raise( this, e );
                 return true;
             }

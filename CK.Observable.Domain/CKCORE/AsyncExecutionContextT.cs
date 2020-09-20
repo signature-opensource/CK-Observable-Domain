@@ -77,6 +77,9 @@ namespace CK.Core
         /// if any are ignored).
         /// </summary>
         /// <param name="throwException">False to return any exception instead of logging and rethrowing it.</param>
+        /// <param name="reverseInitialActions">
+        /// True to revert the initial action list: the last registered will be the first to be called.
+        /// </param>
         /// <returns>The first exception that occurred or null on success.</returns>
         public async Task<Exception?> ExecuteAsync( bool throwException = true, bool reverseInitialActions = false )
         {

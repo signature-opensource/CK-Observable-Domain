@@ -32,8 +32,8 @@ namespace CK.Observable
         void OnTransactionStart( IActivityMonitor monitor, ObservableDomain d, DateTime timeUtc );
 
         /// <summary>
-        /// Called when a transaction ends successfully.
-        /// The domain's write lock is held while this is called. 
+        /// Called when a transaction ends successfully. The domain's write lock is held while this is called.
+        /// Any exception raised by this method will set <see cref="TransactionResult.IsCriticalError"/> to true.
         /// </summary>
         /// <param name="context">The successful context.</param>
         void OnTransactionCommit( in SuccessfulTransactionContext context );

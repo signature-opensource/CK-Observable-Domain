@@ -26,7 +26,7 @@ namespace CK.Observable
         public bool Success => Errors.Count == 0 && ClientError == null;
 
         /// <summary>
-        /// Gets whether the <see cref="ClientError"/> is critical: it is the call to <see cref="IObservableDomainClient.OnTransactionCommit"/>
+        /// Gets whether the <see cref="ClientError"/> is critical: it is the call to <see cref="IObservableDomainClient.OnTransactionCommit(in SuccessfulTransactionContext)"/>
         /// that failed.
         /// This lets the system in an instable, dangerous, state since the transaction has terminated without errors and some external
         /// impacts may have been executed before the error occurred so that rolling back the transaction may not be a brilliant idea.

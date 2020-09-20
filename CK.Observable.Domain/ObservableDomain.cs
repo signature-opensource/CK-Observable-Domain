@@ -753,6 +753,7 @@ namespace CK.Observable
                 return _currentTran.Monitor;
             }
         }
+
         /// <summary>
         /// Gets the associated client (head of the Chain of Responsibility).
         /// </summary>
@@ -1394,7 +1395,7 @@ namespace CK.Observable
 
         internal void Register( InternalObject o )
         {
-            Debug.Assert( o != null && o.Domain == this && o.Prev == null && o.Next == null );
+            Debug.Assert( o != null && o.ActualDomain == this && o.Prev == null && o.Next == null );
             CheckWriteLock( o );
             if( (o.Next = _firstInternalObject) == null ) _lastInternalObject = o;
             else _firstInternalObject.Prev = o;
@@ -1405,7 +1406,7 @@ namespace CK.Observable
 
         internal void Unregister( InternalObject o )
         {
-            Debug.Assert( o.Domain == this );
+            Debug.Assert( o.ActualDomain == this );
             if( _firstInternalObject == o ) _firstInternalObject = o.Next;
             else o.Prev.Next = o.Next;
             if( _lastInternalObject == o ) _lastInternalObject = o.Prev;
@@ -1422,7 +1423,7 @@ namespace CK.Observable
 
         internal ObservableObjectId Register( ObservableObject o )
         {
-            Debug.Assert( o != null && o.Domain == this );
+            Debug.Assert( o != null && o.ActualDomain == this );
             CheckWriteLock( o );
             int idx;
             if( _freeList.Count > 0 )

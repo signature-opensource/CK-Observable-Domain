@@ -471,12 +471,12 @@ namespace CK.Observable.Domain.Tests.TimedEvents
 
             public void StartWork( string message, int repeatCount )
             {
-                Remind( DateTime.UtcNow, DisplayMessageAndStartCounting, (message, repeatCount) );
+                Domain.Remind( DateTime.UtcNow, DisplayMessageAndStartCounting, (message, repeatCount) );
             }
 
             public void StartTooooooLooooongWork()
             {
-                Remind( DateTime.UtcNow.AddDays( 1 ), DisplayMessageAndStartCounting, ("Will never happen.", 0) );
+                Domain.Remind( DateTime.UtcNow.AddDays( 1 ), DisplayMessageAndStartCounting, ("Will never happen.", 0) );
             }
 
             void DisplayMessageAndStartCounting( object sender, ObservableReminderEventArgs e )
@@ -487,14 +487,14 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 var (msg, count) = ((string,int))e.Reminder.Tag;
 
                 if( msg == "Will never happen." ) throw new Exception( "TestReminder: " + msg );
-                Monitor.Info( $"TestReminder: Working: {msg} (count:{count})" );
+                Domain.Monitor.Info( $"TestReminder: Working: {msg} (count:{count})" );
                 if( count > 0 )
                 {
                     e.Reminder.DueTimeUtc = DateTime.UtcNow.AddMilliseconds( 80 );
                     e.Reminder.Tag = (msg, --count);
                 }
                 // Increment the counter from another reminder :).
-                if( _counter != null ) Remind( DateTime.UtcNow.AddMilliseconds( 20 ), _counter.Increment );
+                if( _counter != null ) Domain.Remind( DateTime.UtcNow.AddMilliseconds( 20 ), _counter.Increment );
             }
         }
 

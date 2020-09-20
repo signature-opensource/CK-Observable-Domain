@@ -18,7 +18,7 @@ namespace CK.Observable
     public abstract partial class ObservableObject : INotifyPropertyChanged, IDisposableObject, IKnowMyExportDriver
     {
         ObservableObjectId _oid;
-        internal readonly ObservableDomain Domain;
+        internal readonly ObservableDomain ActualDomain;
         internal readonly IObjectExportTypeDriver _exporter;
         ObservableEventHandler<ObservableDomainEventArgs> _disposed;
         ObservableEventHandler<PropertyChangedEventArgs> _propertyChanged;
@@ -82,9 +82,9 @@ namespace CK.Observable
         ObservableObject( ObservableDomain domain )
         {
             if( domain == null ) throw new ArgumentNullException( nameof( domain ) );
-            Domain = domain;
-            _exporter = Domain._exporters.FindDriver( GetType() );
-            _oid = Domain.Register( this );
+            ActualDomain = domain;
+            _exporter = ActualDomain._exporters.FindDriver( GetType() );
+            _oid = ActualDomain.Register( this );
         }
 
         /// <summary>
@@ -94,8 +94,8 @@ namespace CK.Observable
         protected ObservableObject( IBinaryDeserializerContext d )
         {
             var r = d.StartReading();
-            Domain = r.Services.GetService<ObservableDomain>( throwOnNull: true );
-            _exporter = Domain._exporters.FindDriver( GetType() );
+            ActualDomain = r.Services.GetService<ObservableDomain>( throwOnNull: true );
+            _exporter = ActualDomain._exporters.FindDriver( GetType() );
             _oid = new ObservableObjectId( r );
             _disposed = new ObservableEventHandler<ObservableDomainEventArgs>( r );
             _propertyChanged = new ObservableEventHandler<PropertyChangedEventArgs>( r );
@@ -107,11 +107,6 @@ namespace CK.Observable
             _disposed.Write( w );
             _propertyChanged.Write( w );
         }
-
-        /// <summary>
-        /// Gives access to the monitor to use.
-        /// </summary>
-        protected IActivityMonitor Monitor => Domain.CurrentMonitor;
 
         /// <summary>
         /// Gets whether this object has been disposed.
@@ -126,9 +121,13 @@ namespace CK.Observable
         public ObservableObjectId OId => _oid;
 
         /// <summary>
-        /// Gets whether the domain is being deserialized.
+        /// Gets a safe view on the domain to which this object belongs.
         /// </summary>
-        protected bool IsDeserializing => Domain.IsDeserializing;
+        /// <remarks>
+        /// Useful properties and methods (like the <see cref="DomainView.Monitor"/> or <see cref="DomainView.SendCommand"/> )
+        /// are exposed by this accessor so that the interface of the observable object is not polluted by infrastructure concerns.
+        /// </remarks>
+        protected DomainView Domain => new DomainView( this, ActualDomain );
 
         internal virtual ObjectExportedKind ExportedKind => ObjectExportedKind.Object;
 
@@ -141,45 +140,11 @@ namespace CK.Observable
         {
             if( _oid.IsValid )
             {
-                Domain.CheckBeforeDispose( this );
+                ActualDomain.CheckBeforeDispose( this );
                 Dispose( true );
-                Domain.Unregister( this );
+                ActualDomain.Unregister( this );
                 _oid = ObservableObjectId.Disposed;
             }
-        }
-
-        /// <summary>
-        /// Sends a command to the external world. Commands are enlisted
-        /// into <see cref="TransactionResult.Commands"/> (when the transaction succeeds)
-        /// and can be processed by any <see cref="IObservableDomainClient"/>.
-        /// </summary>
-        /// <param name="command">Any command description.</param>
-        protected void SendCommand( object command )
-        {
-            Domain.SendCommand( this, command );
-        }
-
-        /// <summary>
-        /// Helper that raises a standard event from this object with a reusable <see cref="ObservableDomainEventArgs"/> instance.
-        /// </summary>
-        protected void RaiseStandardDomainEvent( ObservableEventHandler<ObservableDomainEventArgs> h ) => h.Raise( this, Domain.DefaultEventArgs );
-
-        /// <summary>
-        /// Helper that raises a standard event from this object with a reusable <see cref="EventMonitoredArgs"/> instance (that is the
-        /// shared <see cref="ObservableDomainEventArgs"/> instance).
-        /// </summary>
-        protected void RaiseStandardDomainEvent( ObservableEventHandler<EventMonitoredArgs> h ) => h.Raise( this, Domain.DefaultEventArgs );
-
-        /// <summary>
-        /// Uses a pooled <see cref="ObservableReminder"/> to call the specified callback at the given time with the
-        /// associated <see cref="ObservableTimedEventBase.Tag"/> object.
-        /// </summary>
-        /// <param name="dueTimeUtc">The due time. Must be in Utc and not <see cref="Util.UtcMinValue"/> or <see cref="Util.UtcMaxValue"/>.</param>
-        /// <param name="callback">The callback method. Must not be null.</param>
-        /// <param name="tag">Optional tag that will be available on event argument's: <see cref="ObservableTimedEventBase.Tag"/>.</param>
-        protected void Remind( DateTime dueTimeUtc, SafeEventHandler<ObservableReminderEventArgs> callback, object? tag = null )
-        {
-            Domain.TimeManager.Remind( dueTimeUtc, callback, tag );
         }
 
         /// <summary>
@@ -205,7 +170,7 @@ namespace CK.Observable
         {
             if( shouldCleanup )
             {
-                RaiseStandardDomainEvent( _disposed );
+                _disposed.Raise( this, ActualDomain.DefaultEventArgs );
             }
             else
             {
@@ -223,7 +188,7 @@ namespace CK.Observable
         protected virtual void OnPropertyChanged( string propertyName, object before, object after )
         {
             this.CheckDisposed();
-            var ev = Domain.OnPropertyChanged( this, propertyName, before, after );
+            var ev = ActualDomain.OnPropertyChanged( this, propertyName, before, after );
             if( ev != null )
             {
                 // Handles public event EventHandler [propertyName]Changed;
@@ -252,12 +217,12 @@ namespace CK.Observable
                         else if( fNamedEv.FieldType == typeof( ObservableEventHandler<ObservableDomainEventArgs> ) )
                         {
                             var handler = (ObservableEventHandler<ObservableDomainEventArgs>)fNamedEv.GetValue( this );
-                            if( handler.HasHandlers ) RaiseStandardDomainEvent( handler );
+                            if( handler.HasHandlers ) handler.Raise( this, ActualDomain.DefaultEventArgs );
                         }
                         else if( fNamedEv.FieldType == typeof( ObservableEventHandler<EventMonitoredArgs> ) )
                         {
                             var handler = (ObservableEventHandler<EventMonitoredArgs>)fNamedEv.GetValue( this );
-                            if( handler.HasHandlers ) RaiseStandardDomainEvent( handler );
+                            if( handler.HasHandlers ) handler.Raise( this, ActualDomain.DefaultEventArgs );
                         }
                         else if( fNamedEv.FieldType == typeof( ObservableEventHandler<EventArgs> ) )
                         {

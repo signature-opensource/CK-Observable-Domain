@@ -27,8 +27,8 @@ namespace CK.Observable.Domain.Tests.Sample
 
         void OnCurrentCarChanged( object before, object after )
         {
-            if( IsDeserializing ) return;
-            Monitor.Info( $"{ToString()} has a new Car: {CurrentCar?.ToString() ?? "null"}." );
+            if( Domain.IsDeserializing ) return;
+            Domain.Monitor.Info( $"{ToString()} has a new Car: {CurrentCar?.ToString() ?? "null"}." );
             if( CurrentCar != null ) CurrentCar.CurrentMechanic = this;
             else ((Car)before).CurrentMechanic = null;
         }
