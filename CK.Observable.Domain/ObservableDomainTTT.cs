@@ -1,5 +1,6 @@
 using CK.Core;
 using CK.Text;
+using System;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -25,8 +26,9 @@ namespace CK.Observable
         /// </summary>
         /// <param name="monitor">The monitor used to log the construction of this domain. Cannot be null.</param>
         /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
-        public ObservableDomain( IActivityMonitor monitor, string domainName )
-            : this(monitor, domainName, null)
+        /// <param name="serviceProvider">The service providers that will be used to resolve the <see cref="SidekickBase"/> objects.</param>
+        public ObservableDomain( IActivityMonitor monitor, string domainName, IServiceProvider? serviceProvider = null )
+            : this( monitor, domainName, null, serviceProvider )
         {
         }
 
@@ -37,8 +39,9 @@ namespace CK.Observable
         /// <param name="monitor">The monitor used to log the construction of this domain. Cannot be null.</param>
         /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
         /// <param name="client">The observable client (head of the Chain of Responsibility) to use. Can be null.</param>
-        public ObservableDomain( IActivityMonitor monitor, string domainName, IObservableDomainClient? client )
-            : base( monitor, domainName, client )
+        /// <param name="serviceProvider">The service providers that will be used to resolve the <see cref="SidekickBase"/> objects.</param>
+        public ObservableDomain( IActivityMonitor monitor, string domainName, IObservableDomainClient? client, IServiceProvider? serviceProvider = null )
+            : base( monitor, domainName, client, serviceProvider )
         {
             if( AllRoots.Count != 0 ) BindRoots();
             else using( var initialization = new InitializationTransaction( monitor, this ) )
@@ -58,13 +61,15 @@ namespace CK.Observable
         /// <param name="s">The input stream.</param>
         /// <param name="leaveOpen">True to leave the stream opened.</param>
         /// <param name="encoding">Optional encoding for characters. Defaults to UTF-8.</param>
+        /// <param name="serviceProvider">The service providers that will be used to resolve the <see cref="SidekickBase"/> objects.</param>
         public ObservableDomain( IActivityMonitor monitor,
                                  string domainName,
                                  IObservableDomainClient client,
                                  Stream s,
                                  bool leaveOpen = false,
-                                 Encoding encoding = null )
-            : base(monitor, domainName, client, s, leaveOpen, encoding)
+                                 Encoding encoding = null,
+                                 IServiceProvider? serviceProvider = null )
+            : base( monitor, domainName, client, s, leaveOpen, encoding, serviceProvider )
         {
             BindRoots();
         }
@@ -73,7 +78,6 @@ namespace CK.Observable
         /// Gets the first typed root object.
         /// </summary>
         public T1 Root1 { get; private set; }
-
 
         /// <summary>
         /// Gets the second typed root object.

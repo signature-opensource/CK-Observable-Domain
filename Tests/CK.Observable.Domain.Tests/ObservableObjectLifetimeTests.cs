@@ -136,6 +136,7 @@ namespace CK.Observable.Domain.Tests
                 {
                     var c = new Car( "Titine" );
                     d.AllObjects.Should().ContainSingle( x => x == c );
+                    d.AllObjects.Should().HaveCount( 1 );
                     using( var cM = c.Monitor() )
                     {
                         c.Dispose();

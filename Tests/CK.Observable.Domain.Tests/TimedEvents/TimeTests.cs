@@ -503,7 +503,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
         public void reminder_helper_uses_pooled_ObservableReminders( string mode )
         {
             IReadOnlyList<ActivityMonitorSimpleCollector.Entry> logs = null;
-            using( var d = TestHelper.CreateDomainHandler( nameof( reminder_helper_uses_pooled_ObservableReminders)+mode ) )
+            using( var d = TestHelper.CreateDomainHandler( nameof( reminder_helper_uses_pooled_ObservableReminders)+mode, serviceProvider: null ) )
             {
                 TimeSpan ReloadIfNeeded()
                 {

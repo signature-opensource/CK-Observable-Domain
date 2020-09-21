@@ -12,7 +12,7 @@ namespace CK.Observable
     /// </summary>
     public class TransactionResult
     {
-        ActionRegistrar<PostActionContext> _postActions;
+        internal ActionRegistrar<PostActionContext> _postActions;
 
         /// <summary>
         /// The empty transaction result is used when absolutely nothing happened. It has no events and no commands,
@@ -87,7 +87,7 @@ namespace CK.Observable
         /// sent via <see cref="ObservableObject.SendCommand"/>.
         /// Can be empty (and always empty if there are <see cref="Errors"/>).
         /// </summary>
-        public IReadOnlyList<ObservableCommand> Commands { get; }
+        public IReadOnlyList<object> Commands { get; }
 
         /// <summary>
         /// Gets the errors that actually aborted the transaction.
@@ -100,6 +100,11 @@ namespace CK.Observable
         /// is empty) or <see cref="IObservableDomainClient.OnTransactionFailure"/> (when <see cref="Errors"/> is NOT empty).
         /// </summary>
         public CKExceptionData ClientError { get; private set; }
+
+        /// <summary>
+        /// Gets the errors that occured during the call to <see cref="SidekickBase.ExecuteCommand"/> with the faulty command.
+        /// </summary>
+        public IReadOnlyList<(object,CKExceptionData)>  CommandErrors { get; private set; }
 
         /// <summary>
         /// Gets whether at least one post actions has been enlisted thanks to <see cref="SuccessfulTransactionContext.AddPostAction(Func{PostActionContext, Task})"/>
@@ -136,6 +141,7 @@ namespace CK.Observable
             Commands = c.Commands;
             Errors = Array.Empty<CKExceptionData>();
             _postActions = c._postActions;
+            CommandErrors = Array.Empty<(object, CKExceptionData)>();
         }
 
         internal TransactionResult( IReadOnlyList<CKExceptionData> errors, DateTime startTime, DateTime nextDueTime )
@@ -146,12 +152,19 @@ namespace CK.Observable
             NextDueTimeUtc = nextDueTime;
             Errors = errors;
             Events = Array.Empty<ObservableEvent>();
-            Commands = Array.Empty<ObservableCommand>();
+            Commands = Array.Empty<object>();
+            CommandErrors = Array.Empty<(object, CKExceptionData)>();
         }
 
         internal TransactionResult SetClientError( Exception ex )
         {
             ClientError = CKExceptionData.CreateFrom( ex );
+            return this;
+        }
+
+        internal TransactionResult SetCommandErrors( IReadOnlyList<(object, CKExceptionData)> errors )
+        {
+            CommandErrors = errors;
             return this;
         }
 

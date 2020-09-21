@@ -12,7 +12,7 @@ namespace CK.Core
     static class TestHelperExtensions
     {
 
-        public static object SaveAndLoad( this IBasicTestHelper @this, object o, ISerializerResolver serializers = null, IDeserializerResolver deserializers = null )
+        public static object SaveAndLoad( this IBasicTestHelper @this, object o, IServiceProvider serviceProvider = null, ISerializerResolver serializers = null, IDeserializerResolver deserializers = null )
         {
             return SaveAndLoad( @this, o, (x,w) => w.WriteObject( x ), r => r.ReadObject(), serializers, deserializers );
         }
@@ -46,18 +46,21 @@ namespace CK.Core
             }
         }
 
-        public class DomainHandler : IDisposable
+        public class DomainTestHandler : IDisposable
         {
-            public DomainHandler( IActivityMonitor m, string domainName )
+            public DomainTestHandler( IActivityMonitor m, string domainName, IServiceProvider serviceProvider )
             {
-                Domain = new ObservableDomain( m, domainName );
+                ServiceProvider = serviceProvider;
+                Domain = new ObservableDomain( m, domainName, serviceProvider );
             }
+
+            public IServiceProvider ServiceProvider { get; set; }
 
             public ObservableDomain Domain { get; private set; }
 
             public void Reload( IActivityMonitor m )
             {
-                var d = SaveAndLoad( m, Domain, Domain.DomainName, debugMode: true );
+                var d = SaveAndLoad( m, Domain, Domain.DomainName, ServiceProvider, debugMode: true );
                 Domain.Dispose();
                 Domain = d;
             }
@@ -68,26 +71,26 @@ namespace CK.Core
             }
         }
 
-        public static DomainHandler CreateDomainHandler( this IMonitorTestHelper @this, string domainName )
+        public static DomainTestHandler CreateDomainHandler( this IMonitorTestHelper @this, string domainName, IServiceProvider? serviceProvider )
         {
-            return new DomainHandler( @this.Monitor, domainName );
+            return new DomainTestHandler( @this.Monitor, domainName, serviceProvider );
         }
 
-        static ObservableDomain SaveAndLoad( IActivityMonitor m, ObservableDomain domain, string renamed, bool debugMode )
+        static ObservableDomain SaveAndLoad( IActivityMonitor m, ObservableDomain domain, string? renamed, IServiceProvider? serviceProvider, bool debugMode )
         {
             using( var s = new MemoryStream() )
             {
                 domain.Save( m, s, leaveOpen: true, debugMode );
-                var d = new ObservableDomain( m, renamed ?? domain.DomainName );
+                var d = new ObservableDomain( m, renamed ?? domain.DomainName, serviceProvider );
                 s.Position = 0;
                 d.Load( m, s, domain.DomainName );
                 return d;
             }
         }
 
-        public static ObservableDomain SaveAndLoad( this IMonitorTestHelper @this, ObservableDomain domain, string renamed = null, bool debugMode = true )
+        public static ObservableDomain SaveAndLoad( this IMonitorTestHelper @this, ObservableDomain domain, string? renamed = null, IServiceProvider? serviceProvider = null, bool debugMode = true )
         {
-            return SaveAndLoad( @this.Monitor, domain, renamed, debugMode );
+            return SaveAndLoad( @this.Monitor, domain, renamed, serviceProvider, debugMode );
         }
 
 

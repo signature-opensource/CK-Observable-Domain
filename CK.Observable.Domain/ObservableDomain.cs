@@ -1,4 +1,5 @@
 using CK.Core;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -76,6 +77,7 @@ namespace CK.Observable
         readonly ISerializerResolver _serializers;
         readonly IDeserializerResolver _deserializers;
         readonly TimeManager _timeManager;
+        readonly SidekickManager _sidekickManager;
 
         /// <summary>
         /// Maps property names to PropInfo that contains the property index.
@@ -237,14 +239,14 @@ namespace CK.Observable
             readonly List<ObservableEvent> _changeEvents;
             readonly Dictionary<ObservableObject, List<PropertyInfo>?> _newObjects;
             readonly Dictionary<long, PropChanged> _propChanged;
-            readonly List<ObservableCommand> _commands;
+            readonly List<object> _commands;
 
             public ChangeTracker()
             {
                 _changeEvents = new List<ObservableEvent>();
                 _newObjects = new Dictionary<ObservableObject, List<PropertyInfo>?>( PureObjectRefEqualityComparer<ObservableObject>.Default );
                 _propChanged = new Dictionary<long, PropChanged>();
-                _commands = new List<ObservableCommand>();
+                _commands = new List<object>();
             }
 
             public SuccessfulTransactionContext Commit( ObservableDomain domain, Func<string, PropInfo> ensurePropertInfo, DateTime startTime, DateTime nextTimerDueDate )
@@ -388,7 +390,7 @@ namespace CK.Observable
                 return e;
             }
 
-            internal void OnSendCommand( in ObservableCommand command )
+            internal void OnSendCommand( in object command )
             {
                 _commands.Add( command );
             }
@@ -480,7 +482,6 @@ namespace CK.Observable
                     {
                         Monitor.Fatal( "Error in IObservableTransactionManager.OnTransactionCommit. This is a Critical error since the Domain state integrity may be compromised.", ex );
                         _result.SetClientError( ex );
-                        //WatchDog
                     }
                 }
                 var next = _result.NextDueTimeUtc;
@@ -488,6 +489,12 @@ namespace CK.Observable
                 _monitorGroup.Dispose();
                 _domain._currentTran = null;
                 _domain._lock.ExitWriteLock();
+                // Outside of the lock: on success, the sidekicks execute the Command objects.
+                if( _result.Success )
+                {
+                    var errors = _domain._sidekickManager.ExecuteCommands( Monitor, _result, _result._postActions );
+                    if( errors != null ) _result.SetCommandErrors( errors );
+                }
                 return _result;
             }
 
@@ -504,10 +511,11 @@ namespace CK.Observable
         /// <summary>
         /// Initializes a new <see cref="ObservableDomain"/> without any <see cref="DomainClient"/>.
         /// </summary>
-        /// <param name="monitor">The monitor used to log the construction of this domain. Can not be null.</param>
+        /// <param name="monitor">The monitor used to log the construction of this domain. Cannot be null.</param>
         /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
-        public ObservableDomain( IActivityMonitor monitor, string domainName )
-            : this( monitor, domainName, null )
+        /// <param name="serviceProvider">The service providers that will be used to resolve the <see cref="SidekickBase"/> objects.</param>
+        public ObservableDomain( IActivityMonitor monitor, string domainName, IServiceProvider? serviceProvider = null )
+            : this( monitor, domainName, null, serviceProvider )
         {
         }
 
@@ -519,20 +527,22 @@ namespace CK.Observable
         /// <param name="monitor">The monitor used to log the construction of this domain. Cannot be null.</param>
         /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
         /// <param name="client">The observable client (head of the Chain of Responsibility) to use. Can be null.</param>
-        public ObservableDomain( IActivityMonitor monitor, string domainName, IObservableDomainClient? client )
-            : this( monitor, domainName, client, true, exporters: null, serializers: null, deserializers: null )
+        /// <param name="serviceProvider">The service providers that will be used to resolve the <see cref="SidekickBase"/> objects.</param>
+        public ObservableDomain( IActivityMonitor monitor, string domainName, IObservableDomainClient? client, IServiceProvider? serviceProvider = null )
+            : this( monitor, domainName, client, true, serviceProvider, exporters: null, serializers: null, deserializers: null )
         {
         }
 
         /// <summary>
         /// Initializes a previously <see cref="Save"/>d domain.
         /// </summary>
-        /// <param name="monitor">The monitor used to log the construction of this domain. Can not be null.</param>
+        /// <param name="monitor">The monitor used to log the construction of this domain. Cannot be null.</param>
         /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
         /// <param name="client">The observable client (head of the Chain of Responsibility) to use. Can be null.</param>
         /// <param name="s">The input stream.</param>
         /// <param name="leaveOpen">True to leave the stream opened.</param>
         /// <param name="encoding">Optional encoding for characters. Defaults to UTF-8.</param>
+        /// <param name="serviceProvider">The service providers that will be used to resolve the <see cref="SidekickBase"/> objects.</param>
         /// <param name="exporters">Optional exporters handler.</param>
         /// <param name="serializers">Optional serializers handler.</param>
         /// <param name="deserializers">Optional deserializers handler.</param>
@@ -542,10 +552,11 @@ namespace CK.Observable
                                  Stream s,
                                  bool leaveOpen = false,
                                  Encoding? encoding = null,
+                                 IServiceProvider? serviceProvider = null,
                                  IExporterResolver? exporters = null,
                                  ISerializerResolver? serializers = null,
                                  IDeserializerResolver? deserializers = null )
-            : this( monitor, domainName, client, false, exporters, serializers, deserializers )
+            : this( monitor, domainName, client, false, serviceProvider, exporters, serializers, deserializers )
         {
             Load( monitor, s, leaveOpen, encoding );
             client?.OnDomainCreated( monitor, this );
@@ -555,6 +566,7 @@ namespace CK.Observable
                           string domainName,
                           IObservableDomainClient? client,
                           bool callClientOnCreate,
+                          IServiceProvider? serviceProvider,
                           IExporterResolver? exporters,
                           ISerializerResolver? serializers,
                           IDeserializerResolver? deserializers )
@@ -575,6 +587,7 @@ namespace CK.Observable
             _roots = new List<ObservableRootObject>();
             _trackers = new List<IObservableDomainActionTracker>();
             _timeManager = new TimeManager( this );
+            _sidekickManager = new SidekickManager( this, serviceProvider ?? new SimpleServiceContainer() );
             _transactionCommitTimeUtc = DateTime.UtcNow;
             DefaultEventArgs = new ObservableDomainEventArgs( this );
             // LockRecursionPolicy.NoRecursion: reentrancy must NOT be allowed.
@@ -658,6 +671,10 @@ namespace CK.Observable
         /// No event are collected: this is the initial state of the domain.
         /// </summary>
         /// <typeparam name="T">The root type.</typeparam>
+        /// <param name="initializationContext">
+        /// This is not directly used, this is just to express the fact that a InitializationTransaction must be acquired
+        /// before adding roots (root constructors must execute in the context of this fake transaction).
+        /// </param>
         /// <returns>The instance.</returns>
         private protected T AddRoot<T>( InitializationTransaction initializationContext ) where T : ObservableRootObject
         {
@@ -889,8 +906,11 @@ namespace CK.Observable
 
         /// <summary>
         /// Modify the domain once a transaction has been opened and calls the <see cref="IObservableDomainClient"/>
-        /// that have been registered: all this occurs in the lock and it is released at the end. This never throws
-        /// since the transaction result contains any errors.
+        /// that have been registered: all this occurs in the lock and it is released at the end.
+        /// This never throws since the transaction result contains any errors.
+        /// <para>
+        /// 
+        /// </para>
         /// </summary>
         /// <param name="actions">The actions to execute. Can be null.</param>
         /// <param name="t">The observable transaction. Cannot be null.</param>
@@ -913,10 +933,12 @@ namespace CK.Observable
                 if( !skipped && actions != null )
                 {
                     actions();
-
-                    var now = DateTime.UtcNow;
-                    foreach( var tracker in _trackers ) tracker.AfterModify( t.Monitor, t.StartTime, now - t.StartTime );
-                    _timeManager.RaiseElapsedEvent( t.Monitor, now, true );
+                    if( _sidekickManager.CreateWaitingSidekicks( t.Monitor, ex => t.AddError( CKExceptionData.CreateFrom( ex ) ) ) )
+                    {
+                        var now = DateTime.UtcNow;
+                        foreach( var tracker in _trackers ) tracker.AfterModify( t.Monitor, t.StartTime, now - t.StartTime );
+                        _timeManager.RaiseElapsedEvent( t.Monitor, now, true );
+                    }
                 }
             }
             catch( Exception ex )
@@ -925,9 +947,7 @@ namespace CK.Observable
                 t.AddError( CKExceptionData.CreateFrom( ex ) );
             }
             // The transaction commit updates the timers to return the NextDueTime.
-            var result = t.Commit();
-
-            return result;
+            return t.Commit();
         }
 
         /// <summary>
@@ -1401,7 +1421,7 @@ namespace CK.Observable
             else _firstInternalObject.Prev = o;
             _firstInternalObject = o;
             ++_internalObjectCount;
-            if( o is IObservableDomainActionTracker tracker ) _trackers.Add( tracker );
+            RegisterInternalOrObservableObject( o );
         }
 
         internal void Unregister( InternalObject o )
@@ -1412,11 +1432,7 @@ namespace CK.Observable
             if( _lastInternalObject == o ) _lastInternalObject = o.Prev;
             else o.Next.Prev = o.Prev;
             --_internalObjectCount;
-            if( o is IObservableDomainActionTracker tracker )
-            {
-                Debug.Assert( _trackers.Contains( tracker ) );
-                _trackers.Remove( tracker );
-            }
+            UnregisterInternalOrObservableObject( o );
         }
 
         internal ObservableObjectId CreateId( int idx ) => new ObservableObjectId( idx, ObservableObjectId.ForwardUniquifier( ref _currentObjectUniquifier ) );
@@ -1448,9 +1464,23 @@ namespace CK.Observable
             }
 
             ++_actualObjectCount;
-            if( o is IObservableDomainActionTracker tracker ) _trackers.Add( tracker );
-
+            RegisterInternalOrObservableObject( o );
             return id;
+        }
+
+        void RegisterInternalOrObservableObject( IDisposableObject o )
+        {
+            if( o is IObservableDomainActionTracker tracker ) _trackers.Add( tracker );
+            _sidekickManager.DiscoverSidekicks( o );
+        }
+
+        void UnregisterInternalOrObservableObject( IDisposableObject o )
+        {
+            if( o is IObservableDomainActionTracker tracker )
+            {
+                Debug.Assert( _trackers.Contains( tracker ) );
+                _trackers.Remove( tracker );
+            }
         }
 
         internal void CheckBeforeDispose( IDisposableObject o )
@@ -1465,11 +1495,7 @@ namespace CK.Observable
             _objects[o.OId.Index] = null;
             _freeList.Add( o.OId.Index );
             --_actualObjectCount;
-            if( o is IObservableDomainActionTracker tracker )
-            {
-                Debug.Assert( _trackers.Contains( tracker ) );
-                _trackers.Remove( tracker );
-            }
+            UnregisterInternalOrObservableObject( o );
         }
 
         /// <summary>
@@ -1614,7 +1640,7 @@ namespace CK.Observable
         internal void SendCommand( IDisposableObject o, object command )
         {
             CheckWriteLock( o ).CheckDisposed();
-            _changeTracker.OnSendCommand( new ObservableCommand( o, command ) );
+            _changeTracker.OnSendCommand( command );
         }
 
         internal PropertyChangedEventArgs? OnPropertyChanged( ObservableObject o, string propertyName, object before, object after )
@@ -1699,7 +1725,7 @@ namespace CK.Observable
 
         /// <summary>
         /// Small helper for tests: ensures that a domain that is Saved, Loaded and Saved again results
-        /// in the exact same array of bytes.
+        /// in the exact same sequence of bytes.
         /// This throws an exception if serialized bytes differ or acquiring locks failed.
         /// </summary>
         /// <param name="monitor">Monitor to use. Cannot be null.</param>

@@ -20,13 +20,19 @@ namespace CK.Observable
         IActivityMonitor Monitor { get; }
 
         /// <summary>
-        /// Commits all changes and retrieves the events and commands on success.
-        /// If errors have been added, the <see cref="TransactionResult"/> contains
+        /// Commits all changes and retrieves the events on success.
+        /// If errors occurred, the <see cref="TransactionResult"/> contains
         /// the errors but no events nor commands.
-        /// This method calls <see cref="IObservableDomainClient.OnTransactionFailure"/>
+        /// <para>
+        /// <para>
+        /// This method executes the commands by calling all the registered sidekicks (see <see cref="SidekickBase.ExecuteCommand"/>).
+        /// </para>
+        /// </para>
+        /// This method NEVER throws: it calls <see cref="IObservableDomainClient.OnTransactionFailure"/>
         /// or <see cref="IObservableDomainClient.OnTransactionCommit"/>, and may set
         /// <see cref="TransactionResult.ClientError"/> if an Exception is thrown
-        /// when calling them: this method NEVER throws.
+        /// when calling them. Then, on success, it sets the <see cref="TransactionResult.CommandErrors"/> list if errors
+        /// occurred during command processing.
         /// </summary>
         /// <returns>The transaction result.</returns>
         TransactionResult Commit();
