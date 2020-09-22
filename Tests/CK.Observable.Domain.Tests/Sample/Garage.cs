@@ -17,7 +17,7 @@ namespace CK.Observable.Domain.Tests.Sample
         public Garage( IBinaryDeserializerContext d )
             : base( d )
         {
-            var r = d.StartReading();
+            var r = d.StartReading().Reader;
             CompanyName = r.ReadNullableString();
             Employees = (ObservableList<Person>)r.ReadObject();
             Cars = (ObservableList<Car>)r.ReadObject();

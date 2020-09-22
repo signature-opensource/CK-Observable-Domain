@@ -25,7 +25,7 @@ namespace CK.Observable
         /// the errors but no events nor commands.
         /// <para>
         /// <para>
-        /// This method executes the commands by calling all the registered sidekicks (see <see cref="SidekickBase.ExecuteCommand"/>).
+        /// This method executes the commands by calling all the registered sidekicks (see <see cref="ObservableDomainSidekick.ExecuteCommand"/>).
         /// </para>
         /// </para>
         /// This method NEVER throws: it calls <see cref="IObservableDomainClient.OnTransactionFailure"/>

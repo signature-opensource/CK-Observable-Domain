@@ -68,7 +68,7 @@ namespace CK.Observable
         protected ObservableList( IBinaryDeserializerContext d )
             : base( d )
         {
-            var r = d.StartReading();
+            var r = d.StartReading().Reader;
             _list = (List<T>)r.ReadObject();
             _itemSet = new ObservableEventHandler<ListSetAtEvent>( r );
             _itemInserted = new ObservableEventHandler<ListInsertEvent>( r );

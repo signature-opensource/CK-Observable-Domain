@@ -35,7 +35,7 @@ namespace CK.Observable
         /// <param name="d">The deserialization context.</param>
         protected ObservableChannel( IBinaryDeserializerContext d ) : base( d )
         {
-            var r = d.StartReading();
+            var r = d.StartReading().Reader;
             _itemSent = new ObservableEventHandler<ListInsertEvent>( r );
         }
 

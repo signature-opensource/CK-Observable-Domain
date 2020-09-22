@@ -16,7 +16,7 @@ namespace CK.Observable.Domain.Tests.Sample
 
         Position( IBinaryDeserializerContext d )
         {
-            var r = d.StartReading();
+            var r = d.StartReading().Reader;
             Latitude = r.ReadDouble();
             Longitude = r.ReadDouble();
         }

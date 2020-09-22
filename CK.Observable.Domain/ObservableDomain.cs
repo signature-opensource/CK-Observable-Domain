@@ -5,6 +5,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -160,7 +161,7 @@ namespace CK.Observable
         // the potential fake transaction that is used when saving.
         readonly object _saveLock;
 
-        bool _deserializing;
+        bool _deserializeOrInitializing;
         bool _disposed;
 
         /// <summary>
@@ -513,7 +514,7 @@ namespace CK.Observable
         /// </summary>
         /// <param name="monitor">The monitor used to log the construction of this domain. Cannot be null.</param>
         /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
-        /// <param name="serviceProvider">The service providers that will be used to resolve the <see cref="SidekickBase"/> objects.</param>
+        /// <param name="serviceProvider">The service providers that will be used to resolve the <see cref="ObservableDomainSidekick"/> objects.</param>
         public ObservableDomain( IActivityMonitor monitor, string domainName, IServiceProvider? serviceProvider = null )
             : this( monitor, domainName, null, serviceProvider )
         {
@@ -527,7 +528,7 @@ namespace CK.Observable
         /// <param name="monitor">The monitor used to log the construction of this domain. Cannot be null.</param>
         /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
         /// <param name="client">The observable client (head of the Chain of Responsibility) to use. Can be null.</param>
-        /// <param name="serviceProvider">The service providers that will be used to resolve the <see cref="SidekickBase"/> objects.</param>
+        /// <param name="serviceProvider">The service providers that will be used to resolve the <see cref="ObservableDomainSidekick"/> objects.</param>
         public ObservableDomain( IActivityMonitor monitor, string domainName, IObservableDomainClient? client, IServiceProvider? serviceProvider = null )
             : this( monitor, domainName, client, true, serviceProvider, exporters: null, serializers: null, deserializers: null )
         {
@@ -542,7 +543,7 @@ namespace CK.Observable
         /// <param name="s">The input stream.</param>
         /// <param name="leaveOpen">True to leave the stream opened.</param>
         /// <param name="encoding">Optional encoding for characters. Defaults to UTF-8.</param>
-        /// <param name="serviceProvider">The service providers that will be used to resolve the <see cref="SidekickBase"/> objects.</param>
+        /// <param name="serviceProvider">The service providers that will be used to resolve the <see cref="ObservableDomainSidekick"/> objects.</param>
         /// <param name="exporters">Optional exporters handler.</param>
         /// <param name="serializers">Optional serializers handler.</param>
         /// <param name="deserializers">Optional deserializers handler.</param>
@@ -642,7 +643,7 @@ namespace CK.Observable
                 d._currentTran = this;
                 _previousThreadDomain = CurrentThreadDomain;
                 CurrentThreadDomain = d;
-                d._deserializing = true;
+                d._deserializeOrInitializing = true;
             }
             IActivityMonitor IObservableTransaction.Monitor => _monitor;
 
@@ -659,7 +660,7 @@ namespace CK.Observable
             /// </summary>
             public void Dispose()
             {
-                _d._deserializing = false;
+                _d._deserializeOrInitializing = false;
                 CurrentThreadDomain = _previousThreadDomain;
                 _d._currentTran = _previousTran;
                 if( _enterWriteLock ) _d._lock.ExitWriteLock();
@@ -1187,7 +1188,7 @@ namespace CK.Observable
         void DoLoad( IActivityMonitor monitor, BinaryDeserializer r, string expectedName, bool callUpdateTimers )
         {
             Debug.Assert( _lock.IsWriteLockHeld );
-            _deserializing = true;
+            _deserializeOrInitializing = true;
             try
             {
                 #region Unload/Dispose existing objects.
@@ -1208,6 +1209,9 @@ namespace CK.Observable
                 Array.Clear( _objects, 0, _objectsListCount );
                 #endregion
 
+                // Free sidekicks and IObservableDomainActionTracker.
+                _trackers.Clear();
+                _sidekickManager.Clear();
 
                 int version = r.ReadSmallInt32();
                 if( version < 0 || version > CurrentSerializationVersion )
@@ -1315,7 +1319,7 @@ namespace CK.Observable
             }
             finally
             {
-                _deserializing = false;
+                _deserializeOrInitializing = false;
             }
         }
 
@@ -1411,7 +1415,7 @@ namespace CK.Observable
             return CurrentThreadDomain;
         }
 
-        internal bool IsDeserializing => _deserializing;
+        internal bool IsDeserializing => _deserializeOrInitializing;
 
         internal void Register( InternalObject o )
         {
@@ -1421,7 +1425,7 @@ namespace CK.Observable
             else _firstInternalObject.Prev = o;
             _firstInternalObject = o;
             ++_internalObjectCount;
-            RegisterInternalOrObservableObject( o );
+            SideEffectsRegister( o );
         }
 
         internal void Unregister( InternalObject o )
@@ -1432,7 +1436,7 @@ namespace CK.Observable
             if( _lastInternalObject == o ) _lastInternalObject = o.Prev;
             else o.Next.Prev = o.Prev;
             --_internalObjectCount;
-            UnregisterInternalOrObservableObject( o );
+            SideEffectUnregister( o );
         }
 
         internal ObservableObjectId CreateId( int idx ) => new ObservableObjectId( idx, ObservableObjectId.ForwardUniquifier( ref _currentObjectUniquifier ) );
@@ -1458,23 +1462,38 @@ namespace CK.Observable
             _objects[idx] = o;
 
             var id = CreateId( idx );
-            if( !_deserializing )
+            if( !_deserializeOrInitializing )
             {
+                // Deserialiation ctors don't call this Register method, BUT this Register
+                // can be called when initializing a domain (for Root objects): in such case we don't want
+                // to declare new objects.
                 _changeTracker.OnNewObject( o, id, o._exporter );
             }
-
             ++_actualObjectCount;
-            RegisterInternalOrObservableObject( o );
+            SideEffectsRegister( o );
             return id;
         }
 
-        void RegisterInternalOrObservableObject( IDisposableObject o )
+        /// <summary>
+        /// Called by:
+        /// - InternalObject: Register() is called from normal and deserialization ctors that calls this.
+        /// - ObservableObject: normal constructor calls Register() but deserialization constructors don't, deserialization constructors must call this directly.
+        /// </summary>
+        /// <param name="o">The new object.</param>
+        internal void SideEffectsRegister( IDisposableObject o )
         {
+            Debug.Assert( !_trackers.Contains( o ) );
             if( o is IObservableDomainActionTracker tracker ) _trackers.Add( tracker );
-            _sidekickManager.DiscoverSidekicks( o );
+            Debug.Assert( _currentTran != null, "A transaction has been opened." );
+            _sidekickManager.DiscoverSidekicks( _currentTran.Monitor, o );
         }
 
-        void UnregisterInternalOrObservableObject( IDisposableObject o )
+        /// <summary>
+        /// This is called from the "real" Dispose calls (Unregister observable/internal objects), not from
+        /// the clear from DoLoad.
+        /// </summary>
+        /// <param name="o">The disposed object.</param>
+        void SideEffectUnregister( IDisposableObject o )
         {
             if( o is IObservableDomainActionTracker tracker )
             {
@@ -1491,11 +1510,11 @@ namespace CK.Observable
 
         internal void Unregister( ObservableObject o )
         {
-            if( !_deserializing ) _changeTracker.OnDisposeObject( o );
+            if( !_deserializeOrInitializing ) _changeTracker.OnDisposeObject( o );
             _objects[o.OId.Index] = null;
             _freeList.Add( o.OId.Index );
             --_actualObjectCount;
-            UnregisterInternalOrObservableObject( o );
+            SideEffectUnregister( o );
         }
 
         /// <summary>
@@ -1645,7 +1664,7 @@ namespace CK.Observable
 
         internal PropertyChangedEventArgs? OnPropertyChanged( ObservableObject o, string propertyName, object before, object after )
         {
-            if( _deserializing
+            if( _deserializeOrInitializing
                 || o._exporter == null
                 || !o._exporter.ExportableProperties.Any( prop => prop.Name == propertyName ) )
             {
@@ -1672,47 +1691,47 @@ namespace CK.Observable
 
         internal ListRemoveAtEvent? OnListRemoveAt( ObservableObject o, int index )
         {
-            if( _deserializing ) return null;
+            if( _deserializeOrInitializing ) return null;
             CheckWriteLock( o ).CheckDisposed();
             return _changeTracker.OnListRemoveAt( o, index );
         }
 
         internal ListSetAtEvent? OnListSetAt( ObservableObject o, int index, object value )
         {
-            if( _deserializing ) return null;
+            if( _deserializeOrInitializing ) return null;
             CheckWriteLock( o ).CheckDisposed();
             return _changeTracker.OnListSetAt( o, index, value );
         }
 
         internal CollectionClearEvent? OnCollectionClear( ObservableObject o )
         {
-            if( _deserializing ) return null;
+            if( _deserializeOrInitializing ) return null;
             CheckWriteLock( o ).CheckDisposed();
             return _changeTracker.OnCollectionClear( o );
         }
 
         internal ListInsertEvent? OnListInsert( ObservableObject o, int index, object item )
         {
-            if( _deserializing ) return null;
+            if( _deserializeOrInitializing ) return null;
             CheckWriteLock( o ).CheckDisposed();
             return _changeTracker.OnListInsert( o, index, item );
         }
 
         internal CollectionMapSetEvent? OnCollectionMapSet( ObservableObject o, object key, object value )
         {
-            if( _deserializing ) return null;
+            if( _deserializeOrInitializing ) return null;
             CheckWriteLock( o ).CheckDisposed();
             return _changeTracker.OnCollectionMapSet( o, key, value );
         }
 
         internal CollectionRemoveKeyEvent? OnCollectionRemoveKey( ObservableObject o, object key )
         {
-            if( _deserializing ) return null;
+            if( _deserializeOrInitializing ) return null;
             CheckWriteLock( o ).CheckDisposed();
             return _changeTracker.OnCollectionRemoveKey( o, key );
         }
 
-        IDisposableObject CheckWriteLock( IDisposableObject o )
+        IDisposableObject CheckWriteLock( [AllowNull]IDisposableObject o )
         {
             if( !_lock.IsWriteLockHeld )
             {

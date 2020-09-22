@@ -26,7 +26,7 @@ namespace CK.Observable.League
         private protected Coordinator( IBinaryDeserializerContext d )
             : base( d )
         {
-            var r = d.StartReading();
+            var r = d.StartReading().Reader;
             _domains = (ObservableDictionary<string, Domain>)r.ReadObject();
         }
 

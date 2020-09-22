@@ -25,7 +25,7 @@ namespace CK.Observable.Domain.Tests
         TestCounter( IBinaryDeserializerContext d )
             : base( d )
         {
-            var r = d.StartReading();
+            var r = d.StartReading().Reader;
             Count = r.ReadInt32();
         }
 

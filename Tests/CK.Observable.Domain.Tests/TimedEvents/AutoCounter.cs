@@ -30,7 +30,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
         AutoCounter( IBinaryDeserializerContext d )
             : base( d )
         {
-            var r = d.StartReading();
+            var r = d.StartReading().Reader;
             Count = r.ReadInt32();
             _timer = (ObservableTimer)r.ReadObject();
         }

@@ -31,7 +31,7 @@ namespace CK.Observable
         protected ObservableTimedEventBase( IBinaryDeserializerContext c )
             : base( c )
         {
-            var r = c.StartReading();
+            var r = c.StartReading().Reader;
             _handlers = new ObservableEventHandler<TEventArgs>( r );
         }
 

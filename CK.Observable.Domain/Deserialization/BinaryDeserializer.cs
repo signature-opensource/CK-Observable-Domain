@@ -12,7 +12,7 @@ namespace CK.Observable
     /// <summary>
     /// Deserializer for complex object graph.
     /// </summary>
-    public class BinaryDeserializer : CKBinaryReader, IBinaryDeserializer, IBinaryDeserializerImpl, ICtorBinaryDeserializer, IBinaryDeserializerContext
+    public partial class BinaryDeserializer : CKBinaryReader, IBinaryDeserializer, IBinaryDeserializerImpl, IBinaryDeserializerContext
     {
         readonly IDeserializerResolver _drivers;
         readonly TypeReadInfo _objectReadTypeInfo;
@@ -22,7 +22,6 @@ namespace CK.Observable
 
         readonly List<Action> _postDeserializationActions;
         readonly Stack<ConstructorContext?> _ctorContextStack;
-        TypeReadInfo? _currentCtorReadInfo;
         BinaryFormatter? _binaryFormatter;
 
         int _debugModeCounter;
@@ -76,15 +75,13 @@ namespace CK.Observable
 
         IServiceProvider IBinaryDeserializer.Services => Services;
 
-        TypeReadInfo ICtorBinaryDeserializer.CurrentReadInfo => _currentCtorReadInfo;
-
         void IBinaryDeserializerImpl.OnPostDeserialization( Action a )
         {
             if( a == null ) throw new ArgumentNullException();
             _postDeserializationActions.Add( a );
         }
 
-        ICtorBinaryDeserializer IBinaryDeserializerContext.StartReading()
+        CtorReader IBinaryDeserializerContext.StartReading()
         {
             var head = _ctorContextStack.Peek();
             if( head != null )
@@ -94,10 +91,9 @@ namespace CK.Observable
                     var baseCtorReadInfo = head.ReadInfo.TypePath[head.CurrentIndex];
                     ReadString( "After: " + head.ReadInfo.DescribeAutoTypePathItem( baseCtorReadInfo ) );
                 }
-                _currentCtorReadInfo = head.ReadInfo.TypePath[++head.CurrentIndex];
+                return new CtorReader( this, head.ReadInfo.TypePath[++head.CurrentIndex] );
             }
-            else _currentCtorReadInfo = null;
-            return this;
+            else return new CtorReader( this, null );
         }
 
         /// <summary>

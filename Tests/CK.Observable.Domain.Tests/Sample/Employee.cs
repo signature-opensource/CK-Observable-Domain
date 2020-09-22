@@ -13,7 +13,7 @@ namespace CK.Observable.Domain.Tests.Sample
 
         protected Employee( IBinaryDeserializerContext d ) : base( d )
         {
-            var r = d.StartReading();
+            var r = d.StartReading().Reader;
             Garage = (Garage)r.ReadObject();
         }
 

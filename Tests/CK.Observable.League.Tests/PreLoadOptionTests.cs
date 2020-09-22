@@ -11,6 +11,13 @@ namespace CK.Observable.League.Tests
 {
     public class PreLoadOptionTests
     {
+        [SetUp]
+        public void Setup()
+        {
+            GC.Collect();
+            GC.WaitForFullGCComplete();
+        }
+
         [Test]
         public async Task always_option_keeps_the_domain_in_memory()
         {

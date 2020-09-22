@@ -28,8 +28,8 @@ namespace Signature.Process.Dispatching
 
         protected NotificationState( IBinaryDeserializerContext d ) : base( d )
         {
-            var r = d.StartReading();
-            if( r.CurrentReadInfo.Version != 0 ) throw new NotSupportedException( $"Cannot deserialize {nameof( NotificationState )} version {r.CurrentReadInfo.Version}" );
+            var (r,info) = d.StartReading();
+            if( info.Version != 0 ) throw new NotSupportedException( $"Cannot deserialize {nameof( NotificationState )} version {info.Version}" );
 
             _productDispatchErrors = (ObservableList<Notification<DispatchProductResult>>)r.ReadObject();
             _exceptions = (ObservableList<Notification<CKExceptionData>>)r.ReadObject();
@@ -82,7 +82,7 @@ namespace Signature.Process.Dispatching
 
         public Notification( IBinaryDeserializerContext d )
         {
-            var r = d.StartReading();
+            var r = d.StartReading().Reader;
             Body = (T)r.ReadObject();
         }
 
@@ -121,7 +121,7 @@ namespace Signature.Process.Dispatching
 
         protected BarcodeScannerState( IBinaryDeserializerContext d ) : base( d )
         {
-            var r = d.StartReading();
+            var r = d.StartReading().Reader;
             LastSeen = r.ReadDateTime();
             LastScanIdentifier = r.ReadNullableString();
             LastScanMetadata = (ObservableDictionary<string, string>)r.ReadObject();
@@ -203,7 +203,7 @@ namespace Signature.Process.Dispatching
 
         public DispatchProductResult( IBinaryDeserializerContext d )
         {
-            var r = d.StartReading();
+            var r = d.StartReading().Reader;
             DispatchProductResultType = (DispatchProductResultType)r.ReadObject();
             ProductId = r.ReadNullableString();
             OrdersWithProduct = (ObservableList<string>)r.ReadObject();

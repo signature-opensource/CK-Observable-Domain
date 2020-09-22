@@ -47,7 +47,7 @@ namespace CK.Observable
         ObservableReminder( IBinaryDeserializerContext c )
             : base( c )
         {
-            var r = c.StartReading();
+            var r = c.StartReading().Reader;
             IsPooled = r.ReadBoolean();
             ReusableArgs = new ObservableReminderEventArgs( this );
             if( IsPooled && ActiveIndex == 0 ) TimeManager.ReleaseToPool( this );

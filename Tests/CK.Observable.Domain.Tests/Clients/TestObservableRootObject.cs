@@ -16,7 +16,7 @@ namespace CK.Observable.Domain.Tests.Clients
 
         public TestObservableRootObject( IBinaryDeserializerContext d ) : base( d )
         {
-            var r = d.StartReading();
+            var r = d.StartReading().Reader;
 
             Prop1 = r.ReadNullableString();
             Prop2 = r.ReadNullableString();

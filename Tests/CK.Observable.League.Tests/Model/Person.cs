@@ -13,7 +13,7 @@ namespace CK.Observable.League.Tests.Model
 
         protected Person( IBinaryDeserializerContext d ) : base( d )
         {
-            var r = d.StartReading();
+            var r = d.StartReading().Reader;
             Friend = (Person)r.ReadObject();
             FirstName = r.ReadNullableString();
             LastName = r.ReadNullableString();

@@ -4,7 +4,7 @@ using System;
 namespace CK.Observable
 {
     /// <summary>
-    /// Command to be executed by <see cref="SidekickBase.ExecuteCommand"/>.
+    /// Command to be executed by <see cref="ObservableDomainSidekick.ExecuteCommand"/>.
     /// </summary>
     public readonly struct SidekickCommand
     {

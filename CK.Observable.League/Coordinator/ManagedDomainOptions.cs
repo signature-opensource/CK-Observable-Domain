@@ -113,7 +113,7 @@ namespace CK.Observable.League
 
         ManagedDomainOptions( IBinaryDeserializerContext ctx )
         {
-            var r = ctx.StartReading();
+            var r = ctx.StartReading().Reader;
             LoadOption = r.ReadEnum<DomainPreLoadOption>();
             CompressionKind = r.ReadEnum<CompressionKind>();
             SnapshotSaveDelay = r.ReadTimeSpan();

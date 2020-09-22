@@ -17,7 +17,7 @@ namespace CK.Observable.Domain.Tests.Sample
         protected Car( IBinaryDeserializerContext d )
             : base( d )
         {
-            var r = d.StartReading();
+            var r = d.StartReading().Reader;
             Name = r.ReadNullableString();
             TestSpeed = r.ReadInt32();
             Position = (Position)r.ReadObject();

@@ -12,7 +12,7 @@ namespace CK.Observable.Domain.Tests.Sample
 
         protected Mechanic( IBinaryDeserializerContext d ) : base( d )
         {
-            var r = d.StartReading();
+            var r = d.StartReading().Reader;
             CurrentCar = (Car)r.ReadObject();
         }
 

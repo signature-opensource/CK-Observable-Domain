@@ -186,7 +186,7 @@ namespace CK.Observable.Domain.Tests
             CustomRoot( IBinaryDeserializerContext d )
                 : base( d )
             {
-                var r = d.StartReading();
+                var r = d.StartReading().Reader;
                 ImmutablesById = (ObservableDictionary<string, CustomImmutable>)r.ReadObject();
                 SomeList = (ObservableList<string>)r.ReadObject();
                 CustomObservableList = (ObservableList<CustomObservable>)r.ReadObject();
@@ -214,7 +214,7 @@ namespace CK.Observable.Domain.Tests
 
             protected CustomImmutable( IBinaryDeserializerContext d )
             {
-                var r = d.StartReading();
+                var r = d.StartReading().Reader;
                 Id = r.ReadNullableString();
                 Title = r.ReadNullableString();
             }
@@ -240,7 +240,7 @@ namespace CK.Observable.Domain.Tests
 
             protected CustomObservable( IBinaryDeserializerContext d )
             {
-                var r = d.StartReading();
+                var r = d.StartReading().Reader;
                 ImmutablesById = (ObservableDictionary<string, CustomImmutable>)r.ReadObject();
             }
 
@@ -265,7 +265,7 @@ namespace CK.Observable.Domain.Tests
             }
             public TestDisposableObservableObject( IBinaryDeserializerContext c ) : base( c )
             {
-                var r = c.StartReading();
+                var r = c.StartReading().Reader;
                 AlwaysDisposeChild = r.ReadBoolean();
                 ChildObject = (ObservableList<int>)r.ReadObject();
             }

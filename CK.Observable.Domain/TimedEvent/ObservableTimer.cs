@@ -55,7 +55,7 @@ namespace CK.Observable
         ObservableTimer( IBinaryDeserializerContext c )
             : base( c )
         {
-            var r = c.StartReading();
+            var r = c.StartReading().Reader;
             _milliSeconds = r.ReadInt32();
             if( _milliSeconds < 0 )
             {

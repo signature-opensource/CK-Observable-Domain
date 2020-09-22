@@ -16,7 +16,7 @@ namespace CK.Observable.Domain.Tests
     {
         public class CmdSimple { public string Text { get; set; } }
 
-        public class SKSimple : SidekickBase
+        public class SKSimple : ObservableDomainSidekick
         {
             public SKSimple( ObservableDomain d )
                 : base( d )
@@ -65,9 +65,9 @@ namespace CK.Observable.Domain.Tests
 
         [Test]
 
-        public void sidekick_simple_instantiation_and_command_handling()
+        public void sidekick_simple_instantiation_and_serialization()
         {
-            var obs = new ObservableDomain( TestHelper.Monitor, nameof( sidekick_simple_instantiation_and_command_handling ) );
+            var obs = new ObservableDomain( TestHelper.Monitor, nameof( sidekick_simple_instantiation_and_serialization ) );
 
             IReadOnlyList<ActivityMonitorSimpleCollector.Entry> logs = null;
             using( TestHelper.Monitor.CollectEntries( entries => logs = entries, LogLevelFilter.Info ) )
@@ -117,7 +117,7 @@ namespace CK.Observable.Domain.Tests
             public string Format( string msg ) => $"Formatted by ExternalService: '{msg}'.";
         }
 
-        public class SKWithDependencies : SidekickBase
+        public class SKWithDependencies : ObservableDomainSidekick
         {
             readonly ExternalService _s;
 
@@ -132,7 +132,7 @@ namespace CK.Observable.Domain.Tests
             {
                 if( command.Command is CmdSimple c )
                 {
-                    monitor.Info( $"Handling {_s.Format( c.Text )}." );
+                    monitor.Info( $"SKWithDependencies[{_s.Format( c.Text )}]" );
                     return true;
                 }
                 return false;
@@ -183,13 +183,13 @@ namespace CK.Observable.Domain.Tests
             {
                 TransactionResult t = obs.Modify( TestHelper.Monitor, () =>
                 {
-                    var o = new ObjWithSKSimple();
+                    var o = new ObjWithSKWithDependencies();
                     o.Message = "Hello!";
                 } );
                 t.Success.Should().BeTrue();
             }
             logs.Select( l => l.Text ).Should().Contain( "Initializing SKWithDependencies." );
-            logs.Select( l => l.Text ).Should().Contain( "Formatted by ExternalService: 'Hello!'" );
+            logs.Select( l => l.Text ).Should().Contain( "SKWithDependencies[Formatted by ExternalService: 'Hello!'.]" );
         }
     }
 

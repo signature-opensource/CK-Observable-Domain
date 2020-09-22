@@ -15,7 +15,7 @@ namespace CK.Observable.League.Tests.Model
         School( IBinaryDeserializerContext ctx )
             : base( ctx )
         {
-            var r = ctx.StartReading();
+            var r = ctx.StartReading().Reader;
             Persons = (ObservableList<Person>)r.ReadObject();
         }
 

@@ -22,7 +22,7 @@ namespace Signature.Process.Dispatching
 
         protected NotificationState2( IBinaryDeserializerContext d ) : base( d )
         {
-            var r = d.StartReading();
+            var r = d.StartReading().Reader;
             BarcodeScanner = (BarcodeScannerState)r.ReadObject();
             ProductDispatchErrors = (ObservableChannel<DispatchProductResult>)r.ReadObject();
             Exceptions = (ObservableChannel<CKExceptionData>)r.ReadObject();

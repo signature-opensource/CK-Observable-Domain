@@ -43,7 +43,7 @@ namespace CK.Observable
             : this()
         {
             Debug.Assert( TimeManager != null );
-            var r = c.StartReading();
+            var r = c.StartReading().Reader;
             ActiveIndex = r.ReadInt32();
             ExpectedDueTimeUtc = r.ReadDateTime();
             _disposed = new ObservableEventHandler<ObservableDomainEventArgs>( r );

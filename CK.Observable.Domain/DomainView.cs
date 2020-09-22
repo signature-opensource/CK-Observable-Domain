@@ -15,7 +15,7 @@ namespace CK.Observable
         readonly IDisposableObject _o;
         readonly ObservableDomain _d;
 
-        public DomainView( IDisposableObject o, ObservableDomain d )
+        internal DomainView( IDisposableObject o, ObservableDomain d )
         {
             _o = o;
             _d = d;
@@ -29,7 +29,7 @@ namespace CK.Observable
         /// <summary>
         /// Sends a command to the external world. Commands are enlisted
         /// into <see cref="TransactionResult.Commands"/> (when the transaction succeeds)
-        /// and can be processed by any <see cref="IObservableDomainClient"/>.
+        /// and can be processed by any <see cref="IObservableDomainClient"/> or by a <see cref="ObservableDomainSidekick"/>.
         /// </summary>
         /// <param name="command">Any command description.</param>
         public void SendCommand( object command )

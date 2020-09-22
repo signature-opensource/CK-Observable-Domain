@@ -9,11 +9,11 @@ namespace CK.Observable.Domain.Tests.Sample
 
         protected Person( IBinaryDeserializerContext d ) : base( d )
         {
-            var r = d.StartReading();
+            var (r, info) = d.StartReading();
             Friend = (Person)r.ReadObject();
             FirstName = r.ReadNullableString();
             LastName = r.ReadNullableString();
-            if( r.CurrentReadInfo.Version >= 1 )
+            if( info.Version >= 1 )
             {
                 Age = r.ReadNonNegativeSmallInt32();
             }

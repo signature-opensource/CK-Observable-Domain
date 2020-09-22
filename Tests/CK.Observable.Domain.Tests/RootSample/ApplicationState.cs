@@ -24,7 +24,7 @@ namespace CK.Observable.Domain.Tests.RootSample
         protected ApplicationState( IBinaryDeserializerContext d )
             : base( d )
         {
-            var r = d.StartReading();
+            var r = d.StartReading().Reader;
             ToDoNumbers = (ObservableList<int>)r.ReadObject();
             Products = (ObservableDictionary<string, ProductInfo>)r.ReadObject();
             ProductStateList = (ObservableList<Product>)r.ReadObject();

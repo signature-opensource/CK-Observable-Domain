@@ -20,7 +20,7 @@ namespace CK.Observable.Domain.Tests.Serialization
             protected C( IBinaryDeserializerContext d )
                 : base( d )
             {
-                var r = d.StartReading();
+                var r = d.StartReading().Reader;
                 ObjectList = (ObservableList<ObservableObject>)r.ReadObject();
             }
 

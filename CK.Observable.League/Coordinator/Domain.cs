@@ -29,7 +29,7 @@ namespace CK.Observable.League
         Domain( IBinaryDeserializerContext c )
             : base( c )
         {
-            var r = c.StartReading();
+            var r = c.StartReading().Reader;
             Coordinator = (Coordinator)r.ReadObject();
             DomainName = r.ReadString();
             _displayName = r.ReadNullableString();

@@ -15,7 +15,7 @@ namespace CK.Observable
     /// and on the other way can monitor/react to any number of "external events" and call one of the Modify/ModifiyAsync domain's method to
     /// inform the domain objects. 
     /// </summary>
-    public abstract class SidekickBase
+    public abstract class ObservableDomainSidekick
     {
         /// <summary>
         /// Initializes a new sidekick for a domain.
@@ -25,7 +25,7 @@ namespace CK.Observable
         /// The domain has the write lock held and this constructor can interact with the domain objects (its interaction is part of the transaction). 
         /// </summary>
         /// <param name="domain">The domain.</param>
-        protected SidekickBase( ObservableDomain domain )
+        protected ObservableDomainSidekick( ObservableDomain domain )
         {
             Domain = domain;
         }

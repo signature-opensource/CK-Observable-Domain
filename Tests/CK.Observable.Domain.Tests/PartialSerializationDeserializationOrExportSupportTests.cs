@@ -43,7 +43,7 @@ namespace CK.Observable.Domain.Tests
             public SerializableOnly( IBinaryDeserializerContext d )
                 : base( d )
             {
-                var r = d.StartReading();
+                var r = d.StartReading().Reader;
                 Name = r.ReadNullableString();
             }
 

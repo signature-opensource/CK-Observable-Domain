@@ -26,7 +26,7 @@ namespace CK.Observable
         /// </summary>
         /// <param name="monitor">The monitor used to log the construction of this domain. Cannot be null.</param>
         /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
-        /// <param name="serviceProvider">The service providers that will be used to resolve the <see cref="SidekickBase"/> objects.</param>
+        /// <param name="serviceProvider">The service providers that will be used to resolve the <see cref="ObservableDomainSidekick"/> objects.</param>
         public ObservableDomain( IActivityMonitor monitor, string domainName, IServiceProvider? serviceProvider = null )
             : this( monitor, domainName, null, serviceProvider )
         {
@@ -39,7 +39,7 @@ namespace CK.Observable
         /// <param name="monitor">The monitor used to log the construction of this domain. Cannot be null.</param>
         /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
         /// <param name="client">The observable client (head of the Chain of Responsibility) to use. Can be null.</param>
-        /// <param name="serviceProvider">The service providers that will be used to resolve the <see cref="SidekickBase"/> objects.</param>
+        /// <param name="serviceProvider">The service providers that will be used to resolve the <see cref="ObservableDomainSidekick"/> objects.</param>
         public ObservableDomain( IActivityMonitor monitor, string domainName, IObservableDomainClient? client, IServiceProvider? serviceProvider = null )
             : base( monitor, domainName, client, serviceProvider )
         {
@@ -61,7 +61,7 @@ namespace CK.Observable
         /// <param name="s">The input stream.</param>
         /// <param name="leaveOpen">True to leave the stream opened.</param>
         /// <param name="encoding">Optional encoding for characters. Defaults to UTF-8.</param>
-        /// <param name="serviceProvider">The service providers that will be used to resolve the <see cref="SidekickBase"/> objects.</param>
+        /// <param name="serviceProvider">The service providers that will be used to resolve the <see cref="ObservableDomainSidekick"/> objects.</param>
         public ObservableDomain( IActivityMonitor monitor,
                                  string domainName,
                                  IObservableDomainClient client,

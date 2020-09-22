@@ -9,7 +9,7 @@ namespace CK.Observable
         /// Only exposed method that must be called at the very beginning of the
         /// deserialization constructor in order to obtain the deserializer to use.
         /// </summary>
-        /// <returns>The deserializer to use.</returns>
-        ICtorBinaryDeserializer StartReading();
+        /// <returns>The deserializer and <see cref="TypeReadInfo"/> to use.</returns>
+         CtorReader StartReading();
     }
 }

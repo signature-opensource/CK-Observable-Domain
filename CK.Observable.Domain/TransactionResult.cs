@@ -102,7 +102,7 @@ namespace CK.Observable
         public CKExceptionData ClientError { get; private set; }
 
         /// <summary>
-        /// Gets the errors that occured during the call to <see cref="SidekickBase.ExecuteCommand"/> with the faulty command.
+        /// Gets the errors that occured during the call to <see cref="ObservableDomainSidekick.ExecuteCommand"/> with the faulty command.
         /// </summary>
         public IReadOnlyList<(object,CKExceptionData)>  CommandErrors { get; private set; }
 

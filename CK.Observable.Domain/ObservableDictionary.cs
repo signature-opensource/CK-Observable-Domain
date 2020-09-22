@@ -70,7 +70,7 @@ namespace CK.Observable
         protected ObservableDictionary( IBinaryDeserializerContext d )
             : base( d )
         {
-            var r = d.StartReading();
+            var r = d.StartReading().Reader;
             _map = (Dictionary<TKey, TValue>)r.ReadObject();
             _itemSet = new ObservableEventHandler<CollectionMapSetEvent>( r );
             _itemAdded = new ObservableEventHandler<CollectionMapSetEvent>( r );

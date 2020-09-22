@@ -79,7 +79,7 @@ namespace CK.Observable.Domain.Tests.Sample
 
         public MultiPropertyType( IBinaryDeserializerContext d ) : base( d )
         {
-            var r = d.StartReading();
+            var r = d.StartReading().Reader;
             String = r.ReadNullableString();
             Int32 = r.ReadInt32();
             UInt32 = r.ReadUInt32();

@@ -93,9 +93,16 @@ namespace CK.Observable
         /// <param name="d">The deserialization context.</param>
         protected ObservableObject( IBinaryDeserializerContext d )
         {
-            var r = d.StartReading();
-            ActualDomain = r.Services.GetService<ObservableDomain>( throwOnNull: true );
-            _exporter = ActualDomain._exporters.FindDriver( GetType() );
+            var r = d.StartReading().Reader;
+            // This enables the Internal object to be serializable/deserializable outside a Domain
+            // (for instance to use BinarySerializer.IdempotenceCheck): we really register the deserialized object
+            // if and only if the available Domain service is the one being deserialized.
+            var domain = r.Services.GetService<ObservableDomain>( throwOnNull: true );
+            if( (ActualDomain = domain) == ObservableDomain.CurrentThreadDomain )
+            {
+                domain.SideEffectsRegister( this );
+            }
+            _exporter = domain._exporters.FindDriver( GetType() );
             _oid = new ObservableObjectId( r );
             _disposed = new ObservableEventHandler<ObservableDomainEventArgs>( r );
             _propertyChanged = new ObservableEventHandler<PropertyChangedEventArgs>( r );
