@@ -6,12 +6,12 @@
   
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
-    <LangVersion>8.0</LangVersion>
     <IsPackable>False</IsPackable>
   </PropertyGroup>
   
   <ItemGroup>
     <PackageReference Include="CK.Testing.Monitoring" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="FluentAssertions" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="NUnit" />

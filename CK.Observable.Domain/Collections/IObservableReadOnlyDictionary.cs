@@ -7,8 +7,8 @@ namespace CK.Observable
     /// <summary>
     /// Extends <see cref="IReadOnlyDictionary{TKey, TValue}"/> to expose events.
     /// </summary>
-    /// <typeparam name="TKey"></typeparam>
-    /// <typeparam name="TValue"></typeparam>
+    /// <typeparam name="TKey">Type of the key.</typeparam>
+    /// <typeparam name="TValue">Type of the value.</typeparam>
     public interface IObservableReadOnlyDictionary<TKey, TValue> : IReadOnlyDictionary<TKey, TValue>
     {
         /// <summary>

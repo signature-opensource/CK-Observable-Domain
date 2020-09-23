@@ -13,7 +13,23 @@ namespace CK.Observable
     /// maintain state), a sidekick is an interface to the world (typically an asynchronous world of interactions) that in one
     /// way handles the commands that domain objects have sent during a transaction (via <see cref="DomainView.SendCommand(object)"/>),
     /// and on the other way can monitor/react to any number of "external events" and call one of the Modify/ModifiyAsync domain's method to
-    /// inform the domain objects. 
+    /// inform the domain objects.
+    /// <para>
+    /// This is not a singleton for the Dependency Injection since a sidekick is bound to its <see cref="Domain"/> but its dependencies MUST
+    /// be singletons.
+    /// </para>
+    /// <para>
+    /// This is a "ISingletonAutoType" (that doesn't exist yet): a singleton auto type is like a ISingletonAutoService except that it cannot
+    /// be instantiated automatically. An explicit contructor should be used with explicit parameters.
+    /// A ISingletonAutoType cannot be a dependency.
+    /// The concept of "IAutoType" captures the "most specialized type" resolution mechanism (it's currently missing in the landscape).
+    /// The "ISingletonAutoType"/"IScopedAutoType" introduces a constraint on its dependencies that are IAutoService objects: the constructor
+    /// parameters that are "contextual" must be defined when a "IAutoType" is defined otherwise those "unknwon" dependencies would be considered
+    /// scoped (and they are not).
+    /// ...IAutoType is necessarily a Class, not an interface!
+    /// So it can be named "IAutoClass". It must be handled like IAutoService but its NOT a IAutoService.
+    /// Constructor parameters can be marked with a [ExplicitParameter] attribute (ie. not from the DI).
+    /// </para>
     /// </summary>
     public abstract class ObservableDomainSidekick
     {
@@ -22,7 +38,11 @@ namespace CK.Observable
         /// <para>
         /// This is called after an external modification of the domain where an object with a [UseSidekick( ... )] attribute has been instantiated.
         /// If the sidekick type has not any instance yet, this is called just before sollicitating the <see cref="ObservableDomain.DomainClient"/>.
-        /// The domain has the write lock held and this constructor can interact with the domain objects (its interaction is part of the transaction). 
+        /// The domain has the write lock held and this constructor can interact with the domain objects (its interaction is part of the transaction).
+        /// <para>
+        /// A <see cref="IActivityMonitor"/> can appear in the parameters (and must be used only in the constructor and not kept) of the constructor and
+        /// all other parameters MUST be singletons.
+        /// </para>
         /// </summary>
         /// <param name="domain">The domain.</param>
         protected ObservableDomainSidekick( ObservableDomain domain )

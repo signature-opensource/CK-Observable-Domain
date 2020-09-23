@@ -9,7 +9,7 @@ namespace CK.Observable
     /// </summary>
     /// <typeparam name="T">Item type.</typeparam>
     [SerializationVersion(0)]
-    public class ObservableList<T> : ObservableObject, IList<T>, IReadOnlyList<T>
+    public class ObservableList<T> : ObservableObject, IList<T>, IObservableReadOnlyList<T>
     {
         readonly List<T> _list;
         ObservableEventHandler<ListSetAtEvent> _itemSet;
