@@ -123,7 +123,7 @@ namespace CK.Observable.League.Tests
             OnTimerCalled.Should().BeFalse( "The reminder has not fired yet. (2)" );
             loader.IsLoaded.Should().BeTrue( "An active timed event keep the domain in memory. (2)" );
 
-            await Task.Delay( 100 );
+            await Task.Delay( 150 );
             OnTimerCalled.Should().BeTrue( "The reminder has eventually fired." );
             loader.IsLoaded.Should().BeFalse( "The reminder fired: there is no more need to keep the domain in memory." );
         }
