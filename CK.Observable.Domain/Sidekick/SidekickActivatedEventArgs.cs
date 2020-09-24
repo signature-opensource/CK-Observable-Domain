@@ -29,6 +29,13 @@ namespace CK.Observable
         public bool IsOfType( Type t ) => t.IsAssignableFrom( _sidekick.GetType() );
 
         /// <summary>
+        /// Gets whether the activated <see cref="ObservableDomainSidekick"/> is compatible with the given type.
+        /// </summary>
+        /// <typeparam name="T">The type to challenge.</typeparam>
+        /// <returns>True if the activated sidekick is compatible with the type to challenge, false otherwise.</returns>
+        public bool IsOfType<T>() => _sidekick is T;
+
+        /// <summary>
         /// Registers the <see cref="ObservableObject"/> on the sidekick. It is up to the sidekick to handle
         /// this "client" object the way it wants.
         /// The semantics of this registration is specific to each sidekick: this Activation/Registration protocol
