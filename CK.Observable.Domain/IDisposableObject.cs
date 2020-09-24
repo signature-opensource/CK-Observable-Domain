@@ -6,10 +6,14 @@ using System.Text;
 namespace CK.Observable
 {
     /// <summary>
-    /// Extends <see cref="IDisposable"/> to expose <see cref="IsDisposed"/> property
-    /// and <see cref="Disposed"/> event.
+    /// Exposes <see cref="IsDisposed"/> property and <see cref="Disposed"/> event and not Dispose method.
+    /// This interface is used to monitor disposing, not to trigger it: this is why it doesn't extend <see cref="IDisposable"/>.
+    /// <para>
+    /// Another reason why IDisposable is not welcome here is that there is absolutely no sense to use the using statement/dispose pattern
+    /// on <see cref="ObservableObject"/> or any other objects managed by a domain.
+    /// </para>
     /// </summary>
-    public interface IDisposableObject : IDisposable
+    public interface IDisposableObject
     {
         /// <summary>
         /// Raised when this object is disposed and will not be part of its <see cref="ObservableDomain"/> anymore.
@@ -35,7 +39,6 @@ namespace CK.Observable
         {
             if( @this.IsDisposed ) throw new ObjectDisposedException( @this.ToString() );
         }
-
 
     }
 

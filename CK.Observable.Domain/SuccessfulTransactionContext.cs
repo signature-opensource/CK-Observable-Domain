@@ -8,6 +8,7 @@ namespace CK.Observable
 {
     /// <summary>
     /// Encapsulates the result of a successful <see cref="ObservableDomain.Transaction.Commit"/>.
+    /// This is avalaible 
     /// </summary>
     public readonly struct SuccessfulTransactionContext
     {

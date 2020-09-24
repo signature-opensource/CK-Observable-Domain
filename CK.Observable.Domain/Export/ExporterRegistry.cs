@@ -47,17 +47,6 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Registers a full driver (<see cref="UnifiedTypeDriverExtension.CheckValidFullDriver"/> is called).
-        /// This replaces any existing export driver for the Type.
-        /// </summary>
-        /// <param name="driver">The driver to register.</param>
-        public void RegisterValidFullDriver( IUnifiedTypeDriver driver )
-        {
-            driver.CheckValidFullDriver();
-            RegisterDriver( driver.ExportDriver );
-        }
-
-        /// <summary>
         /// Registers a driver.
         /// This replaces any existing export driver for the Type.
         /// </summary>

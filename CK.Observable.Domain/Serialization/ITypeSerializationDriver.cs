@@ -4,14 +4,11 @@ namespace CK.Observable
 {
     /// <summary>
     /// Handles serialization of instances of a given type.
+    /// Note that this abstraction doesn't require to be bound to a Type: the <see cref="SerializerRegistry"/>
+    /// is in charge of the association from a Type to a driver.
     /// </summary>
     public interface ITypeSerializationDriver
     {
-        /// <summary>
-        /// Gets the type that this driver handles.
-        /// </summary>
-        Type Type { get; }
-
         /// <summary>
         /// Gets whether this type cannot have any subordinate types.
         /// </summary>

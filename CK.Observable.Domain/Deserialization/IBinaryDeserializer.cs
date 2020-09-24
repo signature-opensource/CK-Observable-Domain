@@ -24,10 +24,10 @@ namespace CK.Observable
         IServiceProvider Services { get; }
 
         /// <summary>
-        /// Reads an object previously written by <see cref="BinarySerializer.WriteObject(object)"/>.
+        /// Reads an object previously written by <see cref="BinarySerializer.WriteObject(object?)"/>.
         /// </summary>
         /// <returns>The object read, possibly in an intermediate state.</returns>
-        object ReadObject();
+        object? ReadObject();
 
         /// <summary>
         /// Reads a <see cref="Type"/> written by <see cref="BinarySerializer.Write(Type)"/>.
@@ -37,14 +37,7 @@ namespace CK.Observable
         /// False to simply return null.
         /// </param>
         /// <returns>The Type.</returns>
-        Type ReadType( bool throwIfMissing = true );
-
-        ///// <summary>
-        ///// Reads an object previously written by <see cref="BinarySerializer.Write{T}(T,ITypeSerializationDriver{T})"/>.
-        ///// </summary>
-        ///// <param name="driver">The deserialization driver.</param>
-        ///// <returns>The object read, possibly in an intermediate state.</returns>
-        //T Read<T>( IDeserializationDriver<T> driver );
+        Type? ReadType( bool throwIfMissing = true );
 
         /// <summary>
         /// Gets a set of low level methods and helpers.
@@ -64,7 +57,7 @@ namespace CK.Observable
         bool IsDebugMode { get; }
 
         /// <summary>
-        /// Updates the current debug mode that must have been written by <see cref="BinarySerializer.DebugWriteMode(bool?)"/>.
+        /// Gets the current debug mode that must have been written by <see cref="BinarySerializer.DebugWriteMode(bool?)"/>.
         /// </summary>
         /// <returns>Whether the debug mode is currently active or not.</returns>
         bool DebugReadMode();

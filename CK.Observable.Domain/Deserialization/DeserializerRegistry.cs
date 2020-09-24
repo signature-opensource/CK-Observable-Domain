@@ -2,6 +2,7 @@ using CK.Core;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 
 namespace CK.Observable
 {
@@ -25,26 +26,28 @@ namespace CK.Observable
         public DeserializerRegistry()
         {
             _drivers = new ConcurrentDictionary<string, IDeserializationDriver>();
-            Register( BasicTypeDrivers.DObject.Default.DeserializationDriver );
-            Register( BasicTypeDrivers.DType.Default.DeserializationDriver );
-            Register( BasicTypeDrivers.DBool.Default.DeserializationDriver );
-            Register( BasicTypeDrivers.DByte.Default.DeserializationDriver );
-            Register( BasicTypeDrivers.DChar.Default.DeserializationDriver );
-            Register( BasicTypeDrivers.DDateTime.Default.DeserializationDriver );
-            Register( BasicTypeDrivers.DDateTimeOffset.Default.DeserializationDriver );
-            Register( BasicTypeDrivers.DDecimal.Default.DeserializationDriver );
-            Register( BasicTypeDrivers.DDouble.Default.DeserializationDriver );
-            Register( BasicTypeDrivers.DGuid.Default.DeserializationDriver );
-            Register( BasicTypeDrivers.DInt16.Default.DeserializationDriver );
-            Register( BasicTypeDrivers.DInt32.Default.DeserializationDriver );
-            Register( BasicTypeDrivers.DInt64.Default.DeserializationDriver );
-            Register( BasicTypeDrivers.DSByte.Default.DeserializationDriver );
-            Register( BasicTypeDrivers.DSingle.Default.DeserializationDriver );
-            Register( BasicTypeDrivers.DString.Default.DeserializationDriver );
-            Register( BasicTypeDrivers.DTimeSpan.Default.DeserializationDriver );
-            Register( BasicTypeDrivers.DUInt16.Default.DeserializationDriver );
-            Register( BasicTypeDrivers.DUInt32.Default.DeserializationDriver );
-            Register( BasicTypeDrivers.DUInt64.Default.DeserializationDriver );
+            Reg( BasicTypeDrivers.DObject.Default );
+            Reg( BasicTypeDrivers.DType.Default );
+            Reg( BasicTypeDrivers.DBool.Default );
+            Reg( BasicTypeDrivers.DByte.Default );
+            Reg( BasicTypeDrivers.DChar.Default );
+            Reg( BasicTypeDrivers.DDateTime.Default );
+            Reg( BasicTypeDrivers.DDateTimeOffset.Default );
+            Reg( BasicTypeDrivers.DDecimal.Default );
+            Reg( BasicTypeDrivers.DDouble.Default );
+            Reg( BasicTypeDrivers.DGuid.Default );
+            Reg( BasicTypeDrivers.DInt16.Default );
+            Reg( BasicTypeDrivers.DInt32.Default );
+            Reg( BasicTypeDrivers.DInt64.Default );
+            Reg( BasicTypeDrivers.DSByte.Default );
+            Reg( BasicTypeDrivers.DSingle.Default );
+            Reg( BasicTypeDrivers.DString.Default );
+            Reg( BasicTypeDrivers.DTimeSpan.Default );
+            Reg( BasicTypeDrivers.DUInt16.Default );
+            Reg( BasicTypeDrivers.DUInt32.Default );
+            Reg( BasicTypeDrivers.DUInt64.Default );
+
+            void Reg<T>( IUnifiedTypeDriver<T> u ) => Register( u.Type, u.DeserializationDriver );
         }
 
         /// <summary>
@@ -61,17 +64,18 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Registers a desererializer. Its <see cref="IDeserializationDriver.AssemblyQualifiedName"/> is used as well
+        /// Registers a desererializer. The <see cref="Type.AssemblyQualifiedName"/> is used as well
         /// as the result of the <see cref="SimpleTypeFinder.WeakenAssemblyQualifiedName(string, out string)"/>.
         /// This replaces any existing desererializer associated to these names.
         /// </summary>
+        /// <param name="type">The type for which names must be registered.</param>
         /// <param name="driver">The driver to register.</param>
-        public void Register( IDeserializationDriver driver )
+        public void Register( Type type, IDeserializationDriver driver )
         {
             if( driver == null ) throw new ArgumentNullException( nameof( driver ) );
-            Register( driver.AssemblyQualifiedName, driver );
-            if( SimpleTypeFinder.WeakenAssemblyQualifiedName( driver.AssemblyQualifiedName, out string weakName )
-                && weakName != driver.AssemblyQualifiedName )
+            var n = type.AssemblyQualifiedName;
+            Register( n, driver );
+            if( SimpleTypeFinder.WeakenAssemblyQualifiedName( n, out string weakName ) && weakName != n )
             {
                 Register( weakName, driver );
             }

@@ -59,5 +59,14 @@ namespace CK.Observable
         /// </summary>
         public bool IsDeserializing => _d.IsDeserializing;
 
+        /// <summary>
+        /// Raised when a new <see cref="ObservableDomainSidekick"/> is available.
+        /// </summary>
+        public event SafeEventHandler<SidekickActivatedEventArgs> SidekickActivated
+        {
+            add => _d.AddOrRemoveSidekickActivatedHandler( _o, true, value );
+            remove => _d.AddOrRemoveSidekickActivatedHandler( _o, false, value );
+        }
+
     }
 }

@@ -5,6 +5,9 @@ namespace CK.Observable
     /// <summary>
     /// Base class for all observable events. Such events are emitted by <see cref="ObservableDomain.Modify(Core.IActivityMonitor, Action, int)"/>
     /// and are enough to fully synchronize a remote associated domain.
+    /// These events must be handled by <see cref="IObservableDomainClient"/> when the domain is locked, directly after the modifications because direct objects
+    /// are exposed by these events (for example the <see cref="PropertyChangedEvent.Value"/>): these events CANNOT be correclty handled outside once the write lock
+    /// has been released.
     /// </summary>
     public abstract class ObservableEvent : EventArgs
     {

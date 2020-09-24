@@ -21,6 +21,7 @@ namespace CK.Observable
         readonly List<(object, bool)> _toInstantiate;
         readonly List<ObservableDomainSidekick> _sidekicks;
         readonly IServiceProvider _serviceProvider;
+        ObservableEventHandler<SidekickActivatedEventArgs> _sidekickAvailable;
 
         public SidekickManager( ObservableDomain domain, IServiceProvider sp )
         {
@@ -32,13 +33,14 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Called for each Internal or Observable object: associated sidekicks (type or name) of UseSidekickAttribute are
+        /// Called for each new Internal or Observable object: associated sidekicks (type or name) of UseSidekickAttribute are
         /// captured (and whether they are optional or not).
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="o">The object that appeared.</param>
         public void DiscoverSidekicks( IActivityMonitor monitor, IDisposableObject o )
         {
+            // Consider the ObservableObject's type.
             Type t = o.GetType();
             if( _alreadyHandled.TryAdd( t, null ) )
             {
@@ -56,8 +58,13 @@ namespace CK.Observable
         /// <summary>
         /// Instantiates sidekicks that have been discovered by <see cref="DiscoverSidekicks(IDisposableObject)"/>.
         /// This never throws, but when false is returned, it means that (at least) one required sidekick failed
-        /// to be instantiated: the exceptions are added to the <paramref name="errorCollector"/> and these are
-        /// fatal errors that cancel the whole transaction.
+        /// to be instantiated or a <see cref="DomainView.SidekickActivated"/> event handlers raised an exception:
+        /// the exceptions are added to the <paramref name="errorCollector"/> and these are fatal errors that
+        /// cancel the whole transaction.
+        /// <para>
+        /// When loading a domain, such errors don't block the load of the domain. Errors are logged and the cause should be
+        /// seriously investigated.
+        /// </para>
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <returns>True on success, false if one required (non optional) sidekick failed to be instantiated.</returns>
@@ -68,24 +75,29 @@ namespace CK.Observable
             {
                 foreach( var r in _toInstantiate )
                 {
-                    using( monitor.OpenInfo( $"Registering {(r.Item2 ? "optional" : "required")} sidekick '{r.Item1}'." ) )
-                    {
-                        if( r.Item1 is string name )
-                        {
-                            success &= Register( monitor, name, r.Item2, errorCollector );
-                        }
-                        else
-                        {
-                            success &= Register( monitor, (Type)r.Item1, r.Item2, errorCollector );
-                        }
-                    }
+                    success = Register( monitor, r, errorCollector );
                 }
                 _toInstantiate.Clear();
             }
             return success;
         }
 
-        bool Register( IActivityMonitor monitor, string typeName, bool optional, Action<Exception> errorCollector )
+        bool Register( IActivityMonitor monitor, (object, bool) toInstantiate, Action<Exception> errorCollector )
+        {
+            using( monitor.OpenInfo( $"Registering {(toInstantiate.Item2 ? "optional" : "required")} sidekick '{toInstantiate.Item1}'." ) )
+            {
+                if( toInstantiate.Item1 is string name )
+                {
+                    return RegisterName( monitor, name, toInstantiate.Item2, errorCollector );
+                }
+                else
+                {
+                    return RegisterType( monitor, (Type)toInstantiate.Item1, toInstantiate.Item2, errorCollector );
+                }
+            }
+        }
+
+        bool RegisterName( IActivityMonitor monitor, string typeName, bool optional, Action<Exception> errorCollector )
         {
             var result = CheckAlreadyRegistered( monitor, typeName, optional, errorCollector );
             if( !result.HasValue )
@@ -93,7 +105,7 @@ namespace CK.Observable
                 try
                 {
                     var type = SimpleTypeFinder.WeakResolver( typeName, throwOnError: true );
-                    result = Register( monitor, type, optional, errorCollector );
+                    result = RegisterType( monitor, type, optional, errorCollector );
                     if( !result.Value )
                     {
                         // Also associates the exception to the type name.
@@ -105,12 +117,11 @@ namespace CK.Observable
                     _alreadyHandled.Add( typeName, ex );
                     result = HandleError( monitor, typeName, optional, errorCollector, ex );
                 }
-
             }
             return result.Value;
         }
 
-        bool Register( IActivityMonitor monitor, Type type, bool optional, Action<Exception> errorCollector )
+        bool RegisterType( IActivityMonitor monitor, Type type, bool optional, Action<Exception> errorCollector )
         {
             var result = CheckAlreadyRegistered( monitor, type, optional, errorCollector );
             if( !result.HasValue )
@@ -122,9 +133,24 @@ namespace CK.Observable
                     {
                         throw new Exception( $"Unable to instantiate '{type.FullName}' type." );
                     }
-                    _alreadyHandled.Add( type, h );
-                    _sidekicks.Add( h );
-                    result = true;
+                    // If something goes wrong in registration phase, we want the error to be considered critical,
+                    // whatever the "optionality" of the sidekick is.
+                    try
+                    {
+                        _sidekickAvailable.Raise( _domain, new SidekickActivatedEventArgs( monitor, h ) );
+                    }
+                    catch( Exception ex )
+                    {
+                        monitor.Fatal( $"While registering sidekick '{type}', a SidekickActivated's event handler failed.", ex );
+                        errorCollector( ex );
+                        result = false;
+                    }
+                    if( !result.HasValue )
+                    {
+                        _alreadyHandled.Add( type, h );
+                        _sidekicks.Add( h );
+                        result = true;
+                    }
                 }
                 catch( Exception ex )
                 {
@@ -164,7 +190,6 @@ namespace CK.Observable
             return true;
         }
 
-
         /// <summary>
         /// Executes the commands by calling <see cref="ObservableDomainSidekick.ExecuteCommand(IActivityMonitor, in SidekickCommand)"/> for each sidekick.
         /// If a command is not executed because no sidekick has accepted it, this is an error that, just as other execution errors will
@@ -178,7 +203,7 @@ namespace CK.Observable
         {
             Debug.Assert( monitor != null );
             Debug.Assert( r.Success );
-            List<(object, CKExceptionData)> results = null;
+            List<(object, CKExceptionData)>? results = null;
             foreach( var c in r.Commands )
             {
                 SidekickCommand cmd = new SidekickCommand( r.StartTimeUtc, r.CommitTimeUtc, c, postActions );
@@ -209,14 +234,51 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Clears the registered sidekicks.
+        /// Clears the registered sidekicks information and disposes all existing sidekick instances.
         /// </summary>
-        public void Clear()
+        /// <param name="monitor">The monitor to use.</param>
+        public void Clear( IActivityMonitor monitor )
         {
             _alreadyHandled.Clear();
             _toInstantiate.Clear();
+            using( monitor.OpenInfo( $"Disposing {_sidekicks.Count} sidekicks." ) )
+            {
+                // Reverse the disposing... Doesn't cost a lot and, who knows,
+                // disposing first a sidekick that has been activated after another one
+                // may help...
+                int i = _sidekicks.Count;
+                while( i > 0 )
+                {
+                    var h = _sidekicks[--i];
+                    try
+                    {
+                        h.Dispose( monitor );
+                    }
+                    catch( Exception ex )
+                    {
+                        monitor.Error( $"While disposing '{h}'.", ex );
+                    }
+                }
+            }
             _sidekicks.Clear();
         }
 
+        internal void AddOrRemoveSidekickActivatedHandler( bool add, SafeEventHandler<SidekickActivatedEventArgs> value )
+        {
+            if( add ) _sidekickAvailable.Add( value, nameof( DomainView.SidekickActivated ) );
+            else _sidekickAvailable.Remove( value );
+        }
+
+        internal void Load( BinaryDeserializer r )
+        {
+            r.ReadByte(); // Version.
+            _sidekickAvailable = new ObservableEventHandler<SidekickActivatedEventArgs>( r );
+        }
+
+        internal void Save( BinarySerializer w )
+        {
+            w.Write( (byte)0 );
+            _sidekickAvailable.Write( w );
+        }
     }
 }

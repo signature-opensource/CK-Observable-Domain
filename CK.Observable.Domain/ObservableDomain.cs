@@ -38,7 +38,7 @@ namespace CK.Observable
         /// <summary>
         /// Current serialization version.
         /// </summary>
-        public const int CurrentSerializationVersion = 3;
+        public const int CurrentSerializationVersion = 4;
 
         /// <summary>
         /// The length in bytes of the <see cref="SecretKey"/>.
@@ -167,7 +167,7 @@ namespace CK.Observable
         /// <summary>
         /// Exposes the non null objects in _objects as a collection.
         /// </summary>
-        class AllCollection : IObservableObjectCollection
+        class AllCollection : IObservableAllObjectsCollection
         {
             readonly ObservableDomain _d;
 
@@ -588,7 +588,7 @@ namespace CK.Observable
             _roots = new List<ObservableRootObject>();
             _trackers = new List<IObservableDomainActionTracker>();
             _timeManager = new TimeManager( this );
-            _sidekickManager = new SidekickManager( this, serviceProvider ?? new SimpleServiceContainer() );
+            _sidekickManager = new SidekickManager( this, serviceProvider ?? EmptyServiceProvider.Default );
             _transactionCommitTimeUtc = DateTime.UtcNow;
             DefaultEventArgs = new ObservableDomainEventArgs( this );
             // LockRecursionPolicy.NoRecursion: reentrancy must NOT be allowed.
@@ -690,7 +690,7 @@ namespace CK.Observable
         /// be used outside of <see cref="BeginTransaction"/> (or other <see cref="Modify"/>, <see cref="ModifyAsync"/> methods)
         /// or <see cref="AcquireReadLock"/> scopes.
         /// </summary>
-        public IObservableObjectCollection AllObjects => _exposedObjects;
+        public IObservableAllObjectsCollection AllObjects => _exposedObjects;
 
         /// <summary>
         /// Gets all the internal objects that this domain contains.
@@ -1173,6 +1173,8 @@ namespace CK.Observable
                         w.DebugWriteSentinel();
                         _timeManager.Save( monitor, w );
                         w.DebugWriteSentinel();
+                        _sidekickManager.Save( w );
+                        w.DebugWriteSentinel();
                         return true;
                     }
                 }
@@ -1202,7 +1204,8 @@ namespace CK.Observable
                         // This may still call Dispose() on other objects.
                         // Disposing() an ObservableObject will call InternalUnregister() here,
                         // and may affect the counts and object/free lists during loading.
-                        o.Dispose( false );
+                        // At least, with false, the Disposed event is not called.
+                        o.Dispose( shouldCleanup: false );
                     }
                 }
                 // Empty _objects completely.
@@ -1211,7 +1214,7 @@ namespace CK.Observable
 
                 // Free sidekicks and IObservableDomainActionTracker.
                 _trackers.Clear();
-                _sidekickManager.Clear();
+                _sidekickManager.Clear( monitor );
 
                 int version = r.ReadSmallInt32();
                 if( version < 0 || version > CurrentSerializationVersion )
@@ -1308,10 +1311,20 @@ namespace CK.Observable
                     // Reading Timed events.
                     r.DebugCheckSentinel();
                     _timeManager.Load( monitor, r );
+                    if( version > 3 )
+                    {
+                        r.DebugCheckSentinel();
+                        _sidekickManager.Load( r );
+                    }
                 }
                 r.DebugCheckSentinel();
                 r.ImplementationServices.ExecutePostDeserializationActions();
+                // This is where specialized typed ObservableDomain bind their roots.
                 OnLoaded();
+                if( !_sidekickManager.CreateWaitingSidekicks( monitor, ex => { } ) )
+                {
+                    monitor.Error( $"At least one critical error occurred while activating sidekicks. The error should be investigated since this may well be a blocking error." );
+                }
                 if( callUpdateTimers )
                 {
                     _timeManager.SetNextDueTimeUtc( monitor, _timeManager.ApplyChanges() );
@@ -1605,6 +1618,7 @@ namespace CK.Observable
                 DomainClient = null;
                 _disposed = true;
                 _timeManager.Timer.Dispose();
+                _sidekickManager.Clear( monitor );
                 if( monitor != _domainMonitor && Monitor.TryEnter( _domainMonitorLock, 0 ) )
                 {
                     if( _domainMonitor != null ) _domainMonitor.MonitorEnd( "Domain disposed." );
@@ -1740,6 +1754,12 @@ namespace CK.Observable
                 throw new InvalidOperationException( "Concurrent access: no lock has been acquired." );
             }
             return o;
+        }
+
+        internal void AddOrRemoveSidekickActivatedHandler( IDisposableObject o, bool add, SafeEventHandler<SidekickActivatedEventArgs> value )
+        {
+            CheckWriteLock( o ).CheckDisposed();
+            _sidekickManager.AddOrRemoveSidekickActivatedHandler( add, value );
         }
 
         /// <summary>

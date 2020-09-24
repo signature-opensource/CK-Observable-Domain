@@ -65,5 +65,33 @@ namespace CK.Observable
             }
         }
 
+        /// <summary>
+        /// Raises this event, logging any exception that could be thrown by the registered handlers.
+        /// This should be used with care: failing fast should be the rule in an Observable domain transaction.
+        /// </summary>
+        /// <param name="monitor">The monitor that will log any exception.</param>
+        /// <param name="sender">The sender of the event.</param>
+        /// <param name="args">The event argument.</param>
+        /// <returns>True on success, false if at least one handler has thrown.</returns>
+        public bool SafeRaise( IActivityMonitor monitor, object sender, TEventArgs args )
+        {
+            if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
+            bool success = true;
+            var h = _handler.Cleanup();
+            for( int i = 0; i < h.Length; ++i )
+            {
+                try
+                {
+                    ((SafeEventHandler)h[i]).Invoke( sender, args );
+                }
+                catch( Exception ex )
+                {
+                    monitor.Error( "While raising event.", ex );
+                    success = false;
+                }
+            }
+            return success;
+        }
+
     }
 }

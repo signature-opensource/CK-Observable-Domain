@@ -64,7 +64,7 @@ namespace CK.Observable
         /// Writes an object that can be null and of any type.
         /// </summary>
         /// <param name="o">The object to write.</param>
-        public void WriteObject( object o )
+        public void WriteObject( object? o )
         {
             switch( o )
             {
@@ -234,14 +234,14 @@ namespace CK.Observable
         /// Writes a type.
         /// </summary>
         /// <param name="t">The type to write. Can be null.</param>
-        public void Write( Type t )
+        public void Write( Type? t )
         {
             ITypeSerializationDriver driver = _drivers.FindDriver( t );
             if( driver != null ) driver.WriteTypeInformation( this );
             else WriteSimpleType( t );
         }
 
-        internal bool WriteSimpleType( Type t )
+        internal bool WriteSimpleType( Type? t )
         {
             if( DoWriteSimpleType( t ) )
             {

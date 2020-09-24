@@ -12,7 +12,6 @@ namespace CK.Observable
         public EnumTypeSerializer( ITypeSerializationDriver<TU> underlyingType )
         {
             Debug.Assert( underlyingType != null );
-            Debug.Assert( Enum.GetUnderlyingType( typeof( T ) ) == underlyingType.Type );
             _underlyingType = underlyingType;
         }
 

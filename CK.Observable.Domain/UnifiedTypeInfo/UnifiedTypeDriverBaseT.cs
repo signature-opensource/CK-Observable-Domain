@@ -59,8 +59,6 @@ namespace CK.Observable
 
         object? IDeserializationDriver.ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  ) => ReadInstance( r, readInfo );
 
-        string IDeserializationDriver.AssemblyQualifiedName => typeof( T ).AssemblyQualifiedName;
-
         void IObjectExportTypeDriver.Export( object o, int num, ObjectExporter exporter ) => Export( (T)o, num, exporter );
 
         Type IObjectExportTypeDriver.BaseType => Type;

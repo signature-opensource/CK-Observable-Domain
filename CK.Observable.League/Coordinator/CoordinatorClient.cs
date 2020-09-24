@@ -15,10 +15,10 @@ namespace CK.Observable.League
     {
         IManagedLeague? _league;
 
-        public CoordinatorClient( IActivityMonitor monitor, IStreamStore store )
+        public CoordinatorClient( IActivityMonitor monitor, IStreamStore store, IServiceProvider serviceProvider )
             : base( String.Empty, store, null )
         {
-            Domain = new ObservableDomain<Coordinator>( monitor, String.Empty, this );
+            Domain = new ObservableDomain<Coordinator>( monitor, String.Empty, this, serviceProvider );
         }
 
         public ObservableDomain<Coordinator> Domain { get; }

@@ -21,7 +21,7 @@ namespace CK.Observable
         /// <summary>
         /// Gets all the observable objects that this domain contains (roots included).
         /// </summary>
-        IObservableObjectCollection AllObjects { get; }
+        IObservableAllObjectsCollection AllObjects { get; }
 
         /// <summary>
         /// Gets all the internal objects that this domain contains.

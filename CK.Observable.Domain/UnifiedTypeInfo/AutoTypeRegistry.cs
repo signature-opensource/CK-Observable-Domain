@@ -69,8 +69,6 @@ namespace CK.Observable
 
             Type IObjectExportTypeDriver.BaseType => Type;
 
-            string IDeserializationDriver.AssemblyQualifiedName => _type.AssemblyQualifiedName;
-
             /// <summary>
             /// Invokes the deserialization constructor.
             /// </summary>

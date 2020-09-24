@@ -56,6 +56,24 @@ namespace CK.Observable
         protected ObservableDomain Domain { get; }
 
         /// <summary>
+        /// Must register the provided <see cref="InternalObject"/> or <see cref="ObservableObject"/> as a client
+        /// of this sidekick.
+        /// The semantics of this registration, what a "client" actually means, is specific to each sidekick.
+        /// <para>
+        /// When this method is called (from <see cref="DomainView.SidekickActivated"/> handlers that call <see cref="SidekickActivatedEventArgs.RegisterClientObject"/>),
+        /// the domain lock is held, any interaction can take place. After that registering phase, interactions
+        /// must be protected in <see cref="ObservableDomain.AcquireReadLock(int)"/> or one of the Modify method.
+        /// </para>
+        /// <para>
+        /// When a sidekick keeps a reference on a client object, it should either check <see cref="IDisposableObject.IsDisposed"/> (in the context of
+        /// a read or modify lock) or registers to <see cref="IDisposableObject.Disposed"/> event.
+        /// </para>
+        /// </summary>
+        /// <param name="monitor"></param>
+        /// <param name="o"></param>
+        protected internal abstract void RegisterClientObject( IActivityMonitor monitor, IDisposableObject o );
+
+        /// <summary>
         /// Called when a successful transaction has been successfully handled by the <see cref="ObservableDomain.DomainClient"/>.
         /// When this is called, the <see cref="Domain"/> MUST NOT BE touched in any way: this occurs outside of the domain lock.
         /// <para>
@@ -70,6 +88,12 @@ namespace CK.Observable
         /// <returns>True if the command has been handled, false if the command has been ignored by this handler.</returns>
         protected internal abstract bool ExecuteCommand( IActivityMonitor monitor, in SidekickCommand command );
 
+        /// <summary>
+        /// Called when the <see cref="Domain"/> is being cleared, either because it will be reloaded or because it is disposed.
+        /// In both case, the domain lock is held.
+        /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
+        protected internal abstract void Dispose( IActivityMonitor monitor );
     }
 
 

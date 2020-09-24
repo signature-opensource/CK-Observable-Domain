@@ -21,10 +21,15 @@ namespace CK.Core
         /// <param name="monitor">Monitor to use.</param>
         /// <param name="t">Type of the object to create.</param>
         /// <param name="services">Available services to inject.</param>
-        /// <param name="requiresAllParameters">True to restrict constructors to the ones that use all the <paramref name="parameters"/>.</param>
+        /// <param name="parametersAreRequired">True to restrict constructors to the ones that use all the <paramref name="parameters"/>.</param>
         /// <param name="parameters">Optional parameters.</param>
         /// <returns>The object instance or null on error.</returns>
-        public static object? Create( IActivityMonitor monitor, Type t, IServiceProvider services, bool requiresAllParameters, IEnumerable<object>? parameters = null )
+        public static object? Create(
+            IActivityMonitor monitor,
+            Type t,
+            IServiceProvider services,
+            bool parametersAreRequired,
+            IEnumerable<object>? parameters = null )
         {
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
             if( t == null ) throw new ArgumentNullException( nameof( t ) );
@@ -37,7 +42,7 @@ namespace CK.Core
 
                     var longestCtor = t.GetConstructors()
                                         .Select( x => ValueTuple.Create( x, x.GetParameters() ) )
-                                        .Where( x => !requiresAllParameters || x.Item2.Length >= required.Count )
+                                        .Where( x => !parametersAreRequired || x.Item2.Length >= required.Count )
                                         .OrderByDescending( x => x.Item2.Length )
                                         .Select( x => new
                                         {
@@ -47,7 +52,7 @@ namespace CK.Core
                                                         .Select( p => required.FirstOrDefault( r => p.ParameterType.IsAssignableFrom( r.Value ) ).Key )
                                                         .ToArray()
                                         } )
-                                        .Where( x => !requiresAllParameters || x.Mapped.Count( m => m != null ) == required.Count )
+                                        .Where( x => !parametersAreRequired || x.Mapped.Count( m => m != null ) == required.Count )
                                         .FirstOrDefault();
                     if( longestCtor == null )
                     {

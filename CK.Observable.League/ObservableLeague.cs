@@ -20,12 +20,14 @@ namespace CK.Observable.League
         readonly ConcurrentDictionary<string, Shell> _domains;
         readonly IStreamStore _streamStore;
         readonly CoordinatorClient _coordinator;
+        readonly IServiceProvider _serviceProvider;
 
-        ObservableLeague( IStreamStore streamStore, CoordinatorClient coordinator, ConcurrentDictionary<string, Shell> domains )
+        ObservableLeague( IStreamStore streamStore, IServiceProvider serviceProvider, CoordinatorClient coordinator, ConcurrentDictionary<string, Shell> domains )
         {
             _domains = domains;
             _streamStore = streamStore;
             _coordinator = coordinator;
+            _serviceProvider = serviceProvider;
             // Associates the league to the coordinator. This finalizes the initialization of the league. 
             _coordinator.FinalizeConstruct( this );
         }
@@ -35,13 +37,18 @@ namespace CK.Observable.League
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="store">The store to use.</param>
+        /// <param name="serviceProvider">
+        /// The service provider used to instantiate <see cref="ObservableDomainSidekick"/> objects.
+        /// When null, a dummy service provider (<see cref="EmptyServiceProvider.Default"/>) is provided to the domains.
+        /// </param>
         /// <returns>A new league or null on error.</returns>
-        public static async Task<ObservableLeague?> LoadAsync( IActivityMonitor monitor, IStreamStore store )
+        public static async Task<ObservableLeague?> LoadAsync( IActivityMonitor monitor, IStreamStore store, IServiceProvider? serviceProvider = null )
         {
+            if( serviceProvider == null ) serviceProvider = EmptyServiceProvider.Default;
             try
             {
                 // The CoordinatorClient creates its ObservableDomain<Coordinator> domain.
-                var client = new CoordinatorClient( monitor, store );
+                var client = new CoordinatorClient( monitor, store, serviceProvider );
                 // Async initialization here, just like other managed domains.
                 await client.InitializeAsync( monitor, client.Domain );
                 // No need to acquire a read lock here.
@@ -49,12 +56,12 @@ namespace CK.Observable.League
                 IEnumerable<Domain> observableDomains = client.Domain.Root.Domains.Values;
                 foreach( var d in observableDomains )
                 {
-                    var shell = Shell.Create( monitor, client, d.DomainName, store, d.RootTypes );
+                    var shell = Shell.Create( monitor, client, d.DomainName, store, serviceProvider, d.RootTypes );
                     d.Initialize( shell );
                     domains.TryAdd( d.DomainName, shell );
                 }
                 // Shells have been created: we can create the whole structure.
-                var o = new ObservableLeague( store, client, domains );
+                var o = new ObservableLeague( store, serviceProvider, client, domains );
                 // And immediately loads the domains that need to be.
                 foreach( var d in observableDomains )
                 {
@@ -114,14 +121,14 @@ namespace CK.Observable.League
         {
             Debug.Assert( !_coordinator.Domain.IsDisposed );
             return _domains.AddOrUpdate( name,
-                                         Shell.Create( monitor, _coordinator, name, _streamStore, rootTypes ),
+                                         Shell.Create( monitor, _coordinator, name, _streamStore, _serviceProvider, rootTypes ),
                                          ( n, s ) => throw new Exception( $"Internal error: domain name '{n}' already exists." ) );
         }
 
         IManagedDomain IManagedLeague.RebindDomain( IActivityMonitor monitor, string name, IReadOnlyList<string> rootTypes )
         {
             return _domains.AddOrUpdate( name,
-                                         n => Shell.Create( monitor, _coordinator, name, _streamStore, rootTypes ),
+                                         n => Shell.Create( monitor, _coordinator, name, _streamStore, _serviceProvider, rootTypes ),
                                          ( n, s ) =>
                                          {
                                              if( !s.RootTypes.SequenceEqual( rootTypes ) )

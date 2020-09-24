@@ -8,7 +8,7 @@ namespace CK.Observable
     /// The <see cref="ObservableDomain.AllObjects"/> property's type is a <see cref="IReadOnlyCollection{ObjectCollection}"/>
     /// that offers indexed access by <see cref="this[long]"/> or <see cref="this[ObservableObjectId]"/> and with a typed filter.
     /// </summary>
-    public interface IObservableObjectCollection : IReadOnlyCollection<ObservableObject>
+    public interface IObservableAllObjectsCollection : IReadOnlyCollection<ObservableObject>
     {
         /// <summary>
         /// Finds the <see cref="ObservableObject"/> by its <see cref="ObservableObject.OId"/>.

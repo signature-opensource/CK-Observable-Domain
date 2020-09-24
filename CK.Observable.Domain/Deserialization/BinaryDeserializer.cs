@@ -322,8 +322,8 @@ namespace CK.Observable
         /// By default a <see cref="TypeLoadException"/> is thrown if the Type cannot be resolved.
         /// False to simply return null.
         /// </param>
-        /// <returns>The Type.</returns>
-        public Type ReadType( bool throwIfMissing = true )
+        /// <returns>The Type or null if <paramref name="throwIfMissing"/> is false and the type is null or cannot be resolved.</returns>
+        public Type? ReadType( bool throwIfMissing = true )
         {
             var info = ReadTypeReadInfo( true );
             if( info == null ) return null;
@@ -332,7 +332,7 @@ namespace CK.Observable
             return t;
         }
 
-        TypeReadInfo ReadTypeReadInfo( bool isTrackedObject )
+        TypeReadInfo? ReadTypeReadInfo( bool isTrackedObject )
         {
             TypeReadInfo leaf;
             string sT = DoReadOneTypeName( out bool newType );

@@ -32,6 +32,16 @@ namespace CK.Observable.Domain.Tests
                 }
                 return false;
             }
+
+            protected override void RegisterClientObject( IActivityMonitor monitor, IDisposableObject o )
+            {
+            }
+
+            protected override void Dispose( IActivityMonitor monitor )
+            {
+            }
+
+
         }
 
         [UseSidekick( typeof( SKSimple ) )]
@@ -127,6 +137,9 @@ namespace CK.Observable.Domain.Tests
                 _s = s;
                 ctorMonitor.Info( "Initializing SKWithDependencies." );
             }
+            protected override void RegisterClientObject( IActivityMonitor monitor, IDisposableObject o )
+            {
+            }
 
             protected override bool ExecuteCommand( IActivityMonitor monitor, in SidekickCommand command )
             {
@@ -137,6 +150,11 @@ namespace CK.Observable.Domain.Tests
                 }
                 return false;
             }
+
+            protected override void Dispose( IActivityMonitor monitor )
+            {
+            }
+
         }
 
 

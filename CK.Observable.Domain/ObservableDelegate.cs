@@ -10,7 +10,7 @@ using System.Text;
 namespace CK.Observable
 {
     /// <summary>
-    /// Wraps a delegate to a static method or an instance method of an <see cref="ObservableObject"/>.
+    /// Wraps a delegate to a static method or an instance method of a <see cref="IDisposableObject"/>.
     /// This is an internal helper.
     /// </summary>
     struct ObservableDelegate
@@ -35,21 +35,24 @@ namespace CK.Observable
                 do
                 {
                     object o = r.ReadObject();
-                    string methodName = r.ReadSharedString();
-                    // Use local DoReadArray since ArrayDeserializer<Type>.ReadArray track the array and ArraySerializer<Type>.WriteObjects don't.
-                    Type[] paramTypes = DoReadArray( r );
-                    if( o is Type t )
+                    if( o != null )
                     {
-                        var m = t.GetMethod( methodName, BindingFlags.Static|BindingFlags.FlattenHierarchy|BindingFlags.Public|BindingFlags.NonPublic, null, paramTypes, null );
-                        if( m == null ) throw new Exception( $"Unable to find static method {methodName} on type {t.FullName} with parameters {paramTypes.Select( t => t.Name ).Concatenate()}." );
-                        final = Delegate.Combine( final, Delegate.CreateDelegate( tD, m, true ) );                     
-                    }
-                    else
-                    {
-                        var oT = o.GetType();
-                        var m = oT.GetMethod( methodName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, paramTypes, null );
-                        if( m == null ) throw new Exception( $"Unable to find method {methodName} on type {oT.FullName} with parameters {paramTypes.Select( t => t.Name ).Concatenate()}." );
-                        final = Delegate.Combine( final, Delegate.CreateDelegate( tD, o, m ) );
+                        string methodName = r.ReadSharedString();
+                        // Use local DoReadArray since ArrayDeserializer<Type>.ReadArray track the array and ArraySerializer<Type>.WriteObjects don't.
+                        Type[] paramTypes = DoReadArray( r );
+                        if( o is Type t )
+                        {
+                            var m = t.GetMethod( methodName, BindingFlags.Static | BindingFlags.FlattenHierarchy | BindingFlags.Public | BindingFlags.NonPublic, null, paramTypes, null );
+                            if( m == null ) throw new Exception( $"Unable to find static method {methodName} on type {t.FullName} with parameters {paramTypes.Select( t => t.Name ).Concatenate()}." );
+                            final = Delegate.Combine( final, Delegate.CreateDelegate( tD, m, true ) );
+                        }
+                        else
+                        {
+                            var oT = o.GetType();
+                            var m = oT.GetMethod( methodName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, paramTypes, null );
+                            if( m == null ) throw new Exception( $"Unable to find method {methodName} on type {oT.FullName} with parameters {paramTypes.Select( t => t.Name ).Concatenate()}." );
+                            final = Delegate.Combine( final, Delegate.CreateDelegate( tD, o, m ) );
+                        }
                     }
                 }
                 while( --count > 0 );
@@ -79,11 +82,19 @@ namespace CK.Observable
                 w.Write( list[0].GetType() );
                 foreach( var d in list )
                 {
-                    w.WriteObject( d.Target ?? d.Method.DeclaringType );
-                    w.WriteSharedString( d.Method.Name );
-                    var paramInfos = d.Method.GetParameters();
-                    w.WriteNonNegativeSmallInt32( paramInfos.Length );
-                    foreach( var p in paramInfos ) w.Write( p.ParameterType );
+                    // Don't serialize sidekick handlers.
+                    if( d.Target is ObservableDomainSidekick )
+                    {
+                        w.WriteObject( null );
+                    }
+                    else
+                    {
+                        w.WriteObject( d.Target ?? d.Method.DeclaringType );
+                        w.WriteSharedString( d.Method.Name );
+                        var paramInfos = d.Method.GetParameters();
+                        w.WriteNonNegativeSmallInt32( paramInfos.Length );
+                        foreach( var p in paramInfos ) w.Write( p.ParameterType );
+                    }
                 }
             }
         }
@@ -100,7 +111,7 @@ namespace CK.Observable
         /// <param name="eventName">The event name (used for error messages).</param>
         public void Add( Delegate d, string eventName )
         {
-            CheckNonNullAndSerializableDelegate( d, eventName );
+            CheckNonNullAndValidTarget( d, eventName );
             _d = Delegate.Combine( _d, d );
         }
 
@@ -154,15 +165,15 @@ namespace CK.Observable
             return dList;
         }
 
-        static void CheckNonNullAndSerializableDelegate( Delegate value, string eventName )
+        static void CheckNonNullAndValidTarget( Delegate value, string eventName )
         {
             if( value == null ) throw new ArgumentNullException( eventName );
-            if( value.Target != null && !(value.Target is IDisposableObject) )
+            if( value.Target != null
+                && !(value.Target is IDisposableObject)
+                && !(value.Target is ObservableDomainSidekick))
             {
-                throw new ArgumentException( $"Only static methods or ObservableObject's instance methods can be registered on {eventName} event.", eventName );
+                throw new ArgumentException( $"Only static methods or Observable/InternalObject or Sidekick's instance methods can be registered on {eventName} event.", eventName );
             }
         }
-
-
     }
 }

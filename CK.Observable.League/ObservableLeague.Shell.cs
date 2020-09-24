@@ -16,6 +16,7 @@ namespace CK.Observable.League
             readonly SemaphoreSlim? _loadLock;
             readonly IActivityMonitor _initialMonitor;
             readonly IObservableDomainAccess<Coordinator> _coordinator;
+            readonly IServiceProvider _serviceProvider;
             Type? _domainType;
             Type[] _rootTypes;
             int _refCount;
@@ -103,8 +104,15 @@ namespace CK.Observable.League
             /// <param name="coordinator">The coordinator access.</param>
             /// <param name="domainName">The name of the domain.</param>
             /// <param name="store">The persistent store.</param>
+            /// <param name="serviceProvider">The service provider used to instantiate <see cref="ObservableDomainSidekick"/> objects.</param>
             /// <param name="rootTypeNames">The root types.</param>
-            internal static Shell Create( IActivityMonitor monitor, IObservableDomainAccess<Coordinator> coordinator, string domainName, IStreamStore store, IReadOnlyList<string> rootTypeNames )
+            internal static Shell Create(
+                IActivityMonitor monitor,
+                IObservableDomainAccess<Coordinator> coordinator,
+                string domainName,
+                IStreamStore store,
+                IServiceProvider serviceProvider,
+                IReadOnlyList<string> rootTypeNames )
             {
                 Type? domainType = null;
                 Type[] rootTypes;
@@ -134,7 +142,7 @@ namespace CK.Observable.League
                             3 => typeof( Shell<,,> ).MakeGenericType( rootTypes ),
                             _ => typeof( Shell<,,,> ).MakeGenericType( rootTypes )
                         };
-                        return (Shell)Activator.CreateInstance( shellType, monitor, coordinator, domainName, store, rootTypeNames, rootTypes );
+                        return (Shell)Activator.CreateInstance( shellType, monitor, coordinator, domainName, store, serviceProvider, rootTypeNames, rootTypes );
                     }
                 }
                 // The domainType is null if the type resolution failed.
