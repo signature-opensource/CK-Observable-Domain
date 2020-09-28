@@ -21,9 +21,9 @@ namespace CK.Observable
         public static readonly TransactionResult Empty = new TransactionResult( Array.Empty<CKExceptionData>(), Util.UtcMinValue, Util.UtcMinValue );
 
         /// <summary>
-        /// Gets whether <see cref="Errors"/> is empty and <see cref="ClientError"/> is null.
+        /// Gets whether <see cref="Errors"/> is empty, <see cref="ClientError"/> is null and <see cref="CommandErrors"/> is empty.
         /// </summary>
-        public bool Success => Errors.Count == 0 && ClientError == null;
+        public bool Success => Errors.Count == 0 && ClientError == null && CommandErrors.Count == 0;
 
         /// <summary>
         /// Gets whether the <see cref="ClientError"/> is critical: it is the call to <see cref="IObservableDomainClient.OnTransactionCommit(in SuccessfulTransactionContext)"/>
@@ -34,7 +34,7 @@ namespace CK.Observable
         public bool IsCriticalError => Errors.Count == 0 && ClientError != null;
 
         /// <summary>
-        /// Checks that <see cref="Success"/> is true otherwise throw an exception.
+        /// Checks that <see cref="Success"/> is true otherwise throws an exception.
         /// </summary>
         public void ThrowOnTransactionFailure()
         {
@@ -55,6 +55,10 @@ namespace CK.Observable
                         throw new Exception( $"There has been {Errors.Count} error(s) during the transaction. See logs for details.", CKException.CreateFrom( Errors[0] ) );
                     }
                     throw new Exception( $"There has been {Errors.Count} error(s) during the transaction. See logs for details." );
+                }
+                if( CommandErrors.Count > 0 )
+                {
+                    throw new Exception( $"There has been {CommandErrors.Count} error(s) raised by command handling. See logs for details." );
                 }
             }
         }
@@ -91,7 +95,12 @@ namespace CK.Observable
 
         /// <summary>
         /// Gets the errors that actually aborted the transaction.
-        /// This is empty on success.
+        /// This is empty on success but this doesn't mean that everything went well: a <see cref="ClientError"/> may have occurred
+        /// (and that is critical), or <see cref="CommandErrors"/> may have been thrown by sidekicks (this is less critical since the domain's transaction
+        /// itself is fine).
+        /// <para>
+        /// Note that any errors raised by <see cref="ExecutePostActionsAsync(IActivityMonitor, bool)"/> are outside of the scope of this <see cref="TransactionResult"/>.
+        /// </para>
         /// </summary>
         public IReadOnlyList<CKExceptionData> Errors { get; }
 
@@ -104,7 +113,7 @@ namespace CK.Observable
         /// <summary>
         /// Gets the errors that occured during the call to <see cref="ObservableDomainSidekick.ExecuteCommand"/> with the faulty command.
         /// </summary>
-        public IReadOnlyList<(object,CKExceptionData)>  CommandErrors { get; private set; }
+        public IReadOnlyList<(object,CKExceptionData)> CommandErrors { get; private set; }
 
         /// <summary>
         /// Gets whether at least one post actions has been enlisted thanks to <see cref="SuccessfulTransactionContext.AddPostAction(Func{PostActionContext, Task})"/>

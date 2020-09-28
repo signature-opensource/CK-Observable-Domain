@@ -38,6 +38,11 @@ namespace CK.Observable
         }
 
         /// <summary>
+        /// Gets the domain name. 
+        /// </summary>
+        public string DomainName => _d.DomainName;
+
+        /// <summary>
         /// Gets a preallocated reusable event argument. 
         /// </summary>
         public ObservableDomainEventArgs DefaultEventArgs => _d.DefaultEventArgs;

@@ -73,8 +73,8 @@ namespace CK.Core
 
         /// <summary>
         /// Executes the currently enlisted actions, optionaly in reverse order.
-        /// On the first exception thrown by any action, all the error handlers are called (their own axceptions
-        /// if any are ignored).
+        /// On the first exception thrown by any action, all the error handlers are called (their own exceptions,
+        /// if any, are ignored).
         /// </summary>
         /// <param name="throwException">False to return any exception instead of logging and rethrowing it.</param>
         /// <param name="reverseInitialActions">
@@ -154,6 +154,11 @@ namespace CK.Core
             }
         }
 
+        /// <summary>
+        /// Executes the registered success handlers. This never throws.
+        /// </summary>
+        /// <param name="success">The success handlers.</param>
+        /// <returns>The awaitable.</returns>
         async Task RaiseSuccess( List<Func<TThis, Task>> success )
         {
             _reg.SetHandlingSuccess();
@@ -180,6 +185,12 @@ namespace CK.Core
             _reg.ClearHandling();
         }
 
+        /// <summary>
+        /// Executes the error handlers. Never throws.
+        /// </summary>
+        /// <param name="errors">The error handlers.</param>
+        /// <param name="ex">The exception that has been raised by the action.</param>
+        /// <returns>The awaitable.</returns>
         async ValueTask RaiseError( List<Func<TThis, Exception, Task>> errors, Exception ex )
         {
             _reg.SetHandlingError();
@@ -206,6 +217,11 @@ namespace CK.Core
             _reg.ClearHandling();
         }
 
+        /// <summary>
+        /// Executes the registered finally actions. This never throws.
+        /// </summary>
+        /// <param name="final">The final actions to execute.</param>
+        /// <returns>The awaitable.</returns>
         async Task RaiseFinally( List<Func<TThis, Task>> final )
         {
             _reg.SetHandlingFinally();

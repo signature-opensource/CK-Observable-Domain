@@ -42,7 +42,10 @@ namespace CK.Observable
         /// is a framework that is as neutral as possible.
         /// </summary>
         /// <param name="o">The object to register.</param>
-        public void RegisterObject( ObservableObject o ) => _sidekick.RegisterClientObject( Monitor, o );
+        public void RegisterObject( ObservableObject o )
+        {
+            if( !o.IsDisposed ) _sidekick.RegisterClientObject( Monitor, o );
+        }
 
         /// <summary>
         /// Registers the <see cref="InternalObject"/> on the sidekick. It is up to the sidekick to handle
@@ -51,7 +54,9 @@ namespace CK.Observable
         /// is a framework that is as neutral as possible.
         /// </summary>
         /// <param name="o">The object to register.</param>
-        public void RegisterObject( InternalObject o ) => _sidekick.RegisterClientObject( Monitor, o );
-
+        public void RegisterObject( InternalObject o )
+        {
+            if( !o.IsDisposed ) _sidekick.RegisterClientObject( Monitor, o );
+        }
     }
 }

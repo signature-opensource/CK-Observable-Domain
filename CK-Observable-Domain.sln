@@ -12,6 +12,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{0BBC7F98
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{7B5F18DA-4C9C-4D95-97D8-0F916EDD4E89}"
 	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
 		.gitignore = .gitignore
 		js\.npmrc = js\.npmrc
 		Common\CentralPackages.props = Common\CentralPackages.props
@@ -27,7 +28,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CodeCakeBuilder", "CodeCake
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.League", "CK.Observable.League\CK.Observable.League.csproj", "{394226FE-EB0F-476C-BEDB-F959111AB816}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CK.Observable.League.Tests", "Tests\CK.Observable.League.Tests\CK.Observable.League.Tests.csproj", "{9F3A7A85-CCFC-4189-94C8-86FA0966F4B0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.League.Tests", "Tests\CK.Observable.League.Tests\CK.Observable.League.Tests.csproj", "{9F3A7A85-CCFC-4189-94C8-86FA0966F4B0}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.Device", "CK.Observable.Device\CK.Observable.Device.csproj", "{0067CE24-0069-4458-A813-79452569AFC9}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.Device.Tests", "Tests\CK.Observable.Device.Tests\CK.Observable.Device.Tests.csproj", "{FAE59D3D-5DB5-48F1-93BB-85B3A05537F7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -55,6 +60,14 @@ Global
 		{9F3A7A85-CCFC-4189-94C8-86FA0966F4B0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9F3A7A85-CCFC-4189-94C8-86FA0966F4B0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9F3A7A85-CCFC-4189-94C8-86FA0966F4B0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0067CE24-0069-4458-A813-79452569AFC9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0067CE24-0069-4458-A813-79452569AFC9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0067CE24-0069-4458-A813-79452569AFC9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0067CE24-0069-4458-A813-79452569AFC9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FAE59D3D-5DB5-48F1-93BB-85B3A05537F7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FAE59D3D-5DB5-48F1-93BB-85B3A05537F7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FAE59D3D-5DB5-48F1-93BB-85B3A05537F7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FAE59D3D-5DB5-48F1-93BB-85B3A05537F7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -62,6 +75,7 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{2DAC46EE-34A4-432C-A57A-189870912BB7} = {0BBC7F98-38CE-4CF9-A0E6-2005847D43F2}
 		{9F3A7A85-CCFC-4189-94C8-86FA0966F4B0} = {0BBC7F98-38CE-4CF9-A0E6-2005847D43F2}
+		{FAE59D3D-5DB5-48F1-93BB-85B3A05537F7} = {0BBC7F98-38CE-4CF9-A0E6-2005847D43F2}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B2074A41-0020-4F2C-97EE-709573157ACC}
