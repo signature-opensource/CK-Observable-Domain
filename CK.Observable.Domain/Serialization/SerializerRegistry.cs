@@ -53,6 +53,7 @@ namespace CK.Observable
         /// Registers a driver.
         /// This replaces any existing export driver for the Type.
         /// </summary>
+        /// <param name="t">The type for wich the deserializer should be registered.</param>
         /// <param name="driver">The driver to register.</param>
         public void Register( Type t, ITypeSerializationDriver driver )
         {

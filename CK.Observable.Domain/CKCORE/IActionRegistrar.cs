@@ -5,9 +5,10 @@ using System.Threading.Tasks;
 namespace CK.Core
 {
     /// <summary>
-    /// Registerer for asynchronous and synchronous actions and error handlers
+    /// Registrar for asynchronous and synchronous actions and error handlers
     /// that operates on a <typeparamref name="T"/> parameter.
     /// </summary>
+    /// <typeparam name="T">The input type of the action parameter.</typeparam>
     public interface IActionRegistrar<T>
     {
         /// <summary>
@@ -35,7 +36,7 @@ namespace CK.Core
         /// Adds a list of actions (that must be <see cref="Action{T}"/>, <see cref="Func{T, Task}"/>,
         /// or <see cref="Func{T, ValueTask}"/> otherwise an <see cref="ArgumentException"/> is thrown).
         /// </summary>
-        /// <param name="action">The action to enqueue.</param>
+        /// <param name="actions">The actions to enqueue.</param>
         void Add( IEnumerable<object> actions );
 
         /// <summary>

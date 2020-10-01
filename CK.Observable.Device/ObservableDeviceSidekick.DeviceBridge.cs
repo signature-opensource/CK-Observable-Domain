@@ -1,28 +1,29 @@
 using CK.Core;
 using CK.DeviceModel;
+using CK.DeviceModel.Command;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace CK.Observable.Device
 {
-    public abstract partial class ObservableDeviceSidekick<THost,TObjectDevice,TObjectDeviceHost> where THost : IDeviceHost
-        where TObjectDevice : ObservableObjectDevice<THost>
-        where TObjectDeviceHost: ObservableObjectDeviceHost<THost>
+    public abstract partial class ObservableDeviceSidekick<THost,TObjectDevice,TObjectDeviceHost> 
     {
-
         /// <summary>
         /// Must create a <see cref="Bridge{TSidekick, TDevice}"/> between <typeparamref name="TObjectDevice"/> and its actual <see cref="Bridge{TSidekick, TDevice}.Device"/>.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
+        /// <param name="o">The object to be bridged.</param>
         /// <returns>The bridge for the observable device object.</returns>
         protected abstract Bridge CreateBridge( IActivityMonitor monitor, TObjectDevice o );
 
         /// <summary>
-        /// Non generic bridge between observable <see cref="TObjectDevice"/> and its actual <see cref="Device"/>.
+        /// Non generic bridge between observable <typeparamref name="TObjectDevice"/> and its actual <see cref="Device"/>.
         /// This cannot be directly instantiated: use the generic <see cref="Bridge{TSidekick,TDevice}"/> adapter.
         /// </summary>
-        protected abstract class Bridge
+        protected abstract class Bridge : ObservableObjectDevice.IBridge
         {
             internal ObservableDeviceSidekick<THost,TObjectDevice,TObjectDeviceHost> _sidekick;
             internal Bridge? _nextUnbound;
@@ -33,18 +34,39 @@ namespace CK.Observable.Device
             internal protected TObjectDevice Object { get; }
 
             /// <summary>
-            /// Gets the associated device or null if no actual device with the <see cref="TObjectDevice.DeviceName"/> exists in the host.
+            /// Gets the associated device or null if no actual device with the <see cref="ObservableObjectDevice.DeviceName"/> exists in the host.
             /// </summary>
             internal protected IDevice? Device { get; private set; }
 
             /// <summary>
-            /// This is private protected so that developers are obliged to use the <see cref="Bridge{TDevice}"/> generic adapter.
+            /// This is private protected so that developers are obliged to use the <see cref="Bridge{TSidekick,TDevice}"/> generic adapter.
             /// </summary>
             /// <param name="o">The observable object device.</param>
             private protected Bridge( TObjectDevice o )
             {
                 Debug.Assert( !o.IsDisposed );
                 Object = o;
+                o._bridge = this;
+            }
+
+            BasicControlDeviceCommand ObservableObjectDevice.IBridge.CreateBasicCommand() => new BasicControlDeviceCommand<THost>();
+
+            IEnumerable<string> ObservableObjectDevice.IBridge.CurrentlyAvailableDeviceNames => _sidekick._objectHost?.Devices.Select( d => d.Name )
+                                                                                                ?? _sidekick.Host.DeviceConfigurations.Select( d => d.Name );
+
+            string? ObservableObjectDevice.IBridge.ControllerKey => Device?.ControllerKey;
+
+            T ObservableObjectDevice.IBridge.CreateCommand<T>( Action<T>? configuration )
+            {
+                var c = new T();
+                if( !c.HostType.IsAssignableFrom( _sidekick.Host.GetType() ) )
+                {
+                    throw new InvalidOperationException( $"Command '{c.GetType().Name}' is bound to HostType '{c.HostType.Name}'. It cannot be handled by host {_sidekick.Host.GetType().Name}." );
+                }
+                c.DeviceName = Object.DeviceName;
+                c.ControllerKey = Device?.ControllerKey;
+                configuration?.Invoke( c );
+                return c;
             }
 
             internal void Initialize( IActivityMonitor monitor, ObservableDeviceSidekick<THost, TObjectDevice, TObjectDeviceHost> owner, IDevice? initialDevice )
@@ -53,43 +75,48 @@ namespace CK.Observable.Device
                 if( initialDevice == null ) owner.AddUnbound( this );
                 else
                 {
-                    Device = initialDevice;
-                    OnDeviceAppeared( monitor );
+                    SetDevice( monitor, initialDevice, initCall: true );
                 }
             }
 
-            internal void SetDevice( IActivityMonitor monitor, IDevice d )
+            internal void SetDevice( IActivityMonitor monitor, IDevice d, bool initCall = false )
             {
                 Debug.Assert( Device == null, "This is called only if the current Device is null." );
                 Device = d;
                 Object.Status = d.Status;
                 Object.ConfigurationStatus = d.ConfigurationStatus;
-                Object.ControllerKey = d.ControllerKey;
+                SetObjectDeviceControlProperties( d.ControllerKey );
+
                 d.StatusChanged.Async += OnDeviceStatusChanged;
                 d.ControllerKeyChanged.Async += OnDeviceControllerKeyChanged;
-                _sidekick.RemoveUnbound( this );
+                if( !initCall ) _sidekick.RemoveUnbound( this );
                 OnDeviceAppeared( monitor );
+            }
+
+            void SetObjectDeviceControlProperties( string? deviceKey )
+            {
+                var n = _sidekick.Domain.DomainName;
+                Object.HasDeviceControl = deviceKey == null || deviceKey == n;
+                Object.HasExclusiveDeviceControl = deviceKey == n;
             }
 
             internal void DetachDevice( IActivityMonitor monitor )
             {
                 Debug.Assert( Device != null, "This is called only if a Device is bound." );
+                OnDeviceDisappearing( monitor );
                 Object.Status = null;
                 Object.ConfigurationStatus = null;
-                Object.ControllerKey = null;
+                Object.HasDeviceControl = false;
+                Object.HasExclusiveDeviceControl = false;
                 Device.StatusChanged.Async -= OnDeviceStatusChanged;
                 Device.ControllerKeyChanged.Async -= OnDeviceControllerKeyChanged;
                 _sidekick.AddUnbound( this );
                 Device = null;
-                OnDeviceDisappeared( monitor );
             }
 
             Task OnDeviceControllerKeyChanged( IActivityMonitor monitor, IDevice sender, string? controllerKey )
             {
-                return ModifyAsync( monitor, () =>
-                {
-                    Object.ControllerKey = controllerKey;
-                } );
+                return ModifyAsync( monitor, () => SetObjectDeviceControlProperties( controllerKey ) );
             }
 
             Task OnDeviceStatusChanged( IActivityMonitor monitor, IDevice sender )
@@ -107,7 +134,7 @@ namespace CK.Observable.Device
                         Debug.Assert( !sender.Status.IsDestroyed );
                         Object.Status = sender.Status;
                         Object.ConfigurationStatus = sender.ConfigurationStatus;
-                        Object.ControllerKey = sender.ControllerKey;
+                        SetObjectDeviceControlProperties( sender.ControllerKey );
                     }
                 } );
             }
@@ -137,19 +164,24 @@ namespace CK.Observable.Device
 
             /// <summary>
             /// Called whenever the <see cref="Device"/> becames not null.
+            /// The <see cref="Object"/> (and any other objects of the domain) can be safely modified
+            /// since the domain's write lock is held.
             /// </summary>
             /// <param name="monitor">The monitor to use.</param>
             protected abstract void OnDeviceAppeared( IActivityMonitor monitor );
 
             /// <summary>
-            /// Called whenever the <see cref="Device"/> is no more available in the host.
+            /// Called whenever the <see cref="Device"/> is no more available in the host: it is
+            /// still not null here and events unregistering should be done.
+            /// The <see cref="Object"/> (and any other objects of the domain) can be safely modified
+            /// since the domain's write lock is held.
             /// </summary>
             /// <param name="monitor">The monitor to use.</param>
-            protected abstract void OnDeviceDisappeared( IActivityMonitor monitor );
+            protected abstract void OnDeviceDisappearing( IActivityMonitor monitor );
 
             /// <summary>
             /// Called whenever the <see cref="ObservableObjectDevice{THost}"/> is disposed.
-            /// Note that the <see cref="Device"/> may still exist in the host.
+            /// Note that the <see cref="Device"/> may continue to exist in the host.
             /// </summary>
             /// <param name="monitor">The monitor to use.</param>
             protected virtual void OnObjectDeviceDisposed( IActivityMonitor monitor )
@@ -159,6 +191,9 @@ namespace CK.Observable.Device
 
         /// <summary>
         /// Base class to implement to bridge <typeparamref name="TDevice"/> to observable objects.
+        /// Specialized classes have access to the observable object (<see cref="Bridge.Object"/>),
+        /// the device that may not exist (<see cref="Device"/>) and the <see cref="Sidekick"/> in a
+        /// strongly typed manner.
         /// </summary>
         /// <typeparam name="TSidekick">The type of the sidekick that manages this bridge.</typeparam>
         /// <typeparam name="TDevice">The type of the actual device.</typeparam>

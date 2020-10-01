@@ -2,27 +2,27 @@ using CK.DeviceModel;
 
 namespace CK.Observable.Device
 {
+    /// <summary>
+    /// Non generic abstract base class for device that is not intended to be specialized directly.
+    /// Use the generic <see cref="ObservableObjectDeviceHost{TSidekick}"/> as the object device device base.
+    /// </summary>
     [SerializationVersion( 0 )]
-    public abstract class ObservableObjectDeviceHost<THost> : ObservableObject
-        where THost : IDeviceHost
+    public abstract class ObservableObjectDeviceHost : ObservableObject
     {
-        internal readonly ObservableList<AvailableDeviceInfo> InternalDevices;
+        /// <summary>
+        /// Contains the list of devices.
+        /// This list is mutable by specialiation but this should be used this care: the actual devices
+        /// are handled by the <see cref="IDeviceHost"/>.
+        /// </summary>
+        internal protected readonly ObservableList<AvailableDeviceInfo> InternalDevices;
 
-        protected ObservableObjectDeviceHost()
+        private protected ObservableObjectDeviceHost()
         {
             InternalDevices = new ObservableList<AvailableDeviceInfo>();
-            Domain.SidekickActivated += OnSidekickActivated;
         }
 
-        void OnSidekickActivated( object sender, SidekickActivatedEventArgs e )
-        {
-            if( e.IsOfType<IInternalObservableDeviceSidekick<THost>>() )
-            {
-                e.RegisterObject( this );
-            }
-        }
-
-        protected ObservableObjectDeviceHost( IBinaryDeserializerContext ctx )
+        private protected ObservableObjectDeviceHost( IBinaryDeserializerContext ctx )
+            : base( ctx )
         {
             ctx.StartReading();
             InternalDevices = new ObservableList<AvailableDeviceInfo>();

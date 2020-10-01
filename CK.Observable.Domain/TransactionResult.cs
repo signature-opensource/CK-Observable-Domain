@@ -88,7 +88,7 @@ namespace CK.Observable
 
         /// <summary>
         /// Gets the commands that the transaction generated (all the commands
-        /// sent via <see cref="ObservableObject.SendCommand"/>.
+        /// sent via <see cref="DomainView.SendCommand"/>.
         /// Can be empty (and always empty if there are <see cref="Errors"/>).
         /// </summary>
         public IReadOnlyList<object> Commands { get; }
@@ -116,7 +116,7 @@ namespace CK.Observable
         public IReadOnlyList<(object,CKExceptionData)> CommandErrors { get; private set; }
 
         /// <summary>
-        /// Gets whether at least one post actions has been enlisted thanks to <see cref="SuccessfulTransactionContext.AddPostAction(Func{PostActionContext, Task})"/>
+        /// Gets whether at least one post actions has been enlisted thanks to <see cref="IActionRegistrar{T}"/>
         /// and <see cref="ExecutePostActionsAsync(IActivityMonitor, bool)"/> has not been called yet.
         /// </summary>
         public bool HasPostActions => _postActions != null && _postActions.ActionCount > 0;

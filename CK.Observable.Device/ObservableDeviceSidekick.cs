@@ -13,18 +13,20 @@ namespace CK.Observable.Device
     /// <summary>
     /// Abstract base class for a sidekick that interfaces a <see cref="IDeviceHost"/>.
     /// </summary>
-    /// <typeparam name="THost"></typeparam>
-    public abstract partial class ObservableDeviceSidekick<THost,TObjectDevice,TObjectDeviceHost> : ObservableDomainSidekick, IInternalObservableDeviceSidekick<THost>
+    /// <typeparam name="THost">Type of the device host.</typeparam>
+    /// <typeparam name="TObjectDevice">Type of the observable object device.</typeparam>
+    /// <typeparam name="TObjectDeviceHost">Type of the observable device host.</typeparam>
+    public abstract partial class ObservableDeviceSidekick<THost,TObjectDevice,TObjectDeviceHost> : ObservableDomainSidekick
         where THost : IDeviceHost
-        where TObjectDevice : ObservableObjectDevice<THost>
-        where TObjectDeviceHost: ObservableObjectDeviceHost<THost>
+        where TObjectDevice : ObservableObjectDevice
+        where TObjectDeviceHost: ObservableObjectDeviceHost
     {
         readonly Dictionary<string, Bridge> _objects;
         TObjectDeviceHost? _objectHost;
         Bridge? _firstUnbound;
 
         /// <summary>
-        /// Initializes a new <see cref="ObservableDeviceSidekick{THost}"/>.
+        /// Initializes a new <see cref="ObservableDeviceSidekick{THost, TObjectDevice, TObjectDeviceHost}"/>.
         /// </summary>
         /// <param name="domain">The observable domain.</param>
         /// <param name="host">The host.</param>
@@ -46,7 +48,7 @@ namespace CK.Observable.Device
         /// </summary>
         protected TObjectDeviceHost? ObjectHost => _objectHost;
 
-        Task OnDevicesChangedAsync( IActivityMonitor monitor, IDeviceHost sender, EventArgs e )
+        Task OnDevicesChangedAsync( IActivityMonitor monitor, IDeviceHost sender )
         {
             Debug.Assert( ReferenceEquals( Host, sender ) );
 
@@ -69,6 +71,11 @@ namespace CK.Observable.Device
             } );
         }
 
+        /// <summary>
+        /// Registers <typeparamref name="TObjectDevice"/> and <typeparamref name="TObjectDeviceHost"/> objects.
+        /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
+        /// <param name="o">The object.</param>
         protected override void RegisterClientObject( IActivityMonitor monitor, IDisposableObject o )
         {
             if( o is TObjectDevice device )
@@ -142,7 +149,7 @@ namespace CK.Observable.Device
             // Takes a snapshot: the hosted devices list may change concurrently (when called from RegisterClientObject).
             // This can be optimized: here the intermediate list is concretized for nothing.
             var configs = Host.DeviceConfigurations.ToDictionary( c => c.Name );
-            for( int i = 0; i < _objectHost.Devices.Count; ++i )
+            for( int i = 0; i < _objectHost.InternalDevices.Count; ++i )
             {
                 var d = _objectHost.Devices[i];
                 if( configs.Remove( d.Name, out var conf ) )
@@ -159,7 +166,38 @@ namespace CK.Observable.Device
             _objectHost.InternalDevices.AddRange( configs.Values.Select( c => new AvailableDeviceInfo( c.Name, c.Status, c.ControllerKey ) ) );
         }
 
+        /// <summary>
+        /// Handles the command if it is a <see cref="DeviceCommand"/> that the <see cref="Host"/> agrees to
+        /// handle (see <see cref="IDeviceHost.Handle(IActivityMonitor, DeviceCommand)"/>) by executing it
+        /// directly if it is a <see cref="SyncDeviceCommand"/> or defer its execution to the <see cref="SidekickCommand.PostActions"/>
+        /// if it is a <see cref="AsyncDeviceCommand"/>.
+        /// </summary>
+        /// <remarks>
+        /// There is few reason to override this method but it could be done if needed.
+        /// </remarks>
+        /// <param name="monitor">The monitor to use.</param>
+        /// <param name="command">The sidekick command to handle.</param>
+        /// <returns>True if this device sidekick handles the command, false overwise.</returns>
+        protected override bool ExecuteCommand( IActivityMonitor monitor, in SidekickCommand command )
+        {
+            if( command.Command is DeviceCommand c )
+            {
+                var e = Host.Handle( monitor, c );
+                if( e.Success )
+                {
+                    if( e.IsAsync == false ) e.Execute( monitor );
+                    else command.PostActions.Add( c => e.ExecuteAsync( c.Monitor ) );
+                    return true;
+                }
+            }
+            return false;
+        }
+
         /// <inheritdoc />
+        /// <remarks>
+        /// This is sealed and calls the protected virtual <see cref="OnDispose(IActivityMonitor)"/> that
+        /// can be overridden.
+        /// </remarks>
         protected sealed override void Dispose( IActivityMonitor monitor )
         {
             Host.DevicesChanged.Async -= OnDevicesChangedAsync;
@@ -192,15 +230,6 @@ namespace CK.Observable.Device
         protected virtual void OnDispose( IActivityMonitor monitor )
         {
         }
-    }
-
-    /// <summary>
-    /// Internal marker of sidekick: <see cref="ObservableObjectDevice{THost}"/> and <see cref="ObservableObjectDeviceHost{THost}"/>
-    /// use this to register themselves.
-    /// </summary>
-    interface IInternalObservableDeviceSidekick<THost>
-            where THost : IDeviceHost
-    {
     }
 
 }

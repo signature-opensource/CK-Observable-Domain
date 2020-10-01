@@ -17,7 +17,10 @@ namespace CK.Observable.League
     /// used to <see cref="IObservableDomainLoader.LoadAsync(IActivityMonitor)"/> this shell.
     /// </para>
     /// </summary>
-    /// <typeparam name="T">The observable root type.</typeparam>
+    /// <typeparam name="T1">The type of the first observable root.</typeparam>
+    /// <typeparam name="T2">The type of the second observable root.</typeparam>
+    /// <typeparam name="T3">The type of the third observable root.</typeparam>
+    /// <typeparam name="T4">The type of the fourth observable root.</typeparam>
     public interface IObservableDomainShell<out T1, out T2, out T3, out T4> : IObservableDomainShell
         where T1 : ObservableRootObject
         where T2 : ObservableRootObject
@@ -29,7 +32,7 @@ namespace CK.Observable.League
         /// trigger a rollback and the <see cref="TransactionResult.Success"/> is false) and then executes any pending post-actions.
         /// <para>
         /// Any exceptions raised by <see cref="IObservableDomainClient.OnTransactionStart(IActivityMonitor,ObservableDomain, DateTime)"/> (at the start of the process)
-        /// and by <see cref="TransactionResult.PostActions"/> (after the successful commit or the failure) are thrown by this method.
+        /// and by any <see cref="SuccessfulTransactionContext.PostActions"/> (after the successful commit or the failure) are thrown by this method.
         /// </para>
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
@@ -51,7 +54,7 @@ namespace CK.Observable.League
         /// Same as <see cref="ModifyAsync"/> except that it will always throw on any error.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
-        /// <param name="actions">The actions to execute on the <see cref="IObservableDomain[T1,T2,T3,T4}"/>.
+        /// <param name="actions">The actions to execute on the <see cref="IObservableDomain{T1,T2,T3,T4}"/>.
         /// </param>
         /// <param name="millisecondsTimeout">
         /// The maximum number of milliseconds to wait for a read access before giving up. Wait indefinitely by default.

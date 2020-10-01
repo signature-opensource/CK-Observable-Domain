@@ -22,7 +22,7 @@ namespace CK.Observable
     /// This is a "ISingletonAutoType" (that doesn't exist yet): a singleton auto type is like a ISingletonAutoService except that it cannot
     /// be instantiated automatically. An explicit contructor should be used with explicit parameters.
     /// A ISingletonAutoType cannot be a dependency.
-    /// The concept of "IAutoType" captures the "most specialized type" resolution mechanism (it's currently missing in the landscape).
+    /// The concept of "IAutoType" captures only the "most specialized type" resolution mechanism (it's currently missing in the landscape).
     /// The "ISingletonAutoType"/"IScopedAutoType" introduces a constraint on its dependencies that are IAutoService objects: the constructor
     /// parameters that are "contextual" must be defined when a "IAutoType" is defined otherwise those "unknwon" dependencies would be considered
     /// scoped (and they are not).
@@ -39,6 +39,7 @@ namespace CK.Observable
         /// This is called after an external modification of the domain where an object with a [UseSidekick( ... )] attribute has been instantiated.
         /// If the sidekick type has not any instance yet, this is called just before sollicitating the <see cref="ObservableDomain.DomainClient"/>.
         /// The domain has the write lock held and this constructor can interact with the domain objects (its interaction is part of the transaction).
+        /// </para>
         /// <para>
         /// A <see cref="IActivityMonitor"/> can appear in the parameters (and must be used only in the constructor and not kept) of the constructor and
         /// all other parameters MUST be singletons.
@@ -60,9 +61,10 @@ namespace CK.Observable
         /// of this sidekick.
         /// The semantics of this registration, what a "client" actually means, is specific to each sidekick.
         /// <para>
-        /// When this method is called (from <see cref="DomainView.SidekickActivated"/> handlers that call <see cref="SidekickActivatedEventArgs.RegisterClientObject"/>),
-        /// the domain lock is held, any interaction can take place. After that registering phase, interactions
-        /// must be protected in <see cref="ObservableDomain.AcquireReadLock(int)"/> or one of the Modify method.
+        /// When this method is called (from <see cref="DomainView.EnsureSidekicks"/> or at the end of a <see cref="ObservableDomain.Modify"/> call
+        /// or after the deserialization of the graph by <see cref="ObservableDomain.Load(IActivityMonitor, System.IO.Stream, bool, System.Text.Encoding?, int, bool)"/>),
+        /// the domain lock is held, any interaction can take place.
+        /// After that registering phase, interactions must be protected in <see cref="ObservableDomain.AcquireReadLock(int)"/> or one of the Modify method.
         /// </para>
         /// <para>
         /// When a sidekick keeps a reference on a client object, it should either check <see cref="IDisposableObject.IsDisposed"/> (in the context of

@@ -18,16 +18,32 @@ namespace CK.Observable
         // This is used as a cache of "already done" job. Depending on the stage, different type of keys and values
         // are used.
         readonly Dictionary<object,object?> _alreadyHandled;
+
+        /// <summary>
+        /// This list is:
+        /// - filled by <see cref="DiscoverSidekicks"/> each time a new type appears that requires
+        /// one or more sidekick to be available.
+        /// - emptied by <see cref="CreateWaitingSidekicks"/> where the type or name (the object Item1) is resolved.
+        /// </summary>
         readonly List<(object, bool)> _toInstantiate;
+
+        /// <summary>
+        /// This list is:
+        /// - filled by <see cref="DiscoverSidekicks"/> each time a new object with ISidekickClientObject base interfaces appears.
+        /// - emptied by <see cref="CreateWaitingSidekicks"/> (after having ensured that the sidekick instances are available)
+        /// where <see cref="ObservableDomainSidekick.RegisterClientObject(IActivityMonitor, IDisposableObject)"/> is called
+        /// with the Item1 object.
+        /// </summary>
+        readonly List<(IDisposableObject, object[])> _toAutoregister;
         readonly List<ObservableDomainSidekick> _sidekicks;
         readonly IServiceProvider _serviceProvider;
-        ObservableEventHandler<SidekickActivatedEventArgs> _sidekickAvailable;
 
         public SidekickManager( ObservableDomain domain, IServiceProvider sp )
         {
             _domain = domain;
             _alreadyHandled = new Dictionary<object, object?>();
             _toInstantiate = new List<(object, bool)>();
+            _toAutoregister = new List<(IDisposableObject, object[])>();
             _sidekicks = new List<ObservableDomainSidekick>();
             _serviceProvider = sp;
         }
@@ -42,31 +58,61 @@ namespace CK.Observable
         {
             // Consider the ObservableObject's type.
             Type t = o.GetType();
-            if( _alreadyHandled.TryAdd( t, null ) )
+            if( !_alreadyHandled.TryGetValue( t, out var previouslyHandled ) )
             {
+                // We have not seen this ObservableObject's type before.
+                // 1 - We analyse its Sidekick attributes and populates _toInstantiate tuples.
                 foreach( var attr in t.GetCustomAttributesData().Where( a => a.AttributeType == typeof( UseSidekickAttribute ) ) )
                 {
-                    object typeOrName = attr.ConstructorArguments[0].Value;
+                    object typeOrTypeName = attr.ConstructorArguments[0].Value;
                     var args = attr.NamedArguments;
                     bool optional = args.Count > 0 && args[0].TypedValue.Value.Equals( true );
-                    monitor.Trace( $"Domain object '{t.Name}' wants to use {(optional ? "optional" : "required")} sidekick '{typeOrName}'." );
-                    _toInstantiate.Add( (typeOrName, optional) );
+                    monitor.Trace( $"Domain object '{t.Name}' wants to use {(optional ? "optional" : "required")} sidekick '{typeOrTypeName}'." );
+                    _toInstantiate.Add( (typeOrTypeName, optional) );
                 }
+                // 2 - We analyse its ISidekickClientObject<> generic interfaces and populates _toInstantiate tuples.
+                //     The list is of object because the array must be object[] since the types will be replaced
+                //     with sidekick instances on the first registration (to avoid subsequent lookups).
+                List<object>? sidekickTypes = null;
+                foreach( var tI in t.GetInterfaces() )
+                {
+                    if( tI.IsGenericType && tI.GetGenericTypeDefinition() == typeof(ISidekickClientObject<>) )
+                    {
+                        if( sidekickTypes == null ) sidekickTypes = new List<object>();
+                        var tSidekick = tI.GetGenericArguments()[0];
+                        sidekickTypes.Add( tSidekick );
+                        _toInstantiate.Add( (tSidekick, false) );
+                    }
+                }
+                // We store either null or the array of ISidekickClientObject<> types (as objects) if there
+                // are "interface typed sidekicks".
+                previouslyHandled = sidekickTypes?.ToArray();
+                _alreadyHandled.Add( t, previouslyHandled );
+            }
+            // Whether the objects's type was already known or not, a non null previouslyHandled array
+            // indicates that this object must be registered onto one or more sidekicks.
+            if( previouslyHandled != null )
+            {
+                _toAutoregister.Add( (o, (object[])previouslyHandled) );
             }
         }
 
         /// <summary>
-        /// Instantiates sidekicks that have been discovered by <see cref="DiscoverSidekicks(IDisposableObject)"/>.
+        /// Instantiates sidekicks that have been discovered by <see cref="DiscoverSidekicks(IActivityMonitor, IDisposableObject)"/>.
         /// This never throws, but when false is returned, it means that (at least) one required sidekick failed
-        /// to be instantiated or a <see cref="DomainView.SidekickActivated"/> event handlers raised an exception:
-        /// the exceptions are added to the <paramref name="errorCollector"/> and these are fatal errors that
-        /// cancel the whole transaction.
+        /// to be instantiated: the exceptions are added to the <paramref name="errorCollector"/> and these are fatal
+        /// errors that cancel the whole transaction.
         /// <para>
-        /// When loading a domain, such errors don't block the load of the domain. Errors are logged and the cause should be
-        /// seriously investigated.
+        /// This is called when <see cref="DomainView.EnsureSidekicks()"/> is called (typically from a <see cref="ISidekickClientObject{TSidekick}"/>
+        /// object's constructor) or at the end the Modify session (if no transaction error occurred).
+        /// </para>
+        /// <para>
+        /// When loading a domain (at the end of the deserialization of the graph), such errors don't prevent the load of
+        /// the domain. Errors are logged and the cause should be seriously investigated.
         /// </para>
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
+        /// <param name="errorCollector">Error collector (note that errors are already logged).</param>
         /// <returns>True on success, false if one required (non optional) sidekick failed to be instantiated.</returns>
         public bool CreateWaitingSidekicks( IActivityMonitor monitor, Action<Exception> errorCollector )
         {
@@ -75,9 +121,60 @@ namespace CK.Observable
             {
                 foreach( var r in _toInstantiate )
                 {
-                    success = Register( monitor, r, errorCollector );
+                    success &= Register( monitor, r, errorCollector );
                 }
                 _toInstantiate.Clear();
+            }
+            if( _toAutoregister.Count > 0 )
+            {
+                foreach( var r in _toAutoregister )
+                {
+                    success &= AutoRegisterClientObject( monitor, r, errorCollector );
+                }
+                _toAutoregister.Clear();
+            }
+            return success;
+        }
+
+        bool AutoRegisterClientObject( IActivityMonitor monitor, (IDisposableObject, object[]) r, Action<Exception> errorCollector )
+        {
+            bool success = true;
+            for( int i = 0; i < r.Item2.Length; ++i )
+            {
+                var tOrS = r.Item2[i];
+                try
+                {
+                    if( tOrS is ObservableDomainSidekick s )
+                    {
+                        s.RegisterClientObject( monitor, r.Item1 );
+                    }
+                    else
+                    {
+                        Debug.Assert( tOrS is Type );
+                        Debug.Assert( _alreadyHandled.ContainsKey( tOrS ), "The type has been already registered. But is can be on error!" );
+                        var mapped = _alreadyHandled[tOrS];
+                        if( mapped is Exception ex )
+                        {
+                            success = false;
+                            monitor.Fatal( $"Sidekick '{tOrS}' failed to instantiated.", ex );
+                            errorCollector( ex );
+                        }
+                        else
+                        {
+                            Debug.Assert( mapped is ObservableDomainSidekick );
+                            var h = (ObservableDomainSidekick)mapped;
+                            // Changes the Type to the direct object: no more _alreadyHandled lookups.
+                            r.Item2[i] = h;
+                            h.RegisterClientObject( monitor, r.Item1 );
+                        }
+                    }
+                }
+                catch( Exception ex )
+                {
+                    monitor.Fatal( $"Failed to register object on sidekick '{tOrS}'.", ex );
+                    success = false;
+                    errorCollector( ex );
+                }
             }
             return success;
         }
@@ -133,24 +230,9 @@ namespace CK.Observable
                     {
                         throw new Exception( $"Unable to instantiate '{type.FullName}' type." );
                     }
-                    // If something goes wrong in registration phase, we want the error to be considered critical,
-                    // whatever the "optionality" of the sidekick is.
-                    try
-                    {
-                        _sidekickAvailable.Raise( _domain, new SidekickActivatedEventArgs( monitor, h ) );
-                    }
-                    catch( Exception ex )
-                    {
-                        monitor.Fatal( $"While registering sidekick '{type}', a SidekickActivated's event handler failed.", ex );
-                        errorCollector( ex );
-                        result = false;
-                    }
-                    if( !result.HasValue )
-                    {
-                        _alreadyHandled.Add( type, h );
-                        _sidekicks.Add( h );
-                        result = true;
-                    }
+                    _alreadyHandled.Add( type, h );
+                    _sidekicks.Add( h );
+                    result = true;
                 }
                 catch( Exception ex )
                 {
@@ -171,7 +253,7 @@ namespace CK.Observable
                     monitor.Error( "This sidekick instantiation previousy failed." );
                     return HandleError( monitor, typeOrName, optional, errorCollector, ex );
                 }
-                monitor.Trace( "Already available." );
+                monitor.Debug( "Already available." );
                 // We know this type of sidekick.
                 return true;
             }
@@ -241,6 +323,7 @@ namespace CK.Observable
         {
             _alreadyHandled.Clear();
             _toInstantiate.Clear();
+            _toAutoregister.Clear();
             using( monitor.OpenInfo( $"Disposing {_sidekicks.Count} sidekicks." ) )
             {
                 // Reverse the disposing... Doesn't cost a lot and, who knows,
@@ -263,22 +346,14 @@ namespace CK.Observable
             _sidekicks.Clear();
         }
 
-        internal void AddOrRemoveSidekickActivatedHandler( bool add, SafeEventHandler<SidekickActivatedEventArgs> value )
-        {
-            if( add ) _sidekickAvailable.Add( value, nameof( DomainView.SidekickActivated ) );
-            else _sidekickAvailable.Remove( value );
-        }
-
         internal void Load( BinaryDeserializer r )
         {
             r.ReadByte(); // Version.
-            _sidekickAvailable = new ObservableEventHandler<SidekickActivatedEventArgs>( r );
         }
 
         internal void Save( BinarySerializer w )
         {
             w.Write( (byte)0 );
-            _sidekickAvailable.Write( w );
         }
     }
 }

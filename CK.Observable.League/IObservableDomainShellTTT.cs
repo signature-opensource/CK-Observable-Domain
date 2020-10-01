@@ -17,7 +17,9 @@ namespace CK.Observable.League
     /// used to <see cref="IObservableDomainLoader.LoadAsync(IActivityMonitor)"/> this shell.
     /// </para>
     /// </summary>
-    /// <typeparam name="T">The observable root type.</typeparam>
+    /// <typeparam name="T1">Type of the first root object.</typeparam>
+    /// <typeparam name="T2">Type of the second root object.</typeparam>
+    /// <typeparam name="T3">Type of the third root object.</typeparam>
     public interface IObservableDomainShell<out T1, out T2, out T3> : IObservableDomainShell
         where T1 : ObservableRootObject
         where T2 : ObservableRootObject
@@ -28,7 +30,7 @@ namespace CK.Observable.League
         /// trigger a rollback and the <see cref="TransactionResult.Success"/> is false) and then executes any pending post-actions.
         /// <para>
         /// Any exceptions raised by <see cref="IObservableDomainClient.OnTransactionStart(IActivityMonitor,ObservableDomain, DateTime)"/> (at the start of the process)
-        /// and by <see cref="TransactionResult.PostActions"/> (after the successful commit or the failure) are thrown by this method.
+        /// and by <see cref="SuccessfulTransactionContext.PostActions"/> (after the successful commit or the failure) are thrown by this method.
         /// </para>
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>

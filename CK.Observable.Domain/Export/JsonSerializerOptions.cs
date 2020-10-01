@@ -33,6 +33,9 @@ namespace CK.Observable
         /// </summary>
         public Func<TimeSpan, string> TimeSpanConverter { get; set; }
 
+        /// <summary>
+        /// Initializes a new default <see cref="JsonSerializerOptions"/>.
+        /// </summary>
         public JsonSerializerOptions()
         {
             DateTimeConverter = o => o.ToString( "o", CultureInfo );

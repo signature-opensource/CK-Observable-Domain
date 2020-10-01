@@ -18,6 +18,9 @@ namespace CK.Observable.League
         readonly ObservableDictionary<string, Domain> _domains;
         IManagedLeague? _league;
 
+        /// <summary>
+        /// Initializes a new <see cref="Coordinator"/>.
+        /// </summary>
         public Coordinator()
         {
             _domains = new ObservableDictionary<string, Domain>();
@@ -45,7 +48,7 @@ namespace CK.Observable.League
         /// Tests whether the domain type can be resolved: the root types must be available (this triggers any required assembly load).
         /// If the domain type cannot be resolved, this method returns null.
         /// </summary>
-        /// <param name="name">The new domain name.</param>
+        /// <param name="domainName">The new domain name.</param>
         /// <param name="rootTypes">The root types.</param>
         /// <returns>The new domain or null on error.</returns>
         public Domain CreateDomain( string domainName, IEnumerable<string>? rootTypes )
@@ -64,7 +67,7 @@ namespace CK.Observable.League
         /// Tests whether the domain type can be resolved: the root types must be available (this triggers any required assembly load).
         /// If the domain type cannot be resolved, this method returns null.
         /// </summary>
-        /// <param name="name">The new domain name.</param>
+        /// <param name="domainName">The new domain name.</param>
         /// <param name="rootTypes">The root types.</param>
         /// <returns>The new domain or null on error.</returns>
         public Domain CreateDomain( string domainName, params string[] rootTypes ) => CreateDomain( domainName, (IEnumerable<string>)rootTypes );

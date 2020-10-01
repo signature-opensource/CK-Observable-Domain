@@ -26,7 +26,7 @@ namespace CK.Core
         /// Initializes an asynchronous execution context.
         /// </summary>
         /// <param name="monitor">The monitor that must be used.</param>
-        /// <param name="registrar">Optional existing registerer.</param>
+        /// <param name="registrar">Optional existing registrar.</param>
         public AsyncExecutionContext( IActivityMonitor monitor, ActionRegistrar<TThis>? registrar = null )
         {
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
@@ -39,13 +39,14 @@ namespace CK.Core
         /// Initializes an execution context bound to an external memory.
         /// </summary>
         /// <param name="monitor">The monitor that must be used.</param>
+        /// <param name="registrar">Optional existing registrar.</param>
         /// <param name="externalMemory">External memory.</param>
         /// <param name="callMemoryDisposable">
         /// True to call <see cref="IAsyncDisposable.DisposeAsync"/> or <see cref="IDisposable.Dispose"/> on
         /// all disposable <see cref="Memory"/>'s values.
         /// </param>
-        public AsyncExecutionContext( IActivityMonitor monitor, ActionRegistrar<TThis>? registerer, IDictionary<object, object> externalMemory, bool callMemoryDisposable )
-            : this( monitor, registerer )
+        public AsyncExecutionContext( IActivityMonitor monitor, ActionRegistrar<TThis>? registrar, IDictionary<object, object> externalMemory, bool callMemoryDisposable )
+            : this( monitor, registrar )
         {
             if( externalMemory == null ) throw new ArgumentNullException( nameof( externalMemory ) );
             _memory = externalMemory;

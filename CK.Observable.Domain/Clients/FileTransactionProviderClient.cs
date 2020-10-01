@@ -66,7 +66,7 @@ namespace CK.Observable
 
         /// <summary>
         /// If the <see cref="ObservableDomain.TransactionSerialNumber"/> is 0 and the file exists, the base method
-        /// <see cref="MemoryTransactionProviderClient.LoadAndInitializeSnapshot(IActivityMonitor, ObservableDomain, DateTime, Stream)"/>
+        /// <see cref="MemoryTransactionProviderClient.LoadAndInitializeSnapshot(IActivityMonitor, ObservableDomain, Stream)"/>
         /// is called: the snapshot is created from the file content and the domain is restored.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>

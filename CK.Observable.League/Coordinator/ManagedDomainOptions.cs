@@ -23,7 +23,7 @@ namespace CK.Observable.League
 
         /// <summary>
         /// Minimum time between each save, checked on every transaction commit.
-        /// When negative, the file will not be saved automatically (manual save must be done by <see cref="IObservableDomainShell.SaveAsync"/>).
+        /// When negative, the file will not be saved automatically (manual save must be done by <see cref="IObservableDomainShellBase.SaveAsync(IActivityMonitor)"/>).
         /// When 0, every transaction will be saved.
         /// </summary>
         public readonly TimeSpan SnapshotSaveDelay;
@@ -150,7 +150,7 @@ namespace CK.Observable.League
         /// <summary>
         /// Value semantic equality.
         /// </summary>
-        /// <param name="obj">The other object.</param>
+        /// <param name="other">The other object.</param>
         /// <returns>True on equal, false otherwise.</returns>
         public bool Equals( ManagedDomainOptions other ) => LoadOption == other.LoadOption
                                                             && CompressionKind == other.CompressionKind

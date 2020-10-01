@@ -65,13 +65,14 @@ namespace CK.Observable
         public bool IsDeserializing => _d.IsDeserializing;
 
         /// <summary>
-        /// Raised when a new <see cref="ObservableDomainSidekick"/> is available.
+        /// Ensures that required sidekicks are instantiated and that any required <see cref="ObservableDomainSidekick.RegisterClientObject(IActivityMonitor, IDisposableObject)"/>
+        /// have been called.
+        /// When this method returns false, it means that an error occurred and that the current transaction cannot be commited.
+        /// <para>
+        /// This should typically called at the end of a final constructor code of a <see cref="ISidekickClientObject{TSidekick}"/> object.
+        /// </para>
         /// </summary>
-        public event SafeEventHandler<SidekickActivatedEventArgs> SidekickActivated
-        {
-            add => _d.AddOrRemoveSidekickActivatedHandler( _o, true, value );
-            remove => _d.AddOrRemoveSidekickActivatedHandler( _o, false, value );
-        }
-
+        /// <returns>True on success, false if one required sidekick failed to be instantiated.</returns>
+        public bool EnsureSidekicks() => _d.EnsureSidekicks( _o );
     }
 }

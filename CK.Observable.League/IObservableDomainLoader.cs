@@ -28,7 +28,7 @@ namespace CK.Observable.League
         bool IsDestroyed { get; }
 
         /// <summary>
-        /// Loads this domain (if it is not yet loaded) and returns a shell on which <see cref="IObservableDomainShell.DisposeAsync(IActivityMonitor)"/>
+        /// Loads this domain (if it is not yet loaded) and returns a shell on which <see cref="IObservableDomainShellBase.DisposeAsync(IActivityMonitor)"/>
         /// must be called once the domain is not needed anymore.
         /// If <see cref="IsDestroyed"/> is true or if the containing <see cref="ObservableLeague"/> is closing, or an error occurred,
         /// then this returns null.
@@ -38,7 +38,7 @@ namespace CK.Observable.League
 
         /// <summary>
         /// Loads this domain (if it is not yet loaded) as a strongly typed one and returns a
-        /// shell on which <see cref="IObservableDomainShell.DisposeAsync(IActivityMonitor)"/> must be called once the domain is not needed anymore.
+        /// shell on which <see cref="IObservableDomainShellBase.DisposeAsync(IActivityMonitor)"/> must be called once the domain is not needed anymore.
         /// If the actual type is not compatible with this or <see cref="IsDestroyed"/> is true or if the containing <see cref="ObservableLeague"/>
         /// is closing, or an error occurred, then this returns null.
         /// </summary>
@@ -47,7 +47,7 @@ namespace CK.Observable.League
 
         /// <summary>
         /// Loads this domain (if it is not yet loaded) as a strongly typed one and returns a
-        /// shell on which <see cref="IObservableDomainShell.DisposeAsync(IActivityMonitor)"/> must be called once the domain is not needed anymore.
+        /// shell on which <see cref="IObservableDomainShellBase.DisposeAsync(IActivityMonitor)"/> must be called once the domain is not needed anymore.
         /// If the actual type is not compatible with this or <see cref="IsDestroyed"/> is true or if the containing <see cref="ObservableLeague"/>
         /// is closing, or an error occurred, then this returns null.
         /// </summary>
@@ -58,7 +58,7 @@ namespace CK.Observable.League
 
         /// <summary>
         /// Loads this domain (if it is not yet loaded) as a strongly typed one and returns a
-        /// shell on which <see cref="IObservableDomainShell.DisposeAsync(IActivityMonitor)"/> must be called once the domain is not needed anymore.
+        /// shell on which <see cref="IObservableDomainShellBase.DisposeAsync(IActivityMonitor)"/> must be called once the domain is not needed anymore.
         /// If the actual type is not compatible with this or <see cref="IsDestroyed"/> is true or if the containing <see cref="ObservableLeague"/>
         /// is closing, or an error occurred, then this returns null.
         /// </summary>
@@ -70,7 +70,7 @@ namespace CK.Observable.League
 
         /// <summary>
         /// Loads this domain (if it is not yet loaded) as a strongly typed one and returns a
-        /// shell on which <see cref="IObservableDomainShell.DisposeAsync(IActivityMonitor)"/> must be called once the domain is not needed anymore.
+        /// shell on which <see cref="IObservableDomainShellBase.DisposeAsync(IActivityMonitor)"/> must be called once the domain is not needed anymore.
         /// If the actual type is not compatible with this or <see cref="IsDestroyed"/> is true or if the containing <see cref="ObservableLeague"/>
         /// is closing, or an error occurred, then this returns null.
         /// </summary>

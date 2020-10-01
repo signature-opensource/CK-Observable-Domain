@@ -11,7 +11,7 @@ namespace CK.Observable
     public interface IObservableReadOnlyList<T> : IReadOnlyList<T>
     {
         /// <summary>
-        /// Raised when an existing item has been updated by <see cref="ObservableList{T}[int]"/> to a different value.
+        /// Raised when an existing item has been updated by <see cref="ObservableList{T}.this[int]"/> to a different value.
         /// </summary>
         event SafeEventHandler<ListSetAtEvent> ItemSet;
 

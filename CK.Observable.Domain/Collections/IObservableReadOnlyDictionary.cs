@@ -12,17 +12,17 @@ namespace CK.Observable
     public interface IObservableReadOnlyDictionary<TKey, TValue> : IReadOnlyDictionary<TKey, TValue>
     {
         /// <summary>
-        /// Raised when an existing item has been updated by <see cref="IDictionary{TKey, TValue}[TKey]"/> to a different value.
+        /// Raised when an existing item has been updated by <see cref="IDictionary{TKey, TValue}.this[TKey]"/> to a different value.
         /// </summary>
         event SafeEventHandler<CollectionMapSetEvent> ItemSet;
 
         /// <summary>
-        /// Raised when a new item has been added by <see cref="IDictionary{TKey, TValue}[TKey]"/> or <see cref="IDictionary{TKey, TValue}.Add(TKey, TValue)"/>.
+        /// Raised when a new item has been added by <see cref="IDictionary{TKey, TValue}.this[TKey]"/> or <see cref="IDictionary{TKey, TValue}.Add(TKey, TValue)"/>.
         /// </summary>
         event SafeEventHandler<CollectionMapSetEvent> ItemAdded;
 
         /// <summary>
-        /// Raised by <see cref="IDictionary{TKey, TValue}.Clear"/>.
+        /// Raised by <see cref="ICollection{T}.Clear()"/>.
         /// </summary>
         event SafeEventHandler<CollectionClearEvent> CollectionCleared;
 

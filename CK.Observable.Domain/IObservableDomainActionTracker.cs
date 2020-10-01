@@ -25,7 +25,7 @@ namespace CK.Observable
         /// (but before any <see cref="ObservableTimer"/> or <see cref="ObservableReminder"/> events that may trigger).
         /// </summary>
         /// <param name="monitor">The monitor of the current transaction.</param>
-        /// <param name="time">The <see cref="TransactionResult.StartTimeUtc"/>.</param>
+        /// <param name="startTime">The <see cref="TransactionResult.StartTimeUtc"/>.</param>
         /// <param name="actionDuration">The time span of the execution.</param>
         void AfterModify( IActivityMonitor monitor, DateTime startTime, TimeSpan actionDuration );
     }

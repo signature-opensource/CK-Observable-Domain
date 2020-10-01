@@ -110,6 +110,7 @@ namespace CK.Observable.League
         /// </summary>
         public IReadOnlyList<string> RootTypes { get; }
 
+        /// <inheritdoc />
         protected override void Dispose( bool shouldCleanup )
         {
             base.Dispose( shouldCleanup );

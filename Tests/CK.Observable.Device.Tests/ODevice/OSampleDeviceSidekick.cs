@@ -1,7 +1,9 @@
 using CK.Core;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace CK.Observable.Device.Tests
 {
@@ -12,14 +14,53 @@ namespace CK.Observable.Device.Tests
         {
         }
 
-        protected override Bridge CreateBridge( IActivityMonitor monitor, OSampleDevice o )
+        protected override Bridge CreateBridge( IActivityMonitor monitor, OSampleDevice o ) => new SampleBridge( o );
+
+
+        /// <summary>
+        /// The specialized bridge class below cannot be made internal or public (because the Bridge{,} base class is protected)
+        /// and this is on purpose.
+        /// When and if an ObservableObject must interact directly with its device, a specific interface like this one
+        /// can be created simply set onto the observable object from the bridge constructor.
+        /// </summary>
+        internal interface IBridge
         {
-            throw new NotImplementedException();
+            SampleDevice.SafeDeviceState? GetDeviceState();
         }
 
-        protected override bool ExecuteCommand( IActivityMonitor monitor, in SidekickCommand command )
+        class SampleBridge : Bridge<OSampleDeviceSidekick, SampleDevice>, IBridge
         {
-            return false;
+            public SampleBridge( OSampleDevice o )
+                : base( o )
+            {
+                o._bridgeAccess = this;
+            }
+
+            /// <inheritdoc />
+            protected override void OnDeviceAppeared( IActivityMonitor monitor )
+            {
+                Debug.Assert( Device != null );
+                Device.MessageChanged.Async += OnMessageChanged;
+                Object.Message = Device.DangerousCurrentMessage;
+            }
+
+            Task OnMessageChanged( IActivityMonitor monitor, SampleDevice sender, string e )
+            {
+                return ModifyAsync( monitor, () =>
+                {
+                    Object.Message = e;
+                } );
+            }
+
+            /// <inheritdoc />
+            protected override void OnDeviceDisappearing( IActivityMonitor monitor )
+            {
+                Debug.Assert( Device != null );
+                Device.MessageChanged.Async -= OnMessageChanged;
+                Object.Message = null;
+            }
+
+            SampleDevice.SafeDeviceState? IBridge.GetDeviceState() => Device?.State;
         }
     }
 }

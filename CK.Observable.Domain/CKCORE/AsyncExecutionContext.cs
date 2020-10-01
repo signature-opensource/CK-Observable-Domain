@@ -27,7 +27,7 @@ namespace CK.Core
         /// <param name="externalMemory">External memory.</param>
         /// <param name="callMemoryDisposable">
         /// True to call <see cref="IAsyncDisposable.DisposeAsync"/> or <see cref="IDisposable.Dispose"/> on
-        /// all disposable <see cref="Memory"/>'s values.
+        /// all disposable <see cref="AsyncExecutionContext{TemporaryFile}.Memory"/>'s values.
         /// </param>
         public AsyncExecutionContext( IActivityMonitor monitor, IDictionary<object, object> externalMemory, bool callMemoryDisposable )
             : base( monitor )

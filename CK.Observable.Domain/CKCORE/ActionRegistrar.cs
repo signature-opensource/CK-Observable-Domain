@@ -16,7 +16,7 @@ namespace CK.Core
         internal List<Func<T, Task>> _onSuccess;
         internal List<Func<T, Exception, Task>> _onError;
         internal List<Func<T, Task>> _onFinally;
-        // A registerer can can be owned by zero or one ExecutionContext, and only once.
+        // A registrar can can be owned by zero or one ExecutionContext, and only once.
         object _owner;
 
         static readonly string _successStep = "Currently handling success.";
@@ -31,7 +31,7 @@ namespace CK.Core
         }
 
         /// <summary>
-        /// Initializes a new empty registerer.
+        /// Initializes a new empty registrar.
         /// </summary>
         public ActionRegistrar()
         {
@@ -81,7 +81,7 @@ namespace CK.Core
         /// or <see cref="Func{AsyncExecutionContext, ValueTask}"/> otherwise an <see cref="ArgumentException"/> is thrown).
         /// This can be called during the execution of an action by <see cref="AsyncExecutionContext{T}.ExecuteAsync"/> but not by error or success handlers. 
         /// </summary>
-        /// <param name="action">The action to enqueue.</param>
+        /// <param name="actions">The actions to enqueue.</param>
         public void Add( IEnumerable<object> actions )
         {
             GuardAdd( actions == null );
@@ -160,6 +160,7 @@ namespace CK.Core
             _onError.Add( ( c, ex ) => errorHandler!( c, ex ).AsTask() );
         }
 
+        /// <summary>
         /// Registers a new synchronous error handler: this can be called during the execution of any action
         /// by <see cref="AsyncExecutionContext{T}.ExecuteAsync"/> and even while executing an error handler (even if it is
         /// not recommended), but not while executing a success hanlder. 

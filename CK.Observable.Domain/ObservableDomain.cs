@@ -952,9 +952,9 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Modifies this ObservableDomain and executes the <see cref="TransactionResult.PostActions"/>.
+        /// Modifies this ObservableDomain and executes the <see cref="SuccessfulTransactionContext.PostActions"/>.
         /// Any exceptions raised by <see cref="IObservableDomainClient.OnTransactionStart(IActivityMonitor,ObservableDomain, DateTime)"/> (at the start of the process)
-        /// and by <see cref="TransactionResult.PostActions"/> (after the successful commit or failed transaction) are thrown by this method.
+        /// and by any post actions (after the successful commit or failed transaction) are thrown by this method.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="actions">
@@ -1676,6 +1676,12 @@ namespace CK.Observable
             _changeTracker.OnSendCommand( command );
         }
 
+        internal bool EnsureSidekicks( IDisposableObject o )
+        {
+            CheckWriteLock( o ).CheckDisposed();
+            return _sidekickManager.CreateWaitingSidekicks( _currentTran.Monitor, ex => _currentTran.AddError( CKExceptionData.CreateFrom( ex ) ) );
+        }
+
         internal PropertyChangedEventArgs? OnPropertyChanged( ObservableObject o, string propertyName, object before, object after )
         {
             if( _deserializeOrInitializing
@@ -1754,12 +1760,6 @@ namespace CK.Observable
                 throw new InvalidOperationException( "Concurrent access: no lock has been acquired." );
             }
             return o;
-        }
-
-        internal void AddOrRemoveSidekickActivatedHandler( IDisposableObject o, bool add, SafeEventHandler<SidekickActivatedEventArgs> value )
-        {
-            CheckWriteLock( o ).CheckDisposed();
-            _sidekickManager.AddOrRemoveSidekickActivatedHandler( add, value );
         }
 
         /// <summary>
