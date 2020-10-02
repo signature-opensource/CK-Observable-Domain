@@ -21,9 +21,9 @@ namespace CK.Observable.Device
         where TDeviceObject : ObservableDeviceObject
         where TDeviceHostObject: ObservableDeviceHostObject
     {
-        readonly Dictionary<string, Bridge> _objects;
+        readonly Dictionary<string, DeviceBridge> _objects;
         TDeviceHostObject? _objectHost;
-        Bridge? _firstUnbound;
+        DeviceBridge? _firstUnbound;
 
         /// <summary>
         /// Initializes a new <see cref="ObservableDeviceSidekick{THost, TObjectDevice, TObjectDeviceHost}"/>.
@@ -34,7 +34,7 @@ namespace CK.Observable.Device
             : base( domain )
         {
             Host = host;
-            _objects = new Dictionary<string, Bridge>();
+            _objects = new Dictionary<string, DeviceBridge>();
             host.DevicesChanged.Async += OnDevicesChangedAsync;
         }
 
@@ -57,7 +57,7 @@ namespace CK.Observable.Device
                 if( _objectHost != null ) UpdateObjectHost();
                 if( _firstUnbound != null )
                 {
-                    Bridge f = _firstUnbound;
+                    DeviceBridge f = _firstUnbound;
                     for( ; ; )
                     {
                         Debug.Assert( f.Device == null );
@@ -118,17 +118,17 @@ namespace CK.Observable.Device
             bridge.OnDestroy( e.Monitor, true );
         }
 
-        void AddUnbound( Bridge b )
+        void AddUnbound( DeviceBridge b )
         {
             b._nextUnbound = _firstUnbound;
             _firstUnbound = b;
         }
 
-        void RemoveUnbound( Bridge b )
+        void RemoveUnbound( DeviceBridge b )
         {
             Debug.Assert( _firstUnbound != null );
-            Bridge? p = null;
-            Bridge f = _firstUnbound;
+            DeviceBridge? p = null;
+            DeviceBridge f = _firstUnbound;
             for( ; ;)
             {
                 if( f == b )

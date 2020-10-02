@@ -33,7 +33,7 @@ namespace CK.Observable.Device
             s.WriteNullableString( DeviceName );
         }
 
-        internal interface IBridge
+        internal interface IDeviceBridge
         {
             BasicControlDeviceCommand CreateBasicCommand();
 
@@ -44,7 +44,7 @@ namespace CK.Observable.Device
             T CreateCommand<T>( Action<T>? configuration ) where T : DeviceCommand, new();
         }
 
-        internal IBridge _bridge;
+        internal IDeviceBridge _bridge;
 
         /// <summary>
         /// Gets the name of this device.

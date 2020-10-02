@@ -14,7 +14,7 @@ namespace CK.Observable.Device.Tests
         {
         }
 
-        protected override Bridge CreateBridge( IActivityMonitor monitor, OSampleDevice o ) => new SampleBridge( o );
+        protected override DeviceBridge CreateBridge( IActivityMonitor monitor, OSampleDevice o ) => new SampleBridge( o );
 
 
         /// <summary>

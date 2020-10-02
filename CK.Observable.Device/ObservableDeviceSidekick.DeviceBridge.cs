@@ -17,16 +17,16 @@ namespace CK.Observable.Device
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="o">The object to be bridged.</param>
         /// <returns>The bridge for the observable device object.</returns>
-        protected abstract Bridge CreateBridge( IActivityMonitor monitor, TDeviceObject o );
+        protected abstract DeviceBridge CreateBridge( IActivityMonitor monitor, TDeviceObject o );
 
         /// <summary>
         /// Non generic bridge between observable <typeparamref name="TDeviceObject"/> and its actual <see cref="Device"/>.
         /// This cannot be directly instantiated: use the generic <see cref="Bridge{TSidekick,TDevice}"/> adapter.
         /// </summary>
-        protected abstract class Bridge : ObservableDeviceObject.IBridge
+        protected abstract class DeviceBridge : ObservableDeviceObject.IDeviceBridge
         {
             internal ObservableDeviceSidekick<THost,TDeviceObject,TDeviceHostObject> _sidekick;
-            internal Bridge? _nextUnbound;
+            internal DeviceBridge? _nextUnbound;
 
             /// <summary>
             /// Gets the observable object device.
@@ -42,21 +42,21 @@ namespace CK.Observable.Device
             /// This is private protected so that developers are obliged to use the <see cref="Bridge{TSidekick,TDevice}"/> generic adapter.
             /// </summary>
             /// <param name="o">The observable object device.</param>
-            private protected Bridge( TDeviceObject o )
+            private protected DeviceBridge( TDeviceObject o )
             {
                 Debug.Assert( !o.IsDisposed );
                 Object = o;
                 o._bridge = this;
             }
 
-            BasicControlDeviceCommand ObservableDeviceObject.IBridge.CreateBasicCommand() => new BasicControlDeviceCommand<THost>();
+            BasicControlDeviceCommand ObservableDeviceObject.IDeviceBridge.CreateBasicCommand() => new BasicControlDeviceCommand<THost>();
 
-            IEnumerable<string> ObservableDeviceObject.IBridge.CurrentlyAvailableDeviceNames => _sidekick._objectHost?.Devices.Select( d => d.Name )
+            IEnumerable<string> ObservableDeviceObject.IDeviceBridge.CurrentlyAvailableDeviceNames => _sidekick._objectHost?.Devices.Select( d => d.Name )
                                                                                                 ?? _sidekick.Host.DeviceConfigurations.Select( d => d.Name );
 
-            string? ObservableDeviceObject.IBridge.ControllerKey => Device?.ControllerKey;
+            string? ObservableDeviceObject.IDeviceBridge.ControllerKey => Device?.ControllerKey;
 
-            T ObservableDeviceObject.IBridge.CreateCommand<T>( Action<T>? configuration )
+            T ObservableDeviceObject.IDeviceBridge.CreateCommand<T>( Action<T>? configuration )
             {
                 var c = new T();
                 if( !c.HostType.IsAssignableFrom( _sidekick.Host.GetType() ) )
@@ -191,13 +191,13 @@ namespace CK.Observable.Device
 
         /// <summary>
         /// Base class to implement to bridge <typeparamref name="TDevice"/> to observable objects.
-        /// Specialized classes have access to the observable object (<see cref="Bridge.Object"/>),
+        /// Specialized classes have access to the observable object (<see cref="DeviceBridge.Object"/>),
         /// the device that may not exist (<see cref="Device"/>) and the <see cref="Sidekick"/> in a
         /// strongly typed manner.
         /// </summary>
         /// <typeparam name="TSidekick">The type of the sidekick that manages this bridge.</typeparam>
         /// <typeparam name="TDevice">The type of the actual device.</typeparam>
-        protected abstract class Bridge<TSidekick,TDevice> : Bridge
+        protected abstract class Bridge<TSidekick,TDevice> : DeviceBridge
             where TSidekick : ObservableDeviceSidekick<THost, TDeviceObject, TDeviceHostObject>
             where TDevice : class, IDevice
         {
