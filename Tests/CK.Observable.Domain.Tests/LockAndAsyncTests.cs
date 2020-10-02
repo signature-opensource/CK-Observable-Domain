@@ -122,5 +122,50 @@ namespace CK.Observable.Domain.Tests
             return null;
         }
 
+        [Test]
+        public void testing_ReaderWriterLockSlim_upgradeable()
+        {
+            using var k = new ReaderWriterLockSlim( LockRecursionPolicy.NoRecursion );
+
+            int counter = 0;
+
+            int firstReadCounter = 0;
+            int lastReadCounter = 0;
+            var t = new Thread( Run );
+
+            void Run()
+            {
+                for( int i = 0; i < 250; ++i )
+                {
+                    k.EnterReadLock();
+                    if( firstReadCounter == 0 ) firstReadCounter = counter;
+                    lastReadCounter = counter;
+                    k.ExitReadLock();
+                    Thread.Sleep( 4 );
+                }
+
+            }
+
+            k.EnterUpgradeableReadLock();
+
+            t.Start();
+
+            for( int i = 0; i < 100; ++i )
+            {
+                k.EnterWriteLock();
+                ++counter;
+                k.ExitWriteLock();
+                Thread.Sleep( 2 );
+            }
+
+            t.Join();
+
+            firstReadCounter.Should().BeLessThan( 100 );
+            lastReadCounter.Should().Be( 100 );
+
+            k.ExitUpgradeableReadLock();
+
+        }
+
     }
 }
