@@ -4,10 +4,10 @@ namespace CK.Observable.Device
 {
     /// <summary>
     /// Non generic abstract base class for device that is not intended to be specialized directly.
-    /// Use the generic <see cref="ObservableObjectDeviceHost{TSidekick}"/> as the object device device base.
+    /// Use the generic <see cref="ObservableDeviceHostObject{TSidekick}"/> as the object device device base.
     /// </summary>
     [SerializationVersion( 0 )]
-    public abstract class ObservableObjectDeviceHost : ObservableObject
+    public abstract class ObservableDeviceHostObject : ObservableObject
     {
         /// <summary>
         /// Contains the list of devices.
@@ -16,12 +16,12 @@ namespace CK.Observable.Device
         /// </summary>
         internal protected readonly ObservableList<AvailableDeviceInfo> InternalDevices;
 
-        private protected ObservableObjectDeviceHost()
+        private protected ObservableDeviceHostObject()
         {
             InternalDevices = new ObservableList<AvailableDeviceInfo>();
         }
 
-        private protected ObservableObjectDeviceHost( IBinaryDeserializerContext ctx )
+        private protected ObservableDeviceHostObject( IBinaryDeserializerContext ctx )
             : base( ctx )
         {
             ctx.StartReading();

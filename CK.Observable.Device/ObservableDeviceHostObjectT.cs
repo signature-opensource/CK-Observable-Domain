@@ -7,13 +7,13 @@ namespace CK.Observable.Device
     /// </summary>
     /// <typeparam name="TSidekick">The type of the sidekick.</typeparam>
     [SerializationVersion( 0 )]
-    public abstract class ObservableObjectDeviceHost<TSidekick> : ObservableObjectDeviceHost
+    public abstract class ObservableDeviceHostObject<TSidekick> : ObservableDeviceHostObject
         where TSidekick : ObservableDomainSidekick
     {
         /// <summary>
-        /// Initializes a new <see cref="ObservableObjectDeviceHost"/>.
+        /// Initializes a new <see cref="ObservableDeviceHostObject"/>.
         /// </summary>
-        protected ObservableObjectDeviceHost()
+        protected ObservableDeviceHostObject()
         {
         }
 
@@ -21,7 +21,7 @@ namespace CK.Observable.Device
         /// Deserialization constructor.
         /// </summary>
         /// <param name="ctx">The deserializer context.</param>
-        protected ObservableObjectDeviceHost( IBinaryDeserializerContext ctx )
+        protected ObservableDeviceHostObject( IBinaryDeserializerContext ctx )
             : base( ctx )
         {
             ctx.StartReading();

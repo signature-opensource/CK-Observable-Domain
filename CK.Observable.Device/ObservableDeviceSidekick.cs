@@ -14,15 +14,15 @@ namespace CK.Observable.Device
     /// Abstract base class for a sidekick that interfaces a <see cref="IDeviceHost"/>.
     /// </summary>
     /// <typeparam name="THost">Type of the device host.</typeparam>
-    /// <typeparam name="TObjectDevice">Type of the observable object device.</typeparam>
-    /// <typeparam name="TObjectDeviceHost">Type of the observable device host.</typeparam>
-    public abstract partial class ObservableDeviceSidekick<THost,TObjectDevice,TObjectDeviceHost> : ObservableDomainSidekick
+    /// <typeparam name="TDeviceObject">Type of the observable object device.</typeparam>
+    /// <typeparam name="TDeviceHostObject">Type of the observable device host.</typeparam>
+    public abstract partial class ObservableDeviceSidekick<THost,TDeviceObject,TDeviceHostObject> : ObservableDomainSidekick
         where THost : IDeviceHost
-        where TObjectDevice : ObservableObjectDevice
-        where TObjectDeviceHost: ObservableObjectDeviceHost
+        where TDeviceObject : ObservableDeviceObject
+        where TDeviceHostObject: ObservableDeviceHostObject
     {
         readonly Dictionary<string, Bridge> _objects;
-        TObjectDeviceHost? _objectHost;
+        TDeviceHostObject? _objectHost;
         Bridge? _firstUnbound;
 
         /// <summary>
@@ -46,7 +46,7 @@ namespace CK.Observable.Device
         /// <summary>
         /// Gets the object device host if the observable object has been instantiated, null otherwise.
         /// </summary>
-        protected TObjectDeviceHost? ObjectHost => _objectHost;
+        protected TDeviceHostObject? ObjectHost => _objectHost;
 
         Task OnDevicesChangedAsync( IActivityMonitor monitor, IDeviceHost sender )
         {
@@ -72,13 +72,13 @@ namespace CK.Observable.Device
         }
 
         /// <summary>
-        /// Registers <typeparamref name="TObjectDevice"/> and <typeparamref name="TObjectDeviceHost"/> objects.
+        /// Registers <typeparamref name="TDeviceObject"/> and <typeparamref name="TDeviceHostObject"/> objects.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="o">The object.</param>
         protected override void RegisterClientObject( IActivityMonitor monitor, IDisposableObject o )
         {
-            if( o is TObjectDevice device )
+            if( o is TDeviceObject device )
             {
                 if( _objects.TryGetValue( device.DeviceName, out var bridge ) )
                 {
@@ -91,7 +91,7 @@ namespace CK.Observable.Device
                 _objects.Add( device.DeviceName, bridge );
                 bridge.Initialize( monitor, this, Host.Find( device.DeviceName ) );
             }
-            else if( o is TObjectDeviceHost host )
+            else if( o is TDeviceHostObject host )
             {
                 if( _objectHost != null )
                 {
@@ -112,7 +112,7 @@ namespace CK.Observable.Device
 
         void OnObjectDeviceDisposed( object sender, ObservableDomainEventArgs e )
         {
-            var o = (TObjectDevice)sender;
+            var o = (TDeviceObject)sender;
             _objects.Remove( o.DeviceName, out var bridge );
             Debug.Assert( bridge != null );
             bridge.OnDestroy( e.Monitor, true );

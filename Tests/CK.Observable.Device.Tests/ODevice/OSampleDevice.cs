@@ -7,7 +7,7 @@ using System.Text;
 namespace CK.Observable.Device.Tests
 {
     [SerializationVersion( 0 )]
-    public class OSampleDevice : ObservableObjectDevice<OSampleDeviceSidekick>
+    public class OSampleDevice : ObservableDeviceObject<OSampleDeviceSidekick>
     {
         public OSampleDevice( string deviceName )
             : base( deviceName )
@@ -38,7 +38,7 @@ namespace CK.Observable.Device.Tests
         /// Note that this state reference is updated by the device internal loop.
         /// </para>
         /// </summary>
-        /// <returns>The state or null if <see cref="ObservableObjectDevice.IsBoundDevice"/> is false.</returns>
+        /// <returns>The state or null if <see cref="ObservableDeviceObject.IsBoundDevice"/> is false.</returns>
         public SampleDevice.SafeDeviceState? GetSafeState() => _bridgeAccess.GetDeviceState();
 
         /// <summary>

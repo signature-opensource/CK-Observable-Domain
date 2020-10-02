@@ -4,7 +4,7 @@ using System.Text;
 
 namespace CK.Observable.Device.Tests
 {
-    public class OSampleDeviceHost : ObservableObjectDeviceHost<OSampleDeviceSidekick>
+    public class OSampleDeviceHost : ObservableDeviceHostObject<OSampleDeviceSidekick>
     {
     }
 }

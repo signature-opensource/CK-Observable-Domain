@@ -10,18 +10,18 @@ namespace CK.Observable.Device
 {
     /// <summary>
     /// Non generic abstract base class for device that is not intended to be specialized directly.
-    /// Use the generic <see cref="ObservableObjectDevice{TSidekick}"/> as the object device base.
+    /// Use the generic <see cref="ObservableDeviceObject{TSidekick}"/> as the object device base.
     /// </summary>
     [SerializationVersion( 0 )]
-    public abstract class ObservableObjectDevice : ObservableObject
+    public abstract class ObservableDeviceObject : ObservableObject
     {
-        private protected ObservableObjectDevice( string deviceName )
+        private protected ObservableDeviceObject( string deviceName )
         {
             if( deviceName == null ) throw new ArgumentNullException( nameof( deviceName ) );
             DeviceName = deviceName;
         }
 
-        private protected ObservableObjectDevice( IBinaryDeserializerContext ctx )
+        private protected ObservableDeviceObject( IBinaryDeserializerContext ctx )
             : base( ctx )
         {
             var r = ctx.StartReading().Reader;
@@ -155,7 +155,7 @@ namespace CK.Observable.Device
         /// <summary>
         /// Creates a new command of the given type with its <see cref="DeviceCommand.DeviceName"/> and <see cref="DeviceCommand.ControllerKey"/>.
         /// Note that if the <see cref="DeviceCommand.HostType"/> is not compatible with the actual <see cref="IDeviceHost"/> of this
-        /// <see cref="ObservableObjectDevice{TSidekick}"/> sidekick, a <see cref="InvalidOperationException"/> is thrown.
+        /// <see cref="ObservableDeviceObject{TSidekick}"/> sidekick, a <see cref="InvalidOperationException"/> is thrown.
         /// </summary>
         /// <typeparam name="T">The type of the command to create.</typeparam>
         /// <param name="configuration">Optional configurator of the command.</param>
