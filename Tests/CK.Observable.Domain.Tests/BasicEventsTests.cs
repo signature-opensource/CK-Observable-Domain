@@ -3,7 +3,9 @@ using CK.Observable.Domain.Tests.Sample;
 using FluentAssertions;
 using NUnit.Framework;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using static CK.Testing.MonitorTestHelper;
 
@@ -19,13 +21,17 @@ namespace CK.Observable.Domain.Tests
             {
                 Car c0 = null;
                 Car c1 = null;
-                TransactionResult events;
 
-                events = domain.Modify( TestHelper.Monitor, () =>
+                IReadOnlyList<ObservableEvent>? events = null;
+                domain.OnSuccessfulTransaction += ( d, ev ) => events = ev.Events;
+
+                domain.Modify( TestHelper.Monitor, () =>
                 {
                     c0 = new Car( "First Car" );
                     c1 = new Car( "Second Car" );
-                } );
+                } ).Success.Should().BeTrue();
+                Debug.Assert( events != null );
+
                 Check( events, "NewObject 0 (Car).",
                                "NewObject 1 (Car).",
                                "NewProperty Name -> 0.",
@@ -44,17 +50,18 @@ namespace CK.Observable.Domain.Tests
                                "PropertyChanged 1.CurrentMechanic = null.",
                                "PropertyChanged 1.OId = 1." );
 
-                events = domain.Modify( TestHelper.Monitor, () =>
+                domain.Modify( TestHelper.Monitor, () =>
                 {
                     c0.TestSpeed = 1;
-                } );
+                } ).Success.Should().BeTrue();
                 Check( events, "PropertyChanged 0.TestSpeed = 1." );
 
-                events = domain.Modify( TestHelper.Monitor, () =>
+                domain.Modify( TestHelper.Monitor, () =>
                 {
                     c0.TestSpeed = 78;
                     c1.Position = new Position( 1.5, 2.3 );
-                } );
+                } ).Success.Should().BeTrue();
+
                 Check( events, "PropertyChanged 0.TestSpeed = 78.", "PropertyChanged 1.Position = (1.5,2.3)." );
             }
         }
@@ -64,23 +71,25 @@ namespace CK.Observable.Domain.Tests
         {
             using( var domain = new ObservableDomain( TestHelper.Monitor, nameof( property_changed_events_use_the_last_value ) ) )
             {
-                Car c = null;
-                TransactionResult result;
+                IReadOnlyList<ObservableEvent>? events = null;
+                domain.OnSuccessfulTransaction += ( d, ev ) => events = ev.Events;
 
-                result = domain.Modify( TestHelper.Monitor, () =>
+                Car c = null;
+
+                domain.Modify( TestHelper.Monitor, () =>
                 {
                     c = new Car( "First Car" );
-                } );
+                } ).Success.Should().BeTrue();
 
-                result = domain.Modify( TestHelper.Monitor, () =>
+                domain.Modify( TestHelper.Monitor, () =>
                 {
                     c.Position = new Position( 1.0, 2.0 );
                     c.TestSpeed = 1;
                     c.TestSpeed = 2;
                     c.TestSpeed = 3;
                     c.Position = new Position( 3.0, 4.0 );
-                } );
-                Check( result, "PropertyChanged 0.TestSpeed = 3.", "PropertyChanged 0.Position = (3,4)." );
+                } ).Success.Should().BeTrue();
+                Check( events, "PropertyChanged 0.TestSpeed = 3.", "PropertyChanged 0.Position = (3,4)." );
             }
         }
 
@@ -248,21 +257,25 @@ namespace CK.Observable.Domain.Tests
                 Car c0 = null;
                 Car c1 = null;
                 Garage g = null;
-                TransactionResult result;
 
-                result = domain.Modify( TestHelper.Monitor, () =>
+                IReadOnlyList<ObservableEvent>? events = null;
+                domain.OnSuccessfulTransaction += ( d, ev ) => events = ev.Events;
+
+                domain.Modify( TestHelper.Monitor, () =>
                 {
                     c0 = new Car( "C1" );
                     c1 = new Car( "C2" );
                     g = new Garage();
-                } );
-                result = domain.Modify( TestHelper.Monitor, () =>
+                } ).Success.Should().BeTrue();
+
+                domain.Modify( TestHelper.Monitor, () =>
                 {
                     g.Cars.Add( c0 );
                     g.Cars.Insert( 0, c1 );
                     g.Cars.Clear();
-                } );
-                Check( result, "ListInsert 4[0] = 'Car C1'.", "ListInsert 4[0] = 'Car C2'.", "CollectionClear 4." );
+                } ).Success.Should().BeTrue();
+
+                Check( events, "ListInsert 4[0] = 'Car C1'.", "ListInsert 4[0] = 'Car C2'.", "CollectionClear 4." );
             }
         }
 
@@ -274,31 +287,35 @@ namespace CK.Observable.Domain.Tests
                 Car c = null;
                 Mechanic m = null;
                 Garage g = null;
-                TransactionResult result;
-                result = domain.Modify( TestHelper.Monitor, () =>
+
+                IReadOnlyList<ObservableEvent>? events = null;
+                domain.OnSuccessfulTransaction += ( d, ev ) => events = ev.Events;
+
+                domain.Modify( TestHelper.Monitor, () =>
                 {
                     g = new Garage();
                     c = new Car( "C" );
                     m = new Mechanic( g ) { FirstName = "Jon", LastName = "Doe" };
-                } );
-                result = domain.Modify( TestHelper.Monitor, () =>
+                } ).Success.Should().BeTrue();
+
+                domain.Modify( TestHelper.Monitor, () =>
                 {
                     m.CurrentCar = c;
-                } );
-                Check( result, "PropertyChanged 4.CurrentMechanic = 'Mechanic Jon Doe'.",
+                } ).Success.Should().BeTrue();
+                Check( events, "PropertyChanged 4.CurrentMechanic = 'Mechanic Jon Doe'.",
                                "PropertyChanged 5.CurrentCar = 'Car C'." );
-                result = domain.Modify( TestHelper.Monitor, () =>
+                domain.Modify( TestHelper.Monitor, () =>
                 {
                     m.CurrentCar = null;
-                } );
-                Check( result, "PropertyChanged 4.CurrentMechanic = null.",
+                } ).Success.Should().BeTrue();
+                Check( events, "PropertyChanged 4.CurrentMechanic = null.",
                                "PropertyChanged 5.CurrentCar = null." );
 
-                result = domain.Modify( TestHelper.Monitor, () =>
+                domain.Modify( TestHelper.Monitor, () =>
                 {
                     c.CurrentMechanic = m;
-                } );
-                Check( result, "PropertyChanged 5.CurrentCar = 'Car C'.",
+                } ).Success.Should().BeTrue();
+                Check( events, "PropertyChanged 5.CurrentCar = 'Car C'.",
                                "PropertyChanged 4.CurrentMechanic = 'Mechanic Jon Doe'." );
 
             }
@@ -376,9 +393,9 @@ namespace CK.Observable.Domain.Tests
             }
         }
 
-        static void Check( TransactionResult events, params string[] e )
+        static void Check( IReadOnlyList<ObservableEvent> events, params string[] e )
         {
-            events.Events.Select( ev => ev.ToString() ).Should().BeEquivalentTo( e );
+            events.Select( ev => ev.ToString() ).Should().BeEquivalentTo( e );
         }
 
     }

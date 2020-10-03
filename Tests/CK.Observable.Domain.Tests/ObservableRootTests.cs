@@ -26,10 +26,11 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void initializing_and_persisting_domain()
         {
-            var eventCollector = new TransactionEventCollectorClient();
+            var eventCollector = new JsonEventCollector();
 
-            using( var d = new ObservableDomain<ApplicationState>( TestHelper.Monitor, "TEST", eventCollector ) )
+            using( var d = new ObservableDomain<ApplicationState>( TestHelper.Monitor, "TEST" ) )
             {
+                d.OnSuccessfulTransaction += eventCollector.OnSuccessfulTransaction;
                 d.Root.ToDoNumbers.Should().BeEmpty();
 
                 d.Modify( TestHelper.Monitor, () =>

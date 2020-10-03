@@ -123,6 +123,7 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
+        [Explicit("Clearly stupidly written test. Don't care :).")]
         public void testing_ReaderWriterLockSlim_upgradeable()
         {
             using var k = new ReaderWriterLockSlim( LockRecursionPolicy.NoRecursion );

@@ -87,7 +87,7 @@ namespace CK.Observable
         /// THEN to create a snapshot (simply calls <see cref="CreateSnapshot"/> protected method).
         /// </summary>
         /// <param name="c">The transaction context.</param>
-        public virtual void OnTransactionCommit( in SuccessfulTransactionContext c )
+        public virtual void OnTransactionCommit( in SuccessfulTransactionEventArgs c )
         {
             Next?.OnTransactionCommit( c );
             CreateSnapshot( c.Monitor, c.Domain );

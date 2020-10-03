@@ -21,12 +21,12 @@ namespace CK.Observable
         public static readonly TransactionResult Empty = new TransactionResult( Array.Empty<CKExceptionData>(), Util.UtcMinValue, Util.UtcMinValue );
 
         /// <summary>
-        /// Gets whether <see cref="Errors"/> is empty, <see cref="ClientError"/> is null and <see cref="CommandErrors"/> is empty.
+        /// Gets whether <see cref="Errors"/> is empty, <see cref="ClientError"/> is null and <see cref="CommandHandlingErrors"/> is empty.
         /// </summary>
-        public bool Success => Errors.Count == 0 && ClientError == null && CommandErrors.Count == 0;
+        public bool Success => Errors.Count == 0 && ClientError == null && CommandHandlingErrors.Count == 0;
 
         /// <summary>
-        /// Gets whether the <see cref="ClientError"/> is critical: it is the call to <see cref="IObservableDomainClient.OnTransactionCommit(in SuccessfulTransactionContext)"/>
+        /// Gets whether the <see cref="ClientError"/> is critical: it is the call to <see cref="IObservableDomainClient.OnTransactionCommit(in SuccessfulTransactionEventArgs)"/>
         /// that failed.
         /// This lets the system in an instable, dangerous, state since the transaction has terminated without errors and some external
         /// impacts may have been executed before the error occurred so that rolling back the transaction may not be a brilliant idea.
@@ -56,9 +56,9 @@ namespace CK.Observable
                     }
                     throw new Exception( $"There has been {Errors.Count} error(s) during the transaction. See logs for details." );
                 }
-                if( CommandErrors.Count > 0 )
+                if( CommandHandlingErrors.Count > 0 )
                 {
-                    throw new Exception( $"There has been {CommandErrors.Count} error(s) raised by command handling. See logs for details." );
+                    throw new Exception( $"There has been {CommandHandlingErrors.Count} error(s) raised by command handling. See logs for details." );
                 }
             }
         }
@@ -81,14 +81,8 @@ namespace CK.Observable
         public DateTime NextDueTimeUtc { get; }
 
         /// <summary>
-        /// Gets the events that the transaction generated (all <see cref="ObservableObject"/> changes).
-        /// Can be empty (and always empty if there are <see cref="Errors"/>).
-        /// </summary>
-        public IReadOnlyList<ObservableEvent> Events { get; }
-
-        /// <summary>
         /// Gets the commands that the transaction generated (all the commands
-        /// sent via <see cref="DomainView.SendCommand"/>.
+        /// sent via <see cref="DomainView.SendCommand"/> or <see cref="SuccessfulTransactionEventArgs.SendCommand"/>.
         /// Can be empty (and always empty if there are <see cref="Errors"/>).
         /// </summary>
         public IReadOnlyList<object> Commands { get; }
@@ -96,8 +90,8 @@ namespace CK.Observable
         /// <summary>
         /// Gets the errors that actually aborted the transaction.
         /// This is empty on success but this doesn't mean that everything went well: a <see cref="ClientError"/> may have occurred
-        /// (and that is critical), or <see cref="CommandErrors"/> may have been thrown by sidekicks (this is less critical since the domain's transaction
-        /// itself is fine).
+        /// (and that is critical), or <see cref="SuccessfulTransactionErrors"/> or <see cref="CommandHandlingErrors"/> may have been
+        /// thrown by sidekicks (this is less critical since the domain's transaction itself is fine).
         /// <para>
         /// Note that any errors raised by <see cref="ExecutePostActionsAsync(IActivityMonitor, bool)"/> are outside of the scope of this <see cref="TransactionResult"/>.
         /// </para>
@@ -111,9 +105,16 @@ namespace CK.Observable
         public CKExceptionData ClientError { get; private set; }
 
         /// <summary>
-        /// Gets the errors that occured during the call to <see cref="ObservableDomainSidekick.ExecuteCommand"/> with the faulty command.
+        /// Gets the errors that occured during the handling of <see cref="ObservableDomain.OnSuccessfulTransaction"/> event
+        /// or when calling <see cref="ObservableDomainSidekick.OnSuccessfulTransaction"/>.
         /// </summary>
-        public IReadOnlyList<(object,CKExceptionData)> CommandErrors { get; private set; }
+        public IReadOnlyList<CKExceptionData> SuccessfulTransactionErrors { get; private set; }
+
+        /// <summary>
+        /// Gets the errors that occured during the call to <see cref="ObservableDomainSidekick.ExecuteCommand"/>.
+        /// Each value tuple contains the faulty command and the exception data.
+        /// </summary>
+        public IReadOnlyList<(object, CKExceptionData)> CommandHandlingErrors { get; private set; }
 
         /// <summary>
         /// Gets whether at least one post actions has been enlisted thanks to <see cref="IActionRegistrar{T}"/>
@@ -141,16 +142,16 @@ namespace CK.Observable
             return Task.FromResult<Exception>( null );
         }
 
-        internal TransactionResult( SuccessfulTransactionContext c )
+        internal TransactionResult( SuccessfulTransactionEventArgs c )
         {
             StartTimeUtc = c.StartTimeUtc;
             CommitTimeUtc = c.CommitTimeUtc;
             NextDueTimeUtc = c.NextDueTimeUtc;
-            Events = c.Events;
-            Commands = c.Commands;
+            Commands = c._commands;
             Errors = Array.Empty<CKExceptionData>();
             _postActions = c._postActions;
-            CommandErrors = Array.Empty<(object, CKExceptionData)>();
+            SuccessfulTransactionErrors = Array.Empty<CKExceptionData>();
+            CommandHandlingErrors = Array.Empty<(object, CKExceptionData)>();
         }
 
         internal TransactionResult( IReadOnlyList<CKExceptionData> errors, DateTime startTime, DateTime nextDueTime )
@@ -160,9 +161,9 @@ namespace CK.Observable
             CommitTimeUtc = DateTime.UtcNow;
             NextDueTimeUtc = nextDueTime;
             Errors = errors;
-            Events = Array.Empty<ObservableEvent>();
             Commands = Array.Empty<object>();
-            CommandErrors = Array.Empty<(object, CKExceptionData)>();
+            SuccessfulTransactionErrors = Array.Empty<CKExceptionData>();
+            CommandHandlingErrors = Array.Empty<(object, CKExceptionData)>();
         }
 
         internal TransactionResult SetClientError( Exception ex )
@@ -171,9 +172,15 @@ namespace CK.Observable
             return this;
         }
 
-        internal TransactionResult SetCommandErrors( IReadOnlyList<(object, CKExceptionData)> errors )
+        internal TransactionResult SetSuccessfulTransactionErrors( IReadOnlyList<CKExceptionData> errors )
         {
-            CommandErrors = errors;
+            SuccessfulTransactionErrors = errors;
+            return this;
+        }
+
+        internal TransactionResult SetCommandHandlingErrors( IReadOnlyList<(object, CKExceptionData)> errors )
+        {
+            CommandHandlingErrors = errors;
             return this;
         }
 

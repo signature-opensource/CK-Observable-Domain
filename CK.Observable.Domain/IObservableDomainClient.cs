@@ -10,8 +10,7 @@ namespace CK.Observable
     /// This is is intented to be implemented as a a chain of responsibility: Start,
     /// Commit and Failure should be synchronously propagated through a linked list
     /// (or tree structure) of such clients.
-    /// See <see cref="TransactionEventCollectorClient"/> or <see cref="MemoryTransactionProviderClient"/>
-    /// for concrete implementations of transaction manager.
+    /// See <see cref="MemoryTransactionProviderClient"/> for concrete implementations of transaction manager.
     /// </summary>
     public interface IObservableDomainClient
     {
@@ -36,7 +35,7 @@ namespace CK.Observable
         /// Any exception raised by this method will set <see cref="TransactionResult.IsCriticalError"/> to true.
         /// </summary>
         /// <param name="context">The successful context.</param>
-        void OnTransactionCommit( in SuccessfulTransactionContext context );
+        void OnTransactionCommit( in SuccessfulTransactionEventArgs context );
 
         /// <summary>
         /// Called when an error occurred in a transaction.

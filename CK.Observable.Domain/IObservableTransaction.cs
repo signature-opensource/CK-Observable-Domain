@@ -31,7 +31,7 @@ namespace CK.Observable
         /// This method NEVER throws: it calls <see cref="IObservableDomainClient.OnTransactionFailure"/>
         /// or <see cref="IObservableDomainClient.OnTransactionCommit"/>, and may set
         /// <see cref="TransactionResult.ClientError"/> if an Exception is thrown
-        /// when calling them. Then, on success, it sets the <see cref="TransactionResult.CommandErrors"/> list if errors
+        /// when calling them. Then, on success, it sets the <see cref="TransactionResult.CommandHandlingErrors"/> list if errors
         /// occurred during command processing.
         /// </summary>
         /// <returns>The transaction result.</returns>

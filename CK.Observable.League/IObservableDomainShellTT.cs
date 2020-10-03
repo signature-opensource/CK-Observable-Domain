@@ -28,7 +28,7 @@ namespace CK.Observable.League
         /// trigger a rollback and the <see cref="TransactionResult.Success"/> is false) and then executes any pending post-actions.
         /// <para>
         /// Any exceptions raised by <see cref="IObservableDomainClient.OnTransactionStart(IActivityMonitor,ObservableDomain, DateTime)"/> (at the start of the process)
-        /// and by <see cref="SuccessfulTransactionContext.PostActions"/> (after the successful commit or the failure) are thrown by this method.
+        /// and by <see cref="SuccessfulTransactionEventArgs.PostActions"/> (after the successful commit or the failure) are thrown by this method.
         /// </para>
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>

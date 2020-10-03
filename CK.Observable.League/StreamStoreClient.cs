@@ -15,13 +15,15 @@ namespace CK.Observable.League
     abstract class StreamStoreClient : MemoryTransactionProviderClient
     {
         readonly string _storeName;
+        readonly JsonEventCollector _eventCollector;
         int _savedTransactionNumber;
         DateTime _nextSave;
         int _snapshotSaveDelay;
 
         public StreamStoreClient( string domainName, IStreamStore store, IObservableDomainClient? next = null )
-            : base( new TransactionEventCollectorClient( next ) )
+            : base()
         {
+            _eventCollector = new JsonEventCollector();
             DomainName = domainName;
             _storeName = domainName.Length == 0 ? "Coordinator" : "D-" + domainName;
             StreamStore = store;
@@ -29,9 +31,9 @@ namespace CK.Observable.League
         }
 
         /// <summary>
-        /// Gets the next client that is in charge of the exported events.
+        /// Gets the <see cref="JsonEventCollector"/> that is in charge of the exported events.
         /// </summary>
-        public TransactionEventCollectorClient TransactClient => (TransactionEventCollectorClient)Next!;
+        public JsonEventCollector JsonEventCollector => _eventCollector;
 
         /// <summary>
         /// Gets the domain name.
@@ -80,7 +82,7 @@ namespace CK.Observable.League
         /// Overridden to FIRST create a snapshot and THEN call the next client.
         /// </summary>
         /// <param name="c"></param>
-        public override void OnTransactionCommit( in SuccessfulTransactionContext c )
+        public override void OnTransactionCommit( in SuccessfulTransactionEventArgs c )
         {
             CreateSnapshot( c.Monitor, c.Domain );
             // We save the snapshot if we must (and there is no compensation for this of course).

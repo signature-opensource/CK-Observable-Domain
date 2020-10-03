@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using FluentAssertions;
@@ -22,7 +23,6 @@ namespace CK.Observable.Domain.Tests.Clients
             } );
 
             transactionResult.Errors.Should().BeEmpty();
-            transactionResult.Events.Should().NotBeEmpty();
             client.CurrentSerialNumber.Should().NotBe( -1, "There should have been a snapshot taken." );
             client.CurrentSerialNumber.Should().NotBe( int.MaxValue, "There should not have been a restore from stream." );
             client.CompressionKind.Should().Be( CompressionKind.None );
@@ -33,15 +33,22 @@ namespace CK.Observable.Domain.Tests.Clients
         [Test]
         public void Exception_during_Write_adds_ClientError()
         {
-            var d = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, "TEST", new MemoryTransactionProviderClient());
+            using var d = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, "TEST", new MemoryTransactionProviderClient());
+
+            IReadOnlyList<ObservableEvent>? events = null;
+            d.OnSuccessfulTransaction += ( d, ev ) => events = ev.Events;
+
             // Initial successful Modify
             d.Modify( TestHelper.Monitor, () =>
             {
                 d.Root.Prop1 = "Hello";
                 d.Root.Prop2 = "World";
-            } );
+            } ).Success.Should().BeTrue();
+            Debug.Assert( events != null );
+            events.Count.Should().Be( 4 );
 
             // Raise exception during Write()
+            events = null;
             var transactionResult = d.Modify( TestHelper.Monitor, () =>
             {
                 d.Root.Prop1 = "This will";
@@ -50,8 +57,10 @@ namespace CK.Observable.Domain.Tests.Clients
             } );
 
             transactionResult.Errors.Should().BeEmpty( $"No errors happened during Modify()" );
-            transactionResult.Events.Should().NotBeEmpty();
+
+            events.Should().BeNull( "OnSuccessfulTransaction has not been raised." );
             transactionResult.ClientError.Should().NotBeNull();
+            transactionResult.IsCriticalError.Should().BeTrue( "Since Write fails, this is CRITICAL!" );
             using( d.AcquireReadLock() )
             {
                 d.Root.Prop1.Should().Be( "This will" );
@@ -63,15 +72,22 @@ namespace CK.Observable.Domain.Tests.Clients
         [Test]
         public void Exception_during_Modify_rolls_ObservableDomain_back()
         {
-            var d = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, "TEST", new MemoryTransactionProviderClient());
+            using var d = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, "TEST", new MemoryTransactionProviderClient());
+            IReadOnlyList<ObservableEvent>? events = null;
+            d.OnSuccessfulTransaction += ( d, ev ) => events = ev.Events;
+
+
             // Initial successful Modify
             d.Modify( TestHelper.Monitor, () =>
             {
                 d.Root.Prop1 = "Hello";
                 d.Root.Prop2 = "World";
-            } );
+            } ).Success.Should().BeTrue();
 
-            // Raise exception during Write()
+            Debug.Assert( events != null );
+
+            // Raise exception during Modify()
+            events = null;
             var transactionResult = d.Modify( TestHelper.Monitor, () =>
             {
                 d.Root.Prop1 = "This will";
@@ -80,8 +96,9 @@ namespace CK.Observable.Domain.Tests.Clients
             } );
 
             transactionResult.Errors.Should().NotBeEmpty( $"Errors happened during Modify()" );
-            transactionResult.Events.Should().BeEmpty();
+            events.Should().BeNull();
             transactionResult.ClientError.Should().BeNull( "No client errors happened" );
+            transactionResult.IsCriticalError.Should().BeFalse( "The domain is in a valid state, this is not CRITICAL." );
             using( d.AcquireReadLock() )
             {
                 d.Root.Prop1.Should().Be( "Hello" );

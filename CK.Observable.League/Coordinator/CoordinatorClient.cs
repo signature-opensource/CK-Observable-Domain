@@ -23,7 +23,7 @@ namespace CK.Observable.League
 
         public ObservableDomain<Coordinator> Domain { get; }
 
-        public override void OnTransactionCommit( in SuccessfulTransactionContext c )
+        public override void OnTransactionCommit( in SuccessfulTransactionEventArgs c )
         {
             base.OnTransactionCommit( c );
             Domain d = null;

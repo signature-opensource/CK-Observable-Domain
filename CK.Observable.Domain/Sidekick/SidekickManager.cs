@@ -272,10 +272,27 @@ namespace CK.Observable
             return true;
         }
 
+        internal void OnSuccessfulTransaction( in SuccessfulTransactionEventArgs result, ref List<CKExceptionData>? errors )
+        {
+            foreach( var h in _sidekicks )
+            {
+                try
+                {
+                    h.OnSuccessfulTransaction( in result );
+                }
+                catch( Exception ex )
+                {
+                    result.Monitor.Error( "Error while raising OnSuccessfulTransaction event.", ex );
+                    if( errors == null ) errors = new List<CKExceptionData>();
+                    errors.Add( CKExceptionData.CreateFrom( ex ) );
+                }
+            }
+        }
+
         /// <summary>
         /// Executes the commands by calling <see cref="ObservableDomainSidekick.ExecuteCommand(IActivityMonitor, in SidekickCommand)"/> for each sidekick.
         /// If a command is not executed because no sidekick has accepted it, this is an error that, just as other execution errors will
-        /// appear in <see cref="TransactionResult.CommandErrors"/>.
+        /// appear in <see cref="TransactionResult.CommandHandlingErrors"/>.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="r">The successful transaction result.</param>
@@ -294,14 +311,17 @@ namespace CK.Observable
                 {
                     try
                     {
-                        foundHandler |= h.ExecuteCommand( monitor, in cmd );
+                        if( h.ExecuteCommand( monitor, in cmd ) )
+                        {
+                            foundHandler = true;
+                            break;
+                        }
                     }
                     catch( Exception ex )
                     {
                         monitor.Error( "Error while handling command.", ex );
                         if( results == null ) results = new List<(object, CKExceptionData)>();
                         results.Add( (c, CKExceptionData.CreateFrom( ex ) ) );
-                        break;
                     }
                 }
                 if( !foundHandler )
@@ -355,5 +375,6 @@ namespace CK.Observable
         {
             w.Write( (byte)0 );
         }
+
     }
 }

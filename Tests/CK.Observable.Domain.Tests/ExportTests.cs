@@ -17,9 +17,10 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void doc_demo()
         {
-            var eventCollector = new TransactionEventCollectorClient();
-            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( doc_demo ), eventCollector ) )
+            var eventCollector = new JsonEventCollector();
+            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( doc_demo ) ) )
             {
+                d.OnSuccessfulTransaction += eventCollector.OnSuccessfulTransaction;
                 Car car = null;
                 d.Modify( TestHelper.Monitor, () =>
                 {
@@ -59,10 +60,11 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void exporting_and_altering_simple()
         {
-            var eventCollector = new TransactionEventCollectorClient();
+            var eventCollector = new JsonEventCollector();
 
-            using( var d = new ObservableDomain( TestHelper.Monitor, "TEST", eventCollector ) )
+            using( var d = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
             {
+                d.OnSuccessfulTransaction += eventCollector.OnSuccessfulTransaction;
                 d.TransactionSerialNumber.Should().Be( 0, "Nothing happened yet." );
 
                 string initial = d.ExportToString();
@@ -139,11 +141,11 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void exporting_and_altering_sample()
         {
-            var eventCollector = new TransactionEventCollectorClient();
+            var eventCollector = new JsonEventCollector();
 
-            using( var d = SampleDomain.CreateSample( eventCollector ) )
+            using( var d = SampleDomain.CreateSample() )
             {
-
+                d.OnSuccessfulTransaction += eventCollector.OnSuccessfulTransaction;
                 d.TransactionSerialNumber.Should().Be( 1 );
 
                 string initial = d.ExportToString();
@@ -190,10 +192,11 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void exporting_and_altering_ApplicationState()
         {
-            var eventCollector = new TransactionEventCollectorClient( new MemoryTransactionProviderClient() );
+            var eventCollector = new JsonEventCollector();
 
-            using( var d = new ObservableDomain<RootSample.ApplicationState>( TestHelper.Monitor, "TEST", eventCollector ) )
+            using( var d = new ObservableDomain<RootSample.ApplicationState>( TestHelper.Monitor, "TEST", new MemoryTransactionProviderClient() ) )
             {
+                d.OnSuccessfulTransaction += eventCollector.OnSuccessfulTransaction;
                 d.Modify( TestHelper.Monitor, () =>
                 {
                     var p1 = new RootSample.ProductInfo( "Name n°1", 12 );

@@ -77,9 +77,29 @@ namespace CK.Observable
 
         /// <summary>
         /// Called when a successful transaction has been successfully handled by the <see cref="ObservableDomain.DomainClient"/>.
-        /// When this is called, the <see cref="Domain"/> MUST NOT BE touched in any way: this occurs outside of the domain lock.
+        /// Default implementation does nothing at this level.
         /// <para>
-        /// Exceptions raised by this method are collected in <see cref="TransactionResult.CommandErrors"/>.
+        /// When this is called, the <see cref="Domain"/>'s lock is held in read mode: objects can be read (but no write/modifications
+        /// should occur).
+        /// </para>
+        /// <para>
+        /// Exceptions raised by this method are collected in <see cref="TransactionResult.SuccessfulTransactionErrors"/>.
+        /// </para>
+        /// </summary>
+        /// <param name="result">The <see cref="SuccessfulTransactionEventArgs"/> event argument.</param>
+        protected internal void OnSuccessfulTransaction( in SuccessfulTransactionEventArgs result )
+        {
+        }
+
+        /// <summary>
+        /// Called when a successful transaction has been successfully handled by the <see cref="ObservableDomain.DomainClient"/>
+        /// and <see cref="ObservableDomain.OnSuccessfulTransaction"/> event and <see cref="ObservableDomainSidekick.OnSuccessfulTransaction(in SuccessfulTransactionEventArgs)"/>
+        /// did not raise any error.
+        /// <para>
+        /// When this is called, the <see cref="Domain"/> MUST NOT BE touched in any way: this occurs outside of the domain lock.
+        /// </para>
+        /// <para>
+        /// Exceptions raised by this method are collected in <see cref="TransactionResult.CommandHandlingErrors"/>.
         /// </para>
         /// <para>
         /// Please note that when this method returns false it just means that the command has not been handled by this sidekick.
@@ -96,6 +116,7 @@ namespace CK.Observable
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         protected internal abstract void Dispose( IActivityMonitor monitor );
+
     }
 
 

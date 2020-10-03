@@ -16,7 +16,7 @@ namespace CK.Observable.League
                 _shell = shell;
             }
 
-            public override void OnTransactionCommit( in SuccessfulTransactionContext c )
+            public override void OnTransactionCommit( in SuccessfulTransactionEventArgs c )
             {
                 base.OnTransactionCommit( c );
                 bool hasEctiveTimedEvents = c.Domain.TimeManager.ActiveTimedEventsCount > 0;

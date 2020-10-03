@@ -8,6 +8,8 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
+using System.Net.NetworkInformation;
+using System.Net.WebSockets;
 using System.Reflection;
 using System.Text;
 using System.Threading;
@@ -240,7 +242,9 @@ namespace CK.Observable
             readonly List<ObservableEvent> _changeEvents;
             readonly Dictionary<ObservableObject, List<PropertyInfo>?> _newObjects;
             readonly Dictionary<long, PropChanged> _propChanged;
-            readonly List<object> _commands;
+            // A new list is allocated each time since commands can be appended to it after the commit, during the
+            // OnSuccessfulTransaction raising.
+            List<object> _commands;
 
             public ChangeTracker()
             {
@@ -250,7 +254,7 @@ namespace CK.Observable
                 _commands = new List<object>();
             }
 
-            public SuccessfulTransactionContext Commit( ObservableDomain domain, Func<string, PropInfo> ensurePropertInfo, DateTime startTime, DateTime nextTimerDueDate )
+            public SuccessfulTransactionEventArgs Commit( ObservableDomain domain, Func<string, PropInfo> ensurePropertInfo, DateTime startTime, DateTime nextTimerDueDate )
             {
                 _changeEvents.RemoveAll( e => e is ICollectionEvent c && c.Object.IsDisposed );
                 foreach( var p in _propChanged.Values )
@@ -276,20 +280,20 @@ namespace CK.Observable
                         _changeEvents.Add( new PropertyChangedEvent( kv.Key, pInfo.PropertyId, pInfo.Name, propValue ) );
                     }
                 }
-                var result = new SuccessfulTransactionContext( domain, _changeEvents.ToArray(), _commands.ToArray(), startTime, nextTimerDueDate );
+                var result = new SuccessfulTransactionEventArgs( domain, _changeEvents.ToArray(), _commands, startTime, nextTimerDueDate );
                 Reset();
                 return result;
             }
 
             /// <summary>
-            /// Clears all events collected so far from the 3 internal lists.
+            /// Clears all events collected so far from the 3 internal lists and allocates a new emty command list for the next transaction.
             /// </summary>
             public void Reset()
             {
                 _changeEvents.Clear();
                 _newObjects.Clear();
                 _propChanged.Clear();
-                _commands.Clear();
+                _commands = new List<object>();
             }
 
             /// <summary>
@@ -452,6 +456,7 @@ namespace CK.Observable
                     Monitor.Error( ex );
                     AddError( CKExceptionData.CreateFrom( ex ) );
                 }
+                SuccessfulTransactionEventArgs? ctx = null;
                 CurrentThreadDomain = _previous;
                 if( _errors.Length != 0 )
                 {
@@ -471,7 +476,7 @@ namespace CK.Observable
                 }
                 else
                 {
-                    SuccessfulTransactionContext ctx = _domain._changeTracker.Commit( _domain, _domain.EnsurePropertyInfo, _startTime, nextTimerDueDate );
+                    ctx = _domain._changeTracker.Commit( _domain, _domain.EnsurePropertyInfo, _startTime, nextTimerDueDate );
                     ++_domain._transactionSerialNumber;
                     _domain._transactionCommitTimeUtc = ctx.CommitTimeUtc;
                     try
@@ -483,18 +488,29 @@ namespace CK.Observable
                     {
                         Monitor.Fatal( "Error in IObservableTransactionManager.OnTransactionCommit. This is a Critical error since the Domain state integrity may be compromised.", ex );
                         _result.SetClientError( ex );
+                        ctx = null;
                     }
                 }
                 var next = _result.NextDueTimeUtc;
                 if( next != Util.UtcMinValue ) _domain._timeManager.SetNextDueTimeUtc( Monitor, next );
                 _monitorGroup.Dispose();
                 _domain._currentTran = null;
+
                 _domain._lock.ExitWriteLock();
+                // Back to Readeable lock: publishes SuccessfulTransaction.
+                if( _result.Success )
+                {
+                    Debug.Assert( ctx != null );
+                    
+                    var errors = _domain.RaiseOnSuccessfulTransaction( ctx );
+                    if( errors != null ) _result.SetSuccessfulTransactionErrors( errors );
+                }
+                _domain._lock.ExitUpgradeableReadLock();
                 // Outside of the lock: on success, the sidekicks execute the Command objects.
                 if( _result.Success )
                 {
                     var errors = _domain._sidekickManager.ExecuteCommands( Monitor, _result, _result._postActions );
-                    if( errors != null ) _result.SetCommandErrors( errors );
+                    if( errors != null ) _result.SetCommandHandlingErrors( errors );
                 }
                 return _result;
             }
@@ -778,6 +794,42 @@ namespace CK.Observable
         public IObservableDomainClient? DomainClient { get; private set; }
 
         /// <summary>
+        /// Raised whenever when a successful transaction has been successfully handled by the <see cref="ObservableDomain.DomainClient"/>.
+        /// <para>
+        /// When this is called, the <see cref="Domain"/>'s lock is held in read mode: objects can be read (but no write/modifications
+        /// should occur).
+        /// </para>
+        /// <para>
+        /// Exceptions raised by this method are collected in <see cref="TransactionResult.SuccessfulTransactionErrors"/>.
+        /// </para>
+        /// </summary>
+        public event EventHandler<SuccessfulTransactionEventArgs> OnSuccessfulTransaction;
+
+        List<CKExceptionData>? RaiseOnSuccessfulTransaction( in SuccessfulTransactionEventArgs result )
+        {
+            List<CKExceptionData>? errors = null;
+            var h = OnSuccessfulTransaction;
+            if( h != null )
+            {
+                foreach( var d in h.GetInvocationList() )
+                {
+                    try
+                    {
+                        ((EventHandler<SuccessfulTransactionEventArgs>)d).Invoke( this, result );
+                    }
+                    catch( Exception ex )
+                    {
+                        result.Monitor.Error( "Error while raising OnSuccessfulTransaction event.", ex );
+                        if( errors == null ) errors = new List<CKExceptionData>();
+                        errors.Add( CKExceptionData.CreateFrom( ex ) );
+                    }
+                }
+            }
+            _sidekickManager.OnSuccessfulTransaction( result, ref errors );
+            return errors;
+        }
+
+        /// <summary>
         /// <para>
         /// Acquires a single-threaded read lock on this <see cref="ObservableDomain"/>:
         /// until the returned disposable is disposed, objects can safely be read, and any attempt
@@ -842,7 +894,7 @@ namespace CK.Observable
         {
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
             CheckDisposed();
-            if( !_lock.TryEnterWriteLock( millisecondsTimeout ) )
+            if( !TryEnterUpgradeableReadAndWriteLockAtOnce( millisecondsTimeout ) )
             {
                 monitor.Warn( $"Write lock not obtained in less than {millisecondsTimeout} ms." );
                 return null;
@@ -952,7 +1004,7 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Modifies this ObservableDomain and executes the <see cref="SuccessfulTransactionContext.PostActions"/>.
+        /// Modifies this ObservableDomain and executes the <see cref="SuccessfulTransactionEventArgs.PostActions"/>.
         /// Any exceptions raised by <see cref="IObservableDomainClient.OnTransactionStart(IActivityMonitor,ObservableDomain, DateTime)"/> (at the start of the process)
         /// and by any post actions (after the successful commit or failed transaction) are thrown by this method.
         /// </summary>
@@ -1022,7 +1074,7 @@ namespace CK.Observable
             CheckDisposed();
             TransactionResult tr = TransactionResult.Empty;
             Exception postActionError = null;
-            if( _lock.TryEnterWriteLock( millisecondsTimeout ) )
+            if( TryEnterUpgradeableReadAndWriteLockAtOnce( millisecondsTimeout ) )
             {
                 var tEx = DoBeginTransaction( monitor, false );
                 Debug.Assert( (tEx.Item1 != null) != (tEx.Item2 != null), "The IObservableTransaction XOR IObservableDomainClient.OnTransactionStart() exception." );
@@ -1033,6 +1085,25 @@ namespace CK.Observable
             }
             else monitor.Warn( $"WriteLock not obtained in {millisecondsTimeout} ms (returning TransactionResult.Empty)." );
             return (tr, postActionError );
+        }
+
+        bool TryEnterUpgradeableReadAndWriteLockAtOnce( int millisecondsTimeout )
+        {
+            var start = DateTime.UtcNow;
+            if( _lock.TryEnterUpgradeableReadLock( millisecondsTimeout ) )
+            {
+                if( millisecondsTimeout > 0 )
+                {
+                    millisecondsTimeout -= ((int)(DateTime.UtcNow.Ticks - start.Ticks) / (int)TimeSpan.TicksPerMillisecond);
+                    if( millisecondsTimeout < 0 ) millisecondsTimeout = 0;
+                }
+                if( _lock.TryEnterWriteLock( millisecondsTimeout ) )
+                {
+                    return true;
+                }
+                _lock.ExitUpgradeableReadLock();
+            }
+            return false;
         }
 
         /// <summary>

@@ -3,6 +3,8 @@ using CK.Observable.Domain.Tests.Sample;
 using FluentAssertions;
 using NUnit.Framework;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -30,12 +32,17 @@ namespace CK.Observable.Domain.Tests
         {
             using( var d = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
             {
+                IReadOnlyList<ObservableEvent>? events = null;
+                d.OnSuccessfulTransaction += ( d, ev ) => events = ev.Events;
+
                 using( var t = d.BeginTransaction( TestHelper.Monitor ) )
                 {
                     new Car( "Hello" );
                     var result = t.Commit();
+
                     result.Errors.Should().BeEmpty();
-                    result.Events.Should().HaveCount( 11 );
+                    Debug.Assert( events != null );
+                    events.Should().HaveCount( 11 );
                     result.Commands.Should().BeEmpty();
                 }
                 d.Invoking( sut => sut.AllObjects.OfType<Car>().Single().TestSpeed = 3 )

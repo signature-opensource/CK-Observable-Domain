@@ -7,14 +7,12 @@ using System.Threading.Tasks;
 namespace CK.Observable
 {
     /// <summary>
-    /// Implements a <see cref="IObservableDomainClient"/> that collects
-    /// transaction events and exposes <see cref="TransactionEvent"/> that captures,
-    /// for each transaction, all the transaction <see cref="ObservableEvent"/> as well
-    /// as a JSON object that describes them.
+    /// Helpers that can be enlisted to the <see cref="ObservableDomain.OnSuccessfulTransaction"/> event that transforms
+    /// <see cref="SuccessfulTransactionEventArgs.Events"/> into <see cref="TransactionEvent"/> that captures, for each transaction,
+    /// all the transaction events as JSON string that describes them.
     /// </summary>
-    public class TransactionEventCollectorClient : IObservableDomainClient
+    public class JsonEventCollector
     {
-        readonly IObservableDomainClient? _next;
         readonly List<TransactionEvent> _events;
         readonly StringWriter _buffer;
         readonly ObjectExporter _exporter;
@@ -32,37 +30,29 @@ namespace CK.Observable
             public readonly int TransactionNumber;
 
             /// <summary>
-            /// The list of <see cref="ObservableEvent"/> objects that have been emitted during
-            /// the transaction.
-            /// </summary>
-            public readonly IReadOnlyList<ObservableEvent> Events;
-
-            /// <summary>
             /// The date and time of the transaction.
             /// </summary>
             public readonly DateTime TimeUtc;
 
             /// <summary>
-            /// The JSON description of the <see cref="Events"/>.
+            /// The JSON description of the <see cref="SuccessfulTransactionEventArgs.Events"/>.
             /// </summary>
             public readonly string ExportedEvents;
 
-            internal TransactionEvent( int t, DateTime timeUtc, IReadOnlyList<ObservableEvent> e, string exported )
+            internal TransactionEvent( int t, DateTime timeUtc, string exported )
             {
                 TransactionNumber = t;
-                Events = e;
                 TimeUtc = timeUtc;
                 ExportedEvents = exported;
             }
         }
 
         /// <summary>
-        /// Initializes a new <see cref="TransactionEventCollectorClient"/>.
+        /// Initializes a new <see cref="JsonEventCollector"/>.
         /// </summary>
         /// <param name="next">The next manager (can be null).</param>
-        public TransactionEventCollectorClient( IObservableDomainClient? next = null )
+        public JsonEventCollector()
         {
-            _next = next;
             _events = new List<TransactionEvent>();
             _buffer = new StringWriter();
             _exporter = new ObjectExporter( new JSONExportTarget( _buffer ) );
@@ -105,12 +95,15 @@ namespace CK.Observable
 
         /// <summary>
         /// Generates a JSON object that contains all the events from a specified transaction number.
+        /// This may return the <c>{"N":-1,"E":null}</c> string if a full export of the domain is required.
+        /// This may throw an <see cref="InvalidOperationException"/> if the <paramref name="transactionNumber"/>
+        /// is greater than or equal to the currently known one.
         /// </summary>
-        /// <param name="transactionNumber">The transaction number.</param>
+        /// <param name="transactionNumber">The starting transaction number.</param>
         /// <returns>The JSON object.</returns>
         public string WriteJSONEventsFrom( int transactionNumber )
         {
-            if( _events.Count == 0 || transactionNumber < _events[0].TransactionNumber-1 )
+            if( _events.Count == 0 || transactionNumber < _events[0].TransactionNumber - 1 )
             {
                 // A full export is required.
                 return "{\"N\":-1,\"E\":null}";
@@ -163,30 +156,25 @@ namespace CK.Observable
             }
         }
 
-        void IObservableDomainClient.OnDomainCreated( IActivityMonitor monitor, ObservableDomain d ) => _next?.OnDomainCreated( monitor, d );
+        /// <summary>
+        /// Event pattern adapter that calls <see cref="OnSuccessfulTransaction(in SuccessfulTransactionEventArgs)"/>.
+        /// </summary>
+        /// <param name="sender">The (ignored) sender domain.</param>
+        /// <param name="c">The transaction event.</param>
+        public void OnSuccessfulTransaction( object sender, SuccessfulTransactionEventArgs c ) => OnSuccessfulTransaction( c );
 
-        void IObservableDomainClient.OnTransactionCommit( in SuccessfulTransactionContext c )
+        /// <summary>
+        /// Generates a new <see cref="TransactionEvent"/> based on <see cref="SuccessfulTransactionEventArgs.Events"/>.
+        /// </summary>
+        /// <param name="c">The transaction event.</param>
+        public void OnSuccessfulTransaction( in SuccessfulTransactionEventArgs c )
         {
             _buffer.GetStringBuilder().Clear();
             _exporter.Reset();
             foreach( var e in c.Events ) e.Export( _exporter );
-            _events.Add( new TransactionEvent( c.Domain.TransactionSerialNumber, c.CommitTimeUtc, c.Events, _buffer.ToString() ) );
+            _events.Add( new TransactionEvent( c.Domain.TransactionSerialNumber, c.CommitTimeUtc, _buffer.ToString() ) );
             ApplyKeepDuration();
-            _next?.OnTransactionCommit( c );
         }
 
-        void IObservableDomainClient.OnTransactionFailure( IActivityMonitor monitor, ObservableDomain d, IReadOnlyList<CKExceptionData> errors )
-        {
-            _next?.OnTransactionFailure( monitor, d, errors );
-        }
-
-        void IObservableDomainClient.OnTransactionStart( IActivityMonitor monitor, ObservableDomain d, DateTime timeUtc )
-        {
-            _next?.OnTransactionStart( monitor, d, timeUtc );
-        }
-
-        void IObservableDomainClient.OnDomainDisposed( IActivityMonitor monitor, ObservableDomain d )
-        {
-        }
     }
 }

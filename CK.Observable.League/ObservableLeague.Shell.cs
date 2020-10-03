@@ -182,8 +182,8 @@ namespace CK.Observable.League
                             snapshotSaveDelay: TimeSpan.FromMilliseconds( Client.SnapshotSaveDelay ),
                             snapshotKeepDuration: Client.SnapshotKeepDuration,
                             snapshotMaximalTotalKiB: Client.SnapshotMaximalTotalKiB,
-                            eventKeepDuration: Client.TransactClient.KeepDuration,
-                            eventKeepLimit: Client.TransactClient.KeepLimit );
+                            eventKeepDuration: Client.JsonEventCollector.KeepDuration,
+                            eventKeepLimit: Client.JsonEventCollector.KeepLimit );
             }
 
             void IManagedDomain.Destroy( IActivityMonitor monitor, IManagedLeague league )
@@ -201,8 +201,8 @@ namespace CK.Observable.League
                     Client.SnapshotSaveDelay = (int)options.SnapshotSaveDelay.TotalMilliseconds;
                     Client.SnapshotKeepDuration = options.SnapshotKeepDuration;
                     Client.SnapshotMaximalTotalKiB = options.SnapshotMaximalTotalKiB;
-                    Client.TransactClient.KeepDuration = options.ExportedEventKeepDuration;
-                    Client.TransactClient.KeepLimit = options.ExportedEventKeepLimit;
+                    Client.JsonEventCollector.KeepDuration = options.ExportedEventKeepDuration;
+                    Client.JsonEventCollector.KeepLimit = options.ExportedEventKeepLimit;
                 }
                 if( hasActiveTimedEvents.HasValue ) _hasActiveTimedEvents = hasActiveTimedEvents.Value;
                 bool shouldBeLoaded = ShouldBeLoaded;

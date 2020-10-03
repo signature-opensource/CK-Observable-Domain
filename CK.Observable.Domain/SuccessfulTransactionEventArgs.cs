@@ -8,17 +8,14 @@ namespace CK.Observable
 {
     /// <summary>
     /// Encapsulates the result of a successful <see cref="ObservableDomain.Transaction.Commit"/>.
-    /// This is avalaible 
+    /// This is available from <see cref="IObservableDomainClient.OnTransactionCommit(in SuccessfulTransactionEventArgs)"/>
+    /// and <see cref="IObservableDomainSafeClient"/>
     /// </summary>
-    public readonly struct SuccessfulTransactionContext
+    public class SuccessfulTransactionEventArgs : EventMonitoredArgs 
     {
         readonly ObservableDomain _domain;
         internal readonly ActionRegistrar<PostActionContext> _postActions;
-
-        /// <summary>
-        /// Gets the monitor to use.
-        /// </summary>
-        public IActivityMonitor Monitor => _domain.CurrentMonitor;
+        internal readonly List<object> _commands;
 
         /// <summary>
         /// Gets the observable domain.
@@ -47,25 +44,26 @@ namespace CK.Observable
         public IReadOnlyList<ObservableEvent> Events { get; }
 
         /// <summary>
-        /// Gets the commands that the transaction generated (all the commands
-        /// sent via <see cref="DomainView.SendCommand(object)"/>.
+        /// Adds a command to the ones already enqueued by <see cref="DomainView.SendCommand(object)"/>.
         /// </summary>
-        public IReadOnlyList<object> Commands { get; }
+        public void SendCommand( object command ) => _commands.Add( command );
 
         /// <summary>
-        /// Registrar for actions (that can be synchronous as well as asynchronous) that must be executed.
+        /// Registrar for actions (that can be synchronous as well as asynchronous) that must be executed after
+        /// the transaction itself.
         /// </summary>
         public IActionRegistrar<PostActionContext> PostActions => _postActions;
 
-        internal SuccessfulTransactionContext( ObservableDomain d, IReadOnlyList<ObservableEvent> e, IReadOnlyList<object> c, DateTime startTime, DateTime nextDueTime )
+        internal SuccessfulTransactionEventArgs( ObservableDomain d, IReadOnlyList<ObservableEvent> e, List<object> c, DateTime startTime, DateTime nextDueTime )
+            : base( d.CurrentMonitor )
         {
             _postActions = new ActionRegistrar<PostActionContext>();
+            _commands = c;
             _domain = d;
             NextDueTimeUtc = nextDueTime;
             StartTimeUtc = startTime;
             CommitTimeUtc = DateTime.UtcNow;
             Events = e;
-            Commands = c;
         }
 
     }

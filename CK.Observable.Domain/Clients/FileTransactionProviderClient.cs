@@ -92,7 +92,7 @@ namespace CK.Observable
         }
 
         /// <inheritdoc />
-        public override void OnTransactionCommit( in SuccessfulTransactionContext c )
+        public override void OnTransactionCommit( in SuccessfulTransactionEventArgs c )
         {
             base.OnTransactionCommit( c );
             if( _minimumDueTimeMs == 0 )

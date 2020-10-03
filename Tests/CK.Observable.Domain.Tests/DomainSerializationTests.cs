@@ -3,6 +3,7 @@ using CK.Observable.Domain.Tests.Sample;
 using FluentAssertions;
 using NUnit.Framework;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using static CK.Testing.MonitorTestHelper;
@@ -21,18 +22,22 @@ namespace CK.Observable.Domain.Tests
                 {
                     var car = new Car( "Hello" );
                     car.TestSpeed = 10;
-                } );
+                } ).Success.Should().BeTrue();
+
                 using( var d2 = TestHelper.SaveAndLoad( domain ) )
                 {
+                    IReadOnlyList<ObservableEvent>? events = null;
+                    d2.OnSuccessfulTransaction += ( d, ev ) => events = ev.Events;
+
                     var c = d2.AllObjects.OfType<Car>().Single();
                     c.Name.Should().Be( "Hello" );
                     c.TestSpeed.Should().Be( 10 );
 
-                    var r = d2.Modify( TestHelper.Monitor, () =>
+                    d2.Modify( TestHelper.Monitor, () =>
                     {
                         c.TestSpeed = 10000;
-                    } );
-                    r.Events.Should().HaveCount( 1 );
+                    } ).Success.Should().BeTrue();
+                    events.Should().HaveCount( 1 );
                 }
             }
         }

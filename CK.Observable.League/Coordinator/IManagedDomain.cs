@@ -36,8 +36,8 @@ namespace CK.Observable.League
         /// Applies the <see cref="Domain.Options"/>. This is called
         /// after the domain has been created and on each change of its Options form the <see cref="Coordinator"/> domain
         /// or at the end of each transaction from the domain itself.
-        /// Parameters are captured immutables: <see cref="ObservableLeague.DomainClient.OnTransactionCommit(in SuccessfulTransactionContext)"/>
-        /// can safely defer the execution via <see cref="SuccessfulTransactionContext.PostActions"/>.
+        /// Parameters are captured immutables: <see cref="ObservableLeague.DomainClient.OnTransactionCommit(in SuccessfulTransactionEventArgs)"/>
+        /// can safely defer the execution via <see cref="SuccessfulTransactionEventArgs.PostActions"/>.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="options">The updated options if not null.</param>
