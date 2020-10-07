@@ -72,7 +72,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 using( d.AcquireReadLock() )
                 {
                     TestHelper.Monitor.Trace( $"counter.Count = {counter.Count}." );
-                    counter.Count.Should().Match( c => c == intermediateCount + 5 );
+                    counter.Count.Should().BeCloseTo( intermediateCount + 5, 1 );
                 }
             }
         }
