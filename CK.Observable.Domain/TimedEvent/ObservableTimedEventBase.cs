@@ -18,6 +18,10 @@ namespace CK.Observable
     public abstract class ObservableTimedEventBase : IDisposableObject
     {
         internal TimeManager? TimeManager;
+        /// <summary>
+        /// The ActiveIndex is the index of this object in the heap managed by the TimeManager.
+        /// When 0, this is "out of the heap": this is not active.
+        /// </summary>
         internal int ActiveIndex;
 
         /// <summary>
@@ -26,6 +30,10 @@ namespace CK.Observable
         internal DateTime ExpectedDueTimeUtc;
         internal ObservableTimedEventBase? Next;
         internal ObservableTimedEventBase? Prev;
+
+        internal ObservableTimedEventBase? NextInClock;
+        internal ObservableTimedEventBase? PrevInClock;
+        SuspendableClock? _clock;
 
         ObservableEventHandler<ObservableDomainEventArgs> _disposed;
 
@@ -46,9 +54,13 @@ namespace CK.Observable
             var r = c.StartReading().Reader;
             ActiveIndex = r.ReadInt32();
             ExpectedDueTimeUtc = r.ReadDateTime();
+            _clock = (SuspendableClock?)r.ReadObject();
+            NextInClock = (ObservableTimedEventBase?)r.ReadObject();
+            PrevInClock = (ObservableTimedEventBase?)r.ReadObject();
             _disposed = new ObservableEventHandler<ObservableDomainEventArgs>( r );
             Tag = r.ReadObject();
-            if( ActiveIndex != 0 ) TimeManager.OnLoadedActive( this );
+            // Activation is done by TimeManager.Load() that is called at the end of the object load,
+            // before the sidekicks.
         }
 
         void Write( BinarySerializer w )
@@ -56,15 +68,54 @@ namespace CK.Observable
             Debug.Assert( !IsDisposed );
             w.Write( ActiveIndex );
             w.Write( ExpectedDueTimeUtc );
+            w.WriteObject( _clock );
+            w.WriteObject( NextInClock );
+            w.WriteObject( PrevInClock );
             _disposed.Write( w );
             w.WriteObject( Tag );
         }
 
         /// <summary>
         /// Gets whether this timed event is active.
-        /// There must be at least one registered callback for this to be true.
+        /// There must be at least one <see cref="Elapsed"/> registered callback for this to be true. and if a
+        /// bound <see cref="SuspendableClock"/> exists, it must be active.
         /// </summary>
         public abstract bool IsActive { get; }
+
+        /// <summary>
+        /// Gets the <see cref="SuspendableClock"/> to which this <see cref="ObservableTimedEventBase"/> is bound.
+        /// </summary>
+        public SuspendableClock? SuspendableClock
+        {
+            get => _clock;
+            set
+            {
+                if( _clock == value ) return;
+                this.CheckDisposed();
+
+                bool previousActiveClock = true;
+                bool currentActiveClock = true;
+                if( _clock != null )
+                {
+                    previousActiveClock = _clock.IsActive;
+                    _clock.Unbound( this );
+                    _clock = null;
+                    Debug.Assert( NextInClock == null && PrevInClock == null );
+                }
+                if( value != null )
+                {
+                    value.CheckDisposed();
+                    currentActiveClock = value.IsActive;
+                    value.Bound( this );
+                    _clock = value;
+                }
+                if( previousActiveClock != currentActiveClock )
+                {
+                    Debug.Assert( TimeManager != null, "Since this is not disposed." );
+                    TimeManager.OnChanged( this );
+                }
+            }
+        }
 
         /// <summary>
         /// Gets whether this object has been disposed.
@@ -94,6 +145,18 @@ namespace CK.Observable
 
         internal abstract void OnDeactivate();
 
+        internal void OnSuspendableClockActivated( TimeSpan lastStopDuration )
+        {
+            Debug.Assert( _clock != null && _clock.IsActive );
+            // The clock became active.
+            // Whenever ExpectedDueTimeUtc is, we postpone it with the duration of the stop. 
+            if( ExpectedDueTimeUtc != Util.UtcMinValue && ExpectedDueTimeUtc != Util.UtcMaxValue )
+            {
+                ExpectedDueTimeUtc += lastStopDuration;
+                TimeManager.OnChanged( this );
+            }
+        }
+
         /// <summary>
         /// This default implementation applies to reminders.
         /// </summary>
@@ -121,6 +184,11 @@ namespace CK.Observable
         {
             if( !IsDisposed )
             {
+                if( _clock != null )
+                {
+                    _clock.Unbound( this );
+                    _clock = null;
+                }
                 TimeManager.OnPreDisposed( this );
                 Debug.Assert( ActiveIndex == 0, "Timed event has been removed from the priority queue." );
                 _disposed.Raise( this, Domain.DefaultEventArgs );

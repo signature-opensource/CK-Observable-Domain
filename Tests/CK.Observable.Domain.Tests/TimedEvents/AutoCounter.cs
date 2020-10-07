@@ -71,6 +71,22 @@ namespace CK.Observable.Domain.Tests.TimedEvents
         }
 
         /// <summary>
+        /// Gets the private <see cref="ObservableTimedEventBase.IsActive"/>.
+        /// Because of the <see cref="SuspendableClock"/>, then Start is not guaranteed to put this to true
+        /// (A contrario, Stop is guaranteed to transition this to false.)
+        /// </summary>
+        public bool IsRunning => _timer.IsActive;
+
+        /// <summary>
+        /// Gets or sets the private <see cref="ObservableTimedEventBase.SuspendableClock"/>.
+        /// </summary>
+        public SuspendableClock? SuspendableClock
+        {
+            get => _timer.SuspendableClock;
+            set => _timer.SuspendableClock = value;
+        }
+
+        /// <summary>
         /// Reconfigures the private timer: see <see cref="ObservableTimer.Reconfigure(DateTime, int)"/>.
         /// </summary>
         /// <param name="firstDueTimeUtc"></param>

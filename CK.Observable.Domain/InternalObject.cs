@@ -111,9 +111,9 @@ namespace CK.Observable
 
         /// <summary>
         /// Called before this object is disposed.
-        /// Override to dispose other objects managed by this <see cref="ObservableObject"/>, making sure to call base.
-        /// Implementation at this level raises the <see cref="Disposed"/> event:
-        /// it must be called by overrides.
+        /// Override it to dispose other objects managed by this <see cref="ObservableObject"/> or to unregister whatever should be unregistered, but
+        /// always be sure to call the base class.
+        /// Implementation at this level raises the <see cref="Disposed"/> event: it must be called by overrides.
         /// <para>
         /// Note that the Disposed event is raised only for explicit object disposing:
         /// a <see cref="ObservableDomain.Load(IActivityMonitor, System.IO.Stream, bool, System.Text.Encoding, int, bool)"/> doesn't trigger the event.

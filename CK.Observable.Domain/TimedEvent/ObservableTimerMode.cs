@@ -8,6 +8,7 @@ namespace CK.Observable
 {
     /// <summary>
     /// Defines the behavior of the <see cref="ObservableTimer"/> regarding the adjustment of its <see cref="ObservableTimer.DueTimeUtc"/>.
+    /// This is an attempt to handle as simply as possible the clock drift complicated problem. Look for "computer clock drift" on internet.
     /// </summary>
     public enum ObservableTimerMode
     {

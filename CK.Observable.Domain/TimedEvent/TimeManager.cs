@@ -16,6 +16,8 @@ namespace CK.Observable
     /// </summary>
     public sealed class TimeManager : ITimeManager
     {
+        // The min heap is strored in an array.
+        // The ObservableTimedEventBase.ActiveIndex is the index in this heap: 0 index is not used.
         int _activeCount;
         ObservableTimedEventBase[] _activeEvents;
         int _count;
@@ -34,7 +36,7 @@ namespace CK.Observable
 
         /// <summary>
         /// Default implementation that is available on <see cref="Timer"/> and can be specialized
-        /// and replaced as needed... Well... If you really need it, which I strongly doubt.
+        /// and replaced as needed... Well... If you really need it, that I strongly doubt.
         /// </summary>
         public class AutoTimer : IDisposable
         {
@@ -385,14 +387,8 @@ namespace CK.Observable
         /// <inheritdoc/>
         public IReadOnlyCollection<ObservableTimedEventBase> AllObservableTimedEvents => _exposedTimedEvents;
 
-        /// <summary>
-        /// Uses a pooled <see cref="ObservableReminder"/> to call the specified callback at the given time with the
-        /// associated <see cref="ObservableTimedEventBase.Tag"/> object.
-        /// </summary>
-        /// <param name="dueTimeUtc">The due time. Must be in Utc and not <see cref="Util.UtcMinValue"/> or <see cref="Util.UtcMaxValue"/>.</param>
-        /// <param name="callback">The callback method. Must not be null.</param>
-        /// <param name="tag">Optional tag that will be available on event argument's: <see cref="ObservableTimedEventBase.Tag"/>.</param>
-        public void Remind( DateTime dueTimeUtc, SafeEventHandler<ObservableReminderEventArgs> callback, object? tag )
+        /// <inheritdoc />
+        public void Remind( DateTime dueTimeUtc, SafeEventHandler<ObservableReminderEventArgs> callback, SuspendableClock? clock, object? tag )
         {
             // Utc is checked by the DueTimeUtc setter below.
             if( dueTimeUtc == Util.UtcMinValue || dueTimeUtc == Util.UtcMaxValue ) throw new ArgumentException( nameof( dueTimeUtc ), $"Must be a Utc DateTime, not UtcMinValue nor UtcMaxValue: {dueTimeUtc.ToString( "o" )}." );
@@ -401,6 +397,7 @@ namespace CK.Observable
             r.Elapsed += callback;
             r.Tag = tag;
             r.DueTimeUtc = dueTimeUtc;
+            r.SuspendableClock = clock;
         }
 
         ObservableReminder _firstFreeReminder;
@@ -418,6 +415,7 @@ namespace CK.Observable
             Debug.Assert( r != null );
             r.NextFreeReminder = _firstFreeReminder;
             _firstFreeReminder = r;
+            r.SuspendableClock = null;
         }
 
         internal void SetNextDueTimeUtc( IActivityMonitor m, DateTime nextDueTimeUtc )
@@ -440,6 +438,7 @@ namespace CK.Observable
         {
             Debug.Assert( t is ObservableTimer || t is ObservableReminder );
             if( (t.Next = _first) == null ) _last = t;
+            else _first.Prev = t;
             _first = t;
             _changed.Add( t );
             ++_count;
@@ -463,6 +462,12 @@ namespace CK.Observable
             if( t is ObservableTimer ) --_timerCount;
         }
 
+        /// <summary>
+        /// Adds the timed event into the set of changed ones.
+        /// The change is handled in <see cref="DoApplyChanges"/> called at the start
+        /// and at the end of the ObservableDomain.Modify.
+        /// </summary>
+        /// <param name="t">The tiemd event to add.</param>
         internal void OnChanged( ObservableTimedEventBase t ) => _changed.Add( t );
 
         internal void Save( IActivityMonitor m, BinarySerializer w )
@@ -479,22 +484,32 @@ namespace CK.Observable
 
         internal void Load( IActivityMonitor m, BinaryDeserializer r )
         {
-            Debug.Assert( _count == 0 && _timerCount == 0 && _first == null && _last == null && _activeCount == 0 );
             int version = r.ReadNonNegativeSmallInt32();
             int count = r.ReadNonNegativeSmallInt32();
             while( --count >= 0 )
             {
-                object o = r.ReadObject();
-                if( o is ObservableTimer ) ++_timerCount;
+                var t = (ObservableTimedEventBase)r.ReadObject()!;
+                if( t.ActiveIndex > 0 )
+                {
+                    EnsureActiveLength( t.ActiveIndex );
+                    _activeEvents[t.ActiveIndex] = t;
+                    ++_activeCount;
+                }
             }
-        }
-
-        internal void OnLoadedActive( ObservableTimedEventBase t )
-        {
-            Debug.Assert( t.ActiveIndex > 0 );
-            EnsureActiveLength( t.ActiveIndex );
-            _activeEvents[t.ActiveIndex] = t;
-            ++_activeCount;
+#if DEBUG
+            int expectedCount = _count;
+            ObservableTimedEventBase? last = null;
+            ObservableTimedEventBase? f = _first;
+            while( f != null )
+            {
+                Debug.Assert( --expectedCount >= 0 );
+                Debug.Assert( f.Prev == last );
+                last = f;
+                f = f.Next;
+            }
+            Debug.Assert( expectedCount == 0 );
+            Debug.Assert( _last == last );
+#endif
         }
 
         internal void Clear( IActivityMonitor monitor )
@@ -669,18 +684,26 @@ namespace CK.Observable
             {
                 parent = timer.ActiveIndex >> 1;
                 var parentNode = _activeEvents[parent];
-                if( IsBefore( parentNode, timer ) ) return;
-
+                if( IsBefore( parentNode, timer ) )
+                {
+                    return;
+                }
                 _activeEvents[timer.ActiveIndex] = parentNode;
                 parentNode.ActiveIndex = timer.ActiveIndex;
                 timer.ActiveIndex = parent;
             }
-            else return;
+            else
+            {
+                return;
+            }
             while( parent > 1 )
             {
                 parent >>= 1;
                 var parentNode = _activeEvents[parent];
-                if( IsBefore( parentNode, timer ) ) break;
+                if( IsBefore( parentNode, timer ) )
+                {
+                    break;
+                }
                 // Move parent down the heap to make room.
                 _activeEvents[timer.ActiveIndex] = parentNode;
                 parentNode.ActiveIndex = timer.ActiveIndex;
@@ -696,8 +719,10 @@ namespace CK.Observable
             int childLeftIndex = 2 * finalActiveIndex;
 
             // If leaf node, we're done
-            if( childLeftIndex > _activeCount ) return;
-
+            if( childLeftIndex > _activeCount )
+            {
+                return;
+            }
             // Check if the left-child is before the current timer.
             int childRightIndex = childLeftIndex + 1;
             var childLeft = _activeEvents[childLeftIndex];

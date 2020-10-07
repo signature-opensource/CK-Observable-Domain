@@ -73,7 +73,7 @@ namespace CK.Observable
             w.WriteNullableString( Name );
         }
 
-        private protected override bool GetIsActive() => _isActive && ExpectedDueTimeUtc != Util.UtcMinValue && ExpectedDueTimeUtc != Util.UtcMaxValue;
+        private protected override bool GetIsActiveFlag() => _isActive;
 
         private protected override ObservableTimerEventArgs ReusableArgs { get; }
 
@@ -83,13 +83,16 @@ namespace CK.Observable
         /// </summary>
         public new bool IsActive
         {
-            get => GetIsActive();
+            get => base.IsActive;
             set
             {
                 if( _isActive != value )
                 {
                     this.CheckDisposed();
-                    if( _isActive = value ) ExpectedDueTimeUtc = DateTime.UtcNow;
+                    if( _isActive = value )
+                    {
+                        ExpectedDueTimeUtc = DateTime.UtcNow;
+                    }
                     TimeManager.OnChanged( this );
                 }
             }
@@ -97,7 +100,7 @@ namespace CK.Observable
 
         /// <summary>
         /// Gets the next due time.
-        /// If this is <see cref="Util.UtcMinValue"/> nor <see cref="Util.UtcMaxValue"/>, then <see cref="ObservableTimedEventBase.IsActive">IsActive</see>
+        /// If this is <see cref="Util.UtcMinValue"/> or <see cref="Util.UtcMaxValue"/>, then <see cref="IsActive">IsActive</see>
         /// is false.
         /// </summary>
         public DateTime DueTimeUtc => ExpectedDueTimeUtc;

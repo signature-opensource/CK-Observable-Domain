@@ -86,9 +86,6 @@ namespace CK.Observable
 
         private protected override ObservableReminderEventArgs ReusableArgs { get; }
         
-
-        private protected override bool GetIsActive() => ExpectedDueTimeUtc != Util.UtcMinValue && ExpectedDueTimeUtc != Util.UtcMaxValue; 
-
         /// <summary>
         /// Gets or sets the next planned time: set it to <see cref="Util.UtcMinValue"/> or <see cref="Util.UtcMaxValue"/> to disable
         /// this reminder.

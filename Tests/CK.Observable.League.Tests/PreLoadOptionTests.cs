@@ -71,7 +71,7 @@ namespace CK.Observable.League.Tests
             {
                 await shell.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) =>
                 {
-                    d.TimeManager.Remind( DateTime.UtcNow.AddMilliseconds( 100 ), OnTimer, null );
+                    d.TimeManager.Remind( DateTime.UtcNow.AddMilliseconds( 100 ), OnTimer, null, null );
                 } );
             }
             loader.IsLoaded.Should().BeFalse( "The domain is not alive." );
@@ -107,7 +107,7 @@ namespace CK.Observable.League.Tests
                 {
                     d.TimeManager.AllObservableTimedEvents.Should().BeEmpty();
 
-                    d.TimeManager.Remind( DateTime.UtcNow.AddMilliseconds( 100 ), OnTimer, null );
+                    d.TimeManager.Remind( DateTime.UtcNow.AddMilliseconds( 100 ), OnTimer, null, null );
 
                     d.TimeManager.AllObservableTimedEvents.Should().HaveCount( 1 );
                     d.TimeManager.Timers.Should().BeEmpty();

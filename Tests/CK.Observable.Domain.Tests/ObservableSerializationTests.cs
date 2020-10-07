@@ -1,6 +1,7 @@
 using CK.Core;
 using FluentAssertions;
 using NUnit.Framework;
+using System;
 using System.IO;
 using System.Linq;
 using static CK.Testing.MonitorTestHelper;
@@ -10,6 +11,56 @@ namespace CK.Observable.Domain.Tests
     [TestFixture]
     public class ObservableSerializationTests
     {
+        [TestCase( "Person" )]
+        [TestCase( "SuspendableClock" )]
+        [TestCase( "Timer" )]
+        [TestCase( "Reminder" )]
+        [TestCase( "AutoCounter" )]
+        public void one_object_serialization( string type )
+        {
+            using var handler = TestHelper.CreateDomainHandler( $"{nameof( one_object_serialization )}-{type}", serviceProvider: null );
+
+            object o = null;
+            handler.Domain.Modify( TestHelper.Monitor, () =>
+            {
+                switch( type )
+                {
+                    case "Person": o = new Sample.Person() { FirstName = "XX", LastName = "YY", Age = 35 }; break;
+                    case "SuspendableClock": o = new SuspendableClock(); break;
+                    case "Timer": o = new ObservableTimer( DateTime.UtcNow.AddDays( 1 ) ); break;
+                    case "Reminder": o = new ObservableReminder( DateTime.UtcNow.AddDays( 1 ) ); break;
+                    case "AutoCounter": o = new TimedEvents.AutoCounter( 10000 ); break;
+                }
+
+            } ).Success.Should().BeTrue();
+
+            handler.Reload( TestHelper.Monitor, idempotenceCheck: true );
+
+            using( handler.Domain.AcquireReadLock() )
+            {
+                if( o is ObservableObject )
+                {
+                    handler.Domain.AllObjects.Should().HaveCount( 1 );
+                }
+                else if( o is ObservableTimer )
+                {
+                    handler.Domain.TimeManager.Timers.Should().HaveCount( 1 );
+                }
+                else if( o is ObservableReminder )
+                {
+                    handler.Domain.TimeManager.Reminders.Should().HaveCount( 1 );
+                }
+                else if( o is InternalObject )
+                {
+                    handler.Domain.AllInternalObjects.Should().HaveCount( 1 );
+                }
+            }
+
+            handler.Reload( TestHelper.Monitor, idempotenceCheck: true );
+        }
+
+
+
         [SerializationVersion( 0 )]
         class ForgetToCallBaseDeserializationCtor : InternalObject
         {

@@ -58,8 +58,9 @@ namespace CK.Core
 
             public ObservableDomain Domain { get; private set; }
 
-            public void Reload( IActivityMonitor m )
+            public void Reload( IActivityMonitor m, bool idempotenceCheck = false )
             {
+                if( idempotenceCheck ) ObservableDomain.IdempotenceSerializationCheck( m, Domain );
                 var d = SaveAndLoad( m, Domain, Domain.DomainName, ServiceProvider, debugMode: true );
                 Domain.Dispose();
                 Domain = d;

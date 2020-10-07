@@ -46,15 +46,19 @@ namespace CK.Observable
 
         /// <summary>
         /// Gets whether this timed event is active.
-        /// There must be at least one <see cref="Elapsed"/> registered callback for this to be true.
+        /// There must be at least one <see cref="Elapsed"/> registered callback for this to be true. and if a
+        /// bound <see cref="ObservableTimedEventBase.SuspendableClock"/> exists, it must be active.
         /// </summary>
-        public override bool IsActive => _handlers.HasHandlers && GetIsActive();
+        public override bool IsActive => (SuspendableClock == null || SuspendableClock.IsActive)
+                                            && _handlers.HasHandlers
+                                            && ExpectedDueTimeUtc != Util.UtcMinValue && ExpectedDueTimeUtc != Util.UtcMaxValue
+                                            && GetIsActiveFlag();
 
         /// <summary>
         /// This must compute whether this timed event is logically active.
         /// </summary>
         /// <returns>True if this timed event is logically active.</returns>
-        private protected abstract bool GetIsActive();
+        private protected virtual bool GetIsActiveFlag() => true;
 
         /// <summary>
         /// This must provide the typed reusable event argument.

@@ -56,7 +56,20 @@ namespace CK.Observable
         /// <param name="tag">Optional tag that will be available on event argument's: <see cref="ObservableTimedEventBase.Tag"/>.</param>
         public void Remind( DateTime dueTimeUtc, SafeEventHandler<ObservableReminderEventArgs> callback, object? tag = null )
         {
-            _d.TimeManager.Remind( dueTimeUtc, callback, tag );
+            _d.TimeManager.Remind( dueTimeUtc, callback, null, tag );
+        }
+
+        /// <summary>
+        /// Uses a pooled <see cref="ObservableReminder"/> to call the specified callback at the given time with the
+        /// associated <see cref="ObservableTimedEventBase.Tag"/> object, binding this reminder to a <see cref="SuspendableClock"/>.
+        /// </summary>
+        /// <param name="dueTimeUtc">The due time. Must be in Utc and not <see cref="Util.UtcMinValue"/> or <see cref="Util.UtcMaxValue"/>.</param>
+        /// <param name="callback">The callback method. Must not be null.</param>
+        /// <param name="clock">The <see cref="SuspendableClock"/> to which the reminder must be bound.</param>
+        /// <param name="tag">Optional tag that will be available on event argument's: <see cref="ObservableTimedEventBase.Tag"/>.</param>
+        public void Remind( DateTime dueTimeUtc, SafeEventHandler<ObservableReminderEventArgs> callback, SuspendableClock clock, object? tag = null )
+        {
+            _d.TimeManager.Remind( dueTimeUtc, callback, clock, tag );
         }
 
         /// <summary>

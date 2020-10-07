@@ -38,7 +38,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                     var o = new ObservableReminder( DateTime.UtcNow.AddMilliseconds( timeout ) );
                     o.Elapsed += StaticElapsed;
                     TestHelper.Monitor.Info( "Before!" );
-                } );
+                } ).Success.Should().BeTrue();
                 TestHelper.Monitor.Info( "After!" );
                 d.TimeManager.AllObservableTimedEvents.Single().IsActive.Should().BeFalse();
             }
@@ -58,14 +58,14 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                     var o = new ObservableReminder( DateTime.UtcNow.AddMilliseconds( 50 ) );
                     o.Elapsed += StaticElapsed;
                     RawTraces.Enqueue( "Before!" );
-                } );
+                } ).Success.Should().BeTrue();
                 RawTraces.Enqueue( "Not Yet!" );
                 d.TimeManager.AllObservableTimedEvents.Single().IsActive.Should().BeTrue();
                 Thread.Sleep( 50 );
                 d.Modify( TestHelper.Monitor, () =>
                 {
                     RawTraces.Enqueue( "After!" );
-                } );
+                } ).Success.Should().BeTrue();
                 d.TimeManager.AllObservableTimedEvents.Single().IsActive.Should().BeFalse();
             }
 
@@ -101,7 +101,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                     var o = new ObservableReminder( DateTime.UtcNow.AddMilliseconds( 50 ) );
                     o.Elapsed += StaticElapsed;
                     TestHelper.Monitor.Info( "Before!" );
-                } );
+                } ).Success.Should().BeTrue();
                 TestHelper.Monitor.Info( "Not Yet!" );
                 d.TimeManager.AllObservableTimedEvents.Single().IsActive.Should().BeTrue();
                 Thread.Sleep( 50 + 30 );
@@ -109,7 +109,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 d.Modify( TestHelper.Monitor, () =>
                 {
                     TestHelper.Monitor.Info( "After!" );
-                } );
+                } ).Success.Should().BeTrue();
                 d.TimeManager.AllObservableTimedEvents.Single().IsActive.Should().BeFalse();
             }
             entries.Select( e => e.Text ).Concatenate().Should().Match( "*Before!*Elapsed:*After!*" );
@@ -135,7 +135,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 {
                     counter = new AutoCounter( 100 );
                     counter.CountChanged += ( o, e ) => relayedCounter++;
-                } );
+                } ).Success.Should().BeTrue();
                 TestHelper.Monitor.Trace( $"new AutoCounter( 100 ) done. Waiting {waitTime} ms." );
                 Thread.Sleep( waitTime );
                 TestHelper.Monitor.Trace( $"End of Waiting." );
@@ -166,7 +166,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                     // (timed events are handled at the start AND the end of the Modify).
                     Thread.Sleep( 200 );
                     // Here, there is one execution.
-                } );
+                } ).Success.Should().BeTrue();
                 // This is not really safe: the timer MAY be fired here before we do the AcquireReadLock:
                 // this is why we allow the counter to be greater than 1...
                 using( d.AcquireReadLock() )
@@ -244,14 +244,13 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             var now = DateTime.UtcNow;
             using( var d = new ObservableDomain( TestHelper.Monitor, nameof( serializing_timers_and_reminders ) + " (Primary)" ) )
             {
-                var tranResult = d.Modify( TestHelper.Monitor, () =>
+                d.Modify( TestHelper.Monitor, () =>
                 {
                     // Interval: from 1 to 36 ms.
                     // Only half of them (odd ones) are Active.
                     Enumerable.Range( 0, 8 ).Select( i => new ObservableTimer(i.ToString(), now, 1 + i * 5, (i & 1) != 0)).ToArray();
                     d.TimeManager.AllObservableTimedEvents.Where( o => !o.IsActive ).Should().HaveCount( 8 );
-                } );
-                tranResult.Success.Should().BeTrue();
+                } ).Success.Should().BeTrue();
                 using( var d2 = TestHelper.SaveAndLoad( d ) )
                 {
                     d2.TimeManager.Timers.Should().HaveCount( 8 );

@@ -1314,6 +1314,8 @@ namespace CK.Observable
                 _actualObjectCount = r.ReadInt32();
 
                 r.DebugCheckSentinel();
+
+                // Clears and read the new free list.
                 _freeList.Clear();
                 int count = r.ReadNonNegativeSmallInt32();
                 while( --count >= 0 )
@@ -1322,6 +1324,8 @@ namespace CK.Observable
                 }
 
                 r.DebugCheckSentinel();
+
+                // Clears and read the properties index.
                 _properties.Clear();
                 _propertiesByIndex.Clear();
                 count = r.ReadNonNegativeSmallInt32();
@@ -1335,28 +1339,6 @@ namespace CK.Observable
 
                 r.DebugCheckSentinel();
 
-                #region Resize _objects array.
-                _objectsListCount = count = _actualObjectCount + _freeList.Count;
-                while( _objectsListCount > _objects.Length )
-                {
-                    Array.Resize( ref _objects, _objects.Length * 2 );
-                }
-                #endregion
-
-                for( int i = 0; i < count; ++i )
-                {
-                    _objects[i] = (ObservableObject)r.ReadObject();
-                }
-
-                // Roots
-                r.DebugCheckSentinel();
-                _roots.Clear();
-                count = r.ReadNonNegativeSmallInt32();
-                while( --count >= 0 )
-                {
-                    _roots.Add( _objects[r.ReadNonNegativeSmallInt32()] as ObservableRootObject );
-                }
-
                 // Clears any internal objects.
                 var internalObj = _firstInternalObject;
                 while( internalObj != null )
@@ -1365,9 +1347,32 @@ namespace CK.Observable
                     internalObj = internalObj.Next;
                 }
                 _firstInternalObject = _lastInternalObject = null;
+                _internalObjectCount = 0;
 
                 // Clears any time event objects.
                 _timeManager.Clear( monitor );
+
+                // Resize _objects array.
+                _objectsListCount = count = _actualObjectCount + _freeList.Count;
+                while( _objectsListCount > _objects.Length )
+                {
+                    Array.Resize( ref _objects, _objects.Length * 2 );
+                }
+                
+                // Reads objects. This can read Internal and Timed objects.
+                for( int i = 0; i < count; ++i )
+                {
+                    _objects[i] = (ObservableObject)r.ReadObject();
+                }
+
+                // Fill roots array.
+                r.DebugCheckSentinel();
+                _roots.Clear();
+                count = r.ReadNonNegativeSmallInt32();
+                while( --count >= 0 )
+                {
+                    _roots.Add( _objects[r.ReadNonNegativeSmallInt32()] as ObservableRootObject );
+                }
 
                 if( version > 1 )
                 {
@@ -1833,6 +1838,58 @@ namespace CK.Observable
             return o;
         }
 
+        class CheckedWriteStream : Stream
+        {
+            readonly byte[] _already;
+            int _position;
+
+            public CheckedWriteStream( byte[] already )
+            {
+                _already = already;
+            }
+
+            public override bool CanRead => false;
+
+            public override bool CanSeek => false;
+
+            public override bool CanWrite => true;
+
+            public override long Length => throw new NotSupportedException();
+
+            public override long Position { get => _position; set => throw new NotSupportedException(); }
+
+            public override void Flush()
+            {
+            }
+
+            public override int Read( byte[] buffer, int offset, int count )
+            {
+                throw new NotSupportedException();
+            }
+
+            public override long Seek( long offset, SeekOrigin origin )
+            {
+                throw new NotSupportedException();
+            }
+
+            public override void SetLength( long value )
+            {
+                throw new NotSupportedException();
+            }
+
+            public override void Write( byte[] buffer, int offset, int count )
+            {
+                for( int i = offset; i < count; ++i )
+                {
+                    var actual = _already[_position++];
+                    if( buffer[i] != actual )
+                    {
+                        throw new CKException( $"Write stream differ @{_position-1}. Expected byte '{actual}', got '{buffer[i]}'." );
+                    }
+                }
+            }
+        }
+
         /// <summary>
         /// Small helper for tests: ensures that a domain that is Saved, Loaded and Saved again results
         /// in the exact same sequence of bytes.
@@ -1851,43 +1908,10 @@ namespace CK.Observable
                 var originalTransactionSerialNumber = domain.TransactionSerialNumber;
                 s.Position = 0;
                 if( !domain.Load( monitor, s, true, millisecondsTimeout: milliSecondsTimeout, updateAutoTimer: false ) ) throw new Exception( "Reload failed: Unable to acquire lock." );
-                s.Position = 0;
-                if( !domain.Save( monitor, s, true, millisecondsTimeout: milliSecondsTimeout, debugMode: useDebugMode ) ) throw new Exception( "Second Save failed: Unable to acquire lock." );
-                var rewriteBytes = s.ToArray();
-                var rewriteTransactionSerialNumber = domain.TransactionSerialNumber;
-                if( !originalBytes.SequenceEqual( rewriteBytes ) )
-                {
-                    using( monitor.OpenError( "Reserialized bytes differ from original serialized bytes." ) )
-                    {
-                        if( originalTransactionSerialNumber != rewriteTransactionSerialNumber )
-                        {
-                            monitor.Error( $"TransactionSerialNumber changed (original: {originalTransactionSerialNumber}; rewrite: {rewriteTransactionSerialNumber})!" );
-                            monitor.Error( $"Did a timer fired between the two Save calls? If yes, make sure that Timers and Reminders are slow enough or are disabled." );
-                        }
-                        if( useDebugMode )
-                        {
-                            monitor.Error( $"Original: {originalBytes.LongLength} bytes" );
-                            monitor.Debug( ByteArrayToString( originalBytes ) );
-                            monitor.Error( $"Reserialized: {rewriteBytes.LongLength} bytes" );
-                            monitor.Debug( ByteArrayToString( rewriteBytes ) );
-                        }
-                        else
-                        {
-                            monitor.Error( $"Original: {originalBytes.LongLength} bytes" );
-                            monitor.Error( $"Reserialized: {rewriteBytes.LongLength} bytes" );
-                        }
-                    }
-                    throw new Exception( "Reserialized bytes differ from original serialized bytes." );
-                }
-            }
-        }
 
-        static string ByteArrayToString( byte[] ba )
-        {
-            StringBuilder hex = new StringBuilder( ba.Length * 2 );
-            foreach( byte b in ba )
-                hex.AppendFormat( "{0:x2}", b );
-            return hex.ToString();
+                var checker = new CheckedWriteStream( originalBytes );
+                if( !domain.Save( monitor, checker, true, millisecondsTimeout: milliSecondsTimeout, debugMode: useDebugMode ) ) throw new Exception( "Second Save failed: Unable to acquire lock." );
+            }
         }
 
     }
