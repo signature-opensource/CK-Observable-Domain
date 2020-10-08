@@ -62,7 +62,7 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Deserailization constructor.
+        /// Deserialization constructor.
         /// </summary>
         /// <param name="d">The deserialization context.</param>
         protected ObservableList( IBinaryDeserializerContext d )

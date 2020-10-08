@@ -395,6 +395,13 @@ namespace CK.Observable
                 return e;
             }
 
+            internal CollectionAddKeyEvent OnCollectionAddKey( ObservableObject o, object key )
+            {
+                var e = new CollectionAddKeyEvent( o, key );
+                _changeEvents.Add( e );
+                return e;
+            }
+
             internal void OnSendCommand( in object command )
             {
                 _commands.Add( command );
@@ -1825,6 +1832,13 @@ namespace CK.Observable
             if( _deserializeOrInitializing ) return null;
             CheckWriteLock( o ).CheckDisposed();
             return _changeTracker.OnCollectionRemoveKey( o, key );
+        }
+
+        internal CollectionAddKeyEvent? OnCollectionAddKey( ObservableObject o, object key )
+        {
+            if( _deserializeOrInitializing ) return null;
+            CheckWriteLock( o ).CheckDisposed();
+            return _changeTracker.OnCollectionAddKey( o, key );
         }
 
         IDisposableObject CheckWriteLock( [AllowNull]IDisposableObject o )

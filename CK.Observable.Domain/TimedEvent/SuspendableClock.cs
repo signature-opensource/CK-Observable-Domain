@@ -36,12 +36,17 @@ namespace CK.Observable
         bool _isActive;
 
         /// <summary>
-        /// Creates a new active <see cref="SuspendableClock"/>.
+        /// Creates a new <see cref="SuspendableClock"/>.
         /// </summary>
-        public SuspendableClock()
+        /// <param name="isActive">Whether this clock is initally active or not.</param>
+        public SuspendableClock( bool isActive = true )
         {
-            _isActive = true;
             Debug.Assert( _cumulativeOffset == TimeSpan.Zero );
+            _isActive = isActive;
+            if( !isActive )
+            {
+                _lastStop = DateTime.UtcNow;
+            }
         }
 
         SuspendableClock( IBinaryDeserializerContext d )

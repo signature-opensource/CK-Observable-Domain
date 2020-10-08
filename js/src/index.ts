@@ -135,6 +135,11 @@ export class ObservableDomain {
                         this._graph[e[1]].set(this.getValue(e[2]),this.getValue(e[3]));
                         break;
                     }
+				case "A": // CollectionAddKey
+					{
+						this._graph[e[1]].add(this.getValue(e[2]));
+                        break;
+					}
                 default: throw new Error(`Unexpected Event code: '${e[0]}'.`);
             }
         }

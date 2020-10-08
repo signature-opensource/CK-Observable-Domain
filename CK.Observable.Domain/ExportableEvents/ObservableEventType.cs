@@ -1,7 +1,7 @@
 namespace CK.Observable
 {
     /// <summary>
-    /// Models the 10 fundamental observable events required to synchronize any remote domain.
+    /// Models the 11 fundamental observable events required to synchronize any remote domain.
     /// </summary>
     public enum ObservableEventType
     {
@@ -58,6 +58,12 @@ namespace CK.Observable
         /// <summary>
         /// Event for a new association key/value in a map. <see cref="CollectionMapSetEvent"/>.
         /// </summary>
-        CollectionMapSet
+        CollectionMapSet,
+
+        /// <summary>
+        /// Event for item added in a set-like collection. <see cref="CollectionAddKeyEvent"/>.
+        /// </summary>
+        CollectionAddKey
+
     }
 }

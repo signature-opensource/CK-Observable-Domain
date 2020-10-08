@@ -5,9 +5,10 @@ namespace CK.Observable
     /// <summary>
     /// Base class for all observable events. Such events are emitted by <see cref="ObservableDomain.Modify(Core.IActivityMonitor, Action, int)"/>
     /// and are enough to fully synchronize a remote associated domain.
-    /// These events must be handled by <see cref="IObservableDomainClient"/> when the domain is locked, directly after the modifications because direct objects
-    /// are exposed by these events (for example the <see cref="PropertyChangedEvent.Value"/>): these events CANNOT be correclty handled outside once the write lock
-    /// has been released.
+    /// These events must be handled by <see cref="IObservableDomainClient.OnTransactionCommit(in SuccessfulTransactionEventArgs)"/> (write lock held),
+    /// or by <see cref="ObservableDomainSidekick.OnSuccessfulTransaction(in SuccessfulTransactionEventArgs)"/> (read lock held), directly after the
+    /// modifications because direct domain objects are exposed by these events (for example the <see cref="PropertyChangedEvent.Value"/>): these
+    /// events CANNOT be correclty handled outside of these 2 extension points.
     /// </summary>
     public abstract class ObservableEvent : EventArgs
     {
@@ -23,7 +24,8 @@ namespace CK.Observable
                 "R",  // ListRemoveAt
                 "S",  // ListSetAt
                 "K",  // CollectionRemoveKey
-                "M"   // CollectionMapSet
+                "M",  // CollectionMapSet,
+                "A"   // CollectionAddKey
             };
 
         /// <summary>

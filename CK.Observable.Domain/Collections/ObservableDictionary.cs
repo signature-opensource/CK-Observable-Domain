@@ -54,7 +54,6 @@ namespace CK.Observable
             remove => _itemRemoved.Remove( value );
         }
 
-
         /// <summary>
         /// Initializes a new empty <see cref="ObservableDictionary{TKey, TValue}"/>.
         /// </summary>
