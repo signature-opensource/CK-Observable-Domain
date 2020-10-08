@@ -12,8 +12,6 @@ namespace CK.Observable
     /// Observable objects are reference types that belong to a <see cref="ObservableDomain"/> and for
     /// which properties changes and <see cref="Dispose()"/> are tracked.
     /// </summary>
-    /// <remarks>
-    /// </remarks>
     [SerializationVersion( 1 )]
     public abstract partial class ObservableObject : INotifyPropertyChanged, IDisposableObject, IKnowMyExportDriver
     {
@@ -238,7 +236,7 @@ namespace CK.Observable
                         }
                         else
                         {
-                            throw new Exception( $"{propertyName}Changed implementation _{propertyName.ToLowerInvariant()}Changed must be a ObservableEventHandler, a ObservableEventHandler<EventMonitoredArgs> or a ObservableEventHandler<ObservableDomainEventArgs>." );
+                            throw new Exception( $"{propertyName}Changed implementation {fieldName} must be a ObservableEventHandler, a ObservableEventHandler<EventMonitoredArgs> or a ObservableEventHandler<ObservableDomainEventArgs>." );
                         }
                     }
                 }

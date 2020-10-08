@@ -280,7 +280,7 @@ namespace CK.Observable
                         _changeEvents.Add( new PropertyChangedEvent( kv.Key, pInfo.PropertyId, pInfo.Name, propValue ) );
                     }
                 }
-                var result = new SuccessfulTransactionEventArgs( domain, _changeEvents.ToArray(), _commands, startTime, nextTimerDueDate );
+                var result = new SuccessfulTransactionEventArgs( domain, domain.FindPropertyId, _changeEvents.ToArray(), _commands, startTime, nextTimerDueDate );
                 Reset();
                 return result;
             }
@@ -968,9 +968,6 @@ namespace CK.Observable
         /// Modify the domain once a transaction has been opened and calls the <see cref="IObservableDomainClient"/>
         /// that have been registered: all this occurs in the lock and it is released at the end.
         /// This never throws since the transaction result contains any errors.
-        /// <para>
-        /// 
-        /// </para>
         /// </summary>
         /// <param name="actions">The actions to execute. Can be null.</param>
         /// <param name="t">The observable transaction. Cannot be null.</param>
@@ -1790,6 +1787,12 @@ namespace CK.Observable
             }
 
             return p;
+        }
+
+        int? FindPropertyId( string propertyName )
+        {
+            if( !_properties.TryGetValue( propertyName, out var p ) ) return null;
+            return p.PropertyId;
         }
 
         internal ListRemoveAtEvent? OnListRemoveAt( ObservableObject o, int index )

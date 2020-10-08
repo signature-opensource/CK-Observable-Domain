@@ -14,6 +14,7 @@ namespace CK.Observable
     public class SuccessfulTransactionEventArgs : EventMonitoredArgs 
     {
         readonly ObservableDomain _domain;
+        readonly Func<string, int?> _propertyId;
         internal readonly ActionRegistrar<PostActionContext> _postActions;
         internal readonly List<object> _commands;
 
@@ -44,6 +45,14 @@ namespace CK.Observable
         public IReadOnlyList<ObservableEvent> Events { get; }
 
         /// <summary>
+        /// Tries to return the property identifier that is associated to the property name if this
+        /// property name has already been used in the domain.
+        /// </summary>
+        /// <param name="propertyName">THe property name to look for.</param>
+        /// <returns>The property identifier or null.</returns>
+        public int? FindPropertyId( string propertyName ) => _propertyId( propertyName );
+
+        /// <summary>
         /// Adds a command to the ones already enqueued by <see cref="DomainView.SendCommand(object)"/>.
         /// </summary>
         public void SendCommand( object command ) => _commands.Add( command );
@@ -54,12 +63,13 @@ namespace CK.Observable
         /// </summary>
         public IActionRegistrar<PostActionContext> PostActions => _postActions;
 
-        internal SuccessfulTransactionEventArgs( ObservableDomain d, IReadOnlyList<ObservableEvent> e, List<object> c, DateTime startTime, DateTime nextDueTime )
+        internal SuccessfulTransactionEventArgs( ObservableDomain d, Func<string,int?> propertyId, IReadOnlyList<ObservableEvent> e, List<object> c, DateTime startTime, DateTime nextDueTime )
             : base( d.CurrentMonitor )
         {
+            _domain = d;
+            _propertyId = propertyId;
             _postActions = new ActionRegistrar<PostActionContext>();
             _commands = c;
-            _domain = d;
             NextDueTimeUtc = nextDueTime;
             StartTimeUtc = startTime;
             CommitTimeUtc = DateTime.UtcNow;

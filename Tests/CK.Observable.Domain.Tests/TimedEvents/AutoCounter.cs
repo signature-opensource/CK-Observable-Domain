@@ -49,9 +49,9 @@ namespace CK.Observable.Domain.Tests.TimedEvents
         public EventHandler CountChanged;
 
         /// <summary>
-        /// Gets or sets the count property.
+        /// Gets the count property.
         /// </summary>
-        public int Count { get; set; }
+        public int Count { get; private set; }
 
         /// <summary>
         /// Restarts this counter by setting the <see cref="Count"/> to 0 and <see cref="ObservableTimer.IsActive"/> to true.
