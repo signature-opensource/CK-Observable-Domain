@@ -30,6 +30,7 @@ namespace CK.Observable
     {
         ObservableTimedEventBase? _firstInClock;
         ObservableTimedEventBase? _lastInClock;
+        ObservableEventHandler<ObservableDomainEventArgs> _isActiveChanged;
 
         TimeSpan _cumulativeOffset;
         DateTime _lastStop;
@@ -58,6 +59,7 @@ namespace CK.Observable
             _cumulativeOffset = r.ReadTimeSpan();
             _firstInClock = (ObservableTimedEventBase?)r.ReadObject();
             _lastInClock = (ObservableTimedEventBase?)r.ReadObject();
+            _isActiveChanged = new ObservableEventHandler<ObservableDomainEventArgs>( r );
         }
 
         void Write( BinarySerializer w )
@@ -67,6 +69,7 @@ namespace CK.Observable
             w.Write( _cumulativeOffset );
             w.WriteObject( _firstInClock );
             w.WriteObject( _lastInClock );
+            _isActiveChanged.Write( w );
         }
 
         /// <summary>
@@ -112,9 +115,24 @@ namespace CK.Observable
                         }
                         _isActive = false;
                     }
+                    if( _isActiveChanged.HasHandlers ) _isActiveChanged.Raise( this, Domain.DefaultEventArgs );
                 }
             }
         }
+
+        /// <summary>
+        /// Raised when <see cref="IsActive"/> has changed.
+        /// </summary>
+        public event SafeEventHandler<ObservableDomainEventArgs> IsActiveChanged
+        {
+            add
+            {
+                this.CheckDisposed();
+                _isActiveChanged.Add( value, nameof( Disposed ) );
+            }
+            remove => _isActiveChanged.Remove( value );
+        }
+
 
         protected internal override void Dispose( bool shouldDisposeObjects )
         {

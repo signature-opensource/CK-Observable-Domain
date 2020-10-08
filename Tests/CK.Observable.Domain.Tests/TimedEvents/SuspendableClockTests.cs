@@ -82,6 +82,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
         {
             int enoughMilliseconds = 500;
             ReminderHasElapsed = false;
+            ClockIsActiveChanged = false;
 
             using var handler = TestHelper.CreateDomainHandler( nameof( SuspendableClock_serialization ), serviceProvider: null );
             AutoCounter counter = null;
@@ -97,23 +98,28 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 clock = new SuspendableClock();
                 counter.SuspendableClock = clock;
                 reminder.SuspendableClock = clock;
+                clock.IsActiveChanged += Clock_IsActiveChanged;
 
                 clock.IsActive.Should().BeTrue();
                 counter.IsRunning.Should().BeTrue();
 
             } ).Success.Should().BeTrue();
 
+
             using( handler.Domain.AcquireReadLock() )
             {
+                ClockIsActiveChanged.Should().BeFalse();
                 ReminderHasElapsed.Should().BeFalse();
                 counter.Count.Should().Be( 0 );
             }
 
             handler.Reload( TestHelper.Monitor, idempotenceCheck: false );
-            ReminderHasElapsed.Should().BeFalse();
 
             using( handler.Domain.AcquireReadLock() )
             {
+                ReminderHasElapsed.Should().BeFalse();
+                ClockIsActiveChanged.Should().BeFalse();
+
                 counter = handler.Domain.AllObjects.OfType<AutoCounter>().Single();
                 clock = handler.Domain.AllInternalObjects.OfType<SuspendableClock>().Single();
                 reminder = handler.Domain.TimeManager.Reminders.Single();
@@ -122,13 +128,19 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             using( handler.Domain.AcquireReadLock() )
             {
                 ReminderHasElapsed.Should().BeTrue();
+                ClockIsActiveChanged.Should().BeFalse();
+
                 counter.Count.Should().Be( 1 );
                 counter.IsRunning.Should().BeTrue();
                 reminder.IsActive.Should().BeFalse( "Reminder fired. Is is now inactive." );
             }
             handler.Domain.Modify( TestHelper.Monitor, () =>
             {
+                ClockIsActiveChanged.Should().BeFalse();
                 clock.IsActive = false;
+                ClockIsActiveChanged.Should().BeTrue();
+                ClockIsActiveChanged = false;
+
                 counter.IsRunning.Should().BeFalse();
                 reminder.IsActive.Should().BeFalse();
 
@@ -151,7 +163,11 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             // Reactivating the clock: the counter starts again.
             handler.Domain.Modify( TestHelper.Monitor, () =>
             {
+                ClockIsActiveChanged.Should().BeFalse();
                 clock.IsActive = true;
+                ClockIsActiveChanged.Should().BeTrue();
+                ClockIsActiveChanged = false;
+
                 counter.IsRunning.Should().BeTrue();
                 reminder.IsActive.Should().BeFalse( "Reminder has already fired." );
 
@@ -178,9 +194,17 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             Thread.Sleep( enoughMilliseconds );
 
             ReminderHasElapsed.Should().BeTrue();
+            ClockIsActiveChanged.Should().BeFalse();
         }
 
         static bool ReminderHasElapsed = false;
+        static bool ClockIsActiveChanged = false;
+
+
+        static void Clock_IsActiveChanged( object sender, ObservableDomainEventArgs e )
+        {
+            ClockIsActiveChanged = true;
+        }
 
         static void Reminder_Elapsed( object sender, ObservableReminderEventArgs e )
         {
