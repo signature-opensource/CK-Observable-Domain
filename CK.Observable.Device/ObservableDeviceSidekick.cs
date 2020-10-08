@@ -72,10 +72,10 @@ namespace CK.Observable.Device
         }
 
         /// <summary>
-        /// Registers <typeparamref name="TDeviceObject"/> and <typeparamref name="TDeviceHostObject"/> objects.
+        /// Registers <typeparamref name="TDeviceObject"/> and <typeparamref name="TDeviceHostObject"/> instances.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
-        /// <param name="o">The object.</param>
+        /// <param name="o">The object that just appeared.</param>
         protected override void RegisterClientObject( IActivityMonitor monitor, IDisposableObject o )
         {
             if( o is TDeviceObject device )

@@ -20,8 +20,15 @@ namespace CK.Observable.Device
         protected abstract DeviceBridge CreateBridge( IActivityMonitor monitor, TDeviceObject o );
 
         /// <summary>
+        /// Gets the bridge that has been associated to the <paramref name="deviceObject"/>.
+        /// </summary>
+        /// <param name="deviceObject">The device object.</param>
+        /// <returns>The bridge (that should certainly be downcasted).</returns>
+        protected DeviceBridge FindBridge( TDeviceObject deviceObject ) => _objects[deviceObject.DeviceName];
+
+        /// <summary>
         /// Non generic bridge between observable <typeparamref name="TDeviceObject"/> and its actual <see cref="Device"/>.
-        /// This cannot be directly instantiated: use the generic <see cref="Bridge{TSidekick,TDevice}"/> adapter.
+        /// This cannot be directly instantiated: the generic <see cref="Bridge{TSidekick,TDevice}"/> adapter must be used.
         /// </summary>
         protected abstract class DeviceBridge : ObservableDeviceObject.IDeviceBridge
         {
@@ -52,22 +59,9 @@ namespace CK.Observable.Device
             BasicControlDeviceCommand ObservableDeviceObject.IDeviceBridge.CreateBasicCommand() => new BasicControlDeviceCommand<THost>();
 
             IEnumerable<string> ObservableDeviceObject.IDeviceBridge.CurrentlyAvailableDeviceNames => _sidekick._objectHost?.Devices.Select( d => d.Name )
-                                                                                                ?? _sidekick.Host.DeviceConfigurations.Select( d => d.Name );
+                                                                                                        ?? _sidekick.Host.DeviceConfigurations.Select( d => d.Name );
 
             string? ObservableDeviceObject.IDeviceBridge.ControllerKey => Device?.ControllerKey;
-
-            T ObservableDeviceObject.IDeviceBridge.CreateCommand<T>( Action<T>? configuration )
-            {
-                var c = new T();
-                if( !c.HostType.IsAssignableFrom( _sidekick.Host.GetType() ) )
-                {
-                    throw new InvalidOperationException( $"Command '{c.GetType().Name}' is bound to HostType '{c.HostType.Name}'. It cannot be handled by host {_sidekick.Host.GetType().Name}." );
-                }
-                c.DeviceName = Object.DeviceName;
-                c.ControllerKey = Device?.ControllerKey;
-                configuration?.Invoke( c );
-                return c;
-            }
 
             internal void Initialize( IActivityMonitor monitor, ObservableDeviceSidekick<THost, TDeviceObject, TDeviceHostObject> owner, IDevice? initialDevice )
             {
@@ -151,6 +145,20 @@ namespace CK.Observable.Device
                 {
                     OnObjectDeviceDisposed( monitor );
                 }
+            }
+
+            /// <inheritdoc cref="ObservableDeviceObject.CreateCommand{T}(Action{T}?)" />
+            public T CreateCommand<T>( Action<T>? configuration ) where T : DeviceCommand, new()
+            {
+                var c = new T();
+                if( !c.HostType.IsAssignableFrom( _sidekick.Host.GetType() ) )
+                {
+                    throw new InvalidOperationException( $"Command '{c.GetType().Name}' is bound to HostType '{c.HostType.Name}'. It cannot be handled by host {_sidekick.Host.GetType().Name}." );
+                }
+                c.DeviceName = Object.DeviceName;
+                c.ControllerKey = Device?.ControllerKey;
+                configuration?.Invoke( c );
+                return c;
             }
 
             /// <inheritdoc cref="ObservableDomain.Modify(IActivityMonitor, Action, int)" />
