@@ -12,9 +12,9 @@ namespace CK.Observable.League
     public sealed class ManagedDomainOptions : IEquatable<ManagedDomainOptions>
     {
         /// <summary>
-        /// Gets the <see cref="DomainPreLoadOption"/> configuration.
+        /// Gets the <see cref="DomainLifeCycleOption"/> configuration.
         /// </summary>
-        public readonly DomainPreLoadOption LoadOption;
+        public readonly DomainLifeCycleOption LifeCycleOption;
 
         /// <summary>
         /// The Snapshot compression kind.
@@ -58,11 +58,11 @@ namespace CK.Observable.League
         public readonly int ExportedEventKeepLimit;
 
         /// <summary>
-        /// Returns a new immutable option with an updated <see cref="LoadOption"/>.
+        /// Returns a new immutable option with an updated <see cref="LifeCycleOption"/>.
         /// </summary>
         /// <param name="loadOption">The load option.</param>
         /// <returns>This or a new option instance.</returns>
-        public ManagedDomainOptions SetLoadOption( DomainPreLoadOption loadOption ) => LoadOption == loadOption ? this : new ManagedDomainOptions
+        public ManagedDomainOptions SetLoadOption( DomainLifeCycleOption loadOption ) => LifeCycleOption == loadOption ? this : new ManagedDomainOptions
             (
                 loadOption,
                 CompressionKind,
@@ -80,7 +80,7 @@ namespace CK.Observable.League
         /// <returns>This or a new option instance.</returns>
         public ManagedDomainOptions SetCompressionKind( CompressionKind k ) => CompressionKind == k ? this : new ManagedDomainOptions
             (
-                LoadOption,
+                LifeCycleOption,
                 k,
                 SnapshotSaveDelay,
                 SnapshotKeepDuration,
@@ -94,7 +94,7 @@ namespace CK.Observable.League
         /// Initializes a new <see cref="ManagedDomainOptions"/>.
         /// </summary>
         public ManagedDomainOptions(
-            DomainPreLoadOption loadOption,
+            DomainLifeCycleOption loadOption,
             CompressionKind c,
             TimeSpan snapshotSaveDelay,
             TimeSpan snapshotKeepDuration,
@@ -102,7 +102,7 @@ namespace CK.Observable.League
             TimeSpan eventKeepDuration,
             int eventKeepLimit)
         {
-            LoadOption = loadOption;
+            LifeCycleOption = loadOption;
             CompressionKind = c;
             SnapshotSaveDelay = snapshotSaveDelay;
             SnapshotKeepDuration = snapshotKeepDuration;
@@ -114,7 +114,7 @@ namespace CK.Observable.League
         ManagedDomainOptions( IBinaryDeserializerContext ctx )
         {
             var r = ctx.StartReading().Reader;
-            LoadOption = r.ReadEnum<DomainPreLoadOption>();
+            LifeCycleOption = r.ReadEnum<DomainLifeCycleOption>();
             CompressionKind = r.ReadEnum<CompressionKind>();
             SnapshotSaveDelay = r.ReadTimeSpan();
             SnapshotKeepDuration = r.ReadTimeSpan();
@@ -125,7 +125,7 @@ namespace CK.Observable.League
 
         void Write( BinarySerializer w )
         {
-            w.WriteEnum( LoadOption );
+            w.WriteEnum( LifeCycleOption );
             w.WriteEnum( CompressionKind );
             w.Write( SnapshotSaveDelay );
             w.Write( SnapshotKeepDuration );
@@ -145,14 +145,14 @@ namespace CK.Observable.League
         /// Value semantic hash code.
         /// </summary>
         /// <returns>The hash code.</returns>
-        public override int GetHashCode() => HashCode.Combine( LoadOption, CompressionKind, SnapshotSaveDelay, SnapshotKeepDuration, SnapshotMaximalTotalKiB, ExportedEventKeepDuration, ExportedEventKeepLimit );
+        public override int GetHashCode() => HashCode.Combine( LifeCycleOption, CompressionKind, SnapshotSaveDelay, SnapshotKeepDuration, SnapshotMaximalTotalKiB, ExportedEventKeepDuration, ExportedEventKeepLimit );
 
         /// <summary>
         /// Value semantic equality.
         /// </summary>
         /// <param name="other">The other object.</param>
         /// <returns>True on equal, false otherwise.</returns>
-        public bool Equals( ManagedDomainOptions other ) => LoadOption == other.LoadOption
+        public bool Equals( ManagedDomainOptions other ) => LifeCycleOption == other.LifeCycleOption
                                                             && CompressionKind == other.CompressionKind
                                                             && SnapshotSaveDelay == other.SnapshotSaveDelay
                                                             && SnapshotKeepDuration == other.SnapshotKeepDuration

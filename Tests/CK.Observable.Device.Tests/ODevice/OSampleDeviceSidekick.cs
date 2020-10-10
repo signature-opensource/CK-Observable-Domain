@@ -16,7 +16,6 @@ namespace CK.Observable.Device.Tests
 
         protected override DeviceBridge CreateBridge( IActivityMonitor monitor, OSampleDevice o ) => new SampleBridge( o );
 
-
         /// <summary>
         /// The specialized bridge class below cannot be made internal or public (because the Bridge{,} base class is protected)
         /// and this is on purpose.

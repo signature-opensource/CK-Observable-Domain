@@ -10,7 +10,7 @@ namespace CK.Observable.League
     /// A domain must be loaded for its <see cref="ObservableTimer"/> and <see cref="ObservableReminder"/>
     /// to be running.
     /// </summary>
-    public enum DomainPreLoadOption
+    public enum DomainLifeCycleOption
     {
         /// <summary>
         /// The domain is kept in memory as long as at least one active timer or reminder exist.

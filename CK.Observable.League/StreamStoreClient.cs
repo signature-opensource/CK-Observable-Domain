@@ -7,10 +7,12 @@ using System.Threading.Tasks;
 namespace CK.Observable.League
 {
     /// <summary>
-    /// This is the primary, first client. It handles the transaction snapshot and
-    /// associates a <see cref="TransactClient"/> as its direct next client.
+    /// This is the primary client that handles the transaction snapshot (an optional next client
+    /// can be linked if needed).
+    /// <para>
     /// It is specialized by <see cref="CoordinatorClient"/> for the coordinator domain
     /// and <see cref="ObservableLeague.DomainClient"/> for the all the other domains.
+    /// </para>
     /// </summary>
     abstract class StreamStoreClient : MemoryTransactionProviderClient
     {
@@ -21,7 +23,7 @@ namespace CK.Observable.League
         int _snapshotSaveDelay;
 
         public StreamStoreClient( string domainName, IStreamStore store, IObservableDomainClient? next = null )
-            : base()
+            : base( next )
         {
             _eventCollector = new JsonEventCollector();
             DomainName = domainName;
@@ -98,6 +100,7 @@ namespace CK.Observable.League
         /// <returns>The awaitable.</returns>
         public async Task InitializeAsync( IActivityMonitor monitor, ObservableDomain d )
         {
+            d.OnSuccessfulTransaction += _eventCollector.OnSuccessfulTransaction;
             using( var s = await StreamStore.OpenReadAsync( _storeName ) )
             {
                 if( s != null )

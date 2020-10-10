@@ -12,7 +12,7 @@ namespace CK.Observable
     /// </summary>
     public struct ObservableEventHandler
     {
-        readonly ObservableDelegate _handler;
+        ObservableDelegate _handler;
 
         /// <summary>
         /// Deserializes the <see cref="ObservableEventHandler"/>.
@@ -54,13 +54,12 @@ namespace CK.Observable
         /// Raises this event.
         /// </summary>
         /// <param name="sender">The sender of the event.</param>
-        /// <param name="args">The event argument.</param>
-        public void Raise( object sender, EventArgs args )
+        public void Raise( object sender )
         {
             var h = _handler.Cleanup();
             for( int i = 0; i < h.Length; ++i )
             {
-                ((SafeEventHandler)h[i]).Invoke( sender, args );
+                ((SafeEventHandler)h[i]).Invoke( sender );
             }
         }
 
@@ -70,9 +69,8 @@ namespace CK.Observable
         /// </summary>
         /// <param name="monitor">The monitor that will log any exception.</param>
         /// <param name="sender">The sender of the event.</param>
-        /// <param name="args">The event argument.</param>
         /// <returns>True on success, false if at least one handler has thrown.</returns>
-        public bool SafeRaise( IActivityMonitor monitor, object sender, EventArgs args )
+        public bool SafeRaise( IActivityMonitor monitor, object sender )
         {
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
             bool success = true;
@@ -81,7 +79,7 @@ namespace CK.Observable
             {
                 try
                 {
-                    ((SafeEventHandler)h[i]).Invoke( sender, args );
+                    ((SafeEventHandler)h[i]).Invoke( sender );
                 }
                 catch( Exception ex )
                 {

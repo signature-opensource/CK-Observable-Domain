@@ -15,6 +15,9 @@ namespace CK.Observable.Device
     [SerializationVersion( 0 )]
     public abstract class ObservableDeviceObject : ObservableObject
     {
+        DeviceStatus? _status;
+        ObservableEventHandler _statusChanged;
+
         private protected ObservableDeviceObject( string deviceName )
         {
             if( deviceName == null ) throw new ArgumentNullException( nameof( deviceName ) );
@@ -26,11 +29,13 @@ namespace CK.Observable.Device
         {
             var r = ctx.StartReading().Reader;
             DeviceName = r.ReadNullableString();
+            _statusChanged = new ObservableEventHandler( r );
         }
 
-        void Write( BinarySerializer s )
+        void Write( BinarySerializer w )
         {
-            s.WriteNullableString( DeviceName );
+            w.WriteNullableString( DeviceName );
+            _statusChanged.Write( w );
         }
 
         internal interface IDeviceBridge
@@ -55,7 +60,27 @@ namespace CK.Observable.Device
         /// Gets the device status.
         /// This is null when no device named <see cref="DeviceName"/> exist in the device host.
         /// </summary>
-        public DeviceStatus? Status { get; internal set; }
+        public DeviceStatus? Status
+        {
+            get => _status;
+            internal set
+            {
+                if( _status != value )
+                {
+                    _status = value;
+                    if( _statusChanged.HasHandlers ) _statusChanged.Raise( this );
+                }
+            }
+        }
+
+        /// <summary>
+        /// Raised whenever <see cref="Status"/> has changed.
+        /// </summary>
+        public event SafeEventHandler StatusChanged
+        {
+            add => _statusChanged.Add( value, nameof(StatusChanged) );
+            remove => _statusChanged.Remove( value );
+        }
 
         /// <summary>
         /// Gets the current configuration status of this device.

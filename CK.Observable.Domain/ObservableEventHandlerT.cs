@@ -82,7 +82,7 @@ namespace CK.Observable
             {
                 try
                 {
-                    ((SafeEventHandler)h[i]).Invoke( sender, args );
+                    ((SafeEventHandler<TEventArgs>)h[i]).Invoke( sender, args );
                 }
                 catch( Exception ex )
                 {

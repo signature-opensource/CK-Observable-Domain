@@ -14,6 +14,7 @@ namespace CK.Observable.League
     internal class CoordinatorClient : StreamStoreClient, IObservableDomainAccess<Coordinator>
     {
         IManagedLeague? _league;
+        int? _optionsPropertyId;
 
         public CoordinatorClient( IActivityMonitor monitor, IStreamStore store, IServiceProvider serviceProvider )
             : base( String.Empty, store, null )
@@ -26,23 +27,27 @@ namespace CK.Observable.League
         public override void OnTransactionCommit( in SuccessfulTransactionEventArgs c )
         {
             base.OnTransactionCommit( c );
-            Domain d = null;
-            foreach( var e in c.Events )
+            if( !_optionsPropertyId.HasValue ) _optionsPropertyId = c.FindPropertyId( nameof( CK.Observable.League.Domain.Options ) );
+            if( _optionsPropertyId.HasValue )
             {
-                if( e is NewObjectEvent n && n.Object is Domain dN )
+                Domain d = null;
+                foreach( var e in c.Events )
                 {
-                    d = dN;
-                    break;
+                    if( e is NewObjectEvent n && n.Object is Domain dN )
+                    {
+                        d = dN;
+                        break;
+                    }
+                    if( e is PropertyChangedEvent p && p.PropertyId == _optionsPropertyId.Value && p.Object is Domain dP )
+                    {
+                        d = dP;
+                        break;
+                    }
                 }
-                if( e is PropertyChangedEvent p && p.PropertyName == nameof( CK.Observable.League.Domain.Options ) && p.Object is Domain dP )
+                if( d != null )
                 {
-                    d = dP;
-                    break;
+                    c.PostActions.Add( ctx => d.Shell.SynchronizeOptionsAsync( ctx.Monitor, d.Options, hasActiveTimedEvents: null ) );
                 }
-            }
-            if( d != null )
-            {
-                c.PostActions.Add( ctx => d.Shell.SynchronizeOptionsAsync( ctx.Monitor, d.Options, hasActiveTimedEvents: null ) );
             }
         }
 

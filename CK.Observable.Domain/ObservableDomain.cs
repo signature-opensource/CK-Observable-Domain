@@ -47,32 +47,6 @@ namespace CK.Observable
         /// </summary>
         public const int DomainSecretKeyLength = 512;
 
-        class PropInfo
-        {
-            public readonly PropertyChangedEventArgs EventArg;
-            public int PropertyId { get; }
-            public string Name => EventArg.PropertyName;
-
-            public PropInfo( int propertyId, string name )
-            {
-                EventArg = new PropertyChangedEventArgs( name );
-                PropertyId = propertyId;
-            }
-
-            /// <summary>
-            /// Builds a long value based on the <see cref="ObservableObjectId.Index"/> and <see cref="PropertyId"/>
-            /// to use it as a unique local key to track/dedup property changed event.
-            /// </summary>
-            /// <param name="o">The owning object.</param>
-            /// <returns>The key to use for this property of the specified object.</returns>
-            public long GetObjectPropertyId( ObservableObject o )
-            {
-                Debug.Assert( o.OId.IsValid );
-                long r = o.OId.Index;
-                return (r << 24) | (uint)PropertyId;
-            }
-        }
-
         [ThreadStatic]
         internal static ObservableDomain? CurrentThreadDomain;
 
@@ -85,11 +59,11 @@ namespace CK.Observable
         /// <summary>
         /// Maps property names to PropInfo that contains the property index.
         /// </summary>
-        readonly Dictionary<string, PropInfo> _properties;
+        readonly Dictionary<string, ObservablePropertyChangedEventArgs> _properties;
         /// <summary>
         /// Map property index to PropInfo that contains the property name.
         /// </summary>
-        readonly List<PropInfo> _propertiesByIndex;
+        readonly List<ObservablePropertyChangedEventArgs> _propertiesByIndex;
 
         readonly ChangeTracker _changeTracker;
         readonly AllCollection _exposedObjects;
@@ -217,20 +191,20 @@ namespace CK.Observable
 
         /// <summary>
         /// The change tracker handles the transfomation of actual changes into events that are
-        /// optimized and serialized by the <see cref="Commit(ObservableDomain, Func{string, PropInfo}, DateTime, DateTime)"/> method.
+        /// optimized and serialized by the <see cref="Commit(ObservableDomain, Func{string, ObservablePropertyChangedEventArgs}, DateTime, DateTime)"/> method.
         /// </summary>
         class ChangeTracker
         {
             class PropChanged
             {
                 public readonly ObservableObject Object;
-                public readonly PropInfo Info;
+                public readonly ObservablePropertyChangedEventArgs Info;
                 public readonly object InitialValue;
                 public object FinalValue;
 
                 public long Key => Info.GetObjectPropertyId( Object );
 
-                public PropChanged( ObservableObject o, PropInfo p, object initial, object final )
+                public PropChanged( ObservableObject o, ObservablePropertyChangedEventArgs p, object initial, object final )
                 {
                     Object = o;
                     Info = p;
@@ -254,18 +228,18 @@ namespace CK.Observable
                 _commands = new List<object>();
             }
 
-            public SuccessfulTransactionEventArgs Commit( ObservableDomain domain, Func<string, PropInfo> ensurePropertInfo, DateTime startTime, DateTime nextTimerDueDate )
+            public SuccessfulTransactionEventArgs Commit( ObservableDomain domain, Func<string, ObservablePropertyChangedEventArgs> ensurePropertInfo, DateTime startTime, DateTime nextTimerDueDate )
             {
                 _changeEvents.RemoveAll( e => e is ICollectionEvent c && c.Object.IsDisposed );
                 foreach( var p in _propChanged.Values )
                 {
                     if( !p.Object.IsDisposed )
                     {
-                        _changeEvents.Add( new PropertyChangedEvent( p.Object, p.Info.PropertyId, p.Info.Name, p.FinalValue ) );
+                        _changeEvents.Add( new PropertyChangedEvent( p.Object, p.Info.PropertyId, p.Info.PropertyName, p.FinalValue ) );
                         if( _newObjects.TryGetValue( p.Object, out var exportables ) )
                         {
                             Debug.Assert( exportables != null, "If the object is not exportable, there must be no property changed events." );
-                            int idx = exportables.IndexOf( exp => exp.Name == p.Info.Name );
+                            int idx = exportables.IndexOf( exp => exp.Name == p.Info.PropertyName );
                             if( idx >= 0 ) exportables.RemoveAt( idx );
                         }
                     }
@@ -277,7 +251,7 @@ namespace CK.Observable
                     {
                         object propValue = exp.GetValue( kv.Key );
                         var pInfo = ensurePropertInfo( exp.Name );
-                        _changeEvents.Add( new PropertyChangedEvent( kv.Key, pInfo.PropertyId, pInfo.Name, propValue ) );
+                        _changeEvents.Add( new PropertyChangedEvent( kv.Key, pInfo.PropertyId, pInfo.PropertyName, propValue ) );
                     }
                 }
                 var result = new SuccessfulTransactionEventArgs( domain, domain.FindPropertyId, _changeEvents.ToArray(), _commands, startTime, nextTimerDueDate );
@@ -334,12 +308,12 @@ namespace CK.Observable
                 }
             }
 
-            internal void OnNewProperty( PropInfo info )
+            internal void OnNewProperty( ObservablePropertyChangedEventArgs info )
             {
-                _changeEvents.Add( new NewPropertyEvent( info.PropertyId, info.Name ) );
+                _changeEvents.Add( new NewPropertyEvent( info.PropertyId, info.PropertyName ) );
             }
 
-            internal void OnPropertyChanged( ObservableObject o, PropInfo p, object before, object after )
+            internal void OnPropertyChanged( ObservableObject o, ObservablePropertyChangedEventArgs p, object before, object after )
             {
                 PropChanged c;
                 if( _propChanged.TryGetValue( p.GetObjectPropertyId( o ), out c ) )
@@ -603,8 +577,8 @@ namespace CK.Observable
             DomainClient = client;
             _objects = new ObservableObject?[512];
             _freeList = new List<int>();
-            _properties = new Dictionary<string, PropInfo>();
-            _propertiesByIndex = new List<PropInfo>();
+            _properties = new Dictionary<string, ObservablePropertyChangedEventArgs>();
+            _propertiesByIndex = new List<ObservablePropertyChangedEventArgs>();
             _changeTracker = new ChangeTracker();
             _exposedObjects = new AllCollection( this );
             _exposedInternalObjects = new InternalObjectCollection( this );
@@ -1138,7 +1112,7 @@ namespace CK.Observable
                 target.EmitStartObject( -1, ObjectExportedKind.List );
                 foreach( var p in _properties )
                 {
-                    target.EmitString( p.Value.Name );
+                    target.EmitString( p.Value.PropertyName );
                 }
                 target.EmitEndObject( -1, ObjectExportedKind.List );
 
@@ -1223,7 +1197,7 @@ namespace CK.Observable
                         w.WriteNonNegativeSmallInt32( _properties.Count );
                         foreach( var p in _propertiesByIndex )
                         {
-                            w.Write( p.Name );
+                            w.Write( p.PropertyName );
                         }
 
                         w.DebugWriteSentinel();
@@ -1336,7 +1310,7 @@ namespace CK.Observable
                 for( int iProp = 0; iProp < count; iProp++ )
                 {
                     string name = r.ReadString();
-                    var p = new PropInfo( iProp, name );
+                    var p = new ObservablePropertyChangedEventArgs( iProp, name );
                     _properties.Add( name, p );
                     _propertiesByIndex.Add( p );
                 }
@@ -1762,25 +1736,26 @@ namespace CK.Observable
             return _sidekickManager.CreateWaitingSidekicks( _currentTran.Monitor, ex => _currentTran.AddError( CKExceptionData.CreateFrom( ex ) ) );
         }
 
-        internal PropertyChangedEventArgs? OnPropertyChanged( ObservableObject o, string propertyName, object before, object after )
+        internal ObservablePropertyChangedEventArgs? OnPropertyChanged( ObservableObject o, string propertyName, object before, object after )
         {
-            if( _deserializeOrInitializing
-                || o._exporter == null
-                || !o._exporter.ExportableProperties.Any( prop => prop.Name == propertyName ) )
+            if( _deserializeOrInitializing )
             {
                 return null;
             }
             CheckWriteLock( o ).CheckDisposed();
-            PropInfo p = EnsurePropertyInfo( propertyName );
-            _changeTracker.OnPropertyChanged( o, p, before, after );
-            return p.EventArg;
+            ObservablePropertyChangedEventArgs p = EnsurePropertyInfo( propertyName );
+            if( o._exporter != null && o._exporter.ExportableProperties.Any( prop => prop.Name == propertyName ) )
+            {
+                _changeTracker.OnPropertyChanged( o, p, before, after );
+            }
+            return p;
         }
 
-        PropInfo EnsurePropertyInfo( string propertyName )
+        ObservablePropertyChangedEventArgs EnsurePropertyInfo( string propertyName )
         {
             if( !_properties.TryGetValue( propertyName, out var p ) )
             {
-                p = new PropInfo( _properties.Count, propertyName );
+                p = new ObservablePropertyChangedEventArgs( _properties.Count, propertyName );
                 _changeTracker.OnNewProperty( p );
                 _properties.Add( propertyName, p );
                 _propertiesByIndex.Add( p );

@@ -2,6 +2,7 @@ using CK.Core;
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
@@ -196,17 +197,13 @@ namespace CK.Observable
             var ev = ActualDomain.OnPropertyChanged( this, propertyName, before, after );
             if( ev != null )
             {
-                // Handles public event EventHandler [propertyName]Changed;
-                // See https://stackoverflow.com/questions/14885325/eventinfo-getraisemethod-always-null
                 {
+                    // Forbids previously handled EventHandler: this is too dangerous.
+                    // See https://stackoverflow.com/questions/14885325/eventinfo-getraisemethod-always-null
                     FieldInfo fNamedEv = GetType().GetField( propertyName + "Changed", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance );
                     if( fNamedEv != null )
                     {
-                        if( fNamedEv.FieldType != typeof( EventHandler ) )
-                        {
-                            throw new Exception( $"{propertyName}Changed event must be a mere EventHandler (not a {fNamedEv.FieldType.Name})." );
-                        }
-                        ((EventHandler)fNamedEv.GetValue( this ))?.Invoke( this, EventArgs.Empty );
+                        throw new Exception( $"{propertyName}Changed event must be a SafeEventHandler (not a {fNamedEv.FieldType.Name})." );
                     }
                 }
                 {
@@ -217,7 +214,7 @@ namespace CK.Observable
                         if( fNamedEv.FieldType == typeof( ObservableEventHandler ) )
                         {
                             var handler = (ObservableEventHandler)fNamedEv.GetValue( this );
-                            if( handler.HasHandlers ) handler.Raise( this, ev );
+                            if( handler.HasHandlers ) handler.Raise( this );
                         }
                         else if( fNamedEv.FieldType == typeof( ObservableEventHandler<ObservableDomainEventArgs> ) )
                         {

@@ -18,7 +18,7 @@ namespace CK.Observable.League
 
         /// <summary>
         /// Gets whether the domain is currently loaded.
-        /// See <see cref="ManagedDomainOptions.LoadOption"/>.
+        /// See <see cref="ManagedDomainOptions.LifeCycleOption"/>.
         /// </summary>
         bool IsLoaded { get; }
 

@@ -19,6 +19,7 @@ namespace CK.Observable
     /// be singletons.
     /// </para>
     /// <para>
+    /// Note to myself:
     /// This is a "ISingletonAutoType" (that doesn't exist yet): a singleton auto type is like a ISingletonAutoService except that it cannot
     /// be instantiated automatically. An explicit contructor should be used with explicit parameters.
     /// A ISingletonAutoType cannot be a dependency.

@@ -102,9 +102,19 @@ namespace CK.Observable.Device.Tests
 
         }
 
+
+        static bool DeviceStatusChanged = false;
+
+        static void Device_StatusChanged( object sender )
+        {
+            DeviceStatusChanged = true;
+        }
+
         [Test]
         public async Task Start_and_Stop_commands()
         {
+            DeviceStatusChanged = false;
+
             var host = new SampleDeviceHost();
             var sp = new SimpleServiceContainer();
             sp.Add( host );
@@ -119,14 +129,18 @@ namespace CK.Observable.Device.Tests
 
             using var obs = new ObservableDomain( TestHelper.Monitor, nameof( Start_and_Stop_commands ), sp );
 
+
             OSampleDevice? device = null;
             await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 device = new OSampleDevice( "The device..." );
+                device.StatusChanged += Device_StatusChanged;
                 Debug.Assert( device.Status != null );
                 device.Status.Value.IsRunning.Should().BeTrue( "ConfigurationStatus is RunnableStarted." );
 
             } );
+
+            DeviceStatusChanged.Should().BeFalse();
             Debug.Assert( device != null );
             Debug.Assert( device.Status != null );
 
@@ -135,31 +149,43 @@ namespace CK.Observable.Device.Tests
                 device.CmdStop();
             } );
 
+            bool isRunning = true;
+            while( isRunning )
+            {
+                using( obs.AcquireReadLock() )
+                {
+                    isRunning = device.Status.Value.IsRunning;
+                }
+            }
+            DeviceStatusChanged.Should().BeTrue();
+            DeviceStatusChanged = false;
+
             await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
-                // Simple wait (there is not really other ways to do this).
-                while( device.Status.Value.IsRunning )
-                {
-                    System.Threading.Thread.Sleep( 100 );
-                }
                 device.CmdStart();
             } );
-            await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
+
+            while( !isRunning )
             {
-                while( !device.Status.Value.IsRunning )
+                using( obs.AcquireReadLock() )
                 {
-                    System.Threading.Thread.Sleep( 100 );
+                    isRunning = device.Status.Value.IsRunning;
                 }
-            } );
+            }
+            DeviceStatusChanged.Should().BeTrue();
+            DeviceStatusChanged = false;
+
             await host.DestroyDeviceAsync( TestHelper.Monitor, "The device..." );
             await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 device.IsBoundDevice.Should().BeFalse();
                 device.Status.Should().BeNull();
             } );
+            DeviceStatusChanged.Should().BeTrue();
+            DeviceStatusChanged = false;
+
             await host.ClearAsync( TestHelper.Monitor );
         }
-
 
         [Test]
         public async Task commands_are_easy_to_send()

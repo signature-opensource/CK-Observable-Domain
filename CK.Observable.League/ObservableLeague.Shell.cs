@@ -23,7 +23,7 @@ namespace CK.Observable.League
             ObservableDomain? _domain;
             bool _hasActiveTimedEvents;
             bool _preLoaded;
-            DomainPreLoadOption _loadOption;
+            DomainLifeCycleOption _loadOption;
 
             private protected class IndependentShell : IObservableDomainShell
             {
@@ -196,7 +196,7 @@ namespace CK.Observable.League
             {
                 if( options != null )
                 {
-                    _loadOption = options.LoadOption;
+                    _loadOption = options.LifeCycleOption;
                     Client.CompressionKind = options.CompressionKind;
                     Client.SnapshotSaveDelay = (int)options.SnapshotSaveDelay.TotalMilliseconds;
                     Client.SnapshotKeepDuration = options.SnapshotKeepDuration;
@@ -215,8 +215,8 @@ namespace CK.Observable.League
             }
 
             internal bool ShouldBeLoaded => IsLoadable
-                                && (_loadOption == DomainPreLoadOption.Always
-                                    || (_loadOption == DomainPreLoadOption.Default && _hasActiveTimedEvents));
+                                && (_loadOption == DomainLifeCycleOption.Always
+                                    || (_loadOption == DomainLifeCycleOption.Default && _hasActiveTimedEvents));
 
             protected ObservableDomain LoadedDomain => _domain!;
 
