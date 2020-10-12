@@ -217,7 +217,6 @@ namespace CK.Observable.Domain.Tests
             }
         }
 
-
         [Test]
         public void testing_auto_cleanup()
         {

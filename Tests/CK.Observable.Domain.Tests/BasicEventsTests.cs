@@ -40,13 +40,16 @@ namespace CK.Observable.Domain.Tests
                                "PropertyChanged 0.TestSpeed = 0.",
                                "NewProperty Position -> 2.",
                                "PropertyChanged 0.Position = (0,0).",
-                               "NewProperty CurrentMechanic -> 3.",
+                               "NewProperty Power -> 3.",
+                               "PropertyChanged 0.Power = 0.",
+                               "NewProperty CurrentMechanic -> 4.",
                                "PropertyChanged 0.CurrentMechanic = null.",
-                               "NewProperty OId -> 4.",
+                               "NewProperty OId -> 5.",
                                "PropertyChanged 0.OId = 0.",
                                "PropertyChanged 1.Name = Second Car.",
                                "PropertyChanged 1.TestSpeed = 0.",
                                "PropertyChanged 1.Position = (0,0).",
+                               "PropertyChanged 1.Power = 0.",
                                "PropertyChanged 1.CurrentMechanic = null.",
                                "PropertyChanged 1.OId = 1." );
 
@@ -102,9 +105,34 @@ namespace CK.Observable.Domain.Tests
                 {
                     TestCounter counter = new TestCounter();
                     Car c = new Car( "First Car" );
-                    Assert.Throws<NotSupportedException>( () => ((INotifyPropertyChanged)c).PropertyChanged += counter.SilentIncrement );
+                    Assert.Throws<NotSupportedException>( () => ((INotifyPropertyChanged)c).PropertyChanged += (o,e) => { } );
                 } );
             }
+        }
+
+        [Test]
+        public void the_way_PropertyChanged_Fody_works()
+        {
+            using var d = new ObservableDomain( TestHelper.Monitor, nameof( the_way_PropertyChanged_Fody_works ) ); 
+            d.Modify( TestHelper.Monitor, () =>
+            {
+                TestCounter counter = new TestCounter();
+                var c = new Car( "Fody" );
+                c.PositionChanged += counter.IncrementNoLog;
+                c.TestSpeedChanged += counter.Increment;
+                c.PowerChanged += counter.IncrementNoLog;
+
+                counter.Count.Should().Be( 0 );
+                c.TestSpeed = 1;
+                counter.Count.Should().Be( 1 );
+
+                c.Position = new Position( 1.0, 1.0 );
+                counter.Count.Should().Be( 2 );
+
+                c.Power = 1;
+                counter.Count.Should().Be( 3 );
+
+            } ).Success.Should().BeTrue();
         }
 
         [Test]
@@ -118,15 +146,15 @@ namespace CK.Observable.Domain.Tests
 
                     Car c1 = new Car( "First Car" );
                     c1.TestSpeedChanged += counter.Increment;
-                    c1.PositionChanged += counter.SilentIncrement;
+                    c1.PositionChanged += counter.IncrementNoLog;
 
                     Car c2 = new Car( "Second Car" );
                     c2.TestSpeedChanged += counter.Increment;
-                    c2.PositionChanged += counter.SilentIncrement;
+                    c2.PositionChanged += counter.IncrementNoLog;
 
                     Car c3 = new Car( "Third Car" );
                     c3.TestSpeedChanged += counter.Increment;
-                    c3.PositionChanged += counter.SilentIncrement;
+                    c3.PositionChanged += counter.IncrementNoLog;
 
                     c1.Position = new Position( 1.0, 1.0 );
                     c2.TestSpeed = 12;
@@ -156,12 +184,14 @@ namespace CK.Observable.Domain.Tests
             }
         }
 
+        static int Bang = 0;
+        static void IncBang( object sender ) => Bang++;
+
         [Test]
         public void explicit_property_changed_events_are_automatically_triggered()
         {
             using( var domain = new ObservableDomain( TestHelper.Monitor, nameof( explicit_property_changed_events_are_automatically_triggered ) ) )
             {
-                int bang = 0;
                 domain.Modify( TestHelper.Monitor, () =>
                 {
                     TestCounter counter = new TestCounter();
@@ -179,17 +209,17 @@ namespace CK.Observable.Domain.Tests
                     c.TestSpeed = 57;
                     counter.Count.Should().Be( 2, "No change." );
 
-                    EventHandler incBang = ( o, e ) => bang++;
-                    c.PositionChanged += incBang;
-                    bang.Should().Be( 0 );
+                    Bang = 0;
+                    c.PositionChanged += IncBang;
+                    Bang.Should().Be( 0 );
                     c.Position = new Position( 1.0, 1.0 );
-                    bang.Should().Be( 1 );
+                    Bang.Should().Be( 1 );
                     c.Position = new Position( 1.0, 2.0 );
-                    bang.Should().Be( 2 );
-                    c.PositionChanged -= incBang;
+                    Bang.Should().Be( 2 );
+                    c.PositionChanged -= IncBang;
                     c.Position = new Position( 1.0, 3.0 );
+                    Bang.Should().Be( 2, "No change" );
                 } );
-                bang.Should().Be( 2 );
             }
         }
 

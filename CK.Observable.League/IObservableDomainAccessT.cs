@@ -8,6 +8,13 @@ namespace CK.Observable.League
 {
     /// <summary>
     /// Defines the accessors to a typed <see cref="IObservableDomain{T}"/>.
+    /// <para>
+    /// This interface exposes only the typed Modify/Read methods of a <see cref="IObservableDomainShell"/> and
+    /// this is used to expose the <see cref="ObservableLeague.Coordinator"/> without the base <see cref="IObservableDomainShellBase"/>
+    /// that supports disposal of the object.
+    /// There is no IObservableDomainAccess{T1,T2} (or more) since we only need to protect the coordinator root like this: suppor for
+    /// more than one root is directly defined on the correspnding shell (like <see cref="IObservableDomainShell{T1, T2}"/>).
+    /// </para>
     /// </summary>
     /// <typeparam name="T">The observable root type.</typeparam>
     public interface IObservableDomainAccess<out T>

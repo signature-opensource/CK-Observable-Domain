@@ -20,6 +20,16 @@ namespace CK.Observable.League
     public interface IObservableDomainShell : IObservableDomainShellBase
     {
         /// <summary>
+        /// Exports the whole domain state as a JSON object.
+        /// </summary>
+        /// <param name="millisecondsTimeout">
+        /// The maximum number of milliseconds to wait for a read access before giving up.
+        /// Wait indefinitely by default.
+        /// </param>
+        /// <returns>The state as a string or null if timeout occurred.</returns>
+        string? ExportToString( int millisecondsTimeout = -1 );
+
+        /// <summary>
         /// Modifies the ObservableDomain in a transaction (any unhandled errors automatically
         /// trigger a rollback and the <see cref="TransactionResult.Success"/> is false) and then executes any pending post-actions.
         /// <para>

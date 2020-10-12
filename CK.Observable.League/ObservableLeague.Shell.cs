@@ -10,6 +10,16 @@ namespace CK.Observable.League
 {
     public partial class ObservableLeague
     {
+        /// <summary>
+        /// This is one of the top class to understand to understand how ObservableLeague works.
+        /// This shell manages its ObservableDomain: it is the IObservableDomainLoader (that can load or unload the
+        /// domain) and the primary IObservableDomainShell (when the domain is loaded that is wrapped in IndependentShell)
+        /// but also the IManagedDomain with which <see cref="Coordinator"/>'s <see cref="Domain"/> interact (like synchronizing the
+        /// domain options).
+        /// <para>
+        /// This shell exists even when the domain is unloaded: its <see cref="Shell.Client"/> remains the same.
+        /// </para>
+        /// </summary>
         class Shell : IObservableDomainLoader, IObservableDomainShell, IManagedDomain
         {
             readonly private protected DomainClient Client;
@@ -40,14 +50,13 @@ namespace CK.Observable.League
 
                 bool IObservableDomainShellBase.IsDestroyed => Shell.IsDestroyed;
 
-                Task<bool> IObservableDomainShellBase.SaveAsync( IActivityMonitor monitor )
-                {
-                    return Shell.SaveAsync( monitor );
-                }
+                Task<bool> IObservableDomainShellBase.SaveAsync( IActivityMonitor monitor ) => Shell.SaveAsync( monitor );
 
                 ValueTask<bool> IObservableDomainShellBase.DisposeAsync( IActivityMonitor monitor ) => Shell.DisposeAsync( monitor );
 
                 ValueTask IAsyncDisposable.DisposeAsync() => Shell.DisposeAsync( _monitor ).AsNonGenericValueTask();
+
+                string? IObservableDomainShell.ExportToString( int millisecondsTimeout ) => Shell.ExportToString( millisecondsTimeout );
 
                 Task<TransactionResult> IObservableDomainShell.ModifyAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> actions, int millisecondsTimeout )
                 {
@@ -161,6 +170,17 @@ namespace CK.Observable.League
 
             public bool IsLoaded => _refCount != 0;
 
+            public IReadOnlyList<JsonEventCollector.TransactionEvent>? GetTransactionEvents( int transactionNumber )
+            {
+                return Client.JsonEventCollector.GetTransactionEvents( transactionNumber );
+            }
+
+            public event Action<IActivityMonitor,JsonEventCollector.TransactionEvent> DomainChanged
+            {
+                add => Client.JsonEventCollector.OnTransaction += value;
+                remove => Client.JsonEventCollector.OnTransaction -= value;
+            }
+
             internal bool ClosingLeague { get; private set; }
 
             internal ValueTask OnClosingLeagueAsync( IActivityMonitor monitor )
@@ -263,6 +283,7 @@ namespace CK.Observable.League
                                 }
                             }
                             disposedDomain = true;
+                            Client.JsonEventCollector.Detach();
                             _domain.Dispose( monitor );
                         }
                     }
@@ -308,6 +329,7 @@ namespace CK.Observable.League
                         } );
                         updateDone = true;
                         // On success only:
+                        Client.JsonEventCollector.CollectEvent( d, false );
                         _domain = d;
                     }
                     catch( Exception ex )
@@ -388,6 +410,13 @@ namespace CK.Observable.League
             }
 
             #region IObservableDomainShell (non generic) implementation
+
+            string? IObservableDomainShell.ExportToString( int millisecondsTimeout )
+            {
+                var d = LoadedDomain;
+                return d.ExportToString( millisecondsTimeout );
+            }
+
             Task<TransactionResult> IObservableDomainShell.ModifyAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> actions, int millisecondsTimeout )
             {
                 var d = LoadedDomain;
@@ -450,7 +479,7 @@ namespace CK.Observable.League
                 }
 
                 new IObservableDomainShell<T> Shell => (Shell<T>)base.Shell;
- 
+
                 Task<TransactionResult> IObservableDomainAccess<T>.ModifyAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T>> actions, int millisecondsTimeout )
                 {
                     return Shell.ModifyAsync( monitor, actions, millisecondsTimeout );

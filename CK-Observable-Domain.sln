@@ -34,6 +34,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.Device", "CK.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.Device.Tests", "Tests\CK.Observable.Device.Tests\CK.Observable.Device.Tests.csproj", "{FAE59D3D-5DB5-48F1-93BB-85B3A05537F7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CK.ClientDevice", "CK.ClientDevice\CK.ClientDevice.csproj", "{91736616-B0AE-4E50-B503-1E121FA22524}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -68,6 +70,10 @@ Global
 		{FAE59D3D-5DB5-48F1-93BB-85B3A05537F7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FAE59D3D-5DB5-48F1-93BB-85B3A05537F7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FAE59D3D-5DB5-48F1-93BB-85B3A05537F7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{91736616-B0AE-4E50-B503-1E121FA22524}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{91736616-B0AE-4E50-B503-1E121FA22524}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{91736616-B0AE-4E50-B503-1E121FA22524}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{91736616-B0AE-4E50-B503-1E121FA22524}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

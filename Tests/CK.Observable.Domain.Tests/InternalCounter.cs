@@ -35,17 +35,10 @@ namespace CK.Observable.Domain.Tests
         }
 
         /// <summary>
-        /// This event is automatically raised each time Count changed.
-        /// This is a safe event: it is serialized and automatically cleanup of any registered disposed <see cref="IDisposableObject"/>.
-        /// </summary>
-        public SafeEventHandler<ObservableDomainEventArgs> CountChanged;
-
-        /// <summary>
         /// 
         /// </summary>
         /// <param name="sender"></param>
-        /// <param name="e"></param>
-        public void SilentIncrement( object sender, EventArgs e ) => Count++;
+        public void IncrementNoLog( object sender ) => Count++;
 
         public void Increment( object sender, EventMonitoredArgs e )
         {

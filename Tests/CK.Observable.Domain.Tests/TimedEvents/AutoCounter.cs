@@ -4,11 +4,11 @@ using System.Text;
 
 namespace CK.Observable.Domain.Tests.TimedEvents
 {
-
     [SerializationVersion( 0 )]
     class AutoCounter : ObservableObject
     {
         readonly ObservableTimer _timer;
+        ObservableEventHandler _countChanged;
 
         /// <summary>
         /// Initializes a new <see cref="AutoCounter"/> that start immediately.
@@ -33,12 +33,14 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             var r = d.StartReading().Reader;
             Count = r.ReadInt32();
             _timer = (ObservableTimer)r.ReadObject();
+            _countChanged = new ObservableEventHandler( r );
         }
 
         void Write( BinarySerializer w )
         {
             w.Write( Count );
             w.WriteObject( _timer );
+            _countChanged.Write( w );
         }
 
         /// <summary>
@@ -46,7 +48,11 @@ namespace CK.Observable.Domain.Tests.TimedEvents
         /// This is an unsafe event (it is not serialized and no cleanup of disposed <see cref="IDisposableObject"/> is done).
         /// Even if it is supported, safe event should always be preferred.
         /// </summary>
-        public EventHandler CountChanged;
+        public event SafeEventHandler CountChanged
+        {
+            add => _countChanged.Add( value, nameof( CountChanged ) );
+            remove => _countChanged.Remove( value );
+        }
 
         /// <summary>
         /// Gets the count property.

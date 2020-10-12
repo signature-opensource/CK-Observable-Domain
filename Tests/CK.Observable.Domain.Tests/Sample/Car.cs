@@ -1,4 +1,5 @@
 using CK.Core;
+using FluentAssertions;
 using System;
 
 namespace CK.Observable.Domain.Tests.Sample
@@ -7,6 +8,10 @@ namespace CK.Observable.Domain.Tests.Sample
     public class Car : ObservableObject
     {
         ObservableEventHandler<ObservableDomainEventArgs> _testSpeedChanged;
+        ObservableEventHandler _positionChanged;
+        ObservableEventHandler _powerChanged;
+        Position _position;
+        int _power;
 
         public Car( string name )
         {
@@ -20,7 +25,7 @@ namespace CK.Observable.Domain.Tests.Sample
             var r = d.StartReading().Reader;
             Name = r.ReadNullableString();
             TestSpeed = r.ReadInt32();
-            Position = (Position)r.ReadObject();
+            _position = (Position)r.ReadObject();
             _testSpeedChanged = new ObservableEventHandler<ObservableDomainEventArgs>( r );
         }
 
@@ -28,12 +33,16 @@ namespace CK.Observable.Domain.Tests.Sample
         {
             w.WriteNullableString( Name );
             w.Write( TestSpeed );
-            w.WriteObject( Position );
+            w.WriteObject( _position );
             _testSpeedChanged.Write( w );
         }
 
         public string Name { get; }
 
+        /// <summary>
+        /// Gets or sets an automatic property: this is automatically handled (currently by PropertyChanged.Fody).
+        /// The setter can be private.
+        /// </summary>
         public int TestSpeed { get; set; }
 
         /// <summary>
@@ -49,20 +58,75 @@ namespace CK.Observable.Domain.Tests.Sample
         }
 
         /// <summary>
-        /// Defining this event is enough: it will be automatically fired whenever Position has changed.
-        /// Its type MUST be EventHandler BUT, a SafeEventHandler should be used whenever possible.
-        /// This is fired before <see cref="ObservableObject.PropertyChanged"/> event with property's name.
+        /// Gets or sets a property with a specific setter, skipping PropertyChanged.Fody weaving.
+        /// The [PropertyChanged.DoNotNotify] skips the weaving: the protected OnPropertyChanged must
+        /// manually be called.
         /// </summary>
-        #pragma warning disable 67 // The event 'PositionChanged' is never used.
-        public event EventHandler PositionChanged;
-        #pragma warning restore 67
+        [PropertyChanged.DoNotNotify]
+        public Position Position
+        {
+            get => _position;
+            set
+            {
+                if( _position != value )
+                {
+                    _position = value;
+                    OnPropertyChanged( nameof( Position ), value );
+                }
+            }
+        }
 
-        public Position Position { get; set; }
+        public event SafeEventHandler PositionChanged
+        {
+            add => _positionChanged.Add( value, nameof( PositionChanged ) );
+            remove => _positionChanged.Remove( value );
+        }
+
+        bool __onPowerChanged;
+
+        /// <summary>
+        /// Gets or sets a property with a specific setter.
+        /// The PropertyChanged.Fody magically tracks the private field set.
+        /// </summary>
+        public int Power
+        {
+            get => _power;
+            set
+            {
+                if( _power != value )
+                {
+                    __onPowerChanged = false;
+                    Domain.Monitor.Info( "Before Power setting." );
+                    _power = value;
+                    Domain.Monitor.Info( "After Power setting." );
+                    __onPowerChanged.Should().BeTrue();
+                }
+            }
+        }
+
+        // This is called by PropertyChanged.Fody.
+        void OnPowerChanged()
+        {
+            Domain.Monitor.Info( "Power set." );
+            __onPowerChanged = true;
+        }
+
+        public event SafeEventHandler PowerChanged
+        {
+            add => _powerChanged.Add( value, nameof( PowerChanged ) );
+            remove => _powerChanged.Remove( value );
+        }
+
 
         public Mechanic CurrentMechanic { get; set; }
 
         public override string ToString() => $"'Car {Name}'";
 
+        /// <summary>
+        /// This is called by PropertyChanged.Fody.
+        /// </summary>
+        /// <param name="before"></param>
+        /// <param name="after"></param>
         void OnCurrentMechanicChanged( object before, object after )
         {
             if( Domain.IsDeserializing ) return;

@@ -11,6 +11,9 @@ namespace CK.Observable.Domain.Tests
     [TestFixture]
     public class ObservableRootTests
     {
+        static JsonEventCollector.TransactionEvent LastEvent = null;
+        static void TrackLastEvent( IActivityMonitor m, JsonEventCollector.TransactionEvent e ) => LastEvent = e;
+
         [Test]
         public void initializing_and_persisting_new_empty_domain()
         {
@@ -27,18 +30,19 @@ namespace CK.Observable.Domain.Tests
         public void initializing_and_persisting_domain()
         {
             var eventCollector = new JsonEventCollector();
+            eventCollector.OnTransaction += TrackLastEvent;
 
             using( var d = new ObservableDomain<ApplicationState>( TestHelper.Monitor, "TEST" ) )
             {
-                d.OnSuccessfulTransaction += eventCollector.OnSuccessfulTransaction;
+                eventCollector.CollectEvent( d, false );
                 d.Root.ToDoNumbers.Should().BeEmpty();
 
                 d.Modify( TestHelper.Monitor, () =>
                 {
                     d.Root.ToDoNumbers.Add( 42 );
                 } );
-                string t1 = eventCollector.WriteJSONEventsFrom( 0 );
-                t1.Should().Be( @"{""N"":1,""E"":[[""I"",1,0,42]]}", "Initial root objects instanciations are not exposed." );
+                string t1 = LastEvent.ExportedEvents;
+                t1.Should().Be( "" );
 
                 using( var d2 = SaveAndLoad( d ) )
                 {

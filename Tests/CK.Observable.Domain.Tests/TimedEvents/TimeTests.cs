@@ -123,10 +123,13 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             RawTraces.Enqueue( msg );
         }
 
+        static int RelayedCounter = 0;
+        static void Counter_CountChanged( object o ) => ++RelayedCounter;
+
         [Test]
         public void auto_counter_works_as_expected()
         {
-            int relayedCounter = 0;
+            RelayedCounter = 0;
             const int waitTime = 100 * 10;
             using( var d = new ObservableDomain( TestHelper.Monitor, nameof( auto_counter_works_as_expected ) ) )
             {
@@ -134,7 +137,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 d.Modify( TestHelper.Monitor, () =>
                 {
                     counter = new AutoCounter( 100 );
-                    counter.CountChanged += ( o, e ) => relayedCounter++;
+                    counter.CountChanged += Counter_CountChanged;
                 } ).Success.Should().BeTrue();
                 TestHelper.Monitor.Trace( $"new AutoCounter( 100 ) done. Waiting {waitTime} ms." );
                 Thread.Sleep( waitTime );
@@ -145,7 +148,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                     TestHelper.Monitor.Trace( $"counter.Count = {counter.Count}." );
                     d.AllObjects.Single().Should().BeSameAs( counter );
                     counter.Count.Should().Match( c => c == 10 || c == 11 );
-                    relayedCounter.Should().Be( counter.Count );
+                    RelayedCounter.Should().Be( counter.Count );
                 }
             }
         }

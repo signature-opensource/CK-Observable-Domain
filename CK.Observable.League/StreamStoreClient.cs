@@ -100,7 +100,6 @@ namespace CK.Observable.League
         /// <returns>The awaitable.</returns>
         public async Task InitializeAsync( IActivityMonitor monitor, ObservableDomain d )
         {
-            d.OnSuccessfulTransaction += _eventCollector.OnSuccessfulTransaction;
             using( var s = await StreamStore.OpenReadAsync( _storeName ) )
             {
                 if( s != null )

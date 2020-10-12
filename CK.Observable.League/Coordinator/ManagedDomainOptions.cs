@@ -53,7 +53,7 @@ namespace CK.Observable.League
 
         /// <summary>
         /// Gets or sets the minimum number of transaction events that are kept, regardless of <see cref="ExportedEventKeepDuration"/>.
-        /// Default to 100.
+        /// Defaults to 10, the minimum is 1.
         /// </summary>
         public readonly int ExportedEventKeepLimit;
 

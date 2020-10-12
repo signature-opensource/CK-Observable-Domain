@@ -17,6 +17,7 @@ namespace CK.Observable.Device
     {
         DeviceStatus? _status;
         ObservableEventHandler _statusChanged;
+        internal IDeviceBridge _bridge;
 
         private protected ObservableDeviceObject( string deviceName )
         {
@@ -49,8 +50,6 @@ namespace CK.Observable.Device
             T CreateCommand<T>( Action<T>? configuration ) where T : DeviceCommand, new();
         }
 
-        internal IDeviceBridge _bridge;
-
         /// <summary>
         /// Gets the name of this device.
         /// </summary>
@@ -68,7 +67,7 @@ namespace CK.Observable.Device
                 if( _status != value )
                 {
                     _status = value;
-                    if( _statusChanged.HasHandlers ) _statusChanged.Raise( this );
+                    OnPropertyChanged( nameof(Status), value );
                 }
             }
         }

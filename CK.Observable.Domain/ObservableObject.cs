@@ -186,15 +186,23 @@ namespace CK.Observable
 
         /// <summary>
         /// Automatically called by (currently) Fody.
-        /// This method captures the change and routes it to the domain. 
+        /// The before value is unused (we don't track no-change).
         /// </summary>
         /// <param name="propertyName">The name of the changed property.</param>
         /// <param name="before">The property previous value.</param>
         /// <param name="after">The new property value.</param>
-        protected virtual void OnPropertyChanged( string propertyName, object before, object after )
+        protected void OnPropertyChanged( string propertyName, object? before, object? after ) => OnPropertyChanged( propertyName, after );
+
+        /// <summary>
+        /// Must be called (or is automatically called if Fody is used).
+        /// This method captures the change and routes it to the domain. 
+        /// </summary>
+        /// <param name="propertyName">The name of the changed property.</param>
+        /// <param name="value">The new property value.</param>
+        protected virtual void OnPropertyChanged( string propertyName, object? value )
         {
             this.CheckDisposed();
-            var ev = ActualDomain.OnPropertyChanged( this, propertyName, before, after );
+            var ev = ActualDomain.OnPropertyChanged( this, propertyName, value );
             if( ev != null )
             {
                 {
@@ -208,7 +216,12 @@ namespace CK.Observable
                 }
                 {
                     var fieldName = "_" + Char.ToLowerInvariant( propertyName[0] ) + propertyName.Substring( 1 ) + "Changed";
-                    FieldInfo fNamedEv = GetType().GetField( fieldName, BindingFlags.NonPublic | BindingFlags.Instance );
+
+                    Type t = GetType();
+                    FieldInfo? fNamedEv;
+                    while( (fNamedEv = t.GetField( fieldName, BindingFlags.NonPublic | BindingFlags.Instance )) == null
+                            && (t = t.BaseType) != null ) ;
+
                     if( fNamedEv != null )
                     {
                         if( fNamedEv.FieldType == typeof( ObservableEventHandler ) )

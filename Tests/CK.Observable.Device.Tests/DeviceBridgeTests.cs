@@ -139,6 +139,7 @@ namespace CK.Observable.Device.Tests
                 device.Status.Value.IsRunning.Should().BeTrue( "ConfigurationStatus is RunnableStarted." );
 
             } );
+            bool isRunning = true;
 
             DeviceStatusChanged.Should().BeFalse();
             Debug.Assert( device != null );
@@ -149,7 +150,6 @@ namespace CK.Observable.Device.Tests
                 device.CmdStop();
             } );
 
-            bool isRunning = true;
             while( isRunning )
             {
                 using( obs.AcquireReadLock() )

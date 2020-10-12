@@ -1,7 +1,9 @@
 using CK.Core;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace CK.Observable
@@ -16,16 +18,23 @@ namespace CK.Observable
         readonly List<TransactionEvent> _events;
         readonly StringWriter _buffer;
         readonly ObjectExporter _exporter;
+        ObservableDomain _domain;
+        int _lastTranNum;
         TimeSpan _keepDuration;
         int _keepLimit;
 
         /// <summary>
         /// Representation of a successful transaction.
         /// </summary>
-        public readonly struct TransactionEvent
+        public class TransactionEvent
         {
             /// <summary>
             /// The transaction number.
+            /// The very first transaction is number 1.
+            /// It's <see cref="ExportedEvents"/> is empty since a full export will be more efficient.
+            /// This initial transaction will be raised by <see cref="OnTransaction"/> but will never be returned
+            /// by <see cref="GetTransactionEvents(int)"/>: this avoids a race condition when a domain has been exported
+            /// (empty) before the very first transaction.
             /// </summary>
             public readonly int TransactionNumber;
 
@@ -57,13 +66,8 @@ namespace CK.Observable
             _buffer = new StringWriter();
             _exporter = new ObjectExporter( new JSONExportTarget( _buffer ) );
             KeepDuration = TimeSpan.FromMinutes( 5 );
-            KeepLimit = 2;
+            KeepLimit = 10;
         }
-
-        /// <summary>
-        /// Gets the current transaction events.
-        /// </summary>
-        public IReadOnlyList<TransactionEvent> TransactionEvents => _events;
 
         /// <summary>
         /// Gets or sets the maximum time during which events are kept, regardless of <see cref="KeepLimit"/>.
@@ -81,7 +85,7 @@ namespace CK.Observable
 
         /// <summary>
         /// Gets or sets the minimum number of transaction events that are kept, regardless of <see cref="KeepDuration"/>.
-        /// Defaults to 2, the minimum is 1.
+        /// Defaults to 10, the minimum is 1.
         /// </summary>
         public int KeepLimit
         {
@@ -94,51 +98,101 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Generates a JSON object that contains all the events from a specified transaction number.
-        /// This may return the <c>{"N":-1,"E":null}</c> string if a full export of the domain is required.
-        /// This may throw an <see cref="InvalidOperationException"/> if the <paramref name="transactionNumber"/>
-        /// is greater than or equal to the currently known one.
+        /// Gets the transaction events if possible from a given transaction number.
+        /// This returns null if an export is required (the <paramref name="transactionNumber"/> is too old),
+        /// and an empty array if the transactionNumber is greater or equal to the current transaction number
+        /// stored (this should not happen: clients should only have smaller transaction number).
         /// </summary>
         /// <param name="transactionNumber">The starting transaction number.</param>
-        /// <returns>The JSON object.</returns>
-        public string WriteJSONEventsFrom( int transactionNumber )
+        /// <returns>The set of transaction events to apply or null if an export is required.</returns>
+        public IReadOnlyList<TransactionEvent>? GetTransactionEvents( int transactionNumber )
         {
-            if( _events.Count == 0 || transactionNumber < _events[0].TransactionNumber - 1 )
+            lock( _events )
             {
-                // A full export is required.
-                return "{\"N\":-1,\"E\":null}";
+                if( transactionNumber >= _lastTranNum )
+                {
+                    return Array.Empty<TransactionEvent>();
+                }
+                int minTranNum = _lastTranNum - _events.Count;
+                int idxStart = transactionNumber - minTranNum;
+                if( idxStart < 0 )
+                {
+                    return null;
+                }
+                var a = new TransactionEvent[_events.Count - idxStart];
+                _events.CopyTo( idxStart, a, 0, a.Length );
+                return a;
             }
-            var last = _events[_events.Count - 1];
-            if( transactionNumber >= last.TransactionNumber )
+        }
+
+        /// <summary>
+        /// Called whenever a new transaction event is available.
+        /// Note that the first transaction is visible: see <see cref="TransactionEvent.TransactionNumber"/>.
+        /// </summary>
+        public event Action<IActivityMonitor, TransactionEvent> OnTransaction;
+
+        /// <summary>
+        /// Associates this collector to a domain. There must not be any existing associated domain
+        /// otherwise an <see cref="InvalidOperationException"/> is thrown.
+        /// </summary>
+        /// <param name="domain">The domain from which transaction events must be collected.</param>
+        /// <param name="clearEvents">True to clear any existing transactions events.</param>
+        public void CollectEvent( ObservableDomain domain, bool clearEvents )
+        {
+            if( domain == null ) throw new ArgumentNullException( nameof( domain ) );
+            lock( _events )
             {
-                throw new InvalidOperationException( $"Transaction requested n°{transactionNumber}. Current is {last.TransactionNumber}." );
+                if( _domain != null ) throw new InvalidOperationException( "Event collector is already associated to a domain." );
+                _domain = domain;
+                domain.OnSuccessfulTransaction += OnSuccessfulTransaction;
+                if( clearEvents )
+                {
+                    _events.Clear();
+                    _lastTranNum = 0;
+                }
             }
-            _buffer.GetStringBuilder().Clear();
-            _exporter.Reset();
-            var t = _exporter.Target;
-            t.EmitStartObject( -1, ObjectExportedKind.Object );
-            t.EmitPropertyName( "N" );
-            t.EmitInt32( last.TransactionNumber );
-            t.EmitPropertyName( "E" );
-            t.EmitStartList();
-            if( transactionNumber == last.TransactionNumber - 1 )
+        }
+
+        /// <summary>
+        /// Dissociates this collector from the current domain.
+        /// </summary>
+        public void Detach()
+        {
+            lock( _events )
             {
-                _buffer.Write( last.ExportedEvents );
+                _domain.OnSuccessfulTransaction -= OnSuccessfulTransaction;
+                _domain = null;
+            }
+        }
+
+        void OnSuccessfulTransaction( object sender, SuccessfulTransactionEventArgs c ) 
+        {
+            Debug.Assert( sender == _domain );
+            TransactionEvent current;
+            // It's useless to capture the initial transaction: the full export will be more efficient.
+            int num = c.Domain.TransactionSerialNumber;
+            if( num == 1 )
+            {
+                current = new TransactionEvent( 1, c.CommitTimeUtc, String.Empty );
             }
             else
             {
-                bool atLeastOne = false;
-                foreach( var e in _events )
+                lock( _events )
                 {
-                    if( e.TransactionNumber <= transactionNumber ) continue;
-                    if( atLeastOne ) _buffer.Write( "," );
-                    else atLeastOne = true;
-                    _buffer.Write( e.ExportedEvents );
+                    if( _lastTranNum != 0 && _lastTranNum != num - 1 )
+                    {
+                        c.Monitor.Warn( $"Missed transaction. Current is n°{num}, last stored was {_lastTranNum}. Clearing transaction events cache." );
+                        _events.Clear();
+                    }
+                    _lastTranNum = num;
+                    _buffer.GetStringBuilder().Clear();
+                    _exporter.Reset();
+                    foreach( var e in c.Events ) e.Export( _exporter );
+                    _events.Add( current = new TransactionEvent( num, c.CommitTimeUtc, _buffer.ToString() ) );
+                    ApplyKeepDuration();
                 }
             }
-            t.EmitEndList();
-            t.EmitEndObject( -1, ObjectExportedKind.Object );
-            return _buffer.GetStringBuilder().ToString();
+            OnTransaction?.Invoke( c.Monitor, current );
         }
 
         void ApplyKeepDuration()
@@ -154,26 +208,6 @@ namespace CK.Observable
                 }
                 if( i > 0 ) _events.RemoveRange( 0, i );
             }
-        }
-
-        /// <summary>
-        /// Event pattern adapter that calls <see cref="OnSuccessfulTransaction(in SuccessfulTransactionEventArgs)"/>.
-        /// </summary>
-        /// <param name="sender">The (ignored) sender domain.</param>
-        /// <param name="c">The transaction event.</param>
-        public void OnSuccessfulTransaction( object sender, SuccessfulTransactionEventArgs c ) => OnSuccessfulTransaction( c );
-
-        /// <summary>
-        /// Generates a new <see cref="TransactionEvent"/> based on <see cref="SuccessfulTransactionEventArgs.Events"/>.
-        /// </summary>
-        /// <param name="c">The transaction event.</param>
-        public void OnSuccessfulTransaction( in SuccessfulTransactionEventArgs c )
-        {
-            _buffer.GetStringBuilder().Clear();
-            _exporter.Reset();
-            foreach( var e in c.Events ) e.Export( _exporter );
-            _events.Add( new TransactionEvent( c.Domain.TransactionSerialNumber, c.CommitTimeUtc, _buffer.ToString() ) );
-            ApplyKeepDuration();
         }
 
     }

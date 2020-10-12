@@ -28,6 +28,25 @@ namespace CK.Observable.League
         bool IsDestroyed { get; }
 
         /// <summary>
+        /// Gets the transaction events if possible from a given transaction number.
+        /// This returns null if an export is required (the <paramref name="transactionNumber"/> is too old),
+        /// and an empty array if the transactionNumber is greater or equal to the current transaction number
+        /// stored (this should not happen: clients should only have smaller transaction number).
+        /// </summary>
+        /// <param name="transactionNumber">
+        /// The starting transaction number.
+        /// Should be between 1 and the current transaction number (excluded), 0 to trigger a full export.
+        /// </param>
+        /// <returns>The set of transaction events to apply or null if an export is required.</returns>
+        IReadOnlyList<JsonEventCollector.TransactionEvent>? GetTransactionEvents( int transactionNumber );
+
+        /// <summary>
+        /// Raised whenever a transaction has been successfully commited.
+        /// Note that the first transaction is visible: see <see cref="JsonEventCollector.TransactionEvent.TransactionNumber"/>.
+        /// </summary>
+        event Action<IActivityMonitor,JsonEventCollector.TransactionEvent> DomainChanged;
+
+        /// <summary>
         /// Loads this domain (if it is not yet loaded) and returns a shell on which <see cref="IObservableDomainShellBase.DisposeAsync(IActivityMonitor)"/>
         /// must be called once the domain is not needed anymore.
         /// If <see cref="IsDestroyed"/> is true or if the containing <see cref="ObservableLeague"/> is closing, or an error occurred,

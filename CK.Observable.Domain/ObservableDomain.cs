@@ -199,16 +199,14 @@ namespace CK.Observable
             {
                 public readonly ObservableObject Object;
                 public readonly ObservablePropertyChangedEventArgs Info;
-                public readonly object InitialValue;
                 public object FinalValue;
 
                 public long Key => Info.GetObjectPropertyId( Object );
 
-                public PropChanged( ObservableObject o, ObservablePropertyChangedEventArgs p, object initial, object final )
+                public PropChanged( ObservableObject o, ObservablePropertyChangedEventArgs p, object final )
                 {
                     Object = o;
                     Info = p;
-                    InitialValue = initial;
                     FinalValue = final;
                 }
             }
@@ -313,7 +311,7 @@ namespace CK.Observable
                 _changeEvents.Add( new NewPropertyEvent( info.PropertyId, info.PropertyName ) );
             }
 
-            internal void OnPropertyChanged( ObservableObject o, ObservablePropertyChangedEventArgs p, object before, object after )
+            internal void OnPropertyChanged( ObservableObject o, ObservablePropertyChangedEventArgs p, object after )
             {
                 PropChanged c;
                 if( _propChanged.TryGetValue( p.GetObjectPropertyId( o ), out c ) )
@@ -322,7 +320,7 @@ namespace CK.Observable
                 }
                 else
                 {
-                    c = new PropChanged( o, p, before, after );
+                    c = new PropChanged( o, p, after );
                     _propChanged.Add( c.Key, c );
                 }
             }
@@ -1736,7 +1734,7 @@ namespace CK.Observable
             return _sidekickManager.CreateWaitingSidekicks( _currentTran.Monitor, ex => _currentTran.AddError( CKExceptionData.CreateFrom( ex ) ) );
         }
 
-        internal ObservablePropertyChangedEventArgs? OnPropertyChanged( ObservableObject o, string propertyName, object before, object after )
+        internal ObservablePropertyChangedEventArgs? OnPropertyChanged( ObservableObject o, string propertyName, object after )
         {
             if( _deserializeOrInitializing )
             {
@@ -1746,7 +1744,7 @@ namespace CK.Observable
             ObservablePropertyChangedEventArgs p = EnsurePropertyInfo( propertyName );
             if( o._exporter != null && o._exporter.ExportableProperties.Any( prop => prop.Name == propertyName ) )
             {
-                _changeTracker.OnPropertyChanged( o, p, before, after );
+                _changeTracker.OnPropertyChanged( o, p, after );
             }
             return p;
         }

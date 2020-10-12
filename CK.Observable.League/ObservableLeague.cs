@@ -139,6 +139,13 @@ namespace CK.Observable.League
                                          } );
         }
 
+        /// <summary>
+        /// Called from the coordinator: the domain's name is no more associated to the Shell.
+        /// The <see cref="Shell.IsDestroyed"/> has been set to true: when the domain will no more be used,
+        /// the <see cref="StreamStoreClient.ArchiveAsync(IActivityMonitor)"/> will be called instead of <see cref="StreamStoreClient.SaveAsync(IActivityMonitor)"/>.
+        /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
+        /// <param name="d">The managed domain (ie. the Shell: we only need here its DomainName).</param>
         void IManagedLeague.OnDestroy( IActivityMonitor monitor, IManagedDomain d )
         {
             _domains.TryRemove( d.DomainName, out var _ );

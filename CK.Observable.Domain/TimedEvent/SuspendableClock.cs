@@ -128,7 +128,7 @@ namespace CK.Observable
             add
             {
                 this.CheckDisposed();
-                _isActiveChanged.Add( value, nameof( Disposed ) );
+                _isActiveChanged.Add( value, nameof( IsActiveChanged ) );
             }
             remove => _isActiveChanged.Remove( value );
         }
