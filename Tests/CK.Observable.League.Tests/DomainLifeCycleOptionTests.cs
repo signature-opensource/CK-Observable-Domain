@@ -9,7 +9,7 @@ using static CK.Testing.MonitorTestHelper;
 
 namespace CK.Observable.League.Tests
 {
-    public class PreLoadOptionTests
+    public class DomainLifeCycleOptionTests
     {
         [SetUp]
         public void Setup()
