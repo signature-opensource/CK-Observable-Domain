@@ -5,7 +5,7 @@ using System.Reflection;
 namespace CK.Observable
 {
     /// <summary>
-    /// Export driver: this impelemnts the export of <see cref="BaseType"/> instance into <see cref="ObjectExporter"/>.
+    /// Export driver: this implements the export of <see cref="BaseType"/> instance into <see cref="ObjectExporter"/>.
     /// </summary>
     public interface IObjectExportTypeDriver
     {

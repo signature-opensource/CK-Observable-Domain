@@ -64,7 +64,7 @@ namespace CK.Observable.Domain.Tests
             using( var d = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
             {
                 eventCollector.CollectEvent( d, false );
-                eventCollector.OnTransaction += TrackLastEvent;
+                eventCollector.LastEventChanged += TrackLastEvent;
                 d.TransactionSerialNumber.Should().Be( 0, "Nothing happened yet." );
 
                 string initial = d.ExportToString();
@@ -149,7 +149,7 @@ namespace CK.Observable.Domain.Tests
         public void exporting_and_altering_sample()
         {
             var eventCollector = new JsonEventCollector();
-            eventCollector.OnTransaction += TrackLastEvent;
+            eventCollector.LastEventChanged += TrackLastEvent;
 
             using( var d = SampleDomain.CreateSample() )
             {
@@ -202,7 +202,7 @@ namespace CK.Observable.Domain.Tests
         public void exporting_and_altering_ApplicationState()
         {
             var eventCollector = new JsonEventCollector();
-            eventCollector.OnTransaction += TrackLastEvent;
+            eventCollector.LastEventChanged += TrackLastEvent;
 
             using( var d = new ObservableDomain<RootSample.ApplicationState>( TestHelper.Monitor, "TEST", new MemoryTransactionProviderClient() ) )
             {

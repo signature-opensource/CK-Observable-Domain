@@ -177,8 +177,8 @@ namespace CK.Observable.League
 
             public event Action<IActivityMonitor,JsonEventCollector.TransactionEvent> DomainChanged
             {
-                add => Client.JsonEventCollector.OnTransaction += value;
-                remove => Client.JsonEventCollector.OnTransaction -= value;
+                add => Client.JsonEventCollector.LastEventChanged += value;
+                remove => Client.JsonEventCollector.LastEventChanged -= value;
             }
 
             internal bool ClosingLeague { get; private set; }

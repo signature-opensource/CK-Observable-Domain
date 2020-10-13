@@ -30,7 +30,7 @@ namespace CK.Observable.Domain.Tests
         public void initializing_and_persisting_domain()
         {
             var eventCollector = new JsonEventCollector();
-            eventCollector.OnTransaction += TrackLastEvent;
+            eventCollector.LastEventChanged += TrackLastEvent;
 
             using( var d = new ObservableDomain<ApplicationState>( TestHelper.Monitor, "TEST" ) )
             {

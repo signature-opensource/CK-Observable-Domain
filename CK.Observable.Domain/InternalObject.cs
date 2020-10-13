@@ -12,6 +12,7 @@ namespace CK.Observable
     /// as <see cref="IDisposableObject"/>, can implement events and event handler (<see cref="SafeEventHandler"/>
     /// and <see cref="SafeEventHandler{TEventArgs}"/>).
     /// </summary>
+    [NotExportable]
     [SerializationVersion( 0 )]
     public abstract class InternalObject : IDisposableObject
     {

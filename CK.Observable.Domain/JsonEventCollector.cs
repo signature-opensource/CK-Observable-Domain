@@ -32,7 +32,7 @@ namespace CK.Observable
             /// The transaction number.
             /// The very first transaction is number 1.
             /// It's <see cref="ExportedEvents"/> is empty since a full export will be more efficient.
-            /// This initial transaction will be raised by <see cref="OnTransaction"/> but will never be returned
+            /// This initial transaction will be raised by <see cref="LastEventChanged"/> but will never be returned
             /// by <see cref="GetTransactionEvents(int)"/>: this avoids a race condition when a domain has been exported
             /// (empty) before the very first transaction.
             /// </summary>
@@ -57,16 +57,18 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Initializes a new <see cref="JsonEventCollector"/>.
+        /// Initializes a new <see cref="JsonEventCollector"/>, optionally calling <see cref="CollectEvent(ObservableDomain, bool)"/>
+        /// immediately.
         /// </summary>
-        /// <param name="next">The next manager (can be null).</param>
-        public JsonEventCollector()
+        /// <param name="domain">Optional domain for which events must be collected.</param>
+        public JsonEventCollector( ObservableDomain? domain = null )
         {
             _events = new List<TransactionEvent>();
             _buffer = new StringWriter();
             _exporter = new ObjectExporter( new JSONExportTarget( _buffer ) );
             KeepDuration = TimeSpan.FromMinutes( 5 );
             KeepLimit = 10;
+            if( domain != null ) CollectEvent( domain, false );
         }
 
         /// <summary>
@@ -129,7 +131,13 @@ namespace CK.Observable
         /// Called whenever a new transaction event is available.
         /// Note that the first transaction is visible: see <see cref="TransactionEvent.TransactionNumber"/>.
         /// </summary>
-        public event Action<IActivityMonitor, TransactionEvent> OnTransaction;
+        public event Action<IActivityMonitor, TransactionEvent> LastEventChanged;
+
+        /// <summary>
+        /// Gets the last transaction event that has been seen (the first one can appear
+        /// here - see <see cref="TransactionEvent.TransactionNumber"/>).
+        /// </summary>
+        public TransactionEvent? LastEvent { get; private set; }
 
         /// <summary>
         /// Associates this collector to a domain. There must not be any existing associated domain
@@ -168,12 +176,11 @@ namespace CK.Observable
         void OnSuccessfulTransaction( object sender, SuccessfulTransactionEventArgs c ) 
         {
             Debug.Assert( sender == _domain );
-            TransactionEvent current;
             // It's useless to capture the initial transaction: the full export will be more efficient.
             int num = c.Domain.TransactionSerialNumber;
             if( num == 1 )
             {
-                current = new TransactionEvent( 1, c.CommitTimeUtc, String.Empty );
+                LastEvent = new TransactionEvent( 1, c.CommitTimeUtc, String.Empty );
             }
             else
             {
@@ -188,11 +195,11 @@ namespace CK.Observable
                     _buffer.GetStringBuilder().Clear();
                     _exporter.Reset();
                     foreach( var e in c.Events ) e.Export( _exporter );
-                    _events.Add( current = new TransactionEvent( num, c.CommitTimeUtc, _buffer.ToString() ) );
+                    _events.Add( LastEvent = new TransactionEvent( num, c.CommitTimeUtc, _buffer.ToString() ) );
                     ApplyKeepDuration();
                 }
             }
-            OnTransaction?.Invoke( c.Monitor, current );
+            LastEventChanged?.Invoke( c.Monitor, LastEvent );
         }
 
         void ApplyKeepDuration()

@@ -47,6 +47,7 @@ namespace CK.Observable
             // Export.
             readonly MethodInfo? _exporter;
             readonly MethodInfo? _exporterBase;
+
             readonly IReadOnlyList<PropertyInfo> _exportableProperties;
             readonly bool _isExportable;
 
@@ -226,8 +227,13 @@ namespace CK.Observable
                     _isExportable = true;
                     if( _exporter == null )
                     {
+                        // This is far from perfect: the property type may be not exportable for another
+                        // reason than being marked with the NotExportableAttribute... However, this would made
+                        // this property list dependent on the IExporterResolver being used.
+                        // That would imply a heavy refactoring of the export API. For the moment, this does the job.
                         _exportableProperties = Type.GetProperties().Where( p => p.GetIndexParameters().Length == 0
-                                                            && !p.GetCustomAttributes<NotExportableAttribute>().Any() )
+                                                            && !p.GetCustomAttributes<NotExportableAttribute>().Any()
+                                                            && !p.PropertyType.GetCustomAttributes<NotExportableAttribute>().Any() )
                                                 .ToArray();
                     }
                 }
