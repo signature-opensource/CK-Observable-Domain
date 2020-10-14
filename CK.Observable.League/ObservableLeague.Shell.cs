@@ -343,7 +343,7 @@ namespace CK.Observable.League
                 return updateDone;
             }
 
-            private protected virtual ObservableDomain CreateDomain( IActivityMonitor monitor ) => new ObservableDomain( monitor, DomainName, Client );
+            private protected virtual ObservableDomain CreateDomain( IActivityMonitor monitor ) => new ObservableDomain( monitor, DomainName, Client, _serviceProvider );
 
             private protected virtual IObservableDomainShell CreateIndependentShell( IActivityMonitor monitor ) => new IndependentShell( this, monitor );
 
