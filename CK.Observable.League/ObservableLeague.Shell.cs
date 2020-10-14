@@ -240,6 +240,8 @@ namespace CK.Observable.League
 
             protected ObservableDomain LoadedDomain => _domain!;
 
+            protected IServiceProvider ServiceProvider => _serviceProvider;
+
             Task<bool> IObservableDomainShellBase.SaveAsync( IActivityMonitor m )
             {
                 return Client.SaveAsync( m );
@@ -343,7 +345,7 @@ namespace CK.Observable.League
                 return updateDone;
             }
 
-            private protected virtual ObservableDomain CreateDomain( IActivityMonitor monitor ) => new ObservableDomain( monitor, DomainName, Client, _serviceProvider );
+            private protected virtual ObservableDomain CreateDomain( IActivityMonitor monitor ) => new ObservableDomain( monitor, DomainName, Client, ServiceProvider );
 
             private protected virtual IObservableDomainShell CreateIndependentShell( IActivityMonitor monitor ) => new IndependentShell( this, monitor );
 
@@ -469,7 +471,7 @@ namespace CK.Observable.League
             {
             }
 
-            private protected override ObservableDomain CreateDomain( IActivityMonitor monitor ) => new ObservableDomain<T>( monitor, DomainName, Client );
+            private protected override ObservableDomain CreateDomain( IActivityMonitor monitor ) => new ObservableDomain<T>( monitor, DomainName, Client, ServiceProvider );
 
             class IndependentShellT : IndependentShell, IObservableDomainShell<T>
             {
@@ -563,7 +565,7 @@ namespace CK.Observable.League
             {
             }
 
-            private protected override ObservableDomain CreateDomain( IActivityMonitor monitor ) => new ObservableDomain<T1,T2>( monitor, DomainName, Client );
+            private protected override ObservableDomain CreateDomain( IActivityMonitor monitor ) => new ObservableDomain<T1,T2>( monitor, DomainName, Client, ServiceProvider );
 
             class IndependentShellTT : IndependentShell, IObservableDomainShell<T1, T2>
             {
@@ -660,7 +662,7 @@ namespace CK.Observable.League
             {
             }
 
-            private protected override ObservableDomain CreateDomain( IActivityMonitor monitor ) => new ObservableDomain<T1, T2, T3>( monitor, DomainName, Client );
+            private protected override ObservableDomain CreateDomain( IActivityMonitor monitor ) => new ObservableDomain<T1, T2, T3>( monitor, DomainName, Client, ServiceProvider );
 
             class IndependentShellTTT : IndependentShell, IObservableDomainShell<T1, T2, T3>
             {
@@ -757,7 +759,7 @@ namespace CK.Observable.League
             {
             }
 
-            private protected override ObservableDomain CreateDomain( IActivityMonitor monitor ) => new ObservableDomain<T1, T2, T3, T4>( monitor, DomainName, Client );
+            private protected override ObservableDomain CreateDomain( IActivityMonitor monitor ) => new ObservableDomain<T1, T2, T3, T4>( monitor, DomainName, Client, ServiceProvider );
 
             class IndependentShellTTTT : IndependentShell, IObservableDomainShell<T1, T2, T3, T4>
             {
