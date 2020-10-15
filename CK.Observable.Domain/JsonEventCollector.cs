@@ -111,6 +111,10 @@ namespace CK.Observable
         {
             lock( _events )
             {
+                if( transactionNumber <= 1 )
+                {
+                    return null;
+                }
                 if( transactionNumber >= _lastTranNum )
                 {
                     return Array.Empty<TransactionEvent>();
