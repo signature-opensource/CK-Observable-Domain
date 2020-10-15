@@ -11,7 +11,7 @@ namespace CK.Observable.League
     /// can be linked if needed).
     /// <para>
     /// It is specialized by <see cref="CoordinatorClient"/> for the coordinator domain
-    /// and <see cref="ObservableLeague.DomainClient"/> for the all the other domains.
+    /// and <see cref="ObservableLeague.DomainClient"/> for all the other domains.
     /// </para>
     /// </summary>
     abstract class StreamStoreClient : MemoryTransactionProviderClient
@@ -22,8 +22,8 @@ namespace CK.Observable.League
         DateTime _nextSave;
         int _snapshotSaveDelay;
 
-        public StreamStoreClient( string domainName, IStreamStore store, IObservableDomainClient? next = null )
-            : base( next )
+        public StreamStoreClient( string domainName, IStreamStore store, Action<ObservableDomain>? loadHook, IObservableDomainClient? next = null )
+            : base( loadHook, next )
         {
             _eventCollector = new JsonEventCollector();
             DomainName = domainName;

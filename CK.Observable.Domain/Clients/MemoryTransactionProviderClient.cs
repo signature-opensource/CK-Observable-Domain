@@ -18,6 +18,7 @@ namespace CK.Observable
     public class MemoryTransactionProviderClient : IObservableDomainClient
     {
         readonly MemoryStream _memory;
+        readonly Action<ObservableDomain>? _loadHook;
         int _snapshotSerialNumber;
         DateTime _snapshotTimeUtc;
         CompressionKind? _currentSnapshotKind;
@@ -33,11 +34,17 @@ namespace CK.Observable
         /// <summary>
         /// Initializes a new <see cref="MemoryTransactionProviderClient"/>.
         /// </summary>
+        /// <param name="loadHook">
+        /// Optional hook called each time the domain is loaded.
+        /// See the loadHook of the method <see cref="ObservableDomain.Load(IActivityMonitor, Stream, bool, System.Text.Encoding?, int, Func{ObservableDomain, bool}?)"/>.
+        /// Note that the timers and reminders are triggered when <see cref="LoadAndInitializeSnapshot"/> is used, but not when <see cref="RestoreSnapshot"/> is called.
+        /// </param>
         /// <param name="next">The next manager (can be null).</param>
-        public MemoryTransactionProviderClient( IObservableDomainClient? next = null )
+        public MemoryTransactionProviderClient( Action<ObservableDomain>? loadHook = null, IObservableDomainClient? next = null )
         {
             Next = next;
             _memory = new MemoryStream( 16 * 1024 );
+            _loadHook = loadHook;
             _snapshotSerialNumber = -1;
             _snapshotTimeUtc = Util.UtcMinValue;
         }
@@ -139,7 +146,7 @@ namespace CK.Observable
             if( rawBytes[0] != 0 ) throw new InvalidDataException( "Invalid Snapshot version. Only 0 is currently supported." );
             _currentSnapshotKind = (CompressionKind)rawBytes[1];
             if( _currentSnapshotKind != CompressionKind.None && _currentSnapshotKind != CompressionKind.GZiped ) throw new InvalidDataException( "Invalid CompressionKind marker." );
-            DoLoadFromSnapshot( monitor, d );
+            DoLoadFromSnapshot( monitor, d, false );
             _snapshotSerialNumber = d.TransactionSerialNumber;
             _snapshotTimeUtc = d.TransactionCommitTimeUtc;
         }
@@ -193,7 +200,7 @@ namespace CK.Observable
             {
                 try
                 {
-                    DoLoadFromSnapshot( monitor, d );
+                    DoLoadFromSnapshot( monitor, d, true );
                     monitor.CloseGroup( "Success." );
                     return true;
                 }
@@ -210,21 +217,28 @@ namespace CK.Observable
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="d">The domain to load.</param>
-        protected virtual void DoLoadFromSnapshot( IActivityMonitor monitor, ObservableDomain d )
+        /// <param name="restoring">
+        /// True when called from <see cref="RestoreSnapshot"/>, false when called by <see cref="LoadAndInitializeSnapshot"/>.
+        /// </param>
+        protected virtual void DoLoadFromSnapshot( IActivityMonitor monitor, ObservableDomain d, bool restoring )
         {
+            // Hook that wraps the constructor parameter (if one was provided) and returns true (to activate the timed events)
+            // when LoadAndInitializeSnapshot is calling, or false when RestoreSnapshot is at stake.
+            Func<ObservableDomain, bool> loadHook = domain => { _loadHook?.Invoke( domain ); return !restoring; };
+
             long p = _memory.Position;
             _memory.Position = SnapshotHeaderLength;
             if( _currentSnapshotKind == CompressionKind.GZiped )
             {
                 using( var gz = new GZipStream( _memory, CompressionMode.Decompress, leaveOpen: true ) )
                 {
-                    d.Load( monitor, gz, leaveOpen: true );
+                    d.Load( monitor, gz, leaveOpen: true, loadHook: loadHook );
                 }
             }
             else
             {
                 Debug.Assert( CompressionKind == CompressionKind.None );
-                d.Load( monitor, _memory, leaveOpen: true );
+                d.Load( monitor, _memory, leaveOpen: true, loadHook: loadHook );
             }
             if( _memory.Position != p ) throw new Exception( $"Internal error: stream position should be {p} but was {_memory.Position} after reload." );
         }

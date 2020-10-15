@@ -91,6 +91,7 @@ namespace CK.Observable.League
                    IObservableDomainAccess<Coordinator> coordinator,
                    string domainName,
                    IStreamStore store,
+                   Action<ObservableDomain>? loadHook,
                    IServiceProvider serviceProvider,
                    IReadOnlyList<string> rootTypeNames,
                    Type[] rootTypes,
@@ -105,7 +106,7 @@ namespace CK.Observable.League
                 RootTypes = rootTypeNames;
                 _initialMonitor = monitor;
                 _serviceProvider = serviceProvider;
-                Client = new DomainClient( domainName, store, this );
+                Client = new DomainClient( domainName, store, loadHook, this );
             }
 
             /// <summary>
@@ -115,6 +116,7 @@ namespace CK.Observable.League
             /// <param name="coordinator">The coordinator access.</param>
             /// <param name="domainName">The name of the domain.</param>
             /// <param name="store">The persistent store.</param>
+            /// <param name="loadHook">The load hook.</param>
             /// <param name="serviceProvider">The service provider used to instantiate <see cref="ObservableDomainSidekick"/> objects.</param>
             /// <param name="rootTypeNames">The root types.</param>
             internal static Shell Create(
@@ -122,6 +124,7 @@ namespace CK.Observable.League
                 IObservableDomainAccess<Coordinator> coordinator,
                 string domainName,
                 IStreamStore store,
+                Action<ObservableDomain>? loadHook,
                 IServiceProvider serviceProvider,
                 IReadOnlyList<string> rootTypeNames )
             {
@@ -153,11 +156,11 @@ namespace CK.Observable.League
                             3 => typeof( Shell<,,> ).MakeGenericType( rootTypes ),
                             _ => typeof( Shell<,,,> ).MakeGenericType( rootTypes )
                         };
-                        return (Shell)Activator.CreateInstance( shellType, monitor, coordinator, domainName, store, serviceProvider, rootTypeNames, rootTypes );
+                        return (Shell)Activator.CreateInstance( shellType, monitor, coordinator, domainName, store, loadHook, serviceProvider, rootTypeNames, rootTypes );
                     }
                 }
                 // The domainType is null if the type resolution failed.
-                return new Shell( monitor, coordinator, domainName, store, serviceProvider, rootTypeNames, rootTypes, domainType );
+                return new Shell( monitor, coordinator, domainName, store, loadHook, serviceProvider, rootTypeNames, rootTypes, domainType );
             }
 
             public string DomainName => Client.DomainName;
@@ -464,10 +467,11 @@ namespace CK.Observable.League
                           IObservableDomainAccess<Coordinator> coordinator,
                           string domainName,
                           IStreamStore store,
+                          Action<ObservableDomain>? loadHook,
                           IServiceProvider serviceProvider,
                           IReadOnlyList<string> rootTypeNames,
                           Type[] rootTypes )
-                : base( monitor, coordinator, domainName, store, serviceProvider, rootTypeNames, rootTypes, typeof(ObservableDomain<T>) )
+                : base( monitor, coordinator, domainName, store, loadHook, serviceProvider, rootTypeNames, rootTypes, typeof(ObservableDomain<T>) )
             {
             }
 
@@ -558,10 +562,11 @@ namespace CK.Observable.League
                           IObservableDomainAccess<Coordinator> coordinator,
                           string domainName,
                           IStreamStore store,
+                          Action<ObservableDomain>? loadHook,
                           IServiceProvider serviceProvider,
                           IReadOnlyList<string> rootTypeNames,
                           Type[] rootTypes )
-                : base( monitor, coordinator, domainName, store, serviceProvider, rootTypeNames, rootTypes, typeof( ObservableDomain<T1,T2> ) )
+                : base( monitor, coordinator, domainName, store, loadHook, serviceProvider, rootTypeNames, rootTypes, typeof( ObservableDomain<T1,T2> ) )
             {
             }
 
@@ -655,10 +660,11 @@ namespace CK.Observable.League
                           IObservableDomainAccess<Coordinator> coordinator,
                           string domainName,
                           IStreamStore store,
+                          Action<ObservableDomain>? loadHook,
                           IServiceProvider serviceProvider,
                           IReadOnlyList<string> rootTypeNames,
                           Type[] rootTypes )
-                : base( monitor, coordinator, domainName, store, serviceProvider, rootTypeNames, rootTypes, typeof( ObservableDomain<T1, T2, T3> ) )
+                : base( monitor, coordinator, domainName, store, loadHook, serviceProvider, rootTypeNames, rootTypes, typeof( ObservableDomain<T1, T2, T3> ) )
             {
             }
 
@@ -752,10 +758,11 @@ namespace CK.Observable.League
                           IObservableDomainAccess<Coordinator> coordinator,
                           string domainName,
                           IStreamStore store,
+                          Action<ObservableDomain>? loadHook,
                           IServiceProvider serviceProvider,
                           IReadOnlyList<string> rootTypeNames,
                           Type[] rootTypes )
-                : base( monitor, coordinator, domainName, store, serviceProvider, rootTypeNames, rootTypes, typeof( ObservableDomain<T1, T2, T3, T4> ) )
+                : base( monitor, coordinator, domainName, store, loadHook, serviceProvider, rootTypeNames, rootTypes, typeof( ObservableDomain<T1, T2, T3, T4> ) )
             {
             }
 

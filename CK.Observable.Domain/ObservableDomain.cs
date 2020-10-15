@@ -1234,7 +1234,7 @@ namespace CK.Observable
             }
         }
 
-        void DoLoad( IActivityMonitor monitor, BinaryDeserializer r, string expectedName, bool callUpdateTimers )
+        void DoLoad( IActivityMonitor monitor, BinaryDeserializer r, string expectedName, Func<ObservableDomain, bool>? loadHook )
         {
             Debug.Assert( _lock.IsWriteLockHeld );
             _deserializeOrInitializing = true;
@@ -1373,6 +1373,8 @@ namespace CK.Observable
                 r.ImplementationServices.ExecutePostDeserializationActions();
                 // This is where specialized typed ObservableDomain bind their roots.
                 OnLoaded();
+                // Calls the loadHook.
+                bool callUpdateTimers = loadHook != null ? loadHook( this ) : true;
                 if( !_sidekickManager.CreateWaitingSidekicks( monitor, ex => { } ) )
                 {
                     monitor.Error( $"At least one critical error occurred while activating sidekicks. The error should be investigated since this may well be a blocking error." );
@@ -1404,12 +1406,15 @@ namespace CK.Observable
         /// The maximum number of milliseconds to wait for a read access before giving up.
         /// Wait indefinitely by default.
         /// </param>
-        /// <param name="updateAutoTimer">
-        /// By default, <see cref="TimeManager"/> is sollicitated to update the internal timer delay based
-        /// on the loaded timers and reminders configurations.
-        /// </param>
+        /// <param name="loadHook">
+        /// Optional hook called right after the deserialization but before sidekicks activation and timed events processing:
+        /// when this hook returns true (that is the default), the <see cref="TimeManager"/> is sollicitated to update the internal
+        /// timer delay based on the loaded timers and reminders configurations: elapsed timers and reminders fire.
+        /// <para>
+        /// Returning false from this hook doesn't skip the sidekicks activation but skips timed events processing (no timers and reminders fire).
+        /// </para>
         /// <returns>True on success, false if timeout occurred.</returns>
-        public bool Load( IActivityMonitor monitor, Stream stream, string expectedLoadedName, bool leaveOpen = false, Encoding? encoding = null, int millisecondsTimeout = -1, bool updateAutoTimer = true )
+        public bool Load( IActivityMonitor monitor, Stream stream, string expectedLoadedName, bool leaveOpen = false, Encoding? encoding = null, int millisecondsTimeout = -1, Func<ObservableDomain, bool>? loadHook = null )
         {
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
             if( stream == null ) throw new ArgumentNullException( nameof( stream ) );
@@ -1426,7 +1431,7 @@ namespace CK.Observable
                 using( var d = new BinaryDeserializer( stream, null, _deserializers, leaveOpen, encoding ) )
                 {
                     d.Services.Add( this );
-                    DoLoad( monitor, d, expectedLoadedName, updateAutoTimer );
+                    DoLoad( monitor, d, expectedLoadedName, loadHook );
                     return true;
                 }
             }
@@ -1448,14 +1453,18 @@ namespace CK.Observable
         /// The maximum number of milliseconds to wait for a read access before giving up.
         /// Wait indefinitely by default.
         /// </param>
-        /// <param name="updateAutoTimer">
-        /// By default, <see cref="TimeManager"/> is sollicitated to update the internal timer delay based
-        /// on the loaded timers and reminders configurations.
+        /// <param name="loadHook">
+        /// Optional hook called right after the deserialization but before sidekicks activation and timed events processing:
+        /// when this hook returns true (that is the default), the <see cref="TimeManager"/> is sollicitated to update the internal
+        /// timer delay based on the loaded timers and reminders configurations: elapsed timers and reminders fire.
+        /// <para>
+        /// Returning false from this hook doesn't skip the sidekicks activation but skips timed events processing (no timers and reminders fire).
+        /// </para>
         /// </param>
         /// <returns>True on success, false if timeout occurred.</returns>
-        public bool Load( IActivityMonitor monitor, Stream stream, bool leaveOpen = false, Encoding? encoding = null, int millisecondsTimeout = -1, bool updateAutoTimer = true )
+        public bool Load( IActivityMonitor monitor, Stream stream, bool leaveOpen = false, Encoding? encoding = null, int millisecondsTimeout = -1, Func<ObservableDomain,bool>? loadHook = null )
         {
-            return Load( monitor, stream, DomainName, leaveOpen, encoding, millisecondsTimeout, updateAutoTimer );
+            return Load( monitor, stream, DomainName, leaveOpen, encoding, millisecondsTimeout, loadHook );
         }
 
         /// <summary>
@@ -1897,7 +1906,7 @@ namespace CK.Observable
                 var originalBytes = s.ToArray();
                 var originalTransactionSerialNumber = domain.TransactionSerialNumber;
                 s.Position = 0;
-                if( !domain.Load( monitor, s, true, millisecondsTimeout: milliSecondsTimeout, updateAutoTimer: false ) ) throw new Exception( "Reload failed: Unable to acquire lock." );
+                if( !domain.Load( monitor, s, true, millisecondsTimeout: milliSecondsTimeout, loadHook: d => true ) ) throw new Exception( "Reload failed: Unable to acquire lock." );
 
                 var checker = new CheckedWriteStream( originalBytes );
                 if( !domain.Save( monitor, checker, true, millisecondsTimeout: milliSecondsTimeout, debugMode: useDebugMode ) ) throw new Exception( "Second Save failed: Unable to acquire lock." );

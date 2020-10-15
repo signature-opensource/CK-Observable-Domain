@@ -10,8 +10,8 @@ namespace CK.Observable.League
         {
             readonly Shell _shell;
 
-            public DomainClient( string domainName, IStreamStore store, Shell shell, IObservableDomainClient? next = null )
-                : base( domainName, store, next )
+            public DomainClient( string domainName, IStreamStore store, Action<ObservableDomain>? loadHook, Shell shell, IObservableDomainClient? next = null )
+                : base( domainName, store, loadHook, next )
             {
                 _shell = shell;
             }
@@ -19,12 +19,12 @@ namespace CK.Observable.League
             public override void OnTransactionCommit( in SuccessfulTransactionEventArgs c )
             {
                 base.OnTransactionCommit( c );
-                bool hasEctiveTimedEvents = c.Domain.TimeManager.ActiveTimedEventsCount > 0;
+                bool hasActiveTimedEvents = c.Domain.TimeManager.ActiveTimedEventsCount > 0;
                 c.PostActions.Add( ctx =>
                 {
                     // If a post action has been added after this one and eventually fails, there is nothing to compensate:
                     // the domain has or hasn't timed events and the shell has to know this.
-                    return _shell.SynchronizeOptionsAsync( ctx.Monitor, options: null, hasEctiveTimedEvents );
+                    return _shell.SynchronizeOptionsAsync( ctx.Monitor, options: null, hasActiveTimedEvents );
                 } );
             }
         }
