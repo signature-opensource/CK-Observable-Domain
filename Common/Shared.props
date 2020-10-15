@@ -37,6 +37,9 @@
     <RepositoryType>git</RepositoryType>
     <!--Removes annoying Pack warning: The package version ... uses SemVer 2.0.0 or components of SemVer 1.0.0 that are not supported on legacy clients...-->
     <NoWarn>NU5105</NoWarn>
+    <AssemblyOriginatorKeyFile>$(MSBuildThisFileDirectory)SharedKey.snk</AssemblyOriginatorKeyFile>
+    <SignAssembly>true</SignAssembly>
+    <PublicSign Condition=" '$(OS)' != 'Windows_NT' ">true</PublicSign>
   </PropertyGroup>
   <!--</StandardProperties>-->
 
