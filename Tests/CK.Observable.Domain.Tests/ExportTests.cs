@@ -77,9 +77,10 @@ namespace CK.Observable.Domain.Tests
                 LastEvent.TransactionNumber.Should().Be( 1 );
                 LastEvent.ExportedEvents.Should().BeEmpty();
 
-                // Transaction number 1 is not kept: empty means "I can't give youy the diff, do a full export!".
-                eventCollector.GetTransactionEvents( 0 ).Should().BeEmpty();
-                eventCollector.GetTransactionEvents( 1 ).Should().BeEmpty();
+                // Transaction number 1 is not kept: null means "I can't give you the diff, do a full export!".
+                eventCollector.GetTransactionEvents( 0 ).Should().BeNull();
+                eventCollector.GetTransactionEvents( 1 ).Should().BeNull();
+                // Transaction number 1 is not kept: empty means "I can't give you the diff: tour transaction number is too big.".
                 eventCollector.GetTransactionEvents( 2 ).Should().BeEmpty();
 
                 d.Modify( TestHelper.Monitor, () =>
