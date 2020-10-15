@@ -169,9 +169,6 @@ export class ObservableDomain {
                     }
                 case "CL": // CollectionClear
                     {
-                        console.log('idx',e[1]);
-                        console.log('len',this._graph.length);
-                        console.log('v',this._graph[e[1]]);
                         const c = this._graph[e[1]];
                         if (c instanceof Array) c.length = 0;
                         else c.clear();
