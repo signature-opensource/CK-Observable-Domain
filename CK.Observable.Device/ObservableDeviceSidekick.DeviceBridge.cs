@@ -45,6 +45,7 @@ namespace CK.Observable.Device
             /// </summary>
             internal protected IDevice? Device { get; private set; }
 
+#pragma warning disable CS8618 // Non-nullable _sidekick uninitialized. Consider declaring as nullable.
             /// <summary>
             /// This is private protected so that developers are obliged to use the <see cref="Bridge{TSidekick,TDevice}"/> generic adapter.
             /// </summary>
@@ -55,6 +56,7 @@ namespace CK.Observable.Device
                 Object = o;
                 o._bridge = this;
             }
+#pragma warning restore CS8618
 
             BasicControlDeviceCommand ObservableDeviceObject.IDeviceBridge.CreateBasicCommand() => new BasicControlDeviceCommand<THost>();
 

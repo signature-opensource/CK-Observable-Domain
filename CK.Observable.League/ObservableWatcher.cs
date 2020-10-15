@@ -1,7 +1,6 @@
 using CK.Core;
 using System;
 using CK.Observable.League;
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -11,6 +10,10 @@ using System.Threading.Tasks;
 
 namespace CK.Observable
 {
+    /// <summary>
+    /// Base abstract class that watches any number of the domains in a <see cref="ObservableLeague"/>.
+    /// This class is thread safe.
+    /// </summary>
     public abstract class ObservableWatcher : IDisposable
     {
         readonly ObservableLeague _league;
@@ -44,6 +47,12 @@ namespace CK.Observable
             }
         }
 
+        /// <summary>
+        /// Initializes a new watcher on a league.
+        /// <see cref="StartOrRestartWatchAsync(IActivityMonitor, string, int)"/> must be called for each
+        /// domain that must be watched.
+        /// </summary>
+        /// <param name="league">The league.</param>
         public ObservableWatcher( ObservableLeague league )
         {
             _league = league;
@@ -51,6 +60,9 @@ namespace CK.Observable
             _watched = new List<DomainWatcher>();
         }
 
+        /// <summary>
+        /// Disposing this watcher cancels all the subsctiptions on the league and the currently watched domains.
+        /// </summary>
         public void Dispose()
         {
             // We don't use AvailableWaitHandle, so we don't need to
@@ -101,7 +113,9 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Ensures that the appropriate <see cref="WatchEvent"/> is handled by <see cref="HandleEvent(IActivityMonitor, WatchEvent)"/>.
+        /// Starts the watch of a domain.
+        /// The <see cref="HandleEvent(IActivityMonitor, WatchEvent)"/> is called with the
+        /// appropriate <see cref="WatchEvent"/>.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="domainName">The domain that should be watched.</param>
@@ -185,10 +199,12 @@ namespace CK.Observable
         /// <summary>
         /// Stops watching a domain.
         /// </summary>
-        /// <param name="monitor"></param>
-        /// <param name="domainName"></param>
-        /// <returns></returns>
-        public async ValueTask UnwatchAsync( IActivityMonitor monitor, string domainName )
+        /// <param name="monitor">The monitor to use.</param>
+        /// <param name="domainName">The domain that should be watched.</param>
+        /// <returns>
+        /// Whether the <paramref name="domainName"/> has been found: false is the domain doesn't exist or was not watched.
+        /// </returns>
+        public async ValueTask<bool> UnwatchAsync( IActivityMonitor monitor, string domainName )
         {
             await _lock.WaitAsync();
             try
@@ -200,11 +216,10 @@ namespace CK.Observable
                     w.Dispose();
                     _watched.RemoveAt( idx );
                     monitor.Trace( $"Client '{WatcherId}' unwatch '{domainName}'." );
+                    return true;
                 }
-                else
-                {
-                    monitor.Warn( $"Client '{WatcherId}': '{domainName}' not found. Unwatch skipped." );
-                }
+                monitor.Warn( $"Client '{WatcherId}': '{domainName}' not found. Unwatch skipped." );
+                return false;
             }
             finally
             {

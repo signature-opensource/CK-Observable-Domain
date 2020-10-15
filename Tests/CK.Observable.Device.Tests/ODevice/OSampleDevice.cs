@@ -9,6 +9,9 @@ namespace CK.Observable.Device.Tests
     [SerializationVersion( 0 )]
     public class OSampleDevice : ObservableDeviceObject<OSampleDeviceSidekick>
     {
+
+#pragma warning disable CS8618 // Non-nullable _bridgeAccess uninitialized. Consider declaring as nullable.
+
         public OSampleDevice( string deviceName )
             : base( deviceName )
         {
@@ -23,6 +26,7 @@ namespace CK.Observable.Device.Tests
         {
             ctx.StartReading();
         }
+#pragma warning restore CS8618
 
         void Write( BinarySerializer w )
         {

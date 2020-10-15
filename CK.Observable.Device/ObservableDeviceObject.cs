@@ -19,6 +19,8 @@ namespace CK.Observable.Device
         ObservableEventHandler _statusChanged;
         internal IDeviceBridge _bridge;
 
+#pragma warning disable CS8618 // Non-nullable _bridge uninitialized. Consider declaring as nullable.
+
         private protected ObservableDeviceObject( string deviceName )
         {
             if( deviceName == null ) throw new ArgumentNullException( nameof( deviceName ) );
@@ -32,6 +34,8 @@ namespace CK.Observable.Device
             DeviceName = r.ReadNullableString();
             _statusChanged = new ObservableEventHandler( r );
         }
+
+#pragma warning restore CS8618
 
         void Write( BinarySerializer w )
         {
