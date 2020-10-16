@@ -325,6 +325,7 @@ namespace CK.Observable.League
                     try
                     {
                         var d = CreateDomain( monitor );
+                        Client.JsonEventCollector.CollectEvent( d, clearEvents: false );
                         await Client.InitializeAsync( monitor, d );
                         await _coordinator.ModifyThrowAsync( monitor, ( m, d ) =>
                         {
@@ -333,12 +334,11 @@ namespace CK.Observable.League
                             domain.HasActiveTimedEvents = _hasActiveTimedEvents;
                         } );
                         updateDone = true;
-                        // On success only:
-                        Client.JsonEventCollector.CollectEvent( d, false );
                         _domain = d;
                     }
                     catch( Exception ex )
                     {
+                        Client.JsonEventCollector.Detach();
                         Interlocked.Decrement( ref _refCount );
                         monitor.Error( $"Unable to instanciate and load '{DomainName}'.", ex );
                         _refCount = 0;
