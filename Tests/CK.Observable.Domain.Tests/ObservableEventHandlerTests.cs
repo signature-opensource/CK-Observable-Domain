@@ -303,7 +303,7 @@ namespace CK.Observable.Domain.Tests
 
             public PrivateHandlerObject()
             {
-                _timer = new ObservableTimer( DateTime.UtcNow, 100 );
+                _timer = new ObservableTimer( DateTime.UtcNow, 20 );
                 _timer.Elapsed += _timer_Elapsed;
                 _clock = new SuspendableClock();
                 _clock.IsActiveChanged += _clock_IsActiveChanged;
@@ -373,31 +373,7 @@ namespace CK.Observable.Domain.Tests
                 o = type == "UseBase" ? new PrivateHandlerObject() : new SpecializedPrivateHandlerObject();
 
             } ).Success.Should().BeTrue();
-            int count = o.FireCount;
-            o.FireCount.Should().Be( 0 );
-            domain.AllObjects.Single().Should().BeSameAs( o );
-
-            Thread.Sleep( 200 );
-
-            o.FireCount.Should().BeGreaterThan( count );
-
-            // The reload doesn't check the timed events.
             ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, domain );
-
-            // Catch the "last" count of the object (timed events may have been checked right before the IdempotenceSerializationCheck).
-            count = o.FireCount;
-
-            Thread.Sleep( 200 );
-
-            domain.TimeManager.ActiveTimedEventsCount.Should().Be( 1, "Even is a timed event is pending..." );
-            o = (PrivateHandlerObject)domain.AllObjects.Single();
-            o.FireCount.Should().Be( count, "...no check have been done." );
-
-            // This triggers the timed events check.
-            domain.Modify( TestHelper.Monitor, null ).Success.Should().BeTrue();
-
-            // So the timer fired.
-            o.FireCount.Should().BeGreaterThan( count );
         }
 
     }
