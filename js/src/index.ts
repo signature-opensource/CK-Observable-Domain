@@ -1,12 +1,14 @@
 /* tslint:disable */
 import { deserialize } from "@signature/json-graph-serializer";
 
-export interface ObservableDomainEvent {
+export type WatchEvent = TransactionSetEvent | DomainExportEvent | ErrorEvent | '';
+
+export interface TransactionSetEvent {
     N: number;
-    E: any[];
+    E: any[][];
 }
 
-export interface ObservableDomainState {
+export interface DomainExportEvent {
     N: number;
     C: number;
     P: string[];
@@ -14,53 +16,110 @@ export interface ObservableDomainState {
     R: number[];
 }
 
+export interface ErrorEvent {
+    Error: string;
+}
+
 export class ObservableDomain {
     private readonly _props: string[];
     private _tranNum: number;
     private _objCount: number;
     private readonly _graph: any[];
-    private readonly  _roots: any[];        
+    private readonly _roots: any[];
 
-    constructor(initialState: string | ObservableDomainState) {
-        const o : ObservableDomainState = typeof (initialState) === "string"
-                                            ? deserialize(initialState, { prefix: "" })
-                                            : initialState;
-        this._props = o.P;
-        this._tranNum = o.N;
-        this._objCount = o.C;
-        this._graph = o.O;
-        this._roots = o.R.map(i => this._graph[i]);
+    constructor(initialState?: string | DomainExportEvent | undefined) {
+        if (initialState === undefined) {
+            this._props = [];
+            this._tranNum = 0;
+            this._objCount = 0;
+            this._graph = [];
+            this._roots = [];
+        } else {
+            const o: DomainExportEvent = typeof (initialState) === "string"
+                ? deserialize(initialState, { prefix: "" })
+                : initialState;
+            this._props = o.P;
+            this._tranNum = o.N;
+            this._objCount = o.C;
+            this._graph = o.O;
+            this._roots = o.R.map(i => this._graph[i]);
+        }
     }
 
-    public get transactionNumber() : number { 
+    public get transactionNumber(): number {
         return this._tranNum;
     }
 
-    public get allObjectsCount() : number { 
+    public get allObjectsCount(): number {
         return this._objCount;
     }
 
-    public get allObjects() : Iterable<any>  { 
-        function* all(g:any[])
-        {
-            for( const o of g )
-            {
-                if( o !== null ) yield o;
+    public get allObjects(): Iterable<any> {
+        function* all(g: any[]) {
+            for (const o of g) {
+                if (o !== null) yield o;
             }
         }
-        return all( this._graph );
-     }
+        return all(this._graph);
+    }
 
-    public get roots() : ReadonlyArray<any> { 
+    public get roots(): ReadonlyArray<any> {
         return this._roots;
     }
 
-    public applyEvent(event: ObservableDomainEvent) {
-        if (this._tranNum + 1 !== event.N) {
-            throw new Error(`Invalid transaction number. Expected: ${this._tranNum + 1}, got ${event.N}.`);
+    static isTransactionSetEvent(e: WatchEvent): e is TransactionSetEvent {
+        if (e === '') return false;
+        return 'E' in e;
+    }
+
+    static isDomainExportEvent(e: WatchEvent): e is DomainExportEvent {
+        if (e === '') return false;
+        return 'P' in e;
+    }
+
+    static isErrorEvent(e: WatchEvent): e is ErrorEvent {
+        if (e === '') return false;
+        return 'Error' in e;
+    }
+
+    public applyWatchEvent(e: WatchEvent) {
+        e = deserialize(e, { prefix: "" }); // Resolve objects
+        if(ObservableDomain.isTransactionSetEvent(e)) {
+            for(let i = 0; i < e.E.length; i++) {
+                this.applyEvent(e.N + i, e.E[i]);
+            }
+        } else if(ObservableDomain.isDomainExportEvent(e)) {
+            this.applyDomainExport(e);
+        } else if (e === '') {
+            throw new Error('The watch event received is empty. The domain doesn\'t exist (or has been destroyed).');
+        } else if(ObservableDomain.isErrorEvent(e)) {
+            throw new Error('Domain error: ' + e.Error);
+        } else {
+            throw new Error('Unknown WatchEvent: ' + JSON.stringify(e, undefined, 4))
         }
-        const deleted = new Set();
-        const events = event.E;
+    }
+
+    public applyDomainExport(e: DomainExportEvent) {
+        this._props.splice(0, this._props.length); // Clear array
+        for(let i = 0; i < e.P.length; i++) this._props.push(e.P[i]); // Fill array
+
+        this._tranNum = e.N;
+
+        this._objCount = e.C;
+
+        this._graph.splice(0, this._graph.length); // Clear array
+        for(let i = 0; i < e.O.length; i++) this._graph.push(e.O[i]); // Fill array
+
+        this._roots.splice(0, this._roots.length); // Clear array
+        for(let i = 0; i < e.R.length; i++) this._roots.push(this._graph[e.R[i]]); // Fill array
+    }
+
+    public applyEvent(N: number, E: any[]) {
+        if (this._tranNum + 1 !== N) {
+            throw new Error(`Invalid transaction number. Expected: ${this._tranNum + 1}, got ${N}.`);
+        }
+        const deleted = new Set<any>();
+        const events = E;
         for (let i = 0; i < events.length; ++i) {
             const e = events[i];
             const code: string = e[0];
@@ -132,19 +191,19 @@ export class ObservableDomain {
                     }
                 case "M":   // CollectionMapSet
                     {
-                        this._graph[e[1]].set(this.getValue(e[2]),this.getValue(e[3]));
+                        this._graph[e[1]].set(this.getValue(e[2]), this.getValue(e[3]));
                         break;
                     }
-				case "A": // CollectionAddKey
-					{
-						this._graph[e[1]].add(this.getValue(e[2]));
+                case "A": // CollectionAddKey
+                    {
+                        this._graph[e[1]].add(this.getValue(e[2]));
                         break;
-					}
+                    }
                 default: throw new Error(`Unexpected Event code: '${e[0]}'.`);
             }
         }
-        deleted.forEach( id => this._graph[id] = null );
-        this._tranNum = event.N;
+        deleted.forEach(id => this._graph[id] = null);
+        this._tranNum = N;
     }
 
     private getValue(o: any) {
