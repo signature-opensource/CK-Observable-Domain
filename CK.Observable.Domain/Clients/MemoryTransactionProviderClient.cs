@@ -36,7 +36,7 @@ namespace CK.Observable
         /// </summary>
         /// <param name="loadHook">
         /// Optional hook called each time the domain is loaded.
-        /// See the loadHook of the method <see cref="ObservableDomain.Load(IActivityMonitor, Stream, bool, System.Text.Encoding?, int, Func{IActivityMonitor,ObservableDomain, bool}?)"/>.
+        /// See the loadHook of the method <see cref="ObservableDomain.Load(IActivityMonitor, Stream, bool, System.Text.Encoding?, int, Func{ObservableDomain, bool}?)"/>.
         /// Note that the timers and reminders are triggered when <see cref="LoadAndInitializeSnapshot"/> is used, but not when <see cref="RestoreSnapshot"/> is called.
         /// </param>
         /// <param name="next">The next manager (can be null).</param>
@@ -224,7 +224,7 @@ namespace CK.Observable
         {
             // Hook that wraps the constructor parameter (if one was provided) and returns true (to activate the timed events)
             // when LoadAndInitializeSnapshot is calling, or false when RestoreSnapshot is at stake.
-            Func<IActivityMonitor, ObservableDomain, bool> loadHook = (m,domain) => { _loadHook?.Invoke( m, domain ); return !restoring; };
+            Func<ObservableDomain, bool> loadHook = domain => { _loadHook?.Invoke( monitor, domain ); return !restoring; };
 
             long p = _memory.Position;
             _memory.Position = SnapshotHeaderLength;

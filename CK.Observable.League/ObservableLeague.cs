@@ -43,6 +43,11 @@ namespace CK.Observable.League
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="store">The store to use.</param>
+        /// <param name="loadHooks">
+        /// Optional factory for load hooks of domains.
+        /// These hooks are called inside the load method. See <see cref="ObservableDomain.Load(IActivityMonitor, System.IO.Stream, bool, System.Text.Encoding?, int, Func{ObservableDomain, bool}?)"/>
+        /// load hook parameter.
+        /// </param>
         /// <param name="serviceProvider">
         /// The service provider used to instantiate <see cref="ObservableDomainSidekick"/> objects.
         /// When null, a dummy service provider (<see cref="EmptyServiceProvider.Default"/>) is provided to the domains.

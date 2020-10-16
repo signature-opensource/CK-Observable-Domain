@@ -83,7 +83,6 @@ namespace CK.Observable.League
                     return Shell.Read( monitor, reader, millisecondsTimeout );
                 }
 
-
             }
 
             private protected Shell(
