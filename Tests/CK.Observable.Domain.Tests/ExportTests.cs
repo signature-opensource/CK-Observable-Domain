@@ -5,6 +5,7 @@ using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using static CK.Testing.MonitorTestHelper;
 
@@ -55,7 +56,6 @@ namespace CK.Observable.Domain.Tests
             }
         }
 
-
         [Test]
         public void exporting_and_altering_simple()
         {
@@ -79,7 +79,7 @@ namespace CK.Observable.Domain.Tests
 
                 // Transaction number 1 is not kept: null means "I can't give you the diff, do a full export!".
                 eventCollector.GetTransactionEvents( 0 ).Should().BeNull();
-                eventCollector.GetTransactionEvents( 1 ).Should().BeNull();
+                eventCollector.GetTransactionEvents( 1 ).Should().BeEmpty();
                 // Transaction number 1 is not kept: empty means "I can't give you the diff: tour transaction number is too big.".
                 eventCollector.GetTransactionEvents( 2 ).Should().BeEmpty();
 
@@ -142,6 +142,69 @@ namespace CK.Observable.Domain.Tests
                 } ).Should().NotBeNull();
 
                 string t8 = LastEvent.ExportedEvents;
+
+            }
+        }
+
+
+        [Test]
+        public void GetTransactionEvents_semantics()
+        {
+            using( var d = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
+            {
+                var eventCollector = new JsonEventCollector( d );
+                eventCollector.LastEventChanged += TrackLastEvent;
+
+                d.TransactionSerialNumber.Should().Be( 0, "Nothing happened yet." );
+                eventCollector.GetTransactionEvents( 0 ).Should().BeNull( "Asking for 0: a full export must be made." );
+                eventCollector.GetTransactionEvents( 1 ).Should().BeEmpty( "Asking for any number greater or equal to the current transaction number: empty means transaction number is too big." );
+                eventCollector.GetTransactionEvents( 2 ).Should().BeEmpty();
+
+                ObservableList<int>? oneObject = null;
+                d.Modify( TestHelper.Monitor, () =>
+                {
+                    oneObject = new ObservableList<int>();
+
+                } ).Success.Should().BeTrue();
+                Debug.Assert( oneObject != null );
+
+                d.TransactionSerialNumber.Should().Be( 1, "TransactionNumber is incremented." );
+                LastEvent.TransactionNumber.Should().Be( 1 );
+                LastEvent.ExportedEvents.Should().BeEmpty( "The event n°1 is special, it is sent empty: a full export must be made." );
+                var event1 = LastEvent;
+
+                eventCollector.GetTransactionEvents( 0 ).Should().BeNull( "Asking for 0: a full export must always be made." );
+                eventCollector.GetTransactionEvents( 1 ).Should().BeEmpty( "Asking for any number greater or equal to the current transaction number: empty means transaction number is too big." );
+                eventCollector.GetTransactionEvents( 2 ).Should().BeEmpty();
+
+                d.Modify( TestHelper.Monitor, () =>
+                {
+                    oneObject.Add( 1 );
+
+                } ).Success.Should().BeTrue();
+                d.TransactionSerialNumber.Should().Be( 2, "TransactionNumber is incremented." );
+                LastEvent.TransactionNumber.Should().Be( 2 );
+                LastEvent.ExportedEvents.Should().Be( "[\"I\",0,0,1]" );
+                var event2 = LastEvent;
+
+                eventCollector.GetTransactionEvents( 0 ).Should().BeNull( "Asking for 0: a full export must always be made." );
+                eventCollector.GetTransactionEvents( 1 ).Should().BeEquivalentTo( new[] { event2 } );
+                eventCollector.GetTransactionEvents( 2 ).Should().BeEmpty();
+
+                d.Modify( TestHelper.Monitor, () =>
+                {
+                    oneObject.Dispose();
+
+                } ).Success.Should().BeTrue();
+
+                d.TransactionSerialNumber.Should().Be( 3, "TransactionNumber is incremented." );
+                LastEvent.TransactionNumber.Should().Be( 3 );
+                LastEvent.ExportedEvents.Should().Be( "[\"D\",0]" );
+                var event3 = LastEvent;
+
+                eventCollector.GetTransactionEvents( 0 ).Should().BeNull( "Asking for 0: a full export must always be made." );
+                eventCollector.GetTransactionEvents( 1 ).Should().BeEquivalentTo( new[] { event2, event3 } );
+                eventCollector.GetTransactionEvents( 2 ).Should().BeEquivalentTo( new[] { event3 } );
 
             }
         }

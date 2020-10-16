@@ -111,7 +111,7 @@ namespace CK.Observable
         {
             lock( _events )
             {
-                if( transactionNumber <= 1 )
+                if( transactionNumber <= 0 )
                 {
                     return null;
                 }
