@@ -1,6 +1,7 @@
 using CK.Core;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -88,7 +89,7 @@ namespace CK.Observable.League
         /// <param name="c"></param>
         public override void OnTransactionCommit( in SuccessfulTransactionEventArgs c )
         {
-            CreateSnapshot( c.Monitor, c.Domain );
+            CreateSnapshot( c.Monitor, c.Domain, false );
             // We save the snapshot if we must (and there is no compensation for this of course).
             if( c.CommitTimeUtc >= _nextSave ) c.PostActions.Add( ctx => SaveAsync( ctx.Monitor ) );
             Next?.OnTransactionCommit( c );
@@ -99,6 +100,18 @@ namespace CK.Observable.League
             return _loadHook != null
                         ? d => _loadHook( monitor, d )
                         : (Action<ObservableDomain>?)null;
+        }
+
+        protected override void CreateSnapshot( IActivityMonitor monitor, IObservableDomain d, bool initialOne )
+        {
+            if( initialOne && _loadHook != null && d.TransactionSerialNumber == 0 )
+            {
+                monitor.Debug( "The snapshot will be created by the InitializeAsync." );
+            }
+            else
+            {
+                base.CreateSnapshot( monitor, d, initialOne );
+            }
         }
 
         /// <summary>
@@ -118,13 +131,24 @@ namespace CK.Observable.League
                 }
                 else
                 {
-                    // Applies the load hook since this is an "initializer": new domains
-                    // are de facto initialized just like the loaded ones.
                     if( _loadHook != null )
                     {
+                        // Applies the load hook to the newly created domain.
+                        // Since this is an "initializer": new domains are de facto
+                        // initialized just like the loaded ones.
                         await d.ModifyThrowAsync( monitor, () => _loadHook( monitor, d ) );
+                        // It is useless to call CreateSnapshot: ModifyThrowAsync did commit the
+                        // very first transaction.
+                        Debug.Assert( d.TransactionSerialNumber == 1 );
                     }
-                    CreateSnapshot( monitor, d );
+                    else
+                    {
+                        // When there is no initializers, we call CreateSnapshot so that
+                        // the initial snapshot can be saved to the Store: this initializes
+                        // the Store for this domain.
+                        // From now on, it will be reloaded.
+                        CreateSnapshot( monitor, d, true );
+                    }
                     if( !await SaveAsync( monitor ) )
                     {
                         throw new Exception( $"Unable to initialize the store for '{_storeName}'." );

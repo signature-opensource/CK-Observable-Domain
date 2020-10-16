@@ -90,7 +90,7 @@ namespace CK.Observable
         public virtual void OnTransactionCommit( in SuccessfulTransactionEventArgs c )
         {
             Next?.OnTransactionCommit( c );
-            CreateSnapshot( c.Monitor, c.Domain );
+            CreateSnapshot( c.Monitor, c.Domain, false );
         }
 
         /// <summary>
@@ -120,7 +120,7 @@ namespace CK.Observable
         public virtual void OnTransactionStart( IActivityMonitor monitor, ObservableDomain d, DateTime timeUtc )
         {
             Next?.OnTransactionStart( monitor, d, timeUtc );
-            if( _snapshotSerialNumber == -1 ) CreateSnapshot( monitor, d );
+            if( _snapshotSerialNumber == -1 ) CreateSnapshot( monitor, d, true );
         }
 
         /// <summary>
@@ -254,7 +254,16 @@ namespace CK.Observable
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="d">The associated domain.</param>
-        protected void CreateSnapshot( IActivityMonitor monitor, IObservableDomain d )
+        /// <param name="initialOne">
+        /// True if this snapshot is the initial one, created by the first call
+        /// to <see cref="OnTransactionStart(IActivityMonitor, ObservableDomain, DateTime)"/>.
+        /// Subsequent calls are coming from <see cref="OnTransactionCommit(in SuccessfulTransactionEventArgs)"/>.
+        /// <para>
+        /// This "initial" snapshot is the first one for this Client, this has nothing to do with the <see cref="ObservableDomain.TransactionSerialNumber"/>
+        /// that can be greater than 0 if the domain has been loaded.
+        /// </para>
+        /// </param>
+        protected virtual void CreateSnapshot( IActivityMonitor monitor, IObservableDomain d, bool initialOne )
         {
             using( monitor.OpenTrace( $"Creating snapshot." ) )
             {
