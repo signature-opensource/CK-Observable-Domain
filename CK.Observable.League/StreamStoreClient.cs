@@ -18,14 +18,16 @@ namespace CK.Observable.League
     {
         readonly string _storeName;
         readonly JsonEventCollector _eventCollector;
+        readonly Action<IActivityMonitor, ObservableDomain>? _loadHook;
         int _savedTransactionNumber;
         DateTime _nextSave;
         int _snapshotSaveDelay;
 
         public StreamStoreClient( string domainName, IStreamStore store, Action<IActivityMonitor, ObservableDomain>? loadHook, IObservableDomainClient? next = null )
-            : base( loadHook, next )
+            : base( next )
         {
             _eventCollector = new JsonEventCollector();
+            _loadHook = loadHook;
             DomainName = domainName;
             _storeName = domainName.Length == 0 ? "Coordinator" : "D-" + domainName;
             StreamStore = store;
@@ -92,6 +94,13 @@ namespace CK.Observable.League
             Next?.OnTransactionCommit( c );
         }
 
+        protected override Action<ObservableDomain>? GetLoadHook( IActivityMonitor monitor, bool restoring )
+        {
+            return _loadHook != null
+                        ? d => _loadHook( monitor, d )
+                        : (Action<ObservableDomain>?)null;
+        }
+
         /// <summary>
         /// Initializes the domain from the store or initializes the store from the domain.
         /// </summary>
@@ -109,6 +118,12 @@ namespace CK.Observable.League
                 }
                 else
                 {
+                    // Applies the load hook since this is an "initializer": new domains
+                    // are de facto initialized just like the loaded ones.
+                    if( _loadHook != null )
+                    {
+                        await d.ModifyThrowAsync( monitor, () => _loadHook( monitor, d ) );
+                    }
                     CreateSnapshot( monitor, d );
                     if( !await SaveAsync( monitor ) )
                     {

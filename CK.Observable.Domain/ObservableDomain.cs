@@ -516,8 +516,7 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Initializes a new <see cref="ObservableDomain"/> with a <see cref="Monitor"/>,
-        /// a <see cref="DomainClient"/> an optionals explicit exporter, serializer
+        /// Initializes a new <see cref="ObservableDomain"/> with a <see cref="DomainClient"/> an optionals explicit exporter, serializer
         /// and deserializer handlers.
         /// </summary>
         /// <param name="monitor">The monitor used to log the construction of this domain. Cannot be null.</param>

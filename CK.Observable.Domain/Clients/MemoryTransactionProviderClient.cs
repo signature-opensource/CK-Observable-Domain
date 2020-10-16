@@ -18,7 +18,6 @@ namespace CK.Observable
     public class MemoryTransactionProviderClient : IObservableDomainClient
     {
         readonly MemoryStream _memory;
-        readonly Action<IActivityMonitor, ObservableDomain>? _loadHook;
         int _snapshotSerialNumber;
         DateTime _snapshotTimeUtc;
         CompressionKind? _currentSnapshotKind;
@@ -34,17 +33,11 @@ namespace CK.Observable
         /// <summary>
         /// Initializes a new <see cref="MemoryTransactionProviderClient"/>.
         /// </summary>
-        /// <param name="loadHook">
-        /// Optional hook called each time the domain is loaded.
-        /// See the loadHook of the method <see cref="ObservableDomain.Load(IActivityMonitor, Stream, bool, System.Text.Encoding?, int, Func{ObservableDomain, bool}?)"/>.
-        /// Note that the timers and reminders are triggered when <see cref="LoadAndInitializeSnapshot"/> is used, but not when <see cref="RestoreSnapshot"/> is called.
-        /// </param>
         /// <param name="next">The next manager (can be null).</param>
-        public MemoryTransactionProviderClient( Action<IActivityMonitor, ObservableDomain>? loadHook = null, IObservableDomainClient? next = null )
+        public MemoryTransactionProviderClient( IObservableDomainClient? next = null )
         {
             Next = next;
             _memory = new MemoryStream( 16 * 1024 );
-            _loadHook = loadHook;
             _snapshotSerialNumber = -1;
             _snapshotTimeUtc = Util.UtcMinValue;
         }
@@ -222,9 +215,10 @@ namespace CK.Observable
         /// </param>
         protected virtual void DoLoadFromSnapshot( IActivityMonitor monitor, ObservableDomain d, bool restoring )
         {
-            // Hook that wraps the constructor parameter (if one was provided) and returns true (to activate the timed events)
+            var loadAction = GetLoadHook( monitor, restoring );
+            // Hook that wraps the GetLoadHook() value (if not null) and returns true (to activate the timed events)
             // when LoadAndInitializeSnapshot is calling, or false when RestoreSnapshot is at stake.
-            Func<ObservableDomain, bool> loadHook = domain => { _loadHook?.Invoke( monitor, domain ); return !restoring; };
+            Func<ObservableDomain, bool> loadHook = domain => { loadAction?.Invoke( domain ); return !restoring; };
 
             long p = _memory.Position;
             _memory.Position = SnapshotHeaderLength;
@@ -242,6 +236,18 @@ namespace CK.Observable
             }
             if( _memory.Position != p ) throw new Exception( $"Internal error: stream position should be {p} but was {_memory.Position} after reload." );
         }
+
+        /// <summary>
+        /// Extension point called when loading the domain.
+        /// See <see cref="ObservableDomain.Load(IActivityMonitor, Stream, bool, System.Text.Encoding?, int, Func{ObservableDomain, bool}?)"/> loadHook
+        /// parameter.
+        /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
+        /// <param name="restoring">
+        /// True when called from <see cref="RestoreSnapshot"/>, false when called by <see cref="LoadAndInitializeSnapshot"/>.
+        /// </param>
+        /// <returns>Defaults to null.</returns>
+        protected virtual Action<ObservableDomain>? GetLoadHook( IActivityMonitor monitor, bool restoring ) => null;
 
         /// <summary>
         /// Creates a snapshot, respecting the <see cref="CompressionKind"/>.
