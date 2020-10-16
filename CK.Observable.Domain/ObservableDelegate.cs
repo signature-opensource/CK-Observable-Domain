@@ -50,7 +50,14 @@ namespace CK.Observable
                         {
                             var oT = o.GetType();
                             var m = oT.GetMethod( methodName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, paramTypes, null );
-                            if( m == null ) throw new Exception( $"Unable to find method {methodName} on type {oT.FullName} with parameters {paramTypes.Select( t => t.Name ).Concatenate()}." );
+                            while( m == null && (oT = oT.BaseType) != null )
+                            {
+                                m = oT.GetMethod( methodName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, paramTypes, null );
+                            }
+                            if( m == null )
+                            {
+                                throw new Exception( $"Unable to find method {methodName} on type {o.GetType().FullName} with parameters {paramTypes.Select( t => t.Name ).Concatenate()}." );
+                            }
                             final = Delegate.Combine( final, Delegate.CreateDelegate( tD, o, m ) );
                         }
                     }

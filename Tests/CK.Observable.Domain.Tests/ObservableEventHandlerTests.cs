@@ -4,7 +4,9 @@ using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
+using System.Threading;
 using static CK.Testing.MonitorTestHelper;
 
 namespace CK.Observable.Domain.Tests
@@ -290,6 +292,112 @@ namespace CK.Observable.Domain.Tests
                     .Should().BeTrue();
             }
 
+        }
+
+
+        [SerializationVersion( 0 )]
+        public class PrivateHandlerObject : ObservableObject
+        {
+            readonly ObservableTimer _timer;
+            readonly SuspendableClock _clock;
+
+            public PrivateHandlerObject()
+            {
+                _timer = new ObservableTimer( DateTime.UtcNow, 100 );
+                _timer.Elapsed += _timer_Elapsed;
+                _clock = new SuspendableClock();
+                _clock.IsActiveChanged += _clock_IsActiveChanged;
+                _timer.SuspendableClock = _clock;
+            }
+
+            void _timer_Elapsed( object sender, ObservableTimerEventArgs e )
+            {
+                FireCount++;
+            }
+
+            void _clock_IsActiveChanged( object sender, ObservableDomainEventArgs e )
+            {
+                IsActive = _clock.IsActive;
+            }
+
+            public int FireCount { get; private set; }
+
+            public bool IsActive { get; private set; }
+
+            protected PrivateHandlerObject( IBinaryDeserializerContext d )
+                : base( d )
+            {
+                var r = d.StartReading().Reader;
+                FireCount = r.ReadNonNegativeSmallInt32();
+                _timer = (ObservableTimer)r.ReadObject()!;
+                _clock = (SuspendableClock)r.ReadObject()!;
+            }
+
+            void Write( BinarySerializer w )
+            {
+                w.WriteNonNegativeSmallInt32( FireCount );
+                w.WriteObject( _timer );
+                w.WriteObject( _clock );
+            }
+
+        }
+
+        [SerializationVersion( 0 )]
+        public class SpecializedPrivateHandlerObject : PrivateHandlerObject
+        {
+            public SpecializedPrivateHandlerObject()
+            {
+            }
+
+            SpecializedPrivateHandlerObject( IBinaryDeserializerContext d )
+                : base( d )
+            {
+                var r = d.StartReading().Reader;
+            }
+
+            void Write( BinarySerializer w )
+            {
+            }
+
+        }
+
+        [TestCase( "UseSpecialized" )]
+        [TestCase( "UseBase" )]
+        public void private_event_handler_serialization( string type )
+        {
+            var domain = new ObservableDomain( TestHelper.Monitor, nameof( private_event_handler_serialization ) );
+
+            PrivateHandlerObject? o = null;
+            domain.Modify( TestHelper.Monitor, () =>
+            {
+                o = type == "UseBase" ? new PrivateHandlerObject() : new SpecializedPrivateHandlerObject();
+
+            } ).Success.Should().BeTrue();
+            int count = o.FireCount;
+            o.FireCount.Should().Be( 0 );
+            domain.AllObjects.Single().Should().BeSameAs( o );
+
+            Thread.Sleep( 200 );
+
+            o.FireCount.Should().BeGreaterThan( count );
+
+            // The reload doesn't check the timed events.
+            ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, domain );
+
+            // Catch the "last" count of the object (timed events may have been checked right before the IdempotenceSerializationCheck).
+            count = o.FireCount;
+
+            Thread.Sleep( 200 );
+
+            domain.TimeManager.ActiveTimedEventsCount.Should().Be( 1, "Even is a timed event is pending..." );
+            o = (PrivateHandlerObject)domain.AllObjects.Single();
+            o.FireCount.Should().Be( count, "...no check have been done." );
+
+            // This triggers the timed events check.
+            domain.Modify( TestHelper.Monitor, null ).Success.Should().BeTrue();
+
+            // So the timer fired.
+            o.FireCount.Should().BeGreaterThan( count );
         }
 
     }

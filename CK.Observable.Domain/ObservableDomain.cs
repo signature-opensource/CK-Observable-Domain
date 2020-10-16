@@ -927,7 +927,7 @@ namespace CK.Observable
         /// Wait indefinitely by default.
         /// </param>
         /// <returns>The transaction result. <see cref="TransactionResult.Empty"/> when the lock has not been taken.</returns>
-        public TransactionResult Modify( IActivityMonitor monitor, Action actions, int millisecondsTimeout = -1 )
+        public TransactionResult Modify( IActivityMonitor monitor, Action? actions, int millisecondsTimeout = -1 )
         {
             using( var t = BeginTransaction( monitor, millisecondsTimeout ) )
             {
@@ -944,7 +944,7 @@ namespace CK.Observable
         /// <param name="actions">The actions to execute. Can be null.</param>
         /// <param name="t">The observable transaction. Cannot be null.</param>
         /// <returns>The transaction result. Will never be null.</returns>
-        TransactionResult DoModifyAndCommit( Action actions, IObservableTransaction t )
+        TransactionResult DoModifyAndCommit( Action? actions, IObservableTransaction t )
         {
             Debug.Assert( t != null );
             try

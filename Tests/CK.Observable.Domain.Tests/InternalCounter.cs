@@ -18,26 +18,29 @@ namespace CK.Observable.Domain.Tests
         /// </summary>
         public int Count { get; private set; }
 
+        ObservableEventHandler _privateTestSerialization;
+
         public TestCounter()
         {
+            // This registers a private method as the event handler.
+            _privateTestSerialization.Add( PrivateHandler, "PrivateEvent" );
         }
 
-        TestCounter( IBinaryDeserializerContext d )
+        protected TestCounter( IBinaryDeserializerContext d )
             : base( d )
         {
             var r = d.StartReading().Reader;
             Count = r.ReadInt32();
+            _privateTestSerialization = new ObservableEventHandler( r );
+            _privateTestSerialization.HasHandlers.Should().BeTrue();
         }
 
         void Write( BinarySerializer w )
         {
             w.Write( Count );
+            _privateTestSerialization.Write( w );
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="sender"></param>
         public void IncrementNoLog( object sender ) => Count++;
 
         public void Increment( object sender, EventMonitoredArgs e )
@@ -47,5 +50,11 @@ namespace CK.Observable.Domain.Tests
             e.Monitor.Info( $"Incremented Count = {Count}." );
         }
 
+        void PrivateHandler( object sender )
+        {
+            // This is to test the serialization of a private handler.
+        }
+
     }
+
 }
