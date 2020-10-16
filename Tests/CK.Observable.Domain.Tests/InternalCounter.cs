@@ -26,7 +26,7 @@ namespace CK.Observable.Domain.Tests
             _privateTestSerialization.Add( PrivateHandler, "PrivateEvent" );
         }
 
-        protected TestCounter( IBinaryDeserializerContext d )
+        TestCounter( IBinaryDeserializerContext d )
             : base( d )
         {
             var r = d.StartReading().Reader;

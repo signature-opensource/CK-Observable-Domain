@@ -39,11 +39,11 @@ namespace CK.Observable
         /// </param>
         /// <param name="loadHook">
         /// Optional hook called each time the domain is loaded.
-        /// See the loadHook of the method <see cref="ObservableDomain.Load(IActivityMonitor, Stream, bool, System.Text.Encoding?, int, Func{ObservableDomain, bool}?)"/>.
+        /// See the loadHook of the method <see cref="ObservableDomain.Load(IActivityMonitor, Stream, bool, System.Text.Encoding?, int, Func{IActivityMonitor,ObservableDomain, bool}?)"/>.
         /// Note that the timers and reminders are triggered when <see cref="LoadAndInitializeSnapshot"/> is used, but not when <see cref="RestoreSnapshot"/> is called.
         /// </param>
         /// <param name="next">The next manager (can be null).</param>
-        public FileTransactionProviderClient( NormalizedPath filePath, int minimumDueTimeMs, Action<ObservableDomain> loadHook = null, IObservableDomainClient next = null )
+        public FileTransactionProviderClient( NormalizedPath filePath, int minimumDueTimeMs, Action<IActivityMonitor,ObservableDomain> loadHook = null, IObservableDomainClient next = null )
             : base( loadHook, next )
         {
             if( minimumDueTimeMs < -1 ) throw new ArgumentException( $"{minimumDueTimeMs} is not a valid value. Valid values are -1, 0, or above.", nameof( minimumDueTimeMs ) );

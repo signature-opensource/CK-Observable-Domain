@@ -1,3 +1,4 @@
+using CK.Core;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -10,7 +11,7 @@ namespace CK.Observable.League
         {
             readonly Shell _shell;
 
-            public DomainClient( string domainName, IStreamStore store, Action<ObservableDomain>? loadHook, Shell shell, IObservableDomainClient? next = null )
+            public DomainClient( string domainName, IStreamStore store, Action<IActivityMonitor, ObservableDomain>? loadHook, Shell shell, IObservableDomainClient? next = null )
                 : base( domainName, store, loadHook, next )
             {
                 _shell = shell;

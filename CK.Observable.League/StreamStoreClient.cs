@@ -22,7 +22,7 @@ namespace CK.Observable.League
         DateTime _nextSave;
         int _snapshotSaveDelay;
 
-        public StreamStoreClient( string domainName, IStreamStore store, Action<ObservableDomain>? loadHook, IObservableDomainClient? next = null )
+        public StreamStoreClient( string domainName, IStreamStore store, Action<IActivityMonitor, ObservableDomain>? loadHook, IObservableDomainClient? next = null )
             : base( loadHook, next )
         {
             _eventCollector = new JsonEventCollector();

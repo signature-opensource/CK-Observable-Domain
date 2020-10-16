@@ -91,7 +91,7 @@ namespace CK.Observable.League
                    IObservableDomainAccess<Coordinator> coordinator,
                    string domainName,
                    IStreamStore store,
-                   Action<ObservableDomain>? loadHook,
+                   Action<IActivityMonitor, ObservableDomain>? loadHook,
                    IServiceProvider serviceProvider,
                    IReadOnlyList<string> rootTypeNames,
                    Type[] rootTypes,
@@ -124,7 +124,7 @@ namespace CK.Observable.League
                 IObservableDomainAccess<Coordinator> coordinator,
                 string domainName,
                 IStreamStore store,
-                Action<ObservableDomain>? loadHook,
+                Action<IActivityMonitor, ObservableDomain>? loadHook,
                 IServiceProvider serviceProvider,
                 IReadOnlyList<string> rootTypeNames )
             {
@@ -467,7 +467,7 @@ namespace CK.Observable.League
                           IObservableDomainAccess<Coordinator> coordinator,
                           string domainName,
                           IStreamStore store,
-                          Action<ObservableDomain>? loadHook,
+                          Action<IActivityMonitor, ObservableDomain>? loadHook,
                           IServiceProvider serviceProvider,
                           IReadOnlyList<string> rootTypeNames,
                           Type[] rootTypes )
@@ -562,7 +562,7 @@ namespace CK.Observable.League
                           IObservableDomainAccess<Coordinator> coordinator,
                           string domainName,
                           IStreamStore store,
-                          Action<ObservableDomain>? loadHook,
+                          Action<IActivityMonitor, ObservableDomain>? loadHook,
                           IServiceProvider serviceProvider,
                           IReadOnlyList<string> rootTypeNames,
                           Type[] rootTypes )
@@ -660,7 +660,7 @@ namespace CK.Observable.League
                           IObservableDomainAccess<Coordinator> coordinator,
                           string domainName,
                           IStreamStore store,
-                          Action<ObservableDomain>? loadHook,
+                          Action<IActivityMonitor, ObservableDomain>? loadHook,
                           IServiceProvider serviceProvider,
                           IReadOnlyList<string> rootTypeNames,
                           Type[] rootTypes )
@@ -758,7 +758,7 @@ namespace CK.Observable.League
                           IObservableDomainAccess<Coordinator> coordinator,
                           string domainName,
                           IStreamStore store,
-                          Action<ObservableDomain>? loadHook,
+                          Action<IActivityMonitor, ObservableDomain>? loadHook,
                           IServiceProvider serviceProvider,
                           IReadOnlyList<string> rootTypeNames,
                           Type[] rootTypes )

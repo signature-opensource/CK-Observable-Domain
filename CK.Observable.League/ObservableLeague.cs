@@ -20,14 +20,14 @@ namespace CK.Observable.League
         readonly ConcurrentDictionary<string, Shell> _domains;
         readonly IStreamStore _streamStore;
         readonly CoordinatorClient _coordinator;
-        readonly Func<string, Action<ObservableDomain>?>? _loadHooks;
+        readonly Func<string, Action<IActivityMonitor, ObservableDomain>?>? _loadHooks;
         readonly IServiceProvider _serviceProvider;
 
         ObservableLeague( IStreamStore streamStore,
                           IServiceProvider serviceProvider,
                           CoordinatorClient coordinator,
                           ConcurrentDictionary<string, Shell> domains,
-                          Func<string, Action<ObservableDomain>?>? loadHooks )
+                          Func<string, Action<IActivityMonitor, ObservableDomain>?>? loadHooks )
         {
             _domains = domains;
             _streamStore = streamStore;
@@ -48,7 +48,7 @@ namespace CK.Observable.League
         /// When null, a dummy service provider (<see cref="EmptyServiceProvider.Default"/>) is provided to the domains.
         /// </param>
         /// <returns>A new league or null on error.</returns>
-        public static async Task<ObservableLeague?> LoadAsync( IActivityMonitor monitor, IStreamStore store, Func<string,Action<ObservableDomain>?>? loadHooks = null, IServiceProvider? serviceProvider = null )
+        public static async Task<ObservableLeague?> LoadAsync( IActivityMonitor monitor, IStreamStore store, Func<string,Action<IActivityMonitor, ObservableDomain>?>? loadHooks = null, IServiceProvider? serviceProvider = null )
         {
             if( serviceProvider == null ) serviceProvider = EmptyServiceProvider.Default;
             try
@@ -62,7 +62,7 @@ namespace CK.Observable.League
                 IEnumerable<Domain> observableDomains = client.Domain.Root.Domains.Values;
                 foreach( var d in observableDomains )
                 {
-                    Action<ObservableDomain>? hLoad = loadHooks != null ? loadHooks( d.DomainName ) : null;
+                    Action<IActivityMonitor, ObservableDomain>? hLoad = loadHooks != null ? loadHooks( d.DomainName ) : null;
                     var shell = Shell.Create( monitor, client, d.DomainName, store, hLoad, serviceProvider, d.RootTypes );
                     d.Initialize( shell );
                     domains.TryAdd( d.DomainName, shell );
@@ -127,7 +127,7 @@ namespace CK.Observable.League
         IManagedDomain IManagedLeague.CreateDomain( IActivityMonitor monitor, string name, IReadOnlyList<string> rootTypes )
         {
             Debug.Assert( !_coordinator.Domain.IsDisposed );
-            Action<ObservableDomain>? hLoad = _loadHooks != null ? _loadHooks( name ) : null;
+            Action<IActivityMonitor, ObservableDomain>? hLoad = _loadHooks != null ? _loadHooks( name ) : null;
             return _domains.AddOrUpdate( name,
                                          Shell.Create( monitor, _coordinator, name, _streamStore, hLoad, _serviceProvider, rootTypes ),
                                          ( n, s ) => throw new Exception( $"Internal error: domain name '{n}' already exists." ) );
@@ -135,7 +135,7 @@ namespace CK.Observable.League
 
         IManagedDomain IManagedLeague.RebindDomain( IActivityMonitor monitor, string name, IReadOnlyList<string> rootTypes )
         {
-            Action<ObservableDomain>? hLoad = _loadHooks != null ? _loadHooks( name ) : null;
+            Action<IActivityMonitor, ObservableDomain>? hLoad = _loadHooks != null ? _loadHooks( name ) : null;
             return _domains.AddOrUpdate( name,
                                          n => Shell.Create( monitor, _coordinator, name, _streamStore, hLoad, _serviceProvider, rootTypes ),
                                          ( n, s ) =>

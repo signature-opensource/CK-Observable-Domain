@@ -1234,7 +1234,7 @@ namespace CK.Observable
             }
         }
 
-        void DoLoad( IActivityMonitor monitor, BinaryDeserializer r, string expectedName, Func<ObservableDomain, bool>? loadHook )
+        void DoLoad( IActivityMonitor monitor, BinaryDeserializer r, string expectedName, Func<IActivityMonitor, ObservableDomain, bool>? loadHook )
         {
             Debug.Assert( _lock.IsWriteLockHeld );
             _deserializeOrInitializing = true;
@@ -1374,7 +1374,7 @@ namespace CK.Observable
                 // This is where specialized typed ObservableDomain bind their roots.
                 OnLoaded();
                 // Calls the loadHook.
-                bool callUpdateTimers = loadHook != null ? loadHook( this ) : true;
+                bool callUpdateTimers = loadHook != null ? loadHook( monitor, this ) : true;
                 if( !_sidekickManager.CreateWaitingSidekicks( monitor, ex => { } ) )
                 {
                     monitor.Error( $"At least one critical error occurred while activating sidekicks. The error should be investigated since this may well be a blocking error." );
@@ -1414,7 +1414,7 @@ namespace CK.Observable
         /// Returning false from this hook doesn't skip the sidekicks activation but skips timed events processing (no timers and reminders fire).
         /// </para>
         /// <returns>True on success, false if timeout occurred.</returns>
-        public bool Load( IActivityMonitor monitor, Stream stream, string expectedLoadedName, bool leaveOpen = false, Encoding? encoding = null, int millisecondsTimeout = -1, Func<ObservableDomain, bool>? loadHook = null )
+        public bool Load( IActivityMonitor monitor, Stream stream, string expectedLoadedName, bool leaveOpen = false, Encoding? encoding = null, int millisecondsTimeout = -1, Func<IActivityMonitor, ObservableDomain, bool>? loadHook = null )
         {
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
             if( stream == null ) throw new ArgumentNullException( nameof( stream ) );
@@ -1462,7 +1462,7 @@ namespace CK.Observable
         /// </para>
         /// </param>
         /// <returns>True on success, false if timeout occurred.</returns>
-        public bool Load( IActivityMonitor monitor, Stream stream, bool leaveOpen = false, Encoding? encoding = null, int millisecondsTimeout = -1, Func<ObservableDomain,bool>? loadHook = null )
+        public bool Load( IActivityMonitor monitor, Stream stream, bool leaveOpen = false, Encoding? encoding = null, int millisecondsTimeout = -1, Func<IActivityMonitor, ObservableDomain,bool>? loadHook = null )
         {
             return Load( monitor, stream, DomainName, leaveOpen, encoding, millisecondsTimeout, loadHook );
         }
@@ -1906,7 +1906,7 @@ namespace CK.Observable
                 var originalBytes = s.ToArray();
                 var originalTransactionSerialNumber = domain.TransactionSerialNumber;
                 s.Position = 0;
-                if( !domain.Load( monitor, s, true, millisecondsTimeout: milliSecondsTimeout, loadHook: d => true ) ) throw new Exception( "Reload failed: Unable to acquire lock." );
+                if( !domain.Load( monitor, s, true, millisecondsTimeout: milliSecondsTimeout, loadHook: (m,d) => true ) ) throw new Exception( "Reload failed: Unable to acquire lock." );
 
                 var checker = new CheckedWriteStream( originalBytes );
                 if( !domain.Save( monitor, checker, true, millisecondsTimeout: milliSecondsTimeout, debugMode: useDebugMode ) ) throw new Exception( "Second Save failed: Unable to acquire lock." );
