@@ -19,9 +19,5 @@
     <PackageReference Include="PropertyChanged.Fody" PrivateAssets="all" />
     <ProjectReference Include="..\CK.Observable.Domain\CK.Observable.Domain.csproj" />
   </ItemGroup>
-  
-  <ItemGroup>
-    <Folder Include="Watcher\" />
-  </ItemGroup>
 
 </Project>

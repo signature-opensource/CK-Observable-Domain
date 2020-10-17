@@ -170,10 +170,16 @@ namespace CK.Observable
         /// </summary>
         public void Detach()
         {
-            lock( _events )
+            if( _domain != null )
             {
-                _domain.OnSuccessfulTransaction -= OnSuccessfulTransaction;
-                _domain = null;
+                lock( _events )
+                {
+                    if( _domain != null )
+                    {
+                        _domain.OnSuccessfulTransaction -= OnSuccessfulTransaction;
+                        _domain = null;
+                    }
+                }
             }
         }
 

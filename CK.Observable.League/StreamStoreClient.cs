@@ -19,16 +19,16 @@ namespace CK.Observable.League
     {
         readonly string _storeName;
         readonly JsonEventCollector _eventCollector;
-        readonly Action<IActivityMonitor, ObservableDomain>? _loadHook;
+        readonly Action<IActivityMonitor, ObservableDomain>? _domainInitializer;
         int _savedTransactionNumber;
         DateTime _nextSave;
         int _snapshotSaveDelay;
 
-        public StreamStoreClient( string domainName, IStreamStore store, Action<IActivityMonitor, ObservableDomain>? loadHook, IObservableDomainClient? next = null )
+        public StreamStoreClient( string domainName, IStreamStore store, Action<IActivityMonitor, ObservableDomain>? initializer, IObservableDomainClient? next = null )
             : base( next )
         {
             _eventCollector = new JsonEventCollector();
-            _loadHook = loadHook;
+            _domainInitializer = initializer;
             DomainName = domainName;
             _storeName = domainName.Length == 0 ? "Coordinator" : "D-" + domainName;
             StreamStore = store;
@@ -95,23 +95,17 @@ namespace CK.Observable.League
             Next?.OnTransactionCommit( c );
         }
 
-        protected override Action<ObservableDomain>? GetLoadHook( IActivityMonitor monitor, bool restoring )
+        public override void OnTransactionStart( IActivityMonitor monitor, ObservableDomain d, DateTime timeUtc )
         {
-            return _loadHook != null
-                        ? d => _loadHook( monitor, d )
-                        : (Action<ObservableDomain>?)null;
+            // Avoids the call to CreateSnapshot: InitializeAsync below handles the initialization.
+            Next?.OnTransactionStart( monitor, d, timeUtc );
         }
 
-        protected override void CreateSnapshot( IActivityMonitor monitor, IObservableDomain d, bool initialOne )
+        protected override Action<ObservableDomain>? GetLoadHook( IActivityMonitor monitor, bool restoring )
         {
-            if( initialOne && _loadHook != null && d.TransactionSerialNumber == 0 )
-            {
-                monitor.Debug( "The snapshot will be created by the InitializeAsync." );
-            }
-            else
-            {
-                base.CreateSnapshot( monitor, d, initialOne );
-            }
+            return _domainInitializer != null
+                        ? d => _domainInitializer( monitor, d )
+                        : (Action<ObservableDomain>?)null;
         }
 
         /// <summary>
@@ -131,19 +125,19 @@ namespace CK.Observable.League
                 }
                 else
                 {
-                    if( _loadHook != null )
+                    if( _domainInitializer != null )
                     {
-                        // Applies the load hook to the newly created domain.
+                        // Applies the initializer to the newly created domain.
                         // Since this is an "initializer": new domains are de facto
                         // initialized just like the loaded ones.
-                        await d.ModifyThrowAsync( monitor, () => _loadHook( monitor, d ) );
-                        // It is useless to call CreateSnapshot: ModifyThrowAsync did commit the
+                        await d.ModifyThrowAsync( monitor, () => _domainInitializer( monitor, d ) );
+                        // It is useless to call CreateSnapshot: ModifyThrowAsync has committed the
                         // very first transaction.
                         Debug.Assert( d.TransactionSerialNumber == 1 );
                     }
                     else
                     {
-                        // When there is no initializers, we call CreateSnapshot so that
+                        // When there is no initializer, we call CreateSnapshot so that
                         // the initial snapshot can be saved to the Store: this initializes
                         // the Store for this domain.
                         // From now on, it will be reloaded.

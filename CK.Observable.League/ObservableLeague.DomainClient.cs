@@ -11,8 +11,8 @@ namespace CK.Observable.League
         {
             readonly Shell _shell;
 
-            public DomainClient( string domainName, IStreamStore store, Action<IActivityMonitor, ObservableDomain>? loadHook, Shell shell, IObservableDomainClient? next = null )
-                : base( domainName, store, loadHook, next )
+            public DomainClient( string domainName, IStreamStore store, Action<IActivityMonitor, ObservableDomain>? initializer, Shell shell, IObservableDomainClient? next = null )
+                : base( domainName, store, initializer, next )
             {
                 _shell = shell;
             }

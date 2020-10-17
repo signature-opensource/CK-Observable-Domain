@@ -10,6 +10,11 @@ namespace CK.Observable
     /// of domain objects: This is exposed by the protected <see cref="ObservableObject.Domain"/>
     /// and <see cref="InternalObject.Domain"/>.
     /// </summary>
+    /// <remarks>
+    /// This object is marked with <see cref="NotExportableAttribute"/> just to be safe if this is, by mistake, exposed
+    /// in the public API of an <see cref="ObservableObject"/> or an <see cref="InternalObject"/>.
+    /// </remarks>
+    [NotExportable( Error = "DomainView must not be exposed. Only the protected Domain should be used." )]
     public readonly struct DomainView
     {
         readonly IDisposableObject _o;
@@ -25,6 +30,13 @@ namespace CK.Observable
         /// Gives access to the monitor to use.
         /// </summary>
         public IActivityMonitor Monitor => _d.CurrentMonitor;
+
+        /// <summary>
+        /// Gets the current transaction number: the very first one is 1.
+        /// Note that if this transaction fails, the <see cref="ObservableDomain.TransactionSerialNumber"/> will not
+        /// be set to this number.
+        /// </summary>
+        public int CurrentTransactionNumber => _d.TransactionSerialNumber + 1;
 
         /// <summary>
         /// Sends a command to the external world. Commands are enlisted

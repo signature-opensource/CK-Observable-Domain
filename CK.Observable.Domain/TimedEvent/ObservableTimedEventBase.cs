@@ -15,6 +15,7 @@ namespace CK.Observable
     /// Note that <see cref="IsActive"/> can be false.
     /// </summary>
     [SerializationVersion( 0 )]
+    [NotExportable]
     public abstract class ObservableTimedEventBase : IDisposableObject
     {
         internal TimeManager? TimeManager;

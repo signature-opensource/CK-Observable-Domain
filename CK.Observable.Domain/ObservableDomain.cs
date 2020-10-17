@@ -22,6 +22,13 @@ namespace CK.Observable
     /// you must use specialized <see cref="ObservableChannel{T}"/> or <see cref="ObservableDomain{T1, T2, T3, T4}"/>
     /// for domains with strongly typed roots.
     /// </summary>
+    /// <remarks>
+    /// This object is marked with <see cref="NotExportableAttribute"/> just to be safe if a domain reference appears the public API of
+    /// an <see cref="ObservableObject"/>. This should not happen since ObservableObject (and their non-exportable cousins like <see cref="InternalObject"/>
+    /// or <see cref="ObservableTimer"/> and <see cref="ObservableReminder"/>) has access to a "light" <see cref="DomainView"/> through a
+    /// protected property <see cref="ObservableObject.Domain"/>.
+    /// </remarks>
+    [NotExportable( Error = "No interaction with the ObservableDomain must be made from the observable objects." )]
     public class ObservableDomain : IObservableDomain, IDisposable
     {
         /// <summary>

@@ -27,7 +27,7 @@ namespace CK.Observable.League.Tests
             await league.Coordinator.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) =>
             {
                 var alwaysLoaded = d.Root.CreateDomain( "AlwaysLoaded", typeof( Model.School ).AssemblyQualifiedName );
-                alwaysLoaded.Options = alwaysLoaded.Options.SetLoadOption( DomainLifeCycleOption.Always );
+                alwaysLoaded.Options = alwaysLoaded.Options.SetLifeCycleOption( DomainLifeCycleOption.Always );
             } );
 
             league["AlwaysLoaded"].IsLoaded.Should().BeTrue( "The domain is kept alive." );
@@ -35,7 +35,7 @@ namespace CK.Observable.League.Tests
             await league.Coordinator.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) =>
             {
                 Domain loaded = d.Root.Domains["AlwaysLoaded"];
-                loaded.Options = loaded.Options.SetLoadOption( DomainLifeCycleOption.Default );
+                loaded.Options = loaded.Options.SetLifeCycleOption( DomainLifeCycleOption.Default );
             } );
 
             league["AlwaysLoaded"].IsLoaded.Should().BeFalse( "The domain is no more alive since its LoadOption is Default and there is no active timed events." );
@@ -60,7 +60,7 @@ namespace CK.Observable.League.Tests
             await league.Coordinator.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) =>
             {
                 var alwaysLoaded = d.Root.CreateDomain( "NeverLoaded", typeof( Model.School ).AssemblyQualifiedName );
-                alwaysLoaded.Options = alwaysLoaded.Options.SetLoadOption( DomainLifeCycleOption.Never );
+                alwaysLoaded.Options = alwaysLoaded.Options.SetLifeCycleOption( DomainLifeCycleOption.Never );
             } );
 
             var loader = league["NeverLoaded"];

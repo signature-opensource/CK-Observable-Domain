@@ -1,3 +1,4 @@
+using CK.Core;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -5,6 +6,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Transactions;
 
 namespace CK.Observable
 {
@@ -48,8 +50,16 @@ namespace CK.Observable
             readonly MethodInfo? _exporter;
             readonly MethodInfo? _exporterBase;
 
+            /// <summary>
+            /// This is null if this Type is NOT exportable but this doesn't trigger an error [NotExportable]: ExportDriver is simply null.
+            /// <para>
+            /// When _exportError is not null, then ExportDriver is not null:
+            ///  - This is empty if this Type is exportable: ExportDriver works as expected.
+            ///  - This is an error message if any export attempt should trigger an error [NotExportable( Error = "..." )]: ExportDriver throws the message.
+            /// </para>
+            /// </summary>
+            readonly string? _exportError;
             readonly IReadOnlyList<PropertyInfo> _exportableProperties;
-            readonly bool _isExportable;
 
             /// <summary>
             /// Gets the type itself.
@@ -62,11 +72,13 @@ namespace CK.Observable
 
             public IDeserializationDriver? DeserializationDriver => _ctor != null ? this : null;
 
-            public IObjectExportTypeDriver? ExportDriver => _isExportable ? this : null;
+            public IObjectExportTypeDriver? ExportDriver => _exportError != null ? this : null;
 
             IReadOnlyList<PropertyInfo> IObjectExportTypeDriver.ExportableProperties => _exportableProperties;
 
-            bool IObjectExportTypeDriver.IsDefaultBehavior => _isExportable && _exporter == null && _exporterBase == null;
+            bool IObjectExportTypeDriver.IsDefaultBehavior => (_exportError != null && _exportError.Length == 0)
+                                                                && _exporter == null
+                                                                && _exporterBase == null;
 
             Type IObjectExportTypeDriver.BaseType => Type;
 
@@ -173,6 +185,11 @@ namespace CK.Observable
 
             protected void DoExport( object o, int num, ObjectExporter exporter )
             {
+                Debug.Assert( _exportError != null, "When null, this is not exportable." );
+                if( _exportError.Length > 0 )
+                {
+                    throw new CKException( _exportError );
+                }
                 if( _exporter != null )
                 {
                     _exporter.Invoke( o, new object[] { num, exporter } );
@@ -222,9 +239,16 @@ namespace CK.Observable
                     _exporterBase = baseType?._exporterBase;
                 }
                 _exportableProperties = Array.Empty<PropertyInfo>();
-                if( !Type.GetCustomAttributes<NotExportableAttribute>().Any() )
+
+                // CS0192  A readonly field cannot be used as a ref or out value (except in a constructor).
+                // Using exportError to set _exportError.
+                // Defaults to null: not exportable, no error.
+                string? exportError = null;
+
+                if( CheckTypeOrPropertyNotExportable( Type, ref exportError ) )
                 {
-                    _isExportable = true;
+                    // Should be exportable unless a property prevents it.
+                    exportError = String.Empty;
                     if( _exporter == null )
                     {
                         // This is far from perfect: the property type may be not exportable for another
@@ -232,11 +256,30 @@ namespace CK.Observable
                         // this property list dependent on the IExporterResolver being used.
                         // That would imply a heavy refactoring of the export API. For the moment, this does the job.
                         _exportableProperties = Type.GetProperties().Where( p => p.GetIndexParameters().Length == 0
-                                                            && !p.GetCustomAttributes<NotExportableAttribute>().Any()
-                                                            && !p.PropertyType.GetCustomAttributes<NotExportableAttribute>().Any() )
+                                                            && CheckTypeOrPropertyNotExportable( p, ref exportError )
+                                                            && CheckTypeOrPropertyNotExportable( p.PropertyType, ref exportError ) )
                                                 .ToArray();
                     }
                 }
+                _exportError = exportError;
+            }
+
+            static bool CheckTypeOrPropertyNotExportable( MemberInfo m, ref string? exportError )
+            {
+                bool exportable = true;
+                foreach( var a in m.GetCustomAttributes<NotExportableAttribute>() )
+                {
+                    if( !String.IsNullOrWhiteSpace( a.Error ) )
+                    {
+                        var n = m.DeclaringType?.Name;
+                        if( n != null ) n += '.' + m.Name;
+                        else n = m.Name;
+                        if( !String.IsNullOrEmpty( exportError ) ) exportError += Environment.NewLine;
+                        exportError += $"Exporting '{n}' is forbidden: {a.Error}";
+                    }
+                    exportable = false;
+                }
+                return exportable;
             }
         }
 

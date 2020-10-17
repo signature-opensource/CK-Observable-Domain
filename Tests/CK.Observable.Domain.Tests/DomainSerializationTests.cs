@@ -178,5 +178,42 @@ namespace CK.Observable.Domain.Tests
             }
         }
 
+
+        [SerializationVersion( 0 )]
+        public class LoadHookTester : ObservableObject
+        {
+            public LoadHookTester()
+            {
+
+            }
+
+            LoadHookTester( IBinaryDeserializerContext d )
+                : base( d )
+            {
+                var r = d.StartReading().Reader;
+                Count = r.ReadInt32();
+            }
+
+            void Write( BinarySerializer w )
+            {
+                w.Write( Count );
+            }
+
+            public int Count { get; private set; }
+
+            public ObservableTimer Timer { get; }
+ 
+        }
+
+        [Test]
+        public void loadHooks_can_skip_the_TimedEvevents_update()
+        {
+            using var d = new ObservableDomain( TestHelper.Monitor, nameof( loadHooks_can_skip_the_TimedEvevents_update ) );
+            d.Modify( TestHelper.Monitor, () =>
+            {
+                
+            } );
+
+        }
     }
 }

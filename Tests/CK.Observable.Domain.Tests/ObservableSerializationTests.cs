@@ -337,5 +337,6 @@ namespace CK.Observable.Domain.Tests
                 base.Dispose( shouldCleanup );
             }
         }
+
     }
 }

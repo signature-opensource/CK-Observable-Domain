@@ -90,7 +90,7 @@ namespace CK.Observable.League
                    IObservableDomainAccess<Coordinator> coordinator,
                    string domainName,
                    IStreamStore store,
-                   Action<IActivityMonitor, ObservableDomain>? loadHook,
+                   Action<IActivityMonitor, ObservableDomain>? initializer,
                    IServiceProvider serviceProvider,
                    IReadOnlyList<string> rootTypeNames,
                    Type[] rootTypes,
@@ -105,7 +105,7 @@ namespace CK.Observable.League
                 RootTypes = rootTypeNames;
                 _initialMonitor = monitor;
                 _serviceProvider = serviceProvider;
-                Client = new DomainClient( domainName, store, loadHook, this );
+                Client = new DomainClient( domainName, store, initializer, this );
             }
 
             /// <summary>
@@ -115,7 +115,7 @@ namespace CK.Observable.League
             /// <param name="coordinator">The coordinator access.</param>
             /// <param name="domainName">The name of the domain.</param>
             /// <param name="store">The persistent store.</param>
-            /// <param name="loadHook">The load hook.</param>
+            /// <param name="initializer">The domain initializer.</param>
             /// <param name="serviceProvider">The service provider used to instantiate <see cref="ObservableDomainSidekick"/> objects.</param>
             /// <param name="rootTypeNames">The root types.</param>
             internal static Shell Create(
@@ -123,7 +123,7 @@ namespace CK.Observable.League
                 IObservableDomainAccess<Coordinator> coordinator,
                 string domainName,
                 IStreamStore store,
-                Action<IActivityMonitor, ObservableDomain>? loadHook,
+                Action<IActivityMonitor, ObservableDomain>? initializer,
                 IServiceProvider serviceProvider,
                 IReadOnlyList<string> rootTypeNames )
             {
@@ -155,11 +155,11 @@ namespace CK.Observable.League
                             3 => typeof( Shell<,,> ).MakeGenericType( rootTypes ),
                             _ => typeof( Shell<,,,> ).MakeGenericType( rootTypes )
                         };
-                        return (Shell)Activator.CreateInstance( shellType, monitor, coordinator, domainName, store, loadHook, serviceProvider, rootTypeNames, rootTypes );
+                        return (Shell)Activator.CreateInstance( shellType, monitor, coordinator, domainName, store, initializer, serviceProvider, rootTypeNames, rootTypes );
                     }
                 }
                 // The domainType is null if the type resolution failed.
-                return new Shell( monitor, coordinator, domainName, store, loadHook, serviceProvider, rootTypeNames, rootTypes, domainType );
+                return new Shell( monitor, coordinator, domainName, store, initializer, serviceProvider, rootTypeNames, rootTypes, domainType );
             }
 
             public string DomainName => Client.DomainName;
@@ -214,6 +214,9 @@ namespace CK.Observable.League
                 league.OnDestroy( monitor, this );
             }
 
+            // This is called on PostActions of the Coordinator's domain modify.
+            // If the domain must be loaded/created, the error is thrown so that the exception is captured and
+            // a Coordinator.ModifyThrowAsync() actually throws.
             public Task SynchronizeOptionsAsync( IActivityMonitor monitor, ManagedDomainOptions? options, bool? hasActiveTimedEvents )
             {
                 if( options != null )
@@ -231,7 +234,7 @@ namespace CK.Observable.League
                 if( _preLoaded != shouldBeLoaded )
                 {
                     _preLoaded = shouldBeLoaded;
-                    return shouldBeLoaded ? DoShellLoadAsync( monitor ) : DoShellDisposeAsync( monitor ).AsTask();
+                    return shouldBeLoaded ? DoShellLoadAsync( monitor, throwError: true ) : DoShellDisposeAsync( monitor ).AsTask();
                 }
                 return Task.CompletedTask;
             }
@@ -308,13 +311,13 @@ namespace CK.Observable.League
             public async Task<IObservableDomainShell?> LoadAsync( IActivityMonitor monitor )
             {
                 if( !IsLoadable || IsDestroyed || ClosingLeague ) return null;
-                await DoShellLoadAsync( monitor );
+                await DoShellLoadAsync( monitor, false );
                 if( _domain == null ) return null;
                 if( _initialMonitor == monitor ) return this;
                 return CreateIndependentShell( monitor );
             }
 
-            async Task<bool> DoShellLoadAsync( IActivityMonitor monitor )
+            async Task<bool> DoShellLoadAsync( IActivityMonitor monitor, bool throwError )
             {
                 bool updateDone = false;
                 await _loadLock!.WaitAsync();
@@ -341,6 +344,7 @@ namespace CK.Observable.League
                         Interlocked.Decrement( ref _refCount );
                         monitor.Error( $"Unable to instanciate and load '{DomainName}'.", ex );
                         _refCount = 0;
+                        if( throwError ) throw;
                     }
                 }
                 _loadLock.Release();

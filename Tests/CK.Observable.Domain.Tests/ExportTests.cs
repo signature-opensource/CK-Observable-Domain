@@ -6,6 +6,7 @@ using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.Contracts;
 using System.Linq;
 using static CK.Testing.MonitorTestHelper;
 
@@ -315,6 +316,101 @@ namespace CK.Observable.Domain.Tests
                 // Switch to Product n°1 (OId is 7).
                 t2.Should().Contain( @"[""C"",0,1,{""="":7}]" );
             }
+        }
+
+
+
+        public class TryingToExportNotExportableProperties1 : ObservableObject
+        {
+            // ObservableObjects and InternalObjects MUST NOT interact with any domain directly.
+            public ObservableDomain ThisIsVeryBad { get; }
+        }
+
+        public class TryingToExportNotExportableProperties2 : ObservableObject
+        {
+            // This is also bad: the DomainView is a small struct that isolates the domain
+            // and is tied to this object reference.
+            // Each ObservableObjects and InternalObjects have their own and must interact only with it.
+            public DomainView ThisIsBad => Domain;
+        }
+
+        public class TryingToExportNotExportableProperties3 : ObservableObject
+        {
+            // Error on property can be set, but this obviously prevents the whole type to be exported.
+            [NotExportable(Error = "Missed..." )]
+            public int NoWay { get; }
+        }
+
+        [Test]
+        public void ObservableDomain_and_DomainView_is_NotExportable_and_any_other_types_can_be()
+        {
+            using var d = new ObservableDomain( TestHelper.Monitor, nameof( ObservableDomain_and_DomainView_is_NotExportable_and_any_other_types_can_be ) );
+            var eventCollector = new JsonEventCollector( d );
+            d.Modify( TestHelper.Monitor, () =>
+            {
+                d.TransactionSerialNumber.Should().Be( 0 );
+                new TryingToExportNotExportableProperties1();
+
+            } ).Success.Should().BeTrue();
+
+            d.Invoking( x => x.ExportToString() )
+                .Should().Throw<CKException>()
+                .WithMessage( "Exporting 'ObservableDomain' is forbidden: No interaction with the ObservableDomain must be made from the observable objects." );
+
+            d.Modify( TestHelper.Monitor, () =>
+            {
+                d.AllObjects.Single().Dispose();
+                new TryingToExportNotExportableProperties2();
+
+            } ).Success.Should().BeTrue();
+
+            d.Invoking( x => x.ExportToString() )
+                .Should().Throw<CKException>()
+                .WithMessage( "Exporting 'DomainView' is forbidden: DomainView must not be exposed. Only the protected Domain should be used." );
+
+            d.Modify( TestHelper.Monitor, () =>
+            {
+                d.AllObjects.Single().Dispose();
+                new TryingToExportNotExportableProperties3();
+            } ).Success.Should().BeTrue();
+
+            d.Invoking( x => x.ExportToString() )
+                .Should().Throw<CKException>()
+                .WithMessage( "Exporting 'TryingToExportNotExportableProperties3.NoWay' is forbidden: Missed..." );
+        }
+
+
+        public class TimerAndRemiderProperties : ObservableObject
+        {
+            public TimerAndRemiderProperties()
+            {
+                Timer = new ObservableTimer( DateTime.UtcNow.AddDays( 5 ), 1000 );
+                Reminder = new ObservableReminder( Timer.DueTimeUtc );
+            }
+
+            public ObservableTimer Timer { get; }
+
+            public ObservableReminder Reminder { get; }
+
+            public int ThisIsExported { get; set; }
+        }
+
+        [Test]
+        public void timers_and_reminders_are_NotExportable()
+        {
+            using var d = new ObservableDomain( TestHelper.Monitor, nameof( timers_and_reminders_are_NotExportable ) );
+            var eventCollector = new JsonEventCollector( d );
+            // To skip the initial transaction where no events are collectable.
+            d.Modify( TestHelper.Monitor, null );
+
+            TransactionResult t = d.Modify( TestHelper.Monitor, () =>
+            {
+                d.TransactionSerialNumber.Should().Be( 1, "Not incremented yet (still inside the transaction n°2)." );
+                new TimerAndRemiderProperties();
+            } );
+            d.ExportToString().Should().NotContainAny( "Timer", "Reminder" ).And.Contain( "ThisIsExported" );
+            var events = eventCollector.GetTransactionEvents( 1 ).Single().ExportedEvents;
+            events.Should().NotContainAny( "Timer", "Reminder" ).And.Contain( "ThisIsExported" );
         }
     }
 }

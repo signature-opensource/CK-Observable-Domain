@@ -60,11 +60,11 @@ namespace CK.Observable.League
         /// <summary>
         /// Returns a new immutable option with an updated <see cref="LifeCycleOption"/>.
         /// </summary>
-        /// <param name="loadOption">The load option.</param>
+        /// <param name="lifeCycleOption">The life cycle option.</param>
         /// <returns>This or a new option instance.</returns>
-        public ManagedDomainOptions SetLoadOption( DomainLifeCycleOption loadOption ) => LifeCycleOption == loadOption ? this : new ManagedDomainOptions
+        public ManagedDomainOptions SetLifeCycleOption( DomainLifeCycleOption lifeCycleOption ) => LifeCycleOption == lifeCycleOption ? this : new ManagedDomainOptions
             (
-                loadOption,
+                lifeCycleOption,
                 CompressionKind,
                 SnapshotSaveDelay,
                 SnapshotKeepDuration,
