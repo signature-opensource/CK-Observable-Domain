@@ -64,10 +64,10 @@ namespace CK.Observable.League
             Domain.Root.FinalizeConstruct( league );
         }
 
-        protected override void DoLoadFromSnapshot( IActivityMonitor monitor, ObservableDomain d, bool restoring )
+        protected override void DoLoadOrCreateFromSnapshot( IActivityMonitor monitor, ref ObservableDomain d, bool restoring )
         {
             Debug.Assert( Domain == d );
-            base.DoLoadFromSnapshot( monitor, d, restoring );
+            base.DoLoadOrCreateFromSnapshot( monitor, ref d, restoring );
             if( _league != null ) Domain.Root.Initialize( monitor, _league );
         }
 

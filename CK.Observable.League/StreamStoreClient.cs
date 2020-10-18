@@ -120,7 +120,7 @@ namespace CK.Observable.League
             {
                 if( s != null )
                 {
-                    LoadAndInitializeSnapshot( monitor, d, s );
+                    LoadOrCreateAndInitializeSnapshot( monitor, ref d, s );
                     _savedTransactionNumber = CurrentSerialNumber;
                 }
                 else

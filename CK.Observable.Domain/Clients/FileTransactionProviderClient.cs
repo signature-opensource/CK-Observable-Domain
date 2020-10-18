@@ -14,6 +14,15 @@ namespace CK.Observable
     /// Loads the <see cref="ObservableDomain"/> from the given file path,
     /// and stores it at regular intervals - or when calling <see cref="Flush"/>.
     /// </summary>
+    /// <remarks>
+    /// This client is not the best way to handle persistence since, when <see cref="OnDomainCreated(IActivityMonitor, ObservableDomain)"/>
+    /// is called, it loads the already instantiated domain from the file: the contstuctor(s) of the root(s) have already been called and
+    /// this reloads the domain instead of directly deserializing a brand new instance from the file stream.
+    /// <para>
+    /// This works but is not optimal: the ObservableLeague works differently by controlling the deserialization "from the ouside" instead
+    /// of "behind teh client".
+    /// </para>
+    /// </remarks>
     public class FileTransactionProviderClient : MemoryTransactionProviderClient
     {
         readonly NormalizedPath _filePath;
@@ -66,7 +75,7 @@ namespace CK.Observable
 
         /// <summary>
         /// If the <see cref="ObservableDomain.TransactionSerialNumber"/> is 0 and the file exists, the base method
-        /// <see cref="MemoryTransactionProviderClient.LoadAndInitializeSnapshot(IActivityMonitor, ObservableDomain, Stream)"/>
+        /// <see cref="MemoryTransactionProviderClient.LoadOrCreateAndInitializeSnapshot(IActivityMonitor, ObservableDomain, Stream)"/>
         /// is called: the snapshot is created from the file content and the domain is restored.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
@@ -81,7 +90,7 @@ namespace CK.Observable
                     {
                         using( var f = new FileStream( _filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.SequentialScan ) )
                         {
-                            LoadAndInitializeSnapshot( monitor, d, f );
+                            LoadOrCreateAndInitializeSnapshot( monitor, ref d, f );
                             _fileTransactionNumber = CurrentSerialNumber;
                         }
                     }

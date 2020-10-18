@@ -12,7 +12,7 @@ namespace CK.Observable
     /// <summary>
     /// This is a simple, yet useful, participant that implements transaction in memory.
     /// It is open to extensions and can be used as a base class: the <see cref="FileTransactionProviderClient"/> extends this.
-    /// The protected <see cref="LoadAndInitializeSnapshot"/> and <see cref="WriteSnapshot"/> methods offers access to
+    /// The protected <see cref="LoadOrCreateAndInitializeSnapshot"/> and <see cref="WriteSnapshot"/> methods offers access to
     /// the internal memory.
     /// </summary>
     public class MemoryTransactionProviderClient : IObservableDomainClient
@@ -124,13 +124,14 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Initializes the current snapshot with the provided stream content and calls <see cref="DoLoadFromSnapshot(IActivityMonitor, ObservableDomain)"/>
-        /// to load the domain.
+        /// Initializes the current snapshot with the provided stream content and
+        /// calls <see cref="DoLoadFromSnapshot(IActivityMonitor, ObservableDomain)"/> to reload the existing domina or
+        /// instantiates a new domain.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
-        /// <param name="d">The domain.</param>
+        /// <param name="d">The domain to reload or the new instantiated domain.</param>
         /// <param name="s">The readable stream (will be copied into the memory).</param>
-        protected void LoadAndInitializeSnapshot( IActivityMonitor monitor, ObservableDomain d, Stream s )
+        protected void LoadOrCreateAndInitializeSnapshot( IActivityMonitor monitor, ref ObservableDomain d, Stream s )
         {
             _memory.Position = 0;
             s.CopyTo( _memory );
@@ -139,7 +140,7 @@ namespace CK.Observable
             if( rawBytes[0] != 0 ) throw new InvalidDataException( "Invalid Snapshot version. Only 0 is currently supported." );
             _currentSnapshotKind = (CompressionKind)rawBytes[1];
             if( _currentSnapshotKind != CompressionKind.None && _currentSnapshotKind != CompressionKind.GZiped ) throw new InvalidDataException( "Invalid CompressionKind marker." );
-            DoLoadFromSnapshot( monitor, d, false );
+            DoLoadOrCreateFromSnapshot( monitor, ref d, false );
             _snapshotSerialNumber = d.TransactionSerialNumber;
             _snapshotTimeUtc = d.TransactionCommitTimeUtc;
         }
@@ -193,7 +194,7 @@ namespace CK.Observable
             {
                 try
                 {
-                    DoLoadFromSnapshot( monitor, d, true );
+                    DoLoadOrCreateFromSnapshot( monitor, ref d, true );
                     monitor.CloseGroup( "Success." );
                     return true;
                 }
@@ -206,14 +207,15 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Loads the domain from the current snapshot memory.
+        /// Loads the domain from the current snapshot memory: either calls Load on it or invokes the deserialization
+        /// constructor when <paramref name="domain"/> is null.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
-        /// <param name="d">The domain to load.</param>
+        /// <param name="domain">The domain to reload or deserializes.</param>
         /// <param name="restoring">
-        /// True when called from <see cref="RestoreSnapshot"/>, false when called by <see cref="LoadAndInitializeSnapshot"/>.
+        /// True when called from <see cref="RestoreSnapshot"/>, false when called by <see cref="LoadOrCreateAndInitializeSnapshot"/>.
         /// </param>
-        protected virtual void DoLoadFromSnapshot( IActivityMonitor monitor, ObservableDomain d, bool restoring )
+        protected virtual void DoLoadOrCreateFromSnapshot( IActivityMonitor monitor, ref ObservableDomain domain, bool restoring )
         {
             var loadAction = GetLoadHook( monitor, restoring );
             // Hook that wraps the GetLoadHook() value (if not null) and returns true (to activate the timed events)
@@ -226,13 +228,13 @@ namespace CK.Observable
             {
                 using( var gz = new GZipStream( _memory, CompressionMode.Decompress, leaveOpen: true ) )
                 {
-                    d.Load( monitor, gz, leaveOpen: true, loadHook: loadHook );
+                    domain.Load( monitor, gz, leaveOpen: true, loadHook: loadHook );
                 }
             }
             else
             {
                 Debug.Assert( CompressionKind == CompressionKind.None );
-                d.Load( monitor, _memory, leaveOpen: true, loadHook: loadHook );
+                domain.Load( monitor, _memory, leaveOpen: true, loadHook: loadHook );
             }
             if( _memory.Position != p ) throw new Exception( $"Internal error: stream position should be {p} but was {_memory.Position} after reload." );
         }
@@ -244,7 +246,7 @@ namespace CK.Observable
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="restoring">
-        /// True when called from <see cref="RestoreSnapshot"/>, false when called by <see cref="LoadAndInitializeSnapshot"/>.
+        /// True when called from <see cref="RestoreSnapshot"/>, false when called by <see cref="LoadOrCreateAndInitializeSnapshot"/>.
         /// </param>
         /// <returns>Defaults to null.</returns>
         protected virtual Action<ObservableDomain>? GetLoadHook( IActivityMonitor monitor, bool restoring ) => null;
