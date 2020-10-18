@@ -72,6 +72,38 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             RawTraces.Concatenate().Should().Match( "*Before!*Not Yet!*Elapsed:*After!*" );
         }
 
+        [Test]
+        public void when_loadHook_returned_false_timed_events_are_not_activated()
+        {
+            RawTraces.Clear();
+            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( when_loadHook_returned_false_timed_events_are_not_activated ) ) )
+            {
+                d.Modify( TestHelper.Monitor, () =>
+                {
+                    RawTraces.Enqueue( "Before!" );
+                    new ObservableTimer( DateTime.UtcNow.AddMilliseconds( 50 ), 50 ).Elapsed += StaticElapsed;
+
+                } ).Success.Should().BeTrue();
+
+                // This reloads the domain with a loadHook that returns false.
+                ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
+                Thread.Sleep( 500 );
+
+                RawTraces.Enqueue( "Not Yet!" );
+                d.TimeManager.AllObservableTimedEvents.Single().IsActive.Should().BeTrue();
+                // Calling modify reactivates the timed events.
+                d.Modify( TestHelper.Monitor, () =>
+                {
+                    RawTraces.Enqueue( "After!" );
+
+                } ).Success.Should().BeTrue();
+                Thread.Sleep( 200 );
+
+                RawTraces.Concatenate().Should().Match( "Before!, Not Yet!, Elapsed: *, After!, Elapsed: *, Elapsed: *" );
+            }
+
+        }
+
         class FakeAutoTimer : TimeManager.AutoTimer
         {
             public FakeAutoTimer( ObservableDomain d )
