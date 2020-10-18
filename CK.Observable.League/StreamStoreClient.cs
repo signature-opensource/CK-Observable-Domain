@@ -2,6 +2,7 @@ using CK.Core;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -109,31 +110,50 @@ namespace CK.Observable.League
         }
 
         /// <summary>
-        /// Initializes the domain from the store or initializes the store from the domain.
+        /// See base <see cref="MemoryTransactionProviderClient.LoadOrCreateAndInitializeSnapshot"/> comments.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
-        /// <param name="d">The domain to initialize.</param>
-        /// <returns>The awaitable.</returns>
-        public async Task InitializeAsync( IActivityMonitor monitor, ObservableDomain d )
+        /// <param name="stream">The stream fromw wich the domain must be deserialized.</param>
+        /// <param name="loadHook">The load hook to use.</param>
+        /// <returns>Never: throws a <see cref="NotSupportedException"/>.</returns>
+        protected override sealed ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, Func<ObservableDomain, bool> loadHook )
         {
+            var d = DoDeserializeDomain( monitor, stream, loadHook );
+            _eventCollector.CollectEvent( d, clearEvents: false );
+            return d;
+        }
+
+        protected abstract ObservableDomain DoDeserializeDomain( IActivityMonitor monitor, Stream stream, Func<ObservableDomain, bool> loadHook );
+
+        /// <summary>
+        /// Initializes the domain from the store or initializes the store with a new domain.
+        /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
+        /// <param name="factory">The domain factory to use if no stream exists in the store.</param>
+        /// <returns>The awaitable.</returns>
+        public async Task<ObservableDomain> InitializeAsync( IActivityMonitor monitor, Func<IActivityMonitor,ObservableDomain> factory )
+        {
+            ObservableDomain result = null;
             using( var s = await StreamStore.OpenReadAsync( _storeName ) )
             {
                 if( s != null )
                 {
-                    LoadOrCreateAndInitializeSnapshot( monitor, ref d, s );
+                    LoadOrCreateAndInitializeSnapshot( monitor, ref result, s );
                     _savedTransactionNumber = CurrentSerialNumber;
                 }
                 else
                 {
+                    result = factory( monitor );
+                    _eventCollector.CollectEvent( result, clearEvents: true );
                     if( _domainInitializer != null )
                     {
                         // Applies the initializer to the newly created domain.
                         // Since this is an "initializer": new domains are de facto
                         // initialized just like the loaded ones.
-                        await d.ModifyThrowAsync( monitor, () => _domainInitializer( monitor, d ) );
+                        await result.ModifyThrowAsync( monitor, () => _domainInitializer( monitor, result ) );
                         // It is useless to call CreateSnapshot: ModifyThrowAsync has committed the
                         // very first transaction.
-                        Debug.Assert( d.TransactionSerialNumber == 1 );
+                        Debug.Assert( result.TransactionSerialNumber == 1 );
                     }
                     else
                     {
@@ -141,7 +161,7 @@ namespace CK.Observable.League
                         // the initial snapshot can be saved to the Store: this initializes
                         // the Store for this domain.
                         // From now on, it will be reloaded.
-                        CreateSnapshot( monitor, d, true );
+                        CreateSnapshot( monitor, result, true );
                     }
                     if( !await SaveAsync( monitor ) )
                     {
@@ -149,6 +169,7 @@ namespace CK.Observable.League
                     }
                 }
             }
+            return result;
         }
 
         /// <summary>

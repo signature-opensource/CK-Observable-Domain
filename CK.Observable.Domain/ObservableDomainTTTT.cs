@@ -63,14 +63,16 @@ namespace CK.Observable
         /// <param name="leaveOpen">True to leave the stream opened.</param>
         /// <param name="encoding">Optional encoding for characters. Defaults to UTF-8.</param>
         /// <param name="serviceProvider">The service providers that will be used to resolve the <see cref="ObservableDomainSidekick"/> objects.</param>
+        /// <param name="loadHook">The load hook to apply. See loadHook parameter of <see cref="ObservableDomain.Load(IActivityMonitor, Stream, bool, Encoding?, int, Func{ObservableDomain, bool}?)"/>.</param>
         public ObservableDomain( IActivityMonitor monitor,
                                  string domainName,
                                  IObservableDomainClient client,
                                  Stream s,
                                  bool leaveOpen = false,
                                  Encoding encoding = null,
-                                 IServiceProvider? serviceProvider = null )
-            : base( monitor, domainName, client, s, leaveOpen, encoding, serviceProvider )
+                                 IServiceProvider? serviceProvider = null,
+                                 Func<ObservableDomain, bool>? loadHook = null )
+            : base( monitor, domainName, client, s, leaveOpen, encoding, serviceProvider, loadHook )
         {
             BindRoots();
         }

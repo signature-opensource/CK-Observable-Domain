@@ -1,6 +1,7 @@
 using CK.Core;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 
 namespace CK.Observable.League
@@ -27,6 +28,11 @@ namespace CK.Observable.League
                     // the domain has or hasn't timed events and the shell has to know this.
                     return _shell.SynchronizeOptionsAsync( ctx.Monitor, options: null, hasActiveTimedEvents );
                 } );
+            }
+
+            protected override ObservableDomain DoDeserializeDomain( IActivityMonitor monitor, Stream stream, Func<ObservableDomain, bool> loadHook )
+            {
+                return _shell.DeserializeDomain( monitor, stream, loadHook );
             }
         }
     }

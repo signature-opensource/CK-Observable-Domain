@@ -52,19 +52,21 @@ namespace CK.Observable
         /// <param name="monitor">The monitor used to log the construction of this domain. Cannot be null.</param>
         /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
         /// <param name="client">The observable client (head of the Chain of Responsibility) to use. Can be null.</param>
-        /// <param name="s">The input stream.</param>
+        /// <param name="stream">The input stream.</param>
         /// <param name="leaveOpen">True to leave the stream opened.</param>
         /// <param name="encoding">Optional encoding for characters. Defaults to UTF-8.</param>
         /// <param name="serviceProvider">The service providers that will be used to resolve the <see cref="ObservableDomainSidekick"/> objects.</param>
+        /// <param name="loadHook">The load hook to apply. See loadHook parameter of <see cref="ObservableDomain.Load(IActivityMonitor, Stream, bool, Encoding?, int, Func{ObservableDomain, bool}?)"/>.</param>
         public ObservableDomain(
             IActivityMonitor monitor,
             string domainName,
             IObservableDomainClient client,
-            Stream s,
+            Stream stream,
             bool leaveOpen = false,
             Encoding encoding = null,
-            IServiceProvider? serviceProvider = null )
-            : base( monitor, domainName, client, s, leaveOpen, encoding, serviceProvider )
+            IServiceProvider? serviceProvider = null,
+            Func<ObservableDomain, bool>? loadHook = null )
+            : base( monitor, domainName, client, stream, leaveOpen, encoding, serviceProvider, loadHook )
         {
             BindRoots();
         }

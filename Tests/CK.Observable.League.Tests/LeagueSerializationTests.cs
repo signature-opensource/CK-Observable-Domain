@@ -117,7 +117,18 @@ namespace CK.Observable.League.Tests
 
             InstantiationTracker.ContructorCount.Should().Be( 1, "This will never change from now on: the domain is always deserialized." );
             InstantiationTracker.DeserializationCount.Should().Be( 1 );
+            InstantiationTracker.WriteCount.Should().Be( 1 );
+
+            // Loads/Unload it again and creates a transaction.
+            await using( var shell = await loader.LoadAsync<InstantiationTracker>( TestHelper.Monitor ) )
+            {
+                await shell.ModifyAsync( TestHelper.Monitor, (m,d) => { } );
+            }
+
+            InstantiationTracker.ContructorCount.Should().Be( 1, "This will never change from now on: the domain is always deserialized." );
+            InstantiationTracker.DeserializationCount.Should().Be( 2 );
             InstantiationTracker.WriteCount.Should().Be( 2 );
+
         }
 
 

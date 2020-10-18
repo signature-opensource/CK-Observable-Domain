@@ -60,7 +60,7 @@ namespace CK.Observable.League
                 // The CoordinatorClient creates its ObservableDomain<Coordinator> domain.
                 var client = new CoordinatorClient( monitor, store, serviceProvider );
                 // Async initialization here, just like other managed domains.
-                await client.InitializeAsync( monitor, client.Domain );
+                client.Domain = (ObservableDomain<Coordinator>)await client.InitializeAsync( monitor, m => new ObservableDomain<Coordinator>( m, String.Empty, client, serviceProvider ) );
                 // No need to acquire a read lock here.
                 var domains = new ConcurrentDictionary<string, Shell>( StringComparer.OrdinalIgnoreCase );
                 IEnumerable<Domain> observableDomains = client.Domain.Root.Domains.Values;

@@ -3,6 +3,7 @@ using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Linq;
+using System.IO;
 
 namespace CK.Observable.League
 {
@@ -14,15 +15,21 @@ namespace CK.Observable.League
     internal class CoordinatorClient : StreamStoreClient, IObservableDomainAccess<Coordinator>
     {
         IManagedLeague? _league;
+        IServiceProvider _serviceProvider;
         int? _optionsPropertyId;
 
         public CoordinatorClient( IActivityMonitor monitor, IStreamStore store, IServiceProvider serviceProvider )
-            : base( String.Empty, store, null )
+            : base( String.Empty, store, initializer: null, next: null )
         {
-            Domain = new ObservableDomain<Coordinator>( monitor, String.Empty, this, serviceProvider );
+            _serviceProvider = serviceProvider;
         }
 
-        public ObservableDomain<Coordinator> Domain { get; }
+        /// <summary>
+        /// Gets the coordinator domain: this set by the the <see cref="ObservableLeague.LoadAsync"/> right after
+        /// having new'ed this client: this can't be done from the constructor since the domain restoration is
+        /// an async operation.
+        /// </summary>
+        public ObservableDomain<Coordinator> Domain { get; internal set; }
 
         public override void OnTransactionCommit( in SuccessfulTransactionEventArgs c )
         {
@@ -64,11 +71,16 @@ namespace CK.Observable.League
             Domain.Root.FinalizeConstruct( league );
         }
 
-        protected override void DoLoadOrCreateFromSnapshot( IActivityMonitor monitor, ref ObservableDomain d, bool restoring )
+        protected override void DoLoadOrCreateFromSnapshot( IActivityMonitor monitor, ref ObservableDomain? d, bool restoring )
         {
             Debug.Assert( Domain == d );
             base.DoLoadOrCreateFromSnapshot( monitor, ref d, restoring );
             if( _league != null ) Domain.Root.Initialize( monitor, _league );
+        }
+
+        protected override ObservableDomain DoDeserializeDomain( IActivityMonitor monitor, Stream stream, Func<ObservableDomain, bool> loadHook )
+        {
+            return new ObservableDomain<Coordinator>( monitor, String.Empty, this, stream, leaveOpen: true, encoding: null, _serviceProvider, loadHook );
         }
 
         #region Coordinator: IObservableDomainAccess<Coordinator>.

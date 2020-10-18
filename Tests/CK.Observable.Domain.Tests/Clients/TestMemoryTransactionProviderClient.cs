@@ -29,5 +29,10 @@ namespace CK.Observable.Domain.Tests.Clients
             ms.Position = 0;
             return ms;
         }
+
+        protected override ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, Func<ObservableDomain, bool> loadHook )
+        {
+            throw new NotImplementedException( "This is not called since LoadOrCreateAndInitializeSnapshot is not called here." );
+        }
     }
 }

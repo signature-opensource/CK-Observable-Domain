@@ -545,6 +545,7 @@ namespace CK.Observable
         /// <param name="leaveOpen">True to leave the stream opened.</param>
         /// <param name="encoding">Optional encoding for characters. Defaults to UTF-8.</param>
         /// <param name="serviceProvider">The service providers that will be used to resolve the <see cref="ObservableDomainSidekick"/> objects.</param>
+        /// <param name="loadHook">The load hook to apply. See loadHook parameter of <see cref="Load(IActivityMonitor, Stream, bool, Encoding?, int, Func{ObservableDomain, bool}?)"/>.</param>
         /// <param name="exporters">Optional exporters handler.</param>
         /// <param name="serializers">Optional serializers handler.</param>
         /// <param name="deserializers">Optional deserializers handler.</param>
@@ -555,12 +556,13 @@ namespace CK.Observable
                                  bool leaveOpen = false,
                                  Encoding? encoding = null,
                                  IServiceProvider? serviceProvider = null,
+                                Func<ObservableDomain, bool>? loadHook = null,
                                  IExporterResolver? exporters = null,
                                  ISerializerResolver? serializers = null,
                                  IDeserializerResolver? deserializers = null )
             : this( monitor, domainName, client, false, serviceProvider, exporters, serializers, deserializers )
         {
-            Load( monitor, s, leaveOpen, encoding );
+            Load( monitor, s, leaveOpen, encoding, loadHook: loadHook );
             client?.OnDomainCreated( monitor, this );
         }
 

@@ -2,6 +2,7 @@ using CK.Core;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -31,6 +32,7 @@ namespace CK.Observable.League
             Type[] _rootTypes;
             int _refCount;
             ObservableDomain? _domain;
+
             bool _hasActiveTimedEvents;
             bool _preLoaded;
             DomainLifeCycleOption _loadOption;
@@ -177,7 +179,7 @@ namespace CK.Observable.League
                 return Client.JsonEventCollector.GetTransactionEvents( transactionNumber );
             }
 
-            public event Action<IActivityMonitor,JsonEventCollector.TransactionEvent> DomainChanged
+            public event Action<IActivityMonitor, JsonEventCollector.TransactionEvent> DomainChanged
             {
                 add => Client.JsonEventCollector.LastEventChanged += value;
                 remove => Client.JsonEventCollector.LastEventChanged -= value;
@@ -188,7 +190,7 @@ namespace CK.Observable.League
             internal ValueTask OnClosingLeagueAsync( IActivityMonitor monitor )
             {
                 ClosingLeague = true;
-                return _preLoaded ? DoShellDisposeAsync( monitor ).AsNonGenericValueTask() : default; 
+                return _preLoaded ? DoShellDisposeAsync( monitor ).AsNonGenericValueTask() : default;
             }
 
             /// <summary>
@@ -272,7 +274,7 @@ namespace CK.Observable.League
                     {
                         if( _domain != null )
                         {
-                            await( IsDestroyed ? Client.ArchiveAsync( monitor ) : Client.SaveAsync( monitor ) );
+                            await (IsDestroyed ? Client.ArchiveAsync( monitor ) : Client.SaveAsync( monitor ));
                             if( !IsDestroyed && !ClosingLeague )
                             {
                                 try
@@ -326,9 +328,7 @@ namespace CK.Observable.League
                     Debug.Assert( _domain == null );
                     try
                     {
-                        var d = CreateDomain( monitor );
-                        Client.JsonEventCollector.CollectEvent( d, clearEvents: false );
-                        await Client.InitializeAsync( monitor, d );
+                        var d = await Client.InitializeAsync( monitor, CreateDomain );
                         await _coordinator.ModifyThrowAsync( monitor, ( m, d ) =>
                         {
                             var domain = d.Root.Domains[DomainName];
@@ -351,7 +351,15 @@ namespace CK.Observable.League
                 return updateDone;
             }
 
-            private protected virtual ObservableDomain CreateDomain( IActivityMonitor monitor ) => new ObservableDomain( monitor, DomainName, Client, ServiceProvider );
+            private protected virtual ObservableDomain CreateDomain( IActivityMonitor monitor )
+            {
+                return new ObservableDomain( monitor, DomainName, Client, ServiceProvider );
+            }
+
+            internal protected virtual ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, Func<ObservableDomain, bool> loadHook )
+            {
+                return new ObservableDomain( monitor, DomainName, Client, stream, leaveOpen:false, encoding: null, ServiceProvider, loadHook );
+            }
 
             private protected virtual IObservableDomainShell CreateIndependentShell( IActivityMonitor monitor ) => new IndependentShell( this, monitor );
 
@@ -480,6 +488,11 @@ namespace CK.Observable.League
 
             private protected override ObservableDomain CreateDomain( IActivityMonitor monitor ) => new ObservableDomain<T>( monitor, DomainName, Client, ServiceProvider );
 
+            internal protected override ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, Func<ObservableDomain, bool> loadHook )
+            {
+                return new ObservableDomain<T>( monitor, DomainName, Client, stream, leaveOpen: true, encoding: null, ServiceProvider, loadHook );
+            }
+
             class IndependentShellT : IndependentShell, IObservableDomainShell<T>
             {
                 public IndependentShellT( Shell<T> s, IActivityMonitor m )
@@ -574,6 +587,11 @@ namespace CK.Observable.League
             }
 
             private protected override ObservableDomain CreateDomain( IActivityMonitor monitor ) => new ObservableDomain<T1,T2>( monitor, DomainName, Client, ServiceProvider );
+
+            internal protected override ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, Func<ObservableDomain, bool> loadHook )
+            {
+                return new ObservableDomain<T1,T2>( monitor, DomainName, Client, stream, leaveOpen: true, encoding: null, ServiceProvider, loadHook );
+            }
 
             class IndependentShellTT : IndependentShell, IObservableDomainShell<T1, T2>
             {
@@ -673,6 +691,11 @@ namespace CK.Observable.League
 
             private protected override ObservableDomain CreateDomain( IActivityMonitor monitor ) => new ObservableDomain<T1, T2, T3>( monitor, DomainName, Client, ServiceProvider );
 
+            internal protected override ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, Func<ObservableDomain, bool> loadHook )
+            {
+                return new ObservableDomain<T1, T2, T3>( monitor, DomainName, Client, stream, leaveOpen: true, encoding: null, ServiceProvider, loadHook );
+            }
+
             class IndependentShellTTT : IndependentShell, IObservableDomainShell<T1, T2, T3>
             {
                 public IndependentShellTTT( Shell<T1, T2, T3> s, IActivityMonitor m )
@@ -770,6 +793,11 @@ namespace CK.Observable.League
             }
 
             private protected override ObservableDomain CreateDomain( IActivityMonitor monitor ) => new ObservableDomain<T1, T2, T3, T4>( monitor, DomainName, Client, ServiceProvider );
+
+            internal protected override ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, Func<ObservableDomain, bool> loadHook )
+            {
+                return new ObservableDomain<T1, T2, T3, T4>( monitor, DomainName, Client, stream, leaveOpen: true, encoding: null, ServiceProvider, loadHook );
+            }
 
             class IndependentShellTTTT : IndependentShell, IObservableDomainShell<T1, T2, T3, T4>
             {

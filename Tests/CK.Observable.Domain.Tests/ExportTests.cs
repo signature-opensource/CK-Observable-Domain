@@ -269,7 +269,7 @@ namespace CK.Observable.Domain.Tests
             var eventCollector = new JsonEventCollector();
             eventCollector.LastEventChanged += TrackLastEvent;
 
-            using( var d = new ObservableDomain<RootSample.ApplicationState>( TestHelper.Monitor, "TEST", new MemoryTransactionProviderClient() ) )
+            using( var d = new ObservableDomain<RootSample.ApplicationState>( TestHelper.Monitor, "TEST", new Clients.ConcreteMemoryTransactionProviderClient() ) )
             {
                 eventCollector.CollectEvent( d, false );
                 d.Modify( TestHelper.Monitor, () =>

@@ -5,6 +5,7 @@ using System.IO;
 using System.Threading;
 using CK.Core;
 using System.Threading.Tasks;
+using System.Diagnostics.CodeAnalysis;
 
 namespace CK.Observable
 {
@@ -190,5 +191,22 @@ namespace CK.Observable
                 }
             }
         }
+
+        /// <summary>
+        /// See base <see cref="MemoryTransactionProviderClient.LoadOrCreateAndInitializeSnapshot"/> comments.
+        /// this throws a <see cref="NotSupportedException"/>: this <see cref="FileTransactionProviderClient"/> is
+        /// not able to manage domains "from the outside".
+        /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
+        /// <param name="stream">The stream fromw wich the domain must be deserialized.</param>
+        /// <param name="loadHook">The load hook to use.</param>
+        /// <returns>Never: throws a <see cref="NotSupportedException"/>.</returns>
+        [DoesNotReturn]
+        protected override ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, Func<ObservableDomain, bool> loadHook )
+        {
+            throw new NotSupportedException( "FileTransactionProviderClient is not a domain manager." );
+        }
+
+
     }
 }

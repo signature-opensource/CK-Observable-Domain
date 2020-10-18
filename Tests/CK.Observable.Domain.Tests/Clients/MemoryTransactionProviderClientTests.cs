@@ -8,12 +8,13 @@ using static CK.Testing.MonitorTestHelper;
 
 namespace CK.Observable.Domain.Tests.Clients
 {
-    public class MemoryTransactionProviderClientTests
+    public partial class MemoryTransactionProviderClientTests
     {
+
         [Test]
         public void Modify_creates_snapshot()
         {
-            var client = new MemoryTransactionProviderClient();
+            var client = new ConcreteMemoryTransactionProviderClient();
             var d = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, "TEST", client);
 
             var transactionResult = d.Modify( TestHelper.Monitor, () =>
@@ -33,7 +34,7 @@ namespace CK.Observable.Domain.Tests.Clients
         [Test]
         public void Exception_during_Write_adds_ClientError()
         {
-            using var d = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, "TEST", new MemoryTransactionProviderClient());
+            using var d = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, "TEST", new ConcreteMemoryTransactionProviderClient());
 
             IReadOnlyList<ObservableEvent>? events = null;
             d.OnSuccessfulTransaction += ( d, ev ) => events = ev.Events;
@@ -72,7 +73,7 @@ namespace CK.Observable.Domain.Tests.Clients
         [Test]
         public void Exception_during_Modify_rolls_ObservableDomain_back()
         {
-            using var d = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, "TEST", new MemoryTransactionProviderClient());
+            using var d = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, "TEST", new ConcreteMemoryTransactionProviderClient());
             IReadOnlyList<ObservableEvent>? events = null;
             d.OnSuccessfulTransaction += ( d, ev ) => events = ev.Events;
 
@@ -128,9 +129,8 @@ namespace CK.Observable.Domain.Tests.Clients
                 var d2 = new ObservableDomain<TestObservableRootObject>(
                     TestHelper.Monitor,
                     "TEST",
-                    new MemoryTransactionProviderClient(),
-                    domainStream
-                    );
+                    new ConcreteMemoryTransactionProviderClient(),
+                    domainStream );
 
                 using( d2.AcquireReadLock() )
                 {
@@ -219,7 +219,7 @@ namespace CK.Observable.Domain.Tests.Clients
         [Test]
         public void Rollback_disposes_replaced_ObservableObjects()
         {
-            var d = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, "TEST", new MemoryTransactionProviderClient());
+            var d = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, "TEST", new ConcreteMemoryTransactionProviderClient());
             // Initial successful Modify
             TestObservableRootObject initialObservableObject = null;
             TestObservableRootObject restoredObservableObject = null;

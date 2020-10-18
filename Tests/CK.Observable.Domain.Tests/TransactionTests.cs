@@ -14,7 +14,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void transaction_works_for_the_very_first_one()
         {
-            using( var d = new ObservableDomain( TestHelper.Monitor, "TEST", client: new MemoryTransactionProviderClient() ) )
+            using( var d = new ObservableDomain( TestHelper.Monitor, "TEST", client: new Clients.ConcreteMemoryTransactionProviderClient() ) )
             {
                 d.TransactionSerialNumber.Should().Be( 0 );
                 var result = d.Modify( TestHelper.Monitor, () =>
@@ -34,7 +34,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void transaction_manager_with_rollbacks()
         {
-            using( var d = SampleDomain.CreateSample( new MemoryTransactionProviderClient() ) )
+            using( var d = SampleDomain.CreateSample( new Clients.ConcreteMemoryTransactionProviderClient() ) )
             {
                 d.TransactionSerialNumber.Should().Be( 1 );
                 TransactionResult result = SampleDomain.TransactedSetPaulMincLastName( d, "No-More-Minc" );

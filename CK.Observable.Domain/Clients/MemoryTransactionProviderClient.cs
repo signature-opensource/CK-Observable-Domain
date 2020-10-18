@@ -2,6 +2,7 @@ using CK.Core;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.Compression;
 using System.Threading.Tasks;
@@ -14,8 +15,14 @@ namespace CK.Observable
     /// It is open to extensions and can be used as a base class: the <see cref="FileTransactionProviderClient"/> extends this.
     /// The protected <see cref="LoadOrCreateAndInitializeSnapshot"/> and <see cref="WriteSnapshot"/> methods offers access to
     /// the internal memory.
+    /// <para>
+    /// This class is abstract to be able to deserialize typed domains (thanks to <see cref="DeserializeDomain"/> abstract method).
+    /// This is used only when <see cref="LoadOrCreateAndInitializeSnapshot(IActivityMonitor, ref ObservableDomain, Stream)"/> is
+    /// called that happens outside of the <see cref="IObservableDomainClient"/> responsibilities and has been designed mostly to 
+    /// support domain management by Observable leagues (or other domain managers).
+    /// </para>
     /// </summary>
-    public class MemoryTransactionProviderClient : IObservableDomainClient
+    public abstract class MemoryTransactionProviderClient : IObservableDomainClient
     {
         readonly MemoryStream _memory;
         int _snapshotSerialNumber;
@@ -131,7 +138,7 @@ namespace CK.Observable
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="d">The domain to reload or the new instantiated domain.</param>
         /// <param name="s">The readable stream (will be copied into the memory).</param>
-        protected void LoadOrCreateAndInitializeSnapshot( IActivityMonitor monitor, ref ObservableDomain d, Stream s )
+        protected void LoadOrCreateAndInitializeSnapshot( IActivityMonitor monitor, [AllowNull]ref ObservableDomain d, Stream s )
         {
             _memory.Position = 0;
             s.CopyTo( _memory );
@@ -211,16 +218,39 @@ namespace CK.Observable
         /// constructor when <paramref name="domain"/> is null.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
-        /// <param name="domain">The domain to reload or deserializes.</param>
+        /// <param name="domain">The domain to reload or deserialize.</param>
         /// <param name="restoring">
         /// True when called from <see cref="RestoreSnapshot"/>, false when called by <see cref="LoadOrCreateAndInitializeSnapshot"/>.
         /// </param>
-        protected virtual void DoLoadOrCreateFromSnapshot( IActivityMonitor monitor, ref ObservableDomain domain, bool restoring )
+        protected virtual void DoLoadOrCreateFromSnapshot( IActivityMonitor monitor, ref ObservableDomain? domain, bool restoring )
         {
+            static void ReloadOrThrow( IActivityMonitor monitor,
+                                       ObservableDomain domain,
+                                       Stream stream,
+                                       Func<ObservableDomain,bool>? loadHook )
+            {
+                if( !domain.Load( monitor, stream, leaveOpen: true, loadHook: loadHook ) )
+                {
+                    throw new CKException( $"Error while loading serialized domain. Please see logs." );
+                }
+            }
+
+            void Ensure( IActivityMonitor monitor, ref ObservableDomain? domain, Stream stream, Func<ObservableDomain, bool> loadHook )
+            {
+                if( domain != null )
+                {
+                    ReloadOrThrow( monitor, domain, stream, loadHook );
+                }
+                else
+                {
+                    domain = DeserializeDomain( monitor, stream, loadHook );
+                }
+            }
+
             var loadAction = GetLoadHook( monitor, restoring );
             // Hook that wraps the GetLoadHook() value (if not null) and returns true (to activate the timed events)
-            // when LoadAndInitializeSnapshot is calling, or false when RestoreSnapshot is at stake.
-            Func<ObservableDomain, bool> loadHook = domain => { loadAction?.Invoke( domain ); return !restoring; };
+            // when LoadOrCreateAndInitializeSnapshot is calling, or false when RestoreSnapshot is at stake.
+            Func<ObservableDomain, bool> loadHook = d => { loadAction?.Invoke( d ); return !restoring; };
 
             long p = _memory.Position;
             _memory.Position = SnapshotHeaderLength;
@@ -228,16 +258,17 @@ namespace CK.Observable
             {
                 using( var gz = new GZipStream( _memory, CompressionMode.Decompress, leaveOpen: true ) )
                 {
-                    domain.Load( monitor, gz, leaveOpen: true, loadHook: loadHook );
+                    Ensure( monitor, ref domain, gz, loadHook );
                 }
             }
             else
             {
                 Debug.Assert( CompressionKind == CompressionKind.None );
-                domain.Load( monitor, _memory, leaveOpen: true, loadHook: loadHook );
+                Ensure( monitor, ref domain, _memory, loadHook );
             }
             if( _memory.Position != p ) throw new Exception( $"Internal error: stream position should be {p} but was {_memory.Position} after reload." );
         }
+
 
         /// <summary>
         /// Extension point called when loading the domain.
@@ -250,6 +281,16 @@ namespace CK.Observable
         /// </param>
         /// <returns>Defaults to null.</returns>
         protected virtual Action<ObservableDomain>? GetLoadHook( IActivityMonitor monitor, bool restoring ) => null;
+
+        /// <summary>
+        /// Extension point that can only be called from <see cref="LoadOrCreateAndInitializeSnapshot(IActivityMonitor, ref ObservableDomain, Stream)"/>
+        /// with a null domain: instead of reloading the existing domain, this methos must call the deserialization constructor.
+        /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
+        /// <param name="stream">The stream fromw wich the domain must be deserialized.</param>
+        /// <param name="loadHook">The load hook to use.</param>
+        /// <returns>The new domain.</returns>
+        protected abstract ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, Func<ObservableDomain, bool> loadHook );
 
         /// <summary>
         /// Creates a snapshot, respecting the <see cref="CompressionKind"/>.
