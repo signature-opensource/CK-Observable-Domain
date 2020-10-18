@@ -3,6 +3,7 @@ using CK.Text;
 using FluentAssertions;
 using NUnit.Framework;
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
@@ -54,6 +55,71 @@ namespace CK.Observable.League.Tests
             }
             await league2.CloseAsync( TestHelper.Monitor );
         }
+
+        [SerializationVersion( 0 )]
+        public class InstantiationTracker : ObservableRootObject
+        {
+            public InstantiationTracker()
+            {
+                ++ContructorCount;
+            }
+
+            InstantiationTracker( IBinaryDeserializerContext d )
+                : base( d )
+            {
+                var r = d.StartReading().Reader;
+                ++DeserializationCount;
+            }
+
+            void Write( BinarySerializer w )
+            {
+                ++WriteCount;
+            }
+
+            static public int WriteCount { get; set; }
+
+            static public int ContructorCount { get; set; }
+
+            static public int DeserializationCount { get; set; }
+        }
+
+        [Test]
+        public async Task league_reload_domains_by_deserializing()
+        {
+            var store = BasicLeagueTests.CreateStore( nameof( league_reload_domains_by_deserializing ) );
+            var league = await ObservableLeague.LoadAsync( TestHelper.Monitor, store );
+
+            InstantiationTracker.ContructorCount = InstantiationTracker.DeserializationCount = InstantiationTracker.WriteCount = 0;
+
+            await league.Coordinator.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) =>
+            {
+                var a = d.Root.CreateDomain( "Witness", typeof( InstantiationTracker ).AssemblyQualifiedName );
+                a.Options = a.Options.SetLifeCycleOption( DomainLifeCycleOption.Never );
+            } );
+
+            var loader = league["Witness"];
+            Debug.Assert( loader != null );
+
+            loader.IsLoaded.Should().BeFalse();
+            InstantiationTracker.ContructorCount.Should().Be( 0, "The ObservableDomain has NOT been created yet (DomainLifeCycleOption.Never)." );
+            InstantiationTracker.DeserializationCount.Should().Be( 0 );
+            InstantiationTracker.WriteCount.Should().Be( 0 );
+
+            // Loads/Unload it: this triggers its creation.
+            await (await loader.LoadAsync<InstantiationTracker>( TestHelper.Monitor )).DisposeAsync( TestHelper.Monitor );
+
+            InstantiationTracker.ContructorCount.Should().Be( 1 );
+            InstantiationTracker.DeserializationCount.Should().Be( 0 );
+            InstantiationTracker.WriteCount.Should().Be( 1 );
+
+            // Loads/Unload it again.
+            await (await loader.LoadAsync<InstantiationTracker>( TestHelper.Monitor )).DisposeAsync( TestHelper.Monitor );
+
+            InstantiationTracker.ContructorCount.Should().Be( 1, "This will never change from now on: the domain is always deserialized." );
+            InstantiationTracker.DeserializationCount.Should().Be( 1 );
+            InstantiationTracker.WriteCount.Should().Be( 2 );
+        }
+
 
         [SerializationVersion(0)]
         public class WriteCounter : ObservableRootObject
