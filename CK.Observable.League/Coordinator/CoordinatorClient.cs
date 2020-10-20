@@ -110,6 +110,13 @@ namespace CK.Observable.League
             return Domain.ModifyThrowAsync( monitor, () => actions.Invoke( monitor, Domain ), millisecondsTimeout );
         }
 
+        async Task<TResult> IObservableDomainAccess<Coordinator>.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<Coordinator>, TResult> actions, int millisecondsTimeout )
+        {
+            TResult r = default;
+            await Domain.ModifyThrowAsync( monitor, () => r = actions.Invoke( monitor, Domain ), millisecondsTimeout );
+            return r;
+        }
+
         Task<(TransactionResult, Exception)> IObservableDomainAccess<Coordinator>.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<Coordinator>> actions, int millisecondsTimeout )
         {
             return Domain.ModifyNoThrowAsync( monitor, () => actions.Invoke( monitor, Domain ), millisecondsTimeout );

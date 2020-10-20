@@ -64,6 +64,18 @@ namespace CK.Observable.League
         Task ModifyThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> actions, int millisecondsTimeout = -1 );
 
         /// <summary>
+        /// Same as <see cref="ModifyThrowAsync"/> with a returned value. Using this (when errors must be thrown) is easier and avoids a closure.
+        /// </summary>
+        /// <typeparam name="TResult">The type of the result.</typeparam>
+        /// <param name="monitor">The monitor to use.</param>
+        /// <param name="actions">The actions to execute on the <see cref="IObservableDomain"/> that return a value.</param>
+        /// <param name="millisecondsTimeout">
+        /// The maximum number of milliseconds to wait for a read access before giving up. Wait indefinitely by default.
+        /// </param>
+        /// <returns>The result.</returns>
+        Task<TResult> ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain, TResult> actions, int millisecondsTimeout = -1 );
+
+        /// <summary>
         /// Same as <see cref="ModifyAsync"/> except that it will never throw: any exception raised
         /// by <see cref="IObservableDomainClient.OnTransactionStart(IActivityMonitor, ObservableDomain, DateTime)"/>
         /// or <see cref="TransactionResult.ExecutePostActionsAsync(IActivityMonitor, bool)"/> is logged and returned.

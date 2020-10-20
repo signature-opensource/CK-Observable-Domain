@@ -70,6 +70,11 @@ namespace CK.Observable.League
                     return Shell.ModifyThrowAsync( monitor, actions, millisecondsTimeout );
                 }
 
+                Task<TResult> IObservableDomainShell.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain, TResult> actions, int millisecondsTimeout )
+                {
+                    return Shell.ModifyThrowAsync( monitor, actions, millisecondsTimeout );
+                }
+
                 Task<(TransactionResult, Exception)> IObservableDomainShell.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> actions, int millisecondsTimeout )
                 {
                     return Shell.ModifyNoThrowAsync( monitor, actions, millisecondsTimeout );
@@ -84,7 +89,6 @@ namespace CK.Observable.League
                 {
                     return Shell.Read( monitor, reader, millisecondsTimeout );
                 }
-
             }
 
             private protected Shell(
@@ -438,6 +442,14 @@ namespace CK.Observable.League
                 return d.ModifyThrowAsync( monitor, () => actions.Invoke( monitor, d ), millisecondsTimeout );
             }
 
+            async Task<TResult> IObservableDomainShell.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain, TResult> actions, int millisecondsTimeout )
+            {
+                var d = LoadedDomain;
+                TResult r = default;
+                await d.ModifyThrowAsync( monitor, () => r = actions.Invoke( monitor, d ), millisecondsTimeout );
+                return r;
+            }
+
             Task<(TransactionResult, Exception)> IObservableDomainShell.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> actions, int millisecondsTimeout )
             {
                 var d = LoadedDomain;
@@ -505,6 +517,11 @@ namespace CK.Observable.League
                     return Shell.ModifyThrowAsync( monitor, actions, millisecondsTimeout );
                 }
 
+                Task<TResult> IObservableDomainAccess<T>.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<T>, TResult> actions, int millisecondsTimeout )
+                {
+                    return Shell.ModifyThrowAsync( monitor, actions, millisecondsTimeout );
+                }
+
                 void IObservableDomainAccess<T>.Read( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T>> reader, int millisecondsTimeout )
                 {
                     Shell.Read( monitor, reader, millisecondsTimeout );
@@ -535,6 +552,14 @@ namespace CK.Observable.League
             {
                 var d = LoadedDomain;
                 return d.ModifyThrowAsync( monitor, () => actions.Invoke( monitor, d ), millisecondsTimeout );
+            }
+
+            async Task<TResult> IObservableDomainAccess<T>.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<T>, TResult> actions, int millisecondsTimeout )
+            {
+                var d = LoadedDomain;
+                TResult r = default;
+                await d.ModifyThrowAsync( monitor, () => r = actions.Invoke( monitor, d ), millisecondsTimeout );
+                return r;
             }
 
             Task<(TransactionResult, Exception)> IObservableDomainAccess<T>.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T>> actions, int millisecondsTimeout )
@@ -605,6 +630,11 @@ namespace CK.Observable.League
                     return Shell.ModifyThrowAsync( monitor, actions, millisecondsTimeout );
                 }
 
+                Task<TResult> IObservableDomainShell<T1,T2>.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<T1,T2>, TResult> actions, int millisecondsTimeout )
+                {
+                    return Shell.ModifyThrowAsync( monitor, actions, millisecondsTimeout );
+                }
+
                 Task<(TransactionResult, Exception)> IObservableDomainShell<T1, T2>.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2>> actions, int millisecondsTimeout )
                 {
                     return Shell.ModifyNoThrowAsync( monitor, actions, millisecondsTimeout );
@@ -625,7 +655,6 @@ namespace CK.Observable.League
 
             private protected override IObservableDomainShell CreateIndependentShell( IActivityMonitor monitor ) => new IndependentShellTT( this, monitor );
 
-
             new ObservableDomain<T1, T2> LoadedDomain => (ObservableDomain<T1, T2>)base.LoadedDomain;
 
             Task<TransactionResult> IObservableDomainShell<T1, T2>.ModifyAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2>> actions, int millisecondsTimeout )
@@ -633,10 +662,19 @@ namespace CK.Observable.League
                 var d = LoadedDomain;
                 return d.ModifyAsync( monitor, () => actions.Invoke( monitor, d ), millisecondsTimeout );
             }
+
             Task IObservableDomainShell<T1, T2>.ModifyThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2>> actions, int millisecondsTimeout )
             {
                 var d = LoadedDomain;
                 return d.ModifyThrowAsync( monitor, () => actions.Invoke( monitor, d ), millisecondsTimeout );
+            }
+
+            async Task<TResult> IObservableDomainShell<T1, T2>.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<T1, T2>, TResult> actions, int millisecondsTimeout )
+            {
+                var d = LoadedDomain;
+                TResult r = default;
+                await d.ModifyThrowAsync( monitor, () => r = actions.Invoke( monitor, d ), millisecondsTimeout );
+                return r;
             }
 
             Task<(TransactionResult, Exception)> IObservableDomainShell<T1, T2>.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2>> actions, int millisecondsTimeout )
@@ -707,6 +745,11 @@ namespace CK.Observable.League
                     return Shell.ModifyThrowAsync( monitor, actions, millisecondsTimeout );
                 }
 
+                Task<TResult> IObservableDomainShell<T1, T2, T3>.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<T1, T2, T3>, TResult> actions, int millisecondsTimeout )
+                {
+                    return Shell.ModifyThrowAsync( monitor, actions, millisecondsTimeout );
+                }
+
                 Task<(TransactionResult, Exception)> IObservableDomainShell<T1, T2, T3>.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3>> actions, int millisecondsTimeout )
                 {
                     return Shell.ModifyNoThrowAsync( monitor, actions, millisecondsTimeout );
@@ -739,6 +782,14 @@ namespace CK.Observable.League
             {
                 var d = LoadedDomain;
                 return d.ModifyThrowAsync( monitor, () => actions.Invoke( monitor, d ), millisecondsTimeout );
+            }
+
+            async Task<TResult> IObservableDomainShell<T1, T2, T3>.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<T1, T2, T3>, TResult> actions, int millisecondsTimeout )
+            {
+                var d = LoadedDomain;
+                TResult r = default;
+                await d.ModifyThrowAsync( monitor, () => r = actions.Invoke( monitor, d ), millisecondsTimeout );
+                return r;
             }
 
             Task<(TransactionResult, Exception)> IObservableDomainShell<T1, T2, T3>.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3>> actions, int millisecondsTimeout )
@@ -811,6 +862,11 @@ namespace CK.Observable.League
                     return Shell.ModifyThrowAsync( monitor, actions, millisecondsTimeout );
                 }
 
+                Task<TResult> IObservableDomainShell<T1, T2, T3, T4>.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<T1, T2, T3, T4>, TResult> actions, int millisecondsTimeout )
+                {
+                    return Shell.ModifyThrowAsync( monitor, actions, millisecondsTimeout );
+                }
+
                 Task<(TransactionResult, Exception)> IObservableDomainShell<T1, T2, T3, T4>.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3, T4>> actions, int millisecondsTimeout )
                 {
                     return Shell.ModifyNoThrowAsync( monitor, actions, millisecondsTimeout );
@@ -843,6 +899,14 @@ namespace CK.Observable.League
             {
                 var d = LoadedDomain;
                 return d.ModifyThrowAsync( monitor, () => actions.Invoke( monitor, d ), millisecondsTimeout );
+            }
+
+            async Task<TResult> IObservableDomainShell<T1, T2, T3, T4>.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<T1, T2, T3, T4>, TResult> actions, int millisecondsTimeout )
+            {
+                var d = LoadedDomain;
+                TResult r = default;
+                await d.ModifyThrowAsync( monitor, () => r = actions.Invoke( monitor, d ), millisecondsTimeout );
+                return r;
             }
 
             Task<(TransactionResult, Exception)> IObservableDomainShell<T1, T2, T3, T4>.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3, T4>> actions, int millisecondsTimeout )
