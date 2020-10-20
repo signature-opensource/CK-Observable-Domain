@@ -260,12 +260,12 @@ namespace CK.Observable.League
 
             async ValueTask<bool> DoShellDisposeAsync( IActivityMonitor monitor )
             {
-                if( !IsLoadable ) throw new ObjectDisposedException( nameof( IObservableDomainShell ) );
+                if( !IsLoadable ) return false;
                 await _loadLock!.WaitAsync();
                 if( --_refCount < 0 )
                 {
                     _loadLock.Release();
-                    throw new ObjectDisposedException( nameof( IObservableDomainShell ) );
+                    return false;
                 }
                 bool disposedDomain = false;
                 if( _refCount == 0 )
@@ -277,19 +277,12 @@ namespace CK.Observable.League
                             await (IsDestroyed ? Client.ArchiveAsync( monitor ) : Client.SaveAsync( monitor ));
                             if( !IsDestroyed && !ClosingLeague )
                             {
-                                try
+                                await _coordinator.ModifyThrowAsync( monitor, ( m, d ) =>
                                 {
-                                    await _coordinator.ModifyThrowAsync( monitor, ( m, d ) =>
-                                    {
-                                        var domain = d.Root.Domains[DomainName];
-                                        domain.IsLoaded = false;
-                                        domain.HasActiveTimedEvents = _hasActiveTimedEvents;
-                                    } );
-                                }
-                                catch( ObservableDomainDisposedException ex ) when( ex.DomainName == String.Empty )
-                                {
-                                    monitor.Debug( "Race condition on Coordinator disposal vs. unload." );
-                                }
+                                    var domain = d.Root.Domains[DomainName];
+                                    domain.IsLoaded = false;
+                                    domain.HasActiveTimedEvents = _hasActiveTimedEvents;
+                                } );
                             }
                             disposedDomain = true;
                             Client.JsonEventCollector.Detach();
