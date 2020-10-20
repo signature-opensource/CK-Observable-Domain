@@ -13,6 +13,7 @@ namespace CK.Observable
     public class TransactionResult
     {
         internal ActionRegistrar<PostActionContext> _postActions;
+        IPostActionContextMarshaller? _postActionMarshaller;
 
         /// <summary>
         /// The empty transaction result is used when absolutely nothing happened. It has no events and no commands,
@@ -130,19 +131,29 @@ namespace CK.Observable
         /// </summary>
         /// <param name="m">The monitor to use.</param>
         /// <param name="throwException">Set it to false to log any exception and return it instead of rethrowing it.</param>
-        /// <returns>The exception (if <paramref name="throwException"/> is false).</returns>
-        public Task<Exception> ExecutePostActionsAsync( IActivityMonitor m, bool throwException = true )
+        /// <returns>The exception (if <paramref name="throwException"/> is false) or null if no error occurred.</returns>
+        public async Task<Exception?> ExecutePostActionsAsync( IActivityMonitor m, bool throwException = true )
         {
             var actions = System.Threading.Interlocked.Exchange( ref _postActions, null );
             if( actions != null )
             {
                 var ctx = new PostActionContext( m, actions, this );
-                return ctx.ExecuteAsync( throwException );
+                if( _postActionMarshaller == null || !_postActionMarshaller.MarshallExecution( m, ctx, throwException ) )
+                {
+                    try
+                    {
+                        await ctx.ExecuteAsync( throwException );
+                    }
+                    finally
+                    {
+                        await ctx.DisposeAsync();
+                    }
+                }
             }
-            return Task.FromResult<Exception>( null );
+            return null;
         }
 
-        internal TransactionResult( SuccessfulTransactionEventArgs c )
+        internal TransactionResult( SuccessfulTransactionEventArgs c, IPostActionContextMarshaller? postActionMarshaller )
         {
             StartTimeUtc = c.StartTimeUtc;
             CommitTimeUtc = c.CommitTimeUtc;
@@ -150,6 +161,7 @@ namespace CK.Observable
             Commands = c._commands;
             Errors = Array.Empty<CKExceptionData>();
             _postActions = c._postActions;
+            _postActionMarshaller = postActionMarshaller;
             SuccessfulTransactionErrors = Array.Empty<CKExceptionData>();
             CommandHandlingErrors = Array.Empty<(object, CKExceptionData)>();
         }

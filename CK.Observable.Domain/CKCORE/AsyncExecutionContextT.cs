@@ -24,6 +24,7 @@ namespace CK.Core
 
         /// <summary>
         /// Initializes an asynchronous execution context.
+        /// By default all disposable <see cref="Memory"/>'s values are disposed with <see cref="IAsyncDisposable.DisposeAsync"/> or <see cref="IDisposable.Dispose"/>.
         /// </summary>
         /// <param name="monitor">The monitor that must be used.</param>
         /// <param name="registrar">Optional existing registrar.</param>
@@ -75,7 +76,7 @@ namespace CK.Core
         /// <summary>
         /// Executes the currently enlisted actions, optionaly in reverse order.
         /// On the first exception thrown by any action, all the error handlers are called (their own exceptions,
-        /// if any, are ignored).
+        /// if any, are logged but ignored).
         /// </summary>
         /// <param name="throwException">False to return any exception instead of logging and rethrowing it.</param>
         /// <param name="reverseInitialActions">

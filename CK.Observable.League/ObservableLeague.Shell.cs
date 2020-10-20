@@ -27,7 +27,6 @@ namespace CK.Observable.League
             readonly SemaphoreSlim? _loadLock;
             readonly IActivityMonitor _initialMonitor;
             readonly IObservableDomainAccess<Coordinator> _coordinator;
-            readonly IServiceProvider _serviceProvider;
             Type? _domainType;
             Type[] _rootTypes;
             int _refCount;
@@ -97,6 +96,7 @@ namespace CK.Observable.League
                    string domainName,
                    IStreamStore store,
                    Action<IActivityMonitor, ObservableDomain>? initializer,
+                   IPostActionContextMarshaller? postActionsMarshaller,
                    IServiceProvider serviceProvider,
                    IReadOnlyList<string> rootTypeNames,
                    Type[] rootTypes,
@@ -110,7 +110,8 @@ namespace CK.Observable.League
                 _rootTypes = rootTypes;
                 RootTypes = rootTypeNames;
                 _initialMonitor = monitor;
-                _serviceProvider = serviceProvider;
+                ServiceProvider = serviceProvider;
+                PostActionsMarshaller = postActionsMarshaller;
                 Client = new DomainClient( domainName, store, initializer, this );
             }
 
@@ -122,6 +123,7 @@ namespace CK.Observable.League
             /// <param name="domainName">The name of the domain.</param>
             /// <param name="store">The persistent store.</param>
             /// <param name="initializer">The domain initializer.</param>
+            /// <param name="postActionsMarshaller">Optional <see cref="IPostActionContextMarshaller"/>.</param>
             /// <param name="serviceProvider">The service provider used to instantiate <see cref="ObservableDomainSidekick"/> objects.</param>
             /// <param name="rootTypeNames">The root types.</param>
             internal static Shell Create(
@@ -130,6 +132,7 @@ namespace CK.Observable.League
                 string domainName,
                 IStreamStore store,
                 Action<IActivityMonitor, ObservableDomain>? initializer,
+                IPostActionContextMarshaller? postActionsMarshaller,
                 IServiceProvider serviceProvider,
                 IReadOnlyList<string> rootTypeNames )
             {
@@ -161,11 +164,11 @@ namespace CK.Observable.League
                             3 => typeof( Shell<,,> ).MakeGenericType( rootTypes ),
                             _ => typeof( Shell<,,,> ).MakeGenericType( rootTypes )
                         };
-                        return (Shell)Activator.CreateInstance( shellType, monitor, coordinator, domainName, store, initializer, serviceProvider, rootTypeNames, rootTypes );
+                        return (Shell)Activator.CreateInstance( shellType, monitor, coordinator, domainName, store, initializer, postActionsMarshaller, serviceProvider, rootTypeNames, rootTypes );
                     }
                 }
                 // The domainType is null if the type resolution failed.
-                return new Shell( monitor, coordinator, domainName, store, initializer, serviceProvider, rootTypeNames, rootTypes, domainType );
+                return new Shell( monitor, coordinator, domainName, store, initializer, postActionsMarshaller, serviceProvider, rootTypeNames, rootTypes, domainType );
             }
 
             public string DomainName => Client.DomainName;
@@ -251,7 +254,9 @@ namespace CK.Observable.League
 
             protected ObservableDomain LoadedDomain => _domain!;
 
-            protected IServiceProvider ServiceProvider => _serviceProvider;
+            protected IServiceProvider ServiceProvider { get; }
+
+            protected IPostActionContextMarshaller? PostActionsMarshaller { get; }
 
             Task<bool> IObservableDomainShellBase.SaveAsync( IActivityMonitor m )
             {
@@ -350,12 +355,12 @@ namespace CK.Observable.League
 
             private protected virtual ObservableDomain CreateDomain( IActivityMonitor monitor )
             {
-                return new ObservableDomain( monitor, DomainName, Client, ServiceProvider );
+                return new ObservableDomain( monitor, DomainName, Client, ServiceProvider, PostActionsMarshaller );
             }
 
             internal protected virtual ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, Func<ObservableDomain, bool> loadHook )
             {
-                return new ObservableDomain( monitor, DomainName, Client, stream, leaveOpen:false, encoding: null, ServiceProvider, loadHook );
+                return new ObservableDomain( monitor, DomainName, Client, stream, leaveOpen:false, encoding: null, ServiceProvider, loadHook, PostActionsMarshaller );
             }
 
             private protected virtual IObservableDomainShell CreateIndependentShell( IActivityMonitor monitor ) => new IndependentShell( this, monitor );
@@ -483,19 +488,23 @@ namespace CK.Observable.League
                           IObservableDomainAccess<Coordinator> coordinator,
                           string domainName,
                           IStreamStore store,
-                          Action<IActivityMonitor, ObservableDomain>? loadHook,
+                          Action<IActivityMonitor, ObservableDomain>? initializer,
+                          IPostActionContextMarshaller? postActionsMarshaller,
                           IServiceProvider serviceProvider,
                           IReadOnlyList<string> rootTypeNames,
                           Type[] rootTypes )
-                : base( monitor, coordinator, domainName, store, loadHook, serviceProvider, rootTypeNames, rootTypes, typeof(ObservableDomain<T>) )
+                : base( monitor, coordinator, domainName, store, initializer, postActionsMarshaller, serviceProvider, rootTypeNames, rootTypes, typeof(ObservableDomain<T>) )
             {
             }
 
-            private protected override ObservableDomain CreateDomain( IActivityMonitor monitor ) => new ObservableDomain<T>( monitor, DomainName, Client, ServiceProvider );
+            private protected override ObservableDomain CreateDomain( IActivityMonitor monitor )
+            {
+                return new ObservableDomain<T>( monitor, DomainName, Client, ServiceProvider, PostActionsMarshaller );
+            }
 
             internal protected override ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, Func<ObservableDomain, bool> loadHook )
             {
-                return new ObservableDomain<T>( monitor, DomainName, Client, stream, leaveOpen: true, encoding: null, ServiceProvider, loadHook );
+                return new ObservableDomain<T>( monitor, DomainName, Client, stream, leaveOpen: true, encoding: null, ServiceProvider, loadHook, PostActionsMarshaller );
             }
 
             class IndependentShellT : IndependentShell, IObservableDomainShell<T>
@@ -596,19 +605,23 @@ namespace CK.Observable.League
                           IObservableDomainAccess<Coordinator> coordinator,
                           string domainName,
                           IStreamStore store,
-                          Action<IActivityMonitor, ObservableDomain>? loadHook,
+                          Action<IActivityMonitor, ObservableDomain>? initializer,
+                          IPostActionContextMarshaller? postActionsMarshaller,
                           IServiceProvider serviceProvider,
                           IReadOnlyList<string> rootTypeNames,
                           Type[] rootTypes )
-                : base( monitor, coordinator, domainName, store, loadHook, serviceProvider, rootTypeNames, rootTypes, typeof( ObservableDomain<T1,T2> ) )
+                : base( monitor, coordinator, domainName, store, initializer, postActionsMarshaller, serviceProvider, rootTypeNames, rootTypes, typeof( ObservableDomain<T1,T2> ) )
             {
             }
 
-            private protected override ObservableDomain CreateDomain( IActivityMonitor monitor ) => new ObservableDomain<T1,T2>( monitor, DomainName, Client, ServiceProvider );
+            private protected override ObservableDomain CreateDomain( IActivityMonitor monitor )
+            {
+                return new ObservableDomain<T1, T2>( monitor, DomainName, Client, ServiceProvider, PostActionsMarshaller );
+            }
 
             internal protected override ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, Func<ObservableDomain, bool> loadHook )
             {
-                return new ObservableDomain<T1,T2>( monitor, DomainName, Client, stream, leaveOpen: true, encoding: null, ServiceProvider, loadHook );
+                return new ObservableDomain<T1,T2>( monitor, DomainName, Client, stream, leaveOpen: true, encoding: null, ServiceProvider, loadHook, PostActionsMarshaller );
             }
 
             class IndependentShellTT : IndependentShell, IObservableDomainShell<T1, T2>
@@ -712,19 +725,23 @@ namespace CK.Observable.League
                           IObservableDomainAccess<Coordinator> coordinator,
                           string domainName,
                           IStreamStore store,
-                          Action<IActivityMonitor, ObservableDomain>? loadHook,
+                          Action<IActivityMonitor, ObservableDomain>? initializer,
+                          IPostActionContextMarshaller? postActionsMarshaller,
                           IServiceProvider serviceProvider,
                           IReadOnlyList<string> rootTypeNames,
                           Type[] rootTypes )
-                : base( monitor, coordinator, domainName, store, loadHook, serviceProvider, rootTypeNames, rootTypes, typeof( ObservableDomain<T1, T2, T3> ) )
+                : base( monitor, coordinator, domainName, store, initializer, postActionsMarshaller, serviceProvider, rootTypeNames, rootTypes, typeof( ObservableDomain<T1, T2, T3> ) )
             {
             }
 
-            private protected override ObservableDomain CreateDomain( IActivityMonitor monitor ) => new ObservableDomain<T1, T2, T3>( monitor, DomainName, Client, ServiceProvider );
+            private protected override ObservableDomain CreateDomain( IActivityMonitor monitor )
+            {
+                return new ObservableDomain<T1, T2, T3>( monitor, DomainName, Client, ServiceProvider, PostActionsMarshaller );
+            }
 
             internal protected override ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, Func<ObservableDomain, bool> loadHook )
             {
-                return new ObservableDomain<T1, T2, T3>( monitor, DomainName, Client, stream, leaveOpen: true, encoding: null, ServiceProvider, loadHook );
+                return new ObservableDomain<T1, T2, T3>( monitor, DomainName, Client, stream, leaveOpen: true, encoding: null, ServiceProvider, loadHook, PostActionsMarshaller );
             }
 
             class IndependentShellTTT : IndependentShell, IObservableDomainShell<T1, T2, T3>
@@ -828,19 +845,23 @@ namespace CK.Observable.League
                           IObservableDomainAccess<Coordinator> coordinator,
                           string domainName,
                           IStreamStore store,
-                          Action<IActivityMonitor, ObservableDomain>? loadHook,
+                          Action<IActivityMonitor, ObservableDomain>? initializer,
+                          IPostActionContextMarshaller? postActionsMarshaller,
                           IServiceProvider serviceProvider,
                           IReadOnlyList<string> rootTypeNames,
                           Type[] rootTypes )
-                : base( monitor, coordinator, domainName, store, loadHook, serviceProvider, rootTypeNames, rootTypes, typeof( ObservableDomain<T1, T2, T3, T4> ) )
+                : base( monitor, coordinator, domainName, store, initializer, postActionsMarshaller, serviceProvider, rootTypeNames, rootTypes, typeof( ObservableDomain<T1, T2, T3, T4> ) )
             {
             }
 
-            private protected override ObservableDomain CreateDomain( IActivityMonitor monitor ) => new ObservableDomain<T1, T2, T3, T4>( monitor, DomainName, Client, ServiceProvider );
+            private protected override ObservableDomain CreateDomain( IActivityMonitor monitor )
+            {
+                return new ObservableDomain<T1, T2, T3, T4>( monitor, DomainName, Client, ServiceProvider, PostActionsMarshaller );
+            }
 
             internal protected override ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, Func<ObservableDomain, bool> loadHook )
             {
-                return new ObservableDomain<T1, T2, T3, T4>( monitor, DomainName, Client, stream, leaveOpen: true, encoding: null, ServiceProvider, loadHook );
+                return new ObservableDomain<T1, T2, T3, T4>( monitor, DomainName, Client, stream, leaveOpen: true, encoding: null, ServiceProvider, loadHook, PostActionsMarshaller );
             }
 
             class IndependentShellTTTT : IndependentShell, IObservableDomainShell<T1, T2, T3, T4>

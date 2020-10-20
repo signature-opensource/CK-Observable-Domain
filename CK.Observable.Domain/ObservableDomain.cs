@@ -17,6 +17,7 @@ using System.Threading.Tasks;
 
 namespace CK.Observable
 {
+
     /// <summary>
     /// Base class for any observable domain without strongly typed root. This class should not be specialized:
     /// you must use specialized <see cref="ObservableChannel{T}"/> or <see cref="ObservableDomain{T1, T2, T3, T4}"/>
@@ -60,6 +61,7 @@ namespace CK.Observable
         internal readonly IExporterResolver _exporters;
         readonly ISerializerResolver _serializers;
         readonly IDeserializerResolver _deserializers;
+        readonly IPostActionContextMarshaller? _postActionMarshaller;
         readonly TimeManager _timeManager;
         readonly SidekickManager _sidekickManager;
 
@@ -467,7 +469,7 @@ namespace CK.Observable
                     _domain._transactionCommitTimeUtc = ctx.CommitTimeUtc;
                     try
                     {
-                        _result = new TransactionResult( ctx );
+                        _result = new TransactionResult( ctx, _domain._postActionMarshaller );
                         _domain.DomainClient?.OnTransactionCommit( ctx );
                     }
                     catch( Exception ex )
@@ -530,8 +532,13 @@ namespace CK.Observable
         /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
         /// <param name="client">The observable client (head of the Chain of Responsibility) to use. Can be null.</param>
         /// <param name="serviceProvider">The service providers that will be used to resolve the <see cref="ObservableDomainSidekick"/> objects.</param>
-        public ObservableDomain( IActivityMonitor monitor, string domainName, IObservableDomainClient? client, IServiceProvider? serviceProvider = null )
-            : this( monitor, domainName, client, true, serviceProvider, exporters: null, serializers: null, deserializers: null )
+        /// <param name="postActionsMarshaller">Optional marshaller for post actions execution.</param>
+        public ObservableDomain( IActivityMonitor monitor,
+                                 string domainName,
+                                 IObservableDomainClient? client,
+                                 IServiceProvider? serviceProvider = null,
+                                 IPostActionContextMarshaller? postActionsMarshaller = null )
+            : this( monitor, domainName, client, true, serviceProvider, postActionsMarshaller: postActionsMarshaller, exporters: null, serializers: null, deserializers: null )
         {
         }
 
@@ -546,6 +553,7 @@ namespace CK.Observable
         /// <param name="encoding">Optional encoding for characters. Defaults to UTF-8.</param>
         /// <param name="serviceProvider">The service providers that will be used to resolve the <see cref="ObservableDomainSidekick"/> objects.</param>
         /// <param name="loadHook">The load hook to apply. See loadHook parameter of <see cref="Load(IActivityMonitor, Stream, bool, Encoding?, int, Func{ObservableDomain, bool}?)"/>.</param>
+        /// <param name="postActionsMarshaller">Optional marshaller for post actions execution.</param>
         /// <param name="exporters">Optional exporters handler.</param>
         /// <param name="serializers">Optional serializers handler.</param>
         /// <param name="deserializers">Optional deserializers handler.</param>
@@ -556,11 +564,12 @@ namespace CK.Observable
                                  bool leaveOpen = false,
                                  Encoding? encoding = null,
                                  IServiceProvider? serviceProvider = null,
-                                Func<ObservableDomain, bool>? loadHook = null,
+                                 Func<ObservableDomain, bool>? loadHook = null,
+                                 IPostActionContextMarshaller? postActionsMarshaller = null,
                                  IExporterResolver? exporters = null,
                                  ISerializerResolver? serializers = null,
                                  IDeserializerResolver? deserializers = null )
-            : this( monitor, domainName, client, false, serviceProvider, exporters, serializers, deserializers )
+            : this( monitor, domainName, client, false, serviceProvider, postActionsMarshaller, exporters, serializers, deserializers )
         {
             Load( monitor, s, leaveOpen, encoding, loadHook: loadHook );
             client?.OnDomainCreated( monitor, this );
@@ -571,12 +580,14 @@ namespace CK.Observable
                           IObservableDomainClient? client,
                           bool callClientOnCreate,
                           IServiceProvider? serviceProvider,
+                          IPostActionContextMarshaller? postActionsMarshaller,
                           IExporterResolver? exporters,
                           ISerializerResolver? serializers,
                           IDeserializerResolver? deserializers )
         {
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
             DomainName = domainName ?? throw new ArgumentNullException( nameof( domainName ) );
+            _postActionMarshaller = postActionsMarshaller;
             _exporters = exporters ?? ExporterRegistry.Default;
             _serializers = serializers ?? SerializerRegistry.Default;
             _deserializers = deserializers ?? DeserializerRegistry.Default;
