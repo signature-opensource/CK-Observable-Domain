@@ -49,8 +49,8 @@ namespace CK.Observable
         /// </summary>
         /// <param name="c">The deserialization context.</param>
         protected ObservableTimedEventBase( IBinaryDeserializerContext c )
-            : this()
         {
+            TimeManager = ObservableDomain.GetCurrentActiveDomain().TimeManager;
             Debug.Assert( TimeManager != null );
             var r = c.StartReading().Reader;
             ActiveIndex = r.ReadInt32();

@@ -206,9 +206,9 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
-        public void loadHooks_can_skip_the_TimedEvevents_update()
+        public void loadHooks_can_skip_the_TimedEvents_update()
         {
-            using var d = new ObservableDomain( TestHelper.Monitor, nameof( loadHooks_can_skip_the_TimedEvevents_update ) );
+            using var d = new ObservableDomain( TestHelper.Monitor, nameof( loadHooks_can_skip_the_TimedEvents_update ) );
             d.Modify( TestHelper.Monitor, () =>
             {
                 

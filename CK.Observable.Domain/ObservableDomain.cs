@@ -1365,7 +1365,7 @@ namespace CK.Observable
                     count = r.ReadNonNegativeSmallInt32();
                     while( --count >= 0 )
                     {
-                        r.ReadObject();
+                        Register( (InternalObject)r.ReadObject() );
                     }
 
                     // Reading Timed events.
@@ -1503,9 +1503,9 @@ namespace CK.Observable
         {
             Debug.Assert( o != null && o.ActualDomain == this && o.Prev == null && o.Next == null );
             CheckWriteLock( o );
-            if( (o.Next = _firstInternalObject) == null ) _lastInternalObject = o;
-            else _firstInternalObject.Prev = o;
-            _firstInternalObject = o;
+            if( (o.Prev = _lastInternalObject) == null ) _firstInternalObject = o;
+            else _lastInternalObject.Next = o;
+            _lastInternalObject = o;
             ++_internalObjectCount;
             SideEffectsRegister( o );
         }

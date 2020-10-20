@@ -1,3 +1,4 @@
+using FluentAssertions;
 using NUnit.Framework;
 using System.Collections.Generic;
 using static CK.Testing.MonitorTestHelper;
@@ -86,14 +87,31 @@ namespace CK.Observable.Domain.Tests.Serialization
         {
             using( var d = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
             {
+                long c0Id = 0, c1Id = 0;
+                C originalC0 = null;
                 d.Modify( TestHelper.Monitor, () =>
                 {
-                    var c0 = new C();
+                    var c0 = originalC0 = new C();
                     var c1 = new C();
+                    c0Id = c0.OId.UniqueId;
+                    c1Id = c1.OId.UniqueId;
                     if( sameOrder ) c0.ObjectList.Add( c1 );
                     else c1.ObjectList.Add( c0 );
                 } );
                 ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
+
+                var c0 = (C)d.AllObjects[c0Id];
+                c0.Should().NotBeSameAs( originalC0 );
+
+                var c1 = (C)d.AllObjects[c1Id];
+                if( sameOrder )
+                {
+                    c0.ObjectList[0].Should().BeSameAs( c1 );
+                }
+                else
+                {
+                    c1.ObjectList[0].Should().BeSameAs( c0 );
+                }
             }
         }
 

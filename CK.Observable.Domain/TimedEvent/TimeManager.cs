@@ -437,9 +437,11 @@ namespace CK.Observable
         internal void OnCreated( ObservableTimedEventBase t )
         {
             Debug.Assert( t is ObservableTimer || t is ObservableReminder );
-            if( (t.Next = _first) == null ) _last = t;
-            else _first.Prev = t;
-            _first = t;
+            Debug.Assert( t.Prev == null && t.Next == null );
+
+            if( (t.Prev = _last) == null ) _first = t;
+            else _last.Next = t;
+            _last = t;
             _changed.Add( t );
             ++_count;
             if( t is ObservableTimer ) ++_timerCount;
@@ -489,6 +491,7 @@ namespace CK.Observable
             while( --count >= 0 )
             {
                 var t = (ObservableTimedEventBase)r.ReadObject()!;
+                OnCreated( t );
                 if( t.ActiveIndex > 0 )
                 {
                     EnsureActiveLength( t.ActiveIndex );

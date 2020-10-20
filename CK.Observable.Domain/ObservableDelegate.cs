@@ -38,7 +38,8 @@ namespace CK.Observable
                     if( o != null )
                     {
                         string methodName = r.ReadSharedString();
-                        // Use local DoReadArray since ArrayDeserializer<Type>.ReadArray track the array and ArraySerializer<Type>.WriteObjects don't.
+                        // Use local DoReadArray since ArrayDeserializer<Type>.ReadArray track the array (and ArraySerializer<Type>.WriteObjects don't):
+                        // sharing this array makes no sense.
                         Type[] paramTypes = DoReadArray( r );
                         if( o is Type t )
                         {

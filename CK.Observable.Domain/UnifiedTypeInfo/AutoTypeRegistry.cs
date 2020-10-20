@@ -66,7 +66,7 @@ namespace CK.Observable
             /// </summary>
             public Type Type => _type;
 
-            bool ITypeSerializationDriver.IsFinalType => _type.IsSealed || _type.IsValueType;
+            bool ITypeSerializationDriver.IsFinalType => _type.IsValueType;
 
             public ITypeSerializationDriver? SerializationDriver => _writer != null ? this : null;
 

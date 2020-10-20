@@ -66,14 +66,14 @@ namespace CK.Observable
         {
             var (r,info) = d.StartReading();
             Debug.Assert( info.Version == 0 );
-            // This enables the Internal object to be serailizable/deserializable outside a Domain
+            // This enables the Internal object to be serializable/deserializable outside a Domain
             // (for instance to use BinarySerializer.IdempotenceCheck): we really register the deserialized object
             // if and only if the available Domain service is the one being deserialized.
             ActualDomain = r.Services.GetService<ObservableDomain>( throwOnNull: true );
-            if( ActualDomain == ObservableDomain.CurrentThreadDomain )
-            {
-                ActualDomain.Register( this );
-            }
+            //if( ActualDomain == ObservableDomain.CurrentThreadDomain )
+            //{
+            //    ActualDomain.Register( this );
+            //}
             _disposed = new ObservableEventHandler<ObservableDomainEventArgs>( r );
         }
 

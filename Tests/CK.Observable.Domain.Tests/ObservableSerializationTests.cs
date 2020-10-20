@@ -2,6 +2,7 @@ using CK.Core;
 using FluentAssertions;
 using NUnit.Framework;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using static CK.Testing.MonitorTestHelper;
@@ -58,7 +59,6 @@ namespace CK.Observable.Domain.Tests
 
             handler.Reload( TestHelper.Monitor, idempotenceCheck: true );
         }
-
 
 
         [SerializationVersion( 0 )]
@@ -337,6 +337,86 @@ namespace CK.Observable.Domain.Tests
                 base.Dispose( shouldCleanup );
             }
         }
+
+
+        [SerializationVersion( 0 )]
+        public class ReminderAndTimerBag : InternalObject
+        {
+            readonly List<ObservableReminder> _reminders;
+            readonly ObservableList<ObservableReminder> _oReminders;
+            readonly List<ObservableTimer> _timers;
+            readonly ObservableList<ObservableTimer> _oTimers;
+            readonly int _identifier;
+
+            public ReminderAndTimerBag( int id )
+            {
+                _identifier = id;
+                _reminders = new List<ObservableReminder>();
+                _oReminders = new ObservableList<ObservableReminder>();
+                _timers = new List<ObservableTimer>();
+                _oTimers = new ObservableList<ObservableTimer>();
+            }
+
+            ReminderAndTimerBag( IBinaryDeserializerContext d ) : base( d )
+            {
+                var r = d.StartReading().Reader;
+                _identifier = r.ReadInt32();
+                _reminders = (List<ObservableReminder>)r.ReadObject()!;
+                _oReminders = (ObservableList<ObservableReminder>)r.ReadObject()!;
+                _timers = (List<ObservableTimer>)r.ReadObject()!;
+                _oTimers = (ObservableList<ObservableTimer>)r.ReadObject()!;
+            }
+
+            void Write( BinarySerializer w )
+            {
+                w.Write( _identifier );
+                w.WriteObject( _reminders );
+                w.WriteObject( _oReminders );
+                w.WriteObject( _timers );
+                w.WriteObject( _oTimers );
+            }
+
+            public void Create( int count = 5 )
+            {
+                for( int i = 0; i < count; ++i )
+                {
+                    var r1 = new ObservableReminder( DateTime.UtcNow.AddDays( 1 ) );
+                    _reminders.Add( r1 );
+                    var r2 = new ObservableReminder( DateTime.UtcNow.AddDays( 1 ) );
+                    _oReminders.Add( r2 );
+                    var t1 = new ObservableTimer( DateTime.UtcNow.AddDays( 1 ) ) { Name = $"LTimer n°{i}" };
+                    _timers.Add( t1 );
+                    var t2 = new ObservableTimer( DateTime.UtcNow.AddDays( 1 ) ) { Name = $"OTimer n°{i}" };
+                    _oTimers.Add( t2 );
+                }
+            }
+        }
+
+        [Test]
+        public void lot_of_timed_events_test()
+        {
+            using( var od = new ObservableDomain( TestHelper.Monitor, nameof( lot_of_timed_events_test ) ) )
+            {
+                od.Modify( TestHelper.Monitor, () =>
+                {
+                    new ReminderAndTimerBag( 1 ).Create( 1 );
+
+                } );
+                od.AllInternalObjects.Should().HaveCount( 1 );
+                od.TimeManager.AllObservableTimedEvents.Should().HaveCount( 4 );
+                ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, od );
+
+                od.Modify( TestHelper.Monitor, () =>
+                {
+                    new ReminderAndTimerBag( 2 ).Create( 20 );
+
+                } );
+                od.AllInternalObjects.Should().HaveCount( 2 );
+                od.TimeManager.AllObservableTimedEvents.Should().HaveCount( 4 * 21 );
+                ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, od );
+            }
+        }
+
 
     }
 }
