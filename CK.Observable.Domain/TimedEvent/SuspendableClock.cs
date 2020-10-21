@@ -75,8 +75,18 @@ namespace CK.Observable
         /// <summary>
         /// Gets the current time for this clock. It is <see cref="DateTime.UtcNow"/> only if this
         /// clock has never been deactivated, otherwise it is in the past.
+        /// <para>
+        /// This is <see cref="DateTime.UtcNow"/> - <see cref="CumulativeOffset"/> when <see cref="IsActive"/> is true,
+        /// otherwise it the last time when IsActive became false.
+        /// </para>
         /// </summary>
         public DateTime UtcNow => _isActive ? DateTime.UtcNow.Subtract( _cumulativeOffset ) : _lastStop;
+
+        /// <summary>
+        /// Gets the time span during wich this clock has been suspended (this is greater than or
+        /// equal to <see cref="TimeSpan.Zero"/>): this is increased each time <see cref="IsActive"/> becomes true.
+        /// </summary>
+        public TimeSpan CumulativeOffset => _cumulativeOffset;
 
         /// <summary>
         /// Gets or sets whether this clock is active.
