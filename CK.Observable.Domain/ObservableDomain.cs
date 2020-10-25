@@ -56,7 +56,7 @@ namespace CK.Observable
         public const int DomainSecretKeyLength = 512;
 
         [ThreadStatic]
-        internal static ObservableDomain? CurrentThreadDomain;
+        public static ObservableDomain? CurrentThreadDomain;
 
         internal readonly IExporterResolver _exporters;
         readonly ISerializerResolver _serializers;
