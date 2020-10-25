@@ -207,7 +207,8 @@ namespace CK.Observable
                 }
                 catch( Exception ex )
                 {
-                    monitor.Error( ex );
+                    monitor.Error( "Error while restoring snapshot.", ex );
+                    monitor.CloseGroup( "Failed." );
                     return false;
                 }
             }

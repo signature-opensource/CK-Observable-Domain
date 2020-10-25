@@ -431,6 +431,7 @@ namespace CK.Observable
                 // If result has already been initialized, we exit immediately.
                 if( _resultInitialized ) return _result;
 
+                Monitor.Debug( "Starting Commit." );
                 _resultInitialized = true;
                 Debug.Assert( _domain._currentTran == this );
                 Debug.Assert( _domain._lock.IsWriteLockHeld );
@@ -649,6 +650,7 @@ namespace CK.Observable
             /// <param name="enterWriteLock">False to not enter and exit the write lock.</param>
             public InitializationTransaction( IActivityMonitor m, ObservableDomain d, bool enterWriteLock = true )
             {
+                m.OpenDebug( $"Opening new InitializationTransaction on '{d.DomainName}'." );
                 _monitor = m;
                 _startTime = DateTime.UtcNow;
                 _d = d;
@@ -674,6 +676,7 @@ namespace CK.Observable
             /// </summary>
             public void Dispose()
             {
+                _monitor.CloseGroup();
                 _d._deserializeOrInitializing = false;
                 CurrentThreadDomain = _previousThreadDomain;
                 _d._currentTran = _previousTran;
@@ -1192,7 +1195,7 @@ namespace CK.Observable
                 if( needFakeTran ) new InitializationTransaction( monitor, this, false );
                 try
                 {
-                    using( isWrite ? monitor.OpenInfo( $"Transacted saving domain ({_actualObjectCount} objects, {_internalObjectCount} internal objects)." ) : null )
+                    using( isWrite ? monitor.OpenInfo( $"Transacted saving domain ({_actualObjectCount} objects, {_internalObjectCount} internals, {_timeManager.AllObservableTimedEvents.Count} timed events)." ) : null )
                     {
                         // Version 2: supports DebugMode, TimeManager & Internal objects.
                         // Version 3: supports TransactionCommitTimeUtc.
@@ -1393,14 +1396,29 @@ namespace CK.Observable
                 // This is where specialized typed ObservableDomain bind their roots.
                 OnLoaded();
                 // Calls the loadHook.
-                bool callUpdateTimers = loadHook != null ? loadHook( this ) : true;
+                bool callUpdateTimers = true;
+                if( loadHook != null )
+                {
+                    try
+                    {
+                        callUpdateTimers = loadHook( this );
+                    }
+                    catch( Exception ex )
+                    {
+                        monitor.Error( "Error while calling load hook.", ex );
+                        throw;
+                    }
+                }
                 if( !_sidekickManager.CreateWaitingSidekicks( monitor, ex => { } ) )
                 {
                     monitor.Error( $"At least one critical error occurred while activating sidekicks. The error should be investigated since this may well be a blocking error." );
                 }
                 if( callUpdateTimers )
                 {
-                    _timeManager.SetNextDueTimeUtc( monitor, _timeManager.ApplyChanges() );
+                    using( monitor.OpenDebug( "Load hook returned true: raising potential timed events." ) )
+                    {
+                        _timeManager.SetNextDueTimeUtc( monitor, _timeManager.ApplyChanges() );
+                    }
                 }
             }
             finally
@@ -1444,20 +1462,27 @@ namespace CK.Observable
             Debug.Assert( !isWrite || _currentTran != null, "isWrite => _currentTran != null" );
             bool needFakeTran = _currentTran == null || _currentTran.Monitor != monitor;
             if( needFakeTran ) new InitializationTransaction( monitor, this, false );
-            try
+            using( monitor.OpenInfo( $"Loading domain (using {(needFakeTran ? "fake" : "current")} transaction)." ) )
             {
-                using( monitor.OpenInfo( $"Transacted loading domain." ) )
-                using( var d = new BinaryDeserializer( stream, null, _deserializers, leaveOpen, encoding ) )
+                try
                 {
-                    d.Services.Add( this );
-                    DoLoad( monitor, d, expectedLoadedName, loadHook );
-                    return true;
+                    using( var d = new BinaryDeserializer( stream, null, _deserializers, leaveOpen, encoding ) )
+                    {
+                        d.Services.Add( this );
+                        DoLoad( monitor, d, expectedLoadedName, loadHook );
+                        return true;
+                    }
                 }
-            }
-            finally
-            {
-                if( needFakeTran ) _currentTran.Dispose();
-                if( !isWrite ) _lock.ExitWriteLock();
+                catch( Exception ex )
+                {
+                    monitor.Error( ex );
+                    throw;
+                }
+                finally
+                {
+                    if( needFakeTran ) _currentTran.Dispose();
+                    if( !isWrite ) _lock.ExitWriteLock();
+                }
             }
         }
 

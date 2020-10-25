@@ -418,6 +418,11 @@ namespace CK.Observable
             r.SuspendableClock = null;
         }
 
+        /// <summary>
+        /// This doesn't throw.
+        /// </summary>
+        /// <param name="m">The monitor to use.</param>
+        /// <param name="nextDueTimeUtc">The next due time to consider.</param>
         internal void SetNextDueTimeUtc( IActivityMonitor m, DateTime nextDueTimeUtc )
         {
             if( _currentNext != nextDueTimeUtc )
