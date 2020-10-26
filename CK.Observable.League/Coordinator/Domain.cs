@@ -26,10 +26,9 @@ namespace CK.Observable.League
             _shell = shell;
         }
 
-        Domain( IBinaryDeserializerContext c )
-            : base( c )
+        Domain( IBinaryDeserializer r, TypeReadInfo? info )
+            : base( RevertSerialization.Default )
         {
-            var r = c.StartReading().Reader;
             Coordinator = (Coordinator)r.ReadObject();
             DomainName = r.ReadString();
             _displayName = r.ReadNullableString();

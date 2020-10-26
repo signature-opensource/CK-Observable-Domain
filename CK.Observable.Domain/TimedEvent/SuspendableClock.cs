@@ -50,10 +50,10 @@ namespace CK.Observable
             }
         }
 
-        SuspendableClock( IBinaryDeserializerContext d )
-            : base( d )
+        SuspendableClock( IBinaryDeserializer r, TypeReadInfo? info )
+            : base( RevertSerialization.Default )
         {
-            var r = d.StartReading().Reader;
+            Debug.Assert( !IsDisposed );
             _isActive = r.ReadBoolean();
             _lastStop = r.ReadDateTime();
             _cumulativeOffset = r.ReadTimeSpan();
@@ -64,6 +64,7 @@ namespace CK.Observable
 
         void Write( BinarySerializer w )
         {
+            Debug.Assert( !IsDisposed );
             w.Write( _isActive );
             w.Write( _lastStop );
             w.Write( _cumulativeOffset );

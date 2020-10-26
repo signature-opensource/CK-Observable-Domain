@@ -1,4 +1,5 @@
 using CK.Core;
+using System.Diagnostics;
 
 namespace CK.Observable.Domain.Tests.Sample
 {
@@ -11,9 +12,11 @@ namespace CK.Observable.Domain.Tests.Sample
             Garage.Employees.Add( this );
         }
 
-        protected Employee( IBinaryDeserializerContext d ) : base( d )
+        protected Employee( RevertSerialization _ ) : base( _ ) { }
+
+        Employee( IBinaryDeserializer r, TypeReadInfo? info )
+            : base( RevertSerialization.Default )
         {
-            var r = d.StartReading().Reader;
             Garage = (Garage)r.ReadObject();
         }
 

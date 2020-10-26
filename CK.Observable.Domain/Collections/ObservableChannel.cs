@@ -29,22 +29,15 @@ namespace CK.Observable
         {
         }
 
-        /// <summary>
-        /// Deserialization constructor.
-        /// </summary>
-        /// <param name="d">The deserialization context.</param>
-        protected ObservableChannel( IBinaryDeserializerContext d )
-            : base( d )
+        protected ObservableChannel( RevertSerialization _ ) : base( _ ) { }
+
+        ObservableChannel( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
         {
-            var r = d.StartReading().Reader;
             _itemSent = new ObservableEventHandler<ListInsertEvent>( r );
         }
 
-        /// <summary>
-        /// The serialization method.
-        /// </summary>
-        /// <param name="s">The binary serializer to use.</param>
-        void Write( BinarySerializer s )
+       void Write( BinarySerializer s )
         {
             _itemSent.Write( s );
         }

@@ -10,9 +10,9 @@ namespace CK.Observable.Domain.Tests.Sample
         {
         }
 
-        protected Mechanic( IBinaryDeserializerContext d ) : base( d )
+        Mechanic( IBinaryDeserializer r, TypeReadInfo? info )
+            : base( RevertSerialization.Default )
         {
-            var r = d.StartReading().Reader;
             CurrentCar = (Car)r.ReadObject();
         }
 

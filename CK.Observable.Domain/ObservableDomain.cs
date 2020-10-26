@@ -56,7 +56,7 @@ namespace CK.Observable
         public const int DomainSecretKeyLength = 512;
 
         [ThreadStatic]
-        public static ObservableDomain? CurrentThreadDomain;
+        internal static ObservableDomain? CurrentThreadDomain;
 
         internal readonly IExporterResolver _exporters;
         readonly ISerializerResolver _serializers;
@@ -1361,6 +1361,7 @@ namespace CK.Observable
                 for( int i = 0; i < count; ++i )
                 {
                     _objects[i] = (ObservableObject)r.ReadObject();
+                    Debug.Assert( _objects[i] == null || !_objects[i].IsDisposed );
                 }
 
                 // Fill roots array.
@@ -1379,7 +1380,9 @@ namespace CK.Observable
                     count = r.ReadNonNegativeSmallInt32();
                     while( --count >= 0 )
                     {
-                        Register( (InternalObject)r.ReadObject() );
+                        var o = (InternalObject)r.ReadObject();
+                        Debug.Assert( !o.IsDisposed );
+                        Register( o );
                     }
 
                     // Reading Timed events.

@@ -17,14 +17,11 @@ namespace CK.Observable.Device
         {
         }
 
-        /// <summary>
-        /// Deserialization constructor.
-        /// </summary>
-        /// <param name="ctx">The deserializer context.</param>
-        protected ObservableDeviceHostObject( IBinaryDeserializerContext ctx )
-            : base( ctx )
+        protected ObservableDeviceHostObject( RevertSerialization _ ) : base( _ ) { }
+
+        protected ObservableDeviceHostObject( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
         {
-            ctx.StartReading();
         }
 
         void Write( BinarySerializer s )

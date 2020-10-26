@@ -324,10 +324,11 @@ namespace CK.Observable.Domain.Tests
 
             public bool IsActive { get; private set; }
 
-            protected PrivateHandlerObject( IBinaryDeserializerContext d )
-                : base( d )
+            protected PrivateHandlerObject( RevertSerialization _ ) : base( _ ) { }
+
+            PrivateHandlerObject( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
             {
-                var r = d.StartReading().Reader;
                 FireCount = r.ReadNonNegativeSmallInt32();
                 _timer = (ObservableTimer)r.ReadObject()!;
                 _clock = (SuspendableClock)r.ReadObject()!;
@@ -349,10 +350,9 @@ namespace CK.Observable.Domain.Tests
             {
             }
 
-            SpecializedPrivateHandlerObject( IBinaryDeserializerContext d )
-                : base( d )
+            SpecializedPrivateHandlerObject( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
             {
-                var r = d.StartReading().Reader;
             }
 
             void Write( BinarySerializer w )

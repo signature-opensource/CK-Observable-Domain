@@ -23,9 +23,9 @@ namespace CK.Observable.Domain.Tests
                 Message = "I'm Invisible!";
             }
 
-            Invisible( IBinaryDeserializerContext d )
+            Invisible( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
             {
-                var r = d.StartReading().Reader;
                 Message = r.ReadString();
                 NoWay = r.ReadInt32();
             }
@@ -50,9 +50,9 @@ namespace CK.Observable.Domain.Tests
                 Message = "I'm Visible!";
             }
 
-            Visible( IBinaryDeserializerContext d )
+            Visible( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
             {
-                var r = d.StartReading().Reader;
                 NotVisible = (Invisible?)r.ReadObject();
                 Yes = r.ReadInt32();
                 Message = r.ReadNullableString();

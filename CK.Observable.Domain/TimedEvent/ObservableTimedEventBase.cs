@@ -44,36 +44,48 @@ namespace CK.Observable
             TimeManager.OnCreated( this );
         }
 
-        /// <summary>
-        /// Deserialization constructor.
-        /// </summary>
-        /// <param name="c">The deserialization context.</param>
-        protected ObservableTimedEventBase( IBinaryDeserializerContext c )
+        protected ObservableTimedEventBase( RevertSerialization _ ) { }
+
+        ObservableTimedEventBase( IBinaryDeserializer r, TypeReadInfo? info )
         {
-            TimeManager = ObservableDomain.GetCurrentActiveDomain().TimeManager;
-            Debug.Assert( TimeManager != null );
-            var r = c.StartReading().Reader;
-            ActiveIndex = r.ReadInt32();
-            ExpectedDueTimeUtc = r.ReadDateTime();
-            _clock = (SuspendableClock?)r.ReadObject();
-            NextInClock = (ObservableTimedEventBase?)r.ReadObject();
-            PrevInClock = (ObservableTimedEventBase?)r.ReadObject();
-            _disposed = new ObservableEventHandler<ObservableDomainEventArgs>( r );
-            Tag = r.ReadObject();
-            // Activation is done by TimeManager.Load() that is called at the end of the object load,
-            // before the sidekicks.
+            int index = r.ReadInt32();
+            if( index >= 0 )
+            {
+                TimeManager = ObservableDomain.GetCurrentActiveDomain().TimeManager;
+                Debug.Assert( TimeManager != null );
+                ActiveIndex = index;
+                ExpectedDueTimeUtc = r.ReadDateTime();
+                _clock = (SuspendableClock?)r.ReadObject();
+                NextInClock = (ObservableTimedEventBase?)r.ReadObject();
+                PrevInClock = (ObservableTimedEventBase?)r.ReadObject();
+                _disposed = new ObservableEventHandler<ObservableDomainEventArgs>( r );
+                Tag = r.ReadObject();
+                // Activation is done by TimeManager.Load() that is called at the end of the object load,
+                // before the sidekicks.
+                Debug.Assert( !IsDisposed );
+            }
+            else
+            {
+                Debug.Assert( IsDisposed );
+            }
         }
 
         void Write( BinarySerializer w )
         {
-            Debug.Assert( !IsDisposed );
-            w.Write( ActiveIndex );
-            w.Write( ExpectedDueTimeUtc );
-            w.WriteObject( _clock );
-            w.WriteObject( NextInClock );
-            w.WriteObject( PrevInClock );
-            _disposed.Write( w );
-            w.WriteObject( Tag );
+            if( IsDisposed )
+            {
+                w.Write( -1 );
+            }
+            else
+            {
+                w.Write( ActiveIndex );
+                w.Write( ExpectedDueTimeUtc );
+                w.WriteObject( _clock );
+                w.WriteObject( NextInClock );
+                w.WriteObject( PrevInClock );
+                _disposed.Write( w );
+                w.WriteObject( Tag );
+            }
         }
 
         /// <summary>

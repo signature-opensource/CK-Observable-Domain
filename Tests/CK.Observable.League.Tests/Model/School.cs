@@ -12,11 +12,10 @@ namespace CK.Observable.League.Tests.Model
             Persons = new ObservableList<Person>();
         }
 
-        School( IBinaryDeserializerContext ctx )
-            : base( ctx )
+        School( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
         {
-            var r = ctx.StartReading().Reader;
-            Persons = (ObservableList<Person>)r.ReadObject();
+            Persons = (ObservableList<Person>)r.ReadObject()!;
         }
 
         void Write( BinarySerializer w )

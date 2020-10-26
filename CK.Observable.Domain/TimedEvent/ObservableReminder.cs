@@ -43,10 +43,10 @@ namespace CK.Observable
             ReusableArgs = new ObservableReminderEventArgs( this );
         }
 
-        ObservableReminder( IBinaryDeserializerContext c )
-            : base( c )
+        ObservableReminder( IBinaryDeserializer r, TypeReadInfo? info )
+            : base( RevertSerialization.Default )
         {
-            var r = c.StartReading().Reader;
+            Debug.Assert( !IsDisposed );
             IsPooled = r.ReadBoolean();
             ReusableArgs = new ObservableReminderEventArgs( this );
             if( IsPooled && ActiveIndex == 0 ) TimeManager.ReleaseToPool( this );
@@ -54,6 +54,7 @@ namespace CK.Observable
 
         void Write( BinarySerializer w )
         {
+            Debug.Assert( !IsDisposed );
             w.Write( IsPooled );
         }
 

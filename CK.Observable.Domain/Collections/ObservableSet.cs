@@ -56,14 +56,11 @@ namespace CK.Observable
             _set = new HashSet<T>();
         }
 
-        /// <summary>
-        /// Deserialization constructor.
-        /// </summary>
-        /// <param name="d">The deserialization context.</param>
-        protected ObservableSet( IBinaryDeserializerContext d )
-            : base( d )
+        protected ObservableSet( RevertSerialization _ ) : base( _ ) { }
+
+        ObservableSet( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
         {
-            var r = d.StartReading().Reader;
             _set = (HashSet<T>)r.ReadObject();
             _itemAdded = new ObservableEventHandler<CollectionAddKeyEvent>( r );
             _itemRemoved = new ObservableEventHandler<CollectionRemoveKeyEvent>( r );

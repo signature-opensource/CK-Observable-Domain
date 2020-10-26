@@ -52,10 +52,11 @@ namespace CK.Observable.Domain.Tests
             {
             }
 
-            protected ObjWithSKBase( IBinaryDeserializerContext c )
-                : base( c )
+            protected ObjWithSKBase(RevertSerialization _ ) : base( _ ) { }
+
+            ObjWithSKBase( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
             {
-                var r = c.StartReading().Reader;
                 Message = r.ReadString();
             }
 
@@ -88,10 +89,9 @@ namespace CK.Observable.Domain.Tests
             {
             }
 
-            protected ObjWithSKSimple( IBinaryDeserializerContext c )
-                : base( c )
+            protected ObjWithSKSimple( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
             {
-                c.StartReading();
             }
 
             void Write( BinarySerializer s )
@@ -109,10 +109,9 @@ namespace CK.Observable.Domain.Tests
             {
             }
 
-            protected ObjWithSKSimpleViaInterface( IBinaryDeserializerContext c )
-                : base( c )
+            protected ObjWithSKSimpleViaInterface( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
             {
-                c.StartReading();
             }
 
             void Write( BinarySerializer s )
@@ -243,16 +242,15 @@ namespace CK.Observable.Domain.Tests
 
         [UseSidekick( typeof( SKWithDependencies ) )]
         [SerializationVersion( 0 )]
-        public class ObjWithSKWithDependencies : ObjWithSKBase
+        public sealed class ObjWithSKWithDependencies : ObjWithSKBase
         {
             public ObjWithSKWithDependencies()
             {
             }
 
-            protected ObjWithSKWithDependencies( IBinaryDeserializerContext c )
-                : base( c )
+            ObjWithSKWithDependencies( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
             {
-                c.StartReading();
             }
 
             void Write( BinarySerializer s )
@@ -261,16 +259,15 @@ namespace CK.Observable.Domain.Tests
         }
 
         [SerializationVersion( 0 )]
-        public class ObjWithSKWithDependenciesViaInterface : ObjWithSKBase, ISidekickClientObject<SKWithDependencies>
+        public sealed class ObjWithSKWithDependenciesViaInterface : ObjWithSKBase, ISidekickClientObject<SKWithDependencies>
         {
             public ObjWithSKWithDependenciesViaInterface()
             {
             }
 
-            protected ObjWithSKWithDependenciesViaInterface( IBinaryDeserializerContext c )
-                : base( c )
+            ObjWithSKWithDependenciesViaInterface( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
             {
-                c.StartReading();
             }
 
             void Write( BinarySerializer s )

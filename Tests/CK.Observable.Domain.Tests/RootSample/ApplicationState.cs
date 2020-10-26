@@ -21,10 +21,9 @@ namespace CK.Observable.Domain.Tests.RootSample
             p3.Dispose();
         }
 
-        protected ApplicationState( IBinaryDeserializerContext d )
-            : base( d )
+        ApplicationState( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
         {
-            var r = d.StartReading().Reader;
             ToDoNumbers = (ObservableList<int>)r.ReadObject();
             Products = (ObservableDictionary<string, ProductInfo>)r.ReadObject();
             ProductStateList = (ObservableList<Product>)r.ReadObject();

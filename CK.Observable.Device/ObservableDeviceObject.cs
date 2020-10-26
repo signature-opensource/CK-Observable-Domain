@@ -27,10 +27,11 @@ namespace CK.Observable.Device
             DeviceName = deviceName;
         }
 
-        private protected ObservableDeviceObject( IBinaryDeserializerContext ctx )
-            : base( ctx )
+        protected ObservableDeviceObject( RevertSerialization _ ) : base( _ ) { }
+
+        ObservableDeviceObject( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
         {
-            var r = ctx.StartReading().Reader;
             DeviceName = r.ReadNullableString();
             _statusChanged = new ObservableEventHandler( r );
         }

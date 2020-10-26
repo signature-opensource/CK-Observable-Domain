@@ -23,10 +23,10 @@ namespace CK.Observable.League.Tests
         public async Task simple_play_with_first_domain()
         {
             var store = CreateStore( nameof( simple_play_with_first_domain ) );
-            var league = await ObservableLeague.LoadAsync( TestHelper.Monitor, store );
+            var league = await ObservableLeague.LoadAsync( TestHelper.Monitor, store )!;
 
             league.Find( "FirstDomain" ).Should().BeNull( "Empty store. Not created yet." );
-            await league.Coordinator.ModifyAsync( TestHelper.Monitor, ( m, d ) => d.Root.CreateDomain( "FirstDomain", typeof(Model.School).AssemblyQualifiedName ) );
+            await league.Coordinator.ModifyAsync( TestHelper.Monitor, ( m, d ) => d.Root.CreateDomain( "FirstDomain", typeof(Model.School).AssemblyQualifiedName! ) );
 
             var loader = league.Find( "FirstDomain" );
             loader.Should().NotBeNull();
@@ -85,10 +85,9 @@ namespace CK.Observable.League.Tests
             {
             }
 
-            Root1( IBinaryDeserializerContext ctx )
-                : base( ctx )
+            Root1( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
             {
-                var r = ctx.StartReading();
             }
 
             void Write( BinarySerializer w )
@@ -103,10 +102,9 @@ namespace CK.Observable.League.Tests
             {
             }
 
-            Root2( IBinaryDeserializerContext ctx )
-                : base( ctx )
+            Root2( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
             {
-                var r = ctx.StartReading();
             }
 
             void Write( BinarySerializer w )
@@ -121,10 +119,9 @@ namespace CK.Observable.League.Tests
             {
             }
 
-            Root3( IBinaryDeserializerContext ctx )
-                : base( ctx )
+            Root3( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
             {
-                var r = ctx.StartReading();
             }
 
             void Write( BinarySerializer w )
@@ -139,10 +136,9 @@ namespace CK.Observable.League.Tests
             {
             }
 
-            Root4( IBinaryDeserializerContext ctx )
-                : base( ctx )
+            Root4( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
             {
-                var r = ctx.StartReading();
             }
 
             void Write( BinarySerializer w )

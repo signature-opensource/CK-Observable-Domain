@@ -13,7 +13,7 @@ namespace CK.Observable.League
     /// a <see cref="ObservableLeague"/> and allows to manage them.
     /// </summary>
     [SerializationVersion( 0 )]
-    public class Coordinator : ObservableRootObject
+    public sealed class Coordinator : ObservableRootObject
     {
         readonly ObservableDictionary<string, Domain> _domains;
         IManagedLeague? _league;
@@ -26,10 +26,9 @@ namespace CK.Observable.League
             _domains = new ObservableDictionary<string, Domain>();
         }
 
-        private protected Coordinator( IBinaryDeserializerContext d )
-            : base( d )
+        Coordinator( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
         {
-            var r = d.StartReading().Reader;
             _domains = (ObservableDictionary<string, Domain>)r.ReadObject();
         }
 

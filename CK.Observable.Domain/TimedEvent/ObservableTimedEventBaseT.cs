@@ -24,23 +24,18 @@ namespace CK.Observable
         {
         }
 
-        /// <summary>
-        /// Deserialization constructor.
-        /// </summary>
-        /// <param name="c">The deserialization context.</param>
-        protected ObservableTimedEventBase( IBinaryDeserializerContext c )
-            : base( c )
+        protected ObservableTimedEventBase( RevertSerialization _ ) : base( _ ) { }
+
+        ObservableTimedEventBase( IBinaryDeserializer r, TypeReadInfo? info )
+            : base( RevertSerialization.Default )
         {
-            var r = c.StartReading().Reader;
+            Debug.Assert( !IsDisposed );
             _handlers = new ObservableEventHandler<TEventArgs>( r );
         }
 
-        /// <summary>
-        /// Serialization writer.
-        /// </summary>
-        /// <param name="w">The serializer.</param>
         void Write( BinarySerializer w )
         {
+            Debug.Assert( !IsDisposed );
             _handlers.Write( w );
         }
 

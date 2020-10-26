@@ -11,10 +11,12 @@ namespace CK.Observable.League.Tests.Model
         {
         }
 
-        protected Person( IBinaryDeserializerContext d ) : base( d )
+        protected Person( RevertSerialization _ ) : base( _ ) { }
+
+        Person( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
         {
-            var r = d.StartReading().Reader;
-            Friend = (Person)r.ReadObject();
+            Friend = (Person?)r.ReadObject();
             FirstName = r.ReadNullableString();
             LastName = r.ReadNullableString();
             Age = r.ReadNonNegativeSmallInt32();
@@ -28,11 +30,11 @@ namespace CK.Observable.League.Tests.Model
             s.WriteNonNegativeSmallInt32( Age );
         }
 
-        public Person Friend { get; set; }
+        public Person? Friend { get; set; }
 
-        public string FirstName { get; set; }
+        public string? FirstName { get; set; }
 
-        public string LastName { get; set; }
+        public string? LastName { get; set; }
 
         public int Age { get; set; } = 18;
 

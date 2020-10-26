@@ -111,9 +111,8 @@ namespace CK.Observable.League
             ExportedEventKeepLimit = eventKeepLimit;
         }
 
-        ManagedDomainOptions( IBinaryDeserializerContext ctx )
+        ManagedDomainOptions( IBinaryDeserializer r, TypeReadInfo? info )
         {
-            var r = ctx.StartReading().Reader;
             LifeCycleOption = r.ReadEnum<DomainLifeCycleOption>();
             CompressionKind = r.ReadEnum<CompressionKind>();
             SnapshotSaveDelay = r.ReadTimeSpan();

@@ -99,8 +99,8 @@ namespace CK.Observable
         /// </summary>
         /// <param name="reader">The reader.</param>
         public ObservableObjectId( ICKBinaryReader reader )
-            : this( reader.ReadInt64() )
         {
+            UniqueId = reader.ReadInt64();
         }
 
         void Export( int num, ObjectExporter exporter )

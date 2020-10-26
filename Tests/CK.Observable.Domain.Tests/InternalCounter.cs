@@ -26,10 +26,9 @@ namespace CK.Observable.Domain.Tests
             _privateTestSerialization.Add( PrivateHandler, "PrivateEvent" );
         }
 
-        TestCounter( IBinaryDeserializerContext d )
-            : base( d )
+        TestCounter( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
         {
-            var r = d.StartReading().Reader;
             Count = r.ReadInt32();
             _privateTestSerialization = new ObservableEventHandler( r );
             _privateTestSerialization.HasHandlers.Should().BeTrue();

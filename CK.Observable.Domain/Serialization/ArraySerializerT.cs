@@ -12,7 +12,6 @@ namespace CK.Observable
         public ArraySerializer( ITypeSerializationDriver<T> itemSerializer )
         {
             Debug.Assert( itemSerializer != null );
-            Debug.Assert( typeof(T[]).IsSealed );
             _itemSerializer = itemSerializer;
         }
 
@@ -49,7 +48,7 @@ namespace CK.Observable
             if( count > 0 )
             {
                 if( itemSerializer == null ) itemSerializer = w.Drivers.FindDriver<T>();
-                bool monoType = itemSerializer.IsFinalType;
+                bool monoType = itemSerializer?.IsFinalType ?? false;
                 w.Write( monoType );
                 if( monoType )
                 {

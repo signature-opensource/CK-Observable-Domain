@@ -77,6 +77,7 @@ namespace CK.Observable
             if( monoTypeKey && keyDeserialization == null ) keyDeserialization = r.ImplementationServices.Drivers.FindDriver<TKey>();
             bool monoTypeVal = (b & 2) != 0;
             if( monoTypeVal && valueDeserialization == null ) valueDeserialization = r.ImplementationServices.Drivers.FindDriver<TValue>();
+
             var result = new KeyValuePair<TKey, TValue>[len];
             for( int i = 0; i < len; ++i )
             {

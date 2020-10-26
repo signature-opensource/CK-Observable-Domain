@@ -42,7 +42,7 @@ namespace CK.Observable.Domain.Tests
 
                     result.Errors.Should().BeEmpty();
                     Debug.Assert( events != null );
-                    events.Should().HaveCount( 13 );
+                    events.Should().HaveCount( 15 );
                     result.Commands.Should().BeEmpty();
                 }
                 d.Invoking( sut => sut.AllObjects.OfType<Car>().Single().TestSpeed = 3 )

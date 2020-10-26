@@ -3,7 +3,7 @@ using System;
 namespace CK.Observable.Domain.Tests.Clients
 {
     [SerializationVersion( 0 )]
-    public class TestObservableRootObject : ObservableRootObject
+    public sealed class TestObservableRootObject : ObservableRootObject
     {
         public string Prop1 { get; set; }
         public string Prop2 { get; set; }
@@ -14,10 +14,9 @@ namespace CK.Observable.Domain.Tests.Clients
         {
         }
 
-        public TestObservableRootObject( IBinaryDeserializerContext d ) : base( d )
+        TestObservableRootObject( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
         {
-            var r = d.StartReading().Reader;
-
             Prop1 = r.ReadNullableString();
             Prop2 = r.ReadNullableString();
         }

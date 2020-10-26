@@ -62,14 +62,11 @@ namespace CK.Observable
             _map = new Dictionary<TKey, TValue>();
         }
 
-        /// <summary>
-        /// Deserialization contructor.
-        /// </summary>
-        /// <param name="d">The deserialization context.</param>
-        protected ObservableDictionary( IBinaryDeserializerContext d )
-            : base( d )
+        protected ObservableDictionary( RevertSerialization _ ) : base( _ ) { }
+
+        ObservableDictionary( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
         {
-            var r = d.StartReading().Reader;
             _map = (Dictionary<TKey, TValue>)r.ReadObject();
             _itemSet = new ObservableEventHandler<CollectionMapSetEvent>( r );
             _itemAdded = new ObservableEventHandler<CollectionMapSetEvent>( r );
@@ -77,10 +74,6 @@ namespace CK.Observable
             _itemRemoved = new ObservableEventHandler<CollectionRemoveKeyEvent>( r );
         }
 
-        /// <summary>
-        /// Serialization writer.
-        /// </summary>
-        /// <param name="s">The serializer to use.</param>
         void Write( BinarySerializer s )
         {
             s.WriteObject( _map );

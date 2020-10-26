@@ -26,7 +26,7 @@ namespace CK.Observable.Domain.Tests
                     new ExportableOnly() { Name = "Albert" };
                 } );
                 var export = d.ExportToString();
-                export.Should().Be( @"{""N"":1,""C"":1,""P"":[""Name"",""OId""],""O"":[{""þ"":[0,""A""]},{""°"":1,""Name"":""Albert"",""OId"":33554432}],""R"":[]}" );
+                export.Should().Be( @"{""N"":1,""C"":1,""P"":[""Name"",""IsDisposed"",""OId""],""O"":[{""þ"":[0,""A""]},{""°"":1,""Name"":""Albert"",""IsDisposed"":false,""OId"":33554432}],""R"":[]}" );
                 d.Invoking( sut => sut.Save( TestHelper.Monitor, new MemoryStream() ) )
                     .Should().Throw<InvalidOperationException>().WithMessage( "*is not serializable*" );
             }
@@ -40,10 +40,9 @@ namespace CK.Observable.Domain.Tests
             {
             }
 
-            public SerializableOnly( IBinaryDeserializerContext d )
-                : base( d )
+            public SerializableOnly( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
             {
-                var r = d.StartReading().Reader;
                 Name = r.ReadNullableString();
             }
 

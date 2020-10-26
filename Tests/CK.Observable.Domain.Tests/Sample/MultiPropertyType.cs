@@ -5,7 +5,7 @@ using System.Diagnostics;
 namespace CK.Observable.Domain.Tests.Sample
 {
     [SerializationVersionAttribute(0)]
-    public class MultiPropertyType : ObservableObject, IEquatable<MultiPropertyType>
+    public sealed class MultiPropertyType : ObservableObject, IEquatable<MultiPropertyType>
     {
         public static readonly string DefString = "MultiPropertyType";
         public static readonly Guid DefGuid = new Guid( "4F5E996D-51E9-4B04-B572-5126B14A5ECA" );
@@ -77,9 +77,9 @@ namespace CK.Observable.Domain.Tests.Sample
             Position = new Position( Position.Latitude + delta, Position.Longitude + delta );
         }
 
-        public MultiPropertyType( IBinaryDeserializerContext d ) : base( d )
+        MultiPropertyType( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
         {
-            var r = d.StartReading().Reader;
             String = r.ReadNullableString();
             Int32 = r.ReadInt32();
             UInt32 = r.ReadUInt32();

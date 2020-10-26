@@ -57,17 +57,16 @@ namespace CK.Observable.League.Tests
         }
 
         [SerializationVersion( 0 )]
-        public class InstantiationTracker : ObservableRootObject
+        public sealed class InstantiationTracker : ObservableRootObject
         {
             public InstantiationTracker()
             {
                 ++ContructorCount;
             }
 
-            InstantiationTracker( IBinaryDeserializerContext d )
-                : base( d )
+            InstantiationTracker( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
             {
-                var r = d.StartReading().Reader;
                 ++DeserializationCount;
             }
 
@@ -133,16 +132,15 @@ namespace CK.Observable.League.Tests
 
 
         [SerializationVersion(0)]
-        public class WriteCounter : ObservableRootObject
+        public sealed class WriteCounter : ObservableRootObject
         {
             public WriteCounter()
             {
             }
 
-            WriteCounter( IBinaryDeserializerContext d )
-                : base( d )
+            WriteCounter( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
             {
-                var r = d.StartReading().Reader;
                 WriteCount = r.ReadInt32();
             }
 
@@ -153,7 +151,7 @@ namespace CK.Observable.League.Tests
 
             public int WriteCount { get; private set; }
 
-            public string ThisIsInitializedByInitializer { get; internal set; }
+            public string? ThisIsInitializedByInitializer { get; internal set; }
         }
 
         [Test]

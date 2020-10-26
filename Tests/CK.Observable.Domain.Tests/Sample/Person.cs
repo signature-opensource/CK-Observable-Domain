@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace CK.Observable.Domain.Tests.Sample
 {
     [SerializationVersion( 1 )]
@@ -7,9 +9,12 @@ namespace CK.Observable.Domain.Tests.Sample
         {
         }
 
-        protected Person( IBinaryDeserializerContext d ) : base( d )
+        protected Person( RevertSerialization _ ) : base( _ ) { }
+
+        Person( IBinaryDeserializer r, TypeReadInfo? info )
+            : base( RevertSerialization.Default )
         {
-            var (r, info) = d.StartReading();
+            Debug.Assert( !IsDisposed );
             Friend = (Person)r.ReadObject();
             FirstName = r.ReadNullableString();
             LastName = r.ReadNullableString();
@@ -21,6 +26,7 @@ namespace CK.Observable.Domain.Tests.Sample
 
         void Write( BinarySerializer s )
         {
+            Debug.Assert( !IsDisposed );
             s.WriteObject( Friend );
             s.WriteNullableString( FirstName );
             s.WriteNullableString( LastName );

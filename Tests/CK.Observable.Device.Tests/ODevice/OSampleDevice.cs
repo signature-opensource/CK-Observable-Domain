@@ -21,10 +21,9 @@ namespace CK.Observable.Device.Tests
             Domain.EnsureSidekicks();
         }
 
-        protected OSampleDevice( IBinaryDeserializerContext ctx )
-            : base( ctx )
+        protected OSampleDevice( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
         {
-            ctx.StartReading();
         }
 #pragma warning restore CS8618
 

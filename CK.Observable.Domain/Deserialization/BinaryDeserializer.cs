@@ -12,7 +12,7 @@ namespace CK.Observable
     /// <summary>
     /// Deserializer for complex object graph.
     /// </summary>
-    public partial class BinaryDeserializer : CKBinaryReader, IBinaryDeserializer, IBinaryDeserializerImpl, IBinaryDeserializerContext
+    public partial class BinaryDeserializer : CKBinaryReader, IBinaryDeserializer, IBinaryDeserializerImpl
     {
         readonly IDeserializerResolver _drivers;
         readonly TypeReadInfo _objectReadTypeInfo;
@@ -81,21 +81,6 @@ namespace CK.Observable
             _postDeserializationActions.Add( a );
         }
 
-        CtorReader IBinaryDeserializerContext.StartReading()
-        {
-            var head = _ctorContextStack.Peek();
-            if( head != null )
-            {
-                if( IsDebugMode && head.CurrentIndex >= 0 )
-                {
-                    var baseCtorReadInfo = head.ReadInfo.TypePath[head.CurrentIndex];
-                    ReadString( "After: " + head.ReadInfo.DescribeAutoTypePathItem( baseCtorReadInfo ) );
-                }
-                return new CtorReader( this, head.ReadInfo.TypePath[++head.CurrentIndex] );
-            }
-            else return new CtorReader( this, null );
-        }
-
         /// <summary>
         /// Gets a set of low level methods and helpers.
         /// </summary>
@@ -128,27 +113,6 @@ namespace CK.Observable
             if( o == null ) throw new ArgumentException( nameof( o ) );
             _objects[num] = o;
             return o;
-        }
-
-        IBinaryDeserializerContext IBinaryDeserializerImpl.PushConstructorContext( TypeReadInfo? info )
-        {
-            _ctorContextStack.Push( info != null ? new ConstructorContext( info ) : null );
-            return this;
-        }
-
-        void IBinaryDeserializerImpl.PopConstructorContext()
-        {
-            var ctorCtx = _ctorContextStack.Pop();
-            if( ctorCtx != null )
-            {
-                // Always check the deserialization constructor call.
-                int deltaCalled = ctorCtx.ReadInfo.TypePath.Count - ctorCtx.CurrentIndex - 1;
-                if( deltaCalled > 0 )
-                {
-                    var culprit = ctorCtx.ReadInfo.TypePath[deltaCalled];
-                    throw new InvalidDataException( $"Missing \": base( c )\" call in deserialization constructor of '{culprit.TypeName}'." );
-                }
-            }
         }
 
         void IBinaryDeserializerImpl.ExecutePostDeserializationActions() => ExecutePostDeserializationActions();

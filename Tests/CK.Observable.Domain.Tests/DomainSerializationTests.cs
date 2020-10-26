@@ -187,10 +187,9 @@ namespace CK.Observable.Domain.Tests
 
             }
 
-            LoadHookTester( IBinaryDeserializerContext d )
-                : base( d )
+            LoadHookTester( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
             {
-                var r = d.StartReading().Reader;
                 Count = r.ReadInt32();
             }
 
@@ -206,14 +205,63 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
+        public void persisting_disposed_objects()
+        {
+            using var d = new ObservableDomain( TestHelper.Monitor, nameof( loadHooks_can_skip_the_TimedEvents_update ) );
+            d.Modify( TestHelper.Monitor, () =>
+            {
+                var list = new ObservableList<object>();
+                var timer = new ObservableTimer( DateTime.UtcNow.AddDays( 1 ) );
+                var reminder = new ObservableReminder( DateTime.UtcNow.AddDays( 1 ) );
+                var obsOject = new Person();
+                var intObject = new SuspendableClock();
+                list.Add( timer );
+                list.Add( reminder );
+                list.Add( obsOject );
+                list.Add( intObject );
+            } );
+            ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
+            d.Modify( TestHelper.Monitor, () =>
+            {
+                var list = d.AllObjects.OfType<ObservableList<object>>().Single();
+
+                int i = 0;
+                var timer = (ObservableTimer)list[i++]; timer.Dispose();
+                var reminder = (ObservableReminder)list[i++]; reminder.Dispose();
+                var obsOject = (Person)list[i++]; obsOject.Dispose();
+                var intObject = (SuspendableClock)list[i++]; intObject.Dispose();
+            } );
+            ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
+
+            d.Modify( TestHelper.Monitor, () =>
+            {
+                var list = d.AllObjects.OfType<ObservableList<object>>().Single();
+                list.Count.Should().Be( 4 );
+                foreach( IDisposableObject o in list )
+                {
+                    o.IsDisposed.Should().BeTrue();
+                }
+            } );
+        }
+
+
+        [Test]
         public void loadHooks_can_skip_the_TimedEvents_update()
         {
             using var d = new ObservableDomain( TestHelper.Monitor, nameof( loadHooks_can_skip_the_TimedEvents_update ) );
             d.Modify( TestHelper.Monitor, () =>
             {
-                
+                var r = new ObservableReminder( DateTime.Now.AddMilliseconds( 200 ) );
+                r.Elapsed += R_Elapsed;
             } );
 
+
+        }
+
+        static bool ElapsedFired = false;
+        static void R_Elapsed( object sender, ObservableReminderEventArgs e )
+        {
+            ElapsedFired = true;
         }
     }
 }

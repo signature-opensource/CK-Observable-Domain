@@ -12,9 +12,8 @@ namespace CK.Observable.Domain.Tests.RootSample
             ExtraData = new Dictionary<string, string>();
         }
 
-        public ProductInfo( IBinaryDeserializerContext d )
+        ProductInfo( IBinaryDeserializer r, TypeReadInfo? info )
         {
-            var r = d.StartReading().Reader;
             Name = r.ReadNullableString();
             Power = r.ReadInt32();
             ExtraData = (IDictionary<string, string>)r.ReadObject();

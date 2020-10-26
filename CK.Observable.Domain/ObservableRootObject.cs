@@ -18,14 +18,11 @@ namespace CK.Observable
         {
         }
 
-        /// <summary>
-        /// Deserialization constructor.
-        /// </summary>
-        /// <param name="d">The deserialization context.</param>
-        protected ObservableRootObject( IBinaryDeserializerContext d )
-            : base( d )
+        protected ObservableRootObject( RevertSerialization _ ) : base( _ ) { }
+
+        ObservableRootObject( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
         {
-            d.StartReading();
         }
 
         void Write( BinarySerializer w )

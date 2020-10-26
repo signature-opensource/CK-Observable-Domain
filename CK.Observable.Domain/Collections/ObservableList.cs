@@ -61,14 +61,15 @@ namespace CK.Observable
             _list = new List<T>();
         }
 
+        protected ObservableList( RevertSerialization _ ) : base( _ ) { }
+
         /// <summary>
         /// Deserialization constructor.
         /// </summary>
         /// <param name="d">The deserialization context.</param>
-        protected ObservableList( IBinaryDeserializerContext d )
-            : base( d )
+        ObservableList( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
         {
-            var r = d.StartReading().Reader;
             _list = (List<T>)r.ReadObject();
             _itemSet = new ObservableEventHandler<ListSetAtEvent>( r );
             _itemInserted = new ObservableEventHandler<ListInsertEvent>( r );

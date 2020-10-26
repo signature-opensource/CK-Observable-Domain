@@ -8,10 +8,9 @@ namespace CK.Observable.Domain.Tests.RootSample
             ProductInfo = p;
         }
 
-        public Product( IBinaryDeserializerContext d )
-            : base( d )
+        Product( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
         {
-            var r = d.StartReading().Reader;
             ProductNumber = r.ReadInt32();
             Name = r.ReadNullableString();
             ProductInfo = (ProductInfo)r.ReadObject();

@@ -27,10 +27,9 @@ namespace CK.Observable.Domain.Tests.TimedEvents
         /// <param name="e">The event argument.</param>
         void IncrementCount( object sender, ObservableTimedEventArgs e ) => Count++;
 
-        AutoCounter( IBinaryDeserializerContext d )
-            : base( d )
+        AutoCounter( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
         {
-            var r = d.StartReading().Reader;
             Count = r.ReadInt32();
             _timer = (ObservableTimer)r.ReadObject();
             _countChanged = new ObservableEventHandler( r );

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 namespace CK.Observable.Domain.Tests.Sample
 {
     [SerializationVersionAttribute(0)]
-    public class Garage : ObservableObject
+    public sealed class Garage : ObservableObject
     {
         readonly ObservableDictionary<Car, Car> _replacementCars;
 
@@ -14,10 +14,9 @@ namespace CK.Observable.Domain.Tests.Sample
             _replacementCars = new ObservableDictionary<Car, Car>();
         }
 
-        public Garage( IBinaryDeserializerContext d )
-            : base( d )
+        Garage( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
         {
-            var r = d.StartReading().Reader;
             CompanyName = r.ReadNullableString();
             Employees = (ObservableList<Person>)r.ReadObject();
             Cars = (ObservableList<Car>)r.ReadObject();

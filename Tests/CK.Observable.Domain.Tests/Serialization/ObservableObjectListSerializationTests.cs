@@ -18,10 +18,9 @@ namespace CK.Observable.Domain.Tests.Serialization
                 ObjectList = new ObservableList<ObservableObject>();
             }
 
-            protected C( IBinaryDeserializerContext d )
-                : base( d )
+            C( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
             {
-                var r = d.StartReading().Reader;
                 ObjectList = (ObservableList<ObservableObject>)r.ReadObject();
             }
 
@@ -40,10 +39,9 @@ namespace CK.Observable.Domain.Tests.Serialization
             {
             }
 
-            protected O( IBinaryDeserializerContext d )
-                : base( d )
+            protected O( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
             {
-                var r = d.StartReading();
             }
 
             void Write( BinarySerializer w )

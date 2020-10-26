@@ -496,6 +496,7 @@ namespace CK.Observable
             while( --count >= 0 )
             {
                 var t = (ObservableTimedEventBase)r.ReadObject()!;
+                Debug.Assert( !t.IsDisposed );
                 OnCreated( t );
                 if( t.ActiveIndex > 0 )
                 {
@@ -596,18 +597,21 @@ namespace CK.Observable
                         {
                             first.OnAfterRaiseUnchanged( current, m );
                         }
-                        if( !first.IsActive )
+                        if( !first.IsDisposed )
                         {
-                            Deactivate( first );
-                        }
-                        else
-                        {
-                            if( first.ExpectedDueTimeUtc <= current )
+                            if( !first.IsActive )
                             {
-                                // 10 ms is a "very minimal" step: it is smaller than the approximate thread time slice (20 ms). 
-                                first.ForwardExpectedDueTime( m, current.AddMilliseconds( 10 ) );
+                                Deactivate( first );
                             }
-                            OnNextDueTimeUpdated( first );
+                            else
+                            {
+                                if( first.ExpectedDueTimeUtc <= current )
+                                {
+                                    // 10 ms is a "very minimal" step: it is smaller than the approximate thread time slice (20 ms). 
+                                    first.ForwardExpectedDueTime( m, current.AddMilliseconds( 10 ) );
+                                }
+                                OnNextDueTimeUpdated( first );
+                            }
                         }
                         m.Debug( $"{first}: ActiveIndex={first.ActiveIndex}." );
                         ++count;

@@ -44,13 +44,16 @@ namespace CK.Observable.Domain.Tests
                                "PropertyChanged 0.Power = 0.",
                                "NewProperty CurrentMechanic -> 4.",
                                "PropertyChanged 0.CurrentMechanic = null.",
-                               "NewProperty OId -> 5.",
+                               "NewProperty IsDisposed -> 5.",
+                               "PropertyChanged 0.IsDisposed = False.",
+                               "NewProperty OId -> 6.",
                                "PropertyChanged 0.OId = 0.",
                                "PropertyChanged 1.Name = Second Car.",
                                "PropertyChanged 1.TestSpeed = 0.",
                                "PropertyChanged 1.Position = (0,0).",
                                "PropertyChanged 1.Power = 0.",
                                "PropertyChanged 1.CurrentMechanic = null.",
+                               "PropertyChanged 1.IsDisposed = False.",
                                "PropertyChanged 1.OId = 1." );
 
                 domain.Modify( TestHelper.Monitor, () =>

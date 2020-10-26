@@ -237,10 +237,9 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             {
             }
 
-            SimpleValue( IBinaryDeserializerContext c )
-                : base( c )
+            SimpleValue( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
             {
-                var r = c.StartReading().Reader;
                 Value = r.ReadInt32();
                 ValueFromReminders = r.ReadInt32();
             }
@@ -491,10 +490,9 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 _counter = counter;
             }
 
-            TestReminder( IBinaryDeserializerContext c )
-                : base( c )
+            TestReminder( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
             {
-                var r = c.StartReading().Reader;
                 _counter = (TestCounter)r.ReadObject();
             }
 

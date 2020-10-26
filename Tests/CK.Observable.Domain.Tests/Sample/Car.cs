@@ -5,7 +5,7 @@ using System;
 namespace CK.Observable.Domain.Tests.Sample
 {
     [SerializationVersion(0)]
-    public class Car : ObservableObject
+    public sealed class Car : ObservableObject
     {
         ObservableEventHandler<ObservableDomainEventArgs> _testSpeedChanged;
         ObservableEventHandler _positionChanged;
@@ -19,10 +19,9 @@ namespace CK.Observable.Domain.Tests.Sample
             Name = name;
         }
 
-        protected Car( IBinaryDeserializerContext d )
-            : base( d )
+        Car( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
         {
-            var r = d.StartReading().Reader;
             Name = r.ReadNullableString();
             TestSpeed = r.ReadInt32();
             _position = (Position)r.ReadObject();

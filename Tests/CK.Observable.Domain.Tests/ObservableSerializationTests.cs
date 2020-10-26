@@ -13,10 +13,10 @@ namespace CK.Observable.Domain.Tests
     public class ObservableSerializationTests
     {
         [TestCase( "Person" )]
-        [TestCase( "SuspendableClock" )]
-        [TestCase( "Timer" )]
-        [TestCase( "Reminder" )]
-        [TestCase( "AutoCounter" )]
+        //[TestCase( "SuspendableClock" )]
+        //[TestCase( "Timer" )]
+        //[TestCase( "Reminder" )]
+        //[TestCase( "AutoCounter" )]
         public void one_object_serialization( string type )
         {
             using var handler = TestHelper.CreateDomainHandler( $"{nameof( one_object_serialization )}-{type}", serviceProvider: null );
@@ -61,71 +61,71 @@ namespace CK.Observable.Domain.Tests
         }
 
 
-        [SerializationVersion( 0 )]
-        class ForgetToCallBaseDeserializationCtor : InternalObject
-        {
-            public ForgetToCallBaseDeserializationCtor()
-            {
-            }
+        //[SerializationVersion( 0 )]
+        //class ForgetToCallBaseDeserializationCtor : InternalObject
+        //{
+        //    public ForgetToCallBaseDeserializationCtor()
+        //    {
+        //    }
 
-            protected ForgetToCallBaseDeserializationCtor( IBinaryDeserializerContext c )
-            // : base( c )
-            {
-                var r = c.StartReading();
-            }
+        //    protected ForgetToCallBaseDeserializationCtor( IBinaryDeserializerContext c )
+        //    // : base( c )
+        //    {
+        //        var r = c.StartReading();
+        //    }
 
-            void Write( BinarySerializer w )
-            {
-            }
-        }
+        //    void Write( BinarySerializer w )
+        //    {
+        //    }
+        //}
 
-        [SerializationVersion( 0 )]
-        class ForgetToCallBaseDeserializationCtorSpecialized : ForgetToCallBaseDeserializationCtor
-        {
-            public ForgetToCallBaseDeserializationCtorSpecialized()
-            {
-            }
+        //[SerializationVersion( 0 )]
+        //class ForgetToCallBaseDeserializationCtorSpecialized : ForgetToCallBaseDeserializationCtor
+        //{
+        //    public ForgetToCallBaseDeserializationCtorSpecialized()
+        //    {
+        //    }
 
-            ForgetToCallBaseDeserializationCtorSpecialized( IBinaryDeserializerContext c )
-                : base( c )
-            {
-                var r = c.StartReading();
-            }
+        //    ForgetToCallBaseDeserializationCtorSpecialized( IBinaryDeserializerContext c )
+        //        : base( c )
+        //    {
+        //        var r = c.StartReading();
+        //    }
 
-            void Write( BinarySerializer w )
-            {
-            }
-        }
+        //    void Write( BinarySerializer w )
+        //    {
+        //    }
+        //}
 
-        [TestCase( "" )]
-        [TestCase( "debugMode" )]
-        public void forgetting_to_call_base_deserialization_ctor_throws_explicit_InvalidDataException( string mode )
-        {
-            string msgNoDebugMode = $"Missing \": base( c )\" call in deserialization constructor of '{typeof( ForgetToCallBaseDeserializationCtor ).AssemblyQualifiedName}'.";
+        //[TestCase( "" )]
+        //[TestCase( "debugMode" )]
+        //public void forgetting_to_call_base_deserialization_ctor_throws_explicit_InvalidDataException( string mode )
+        //{
+        //    string msgNoDebugMode = $"Missing \": base( c )\" call in deserialization constructor of '{typeof( ForgetToCallBaseDeserializationCtor ).AssemblyQualifiedName}'.";
 
-            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( forgetting_to_call_base_deserialization_ctor_throws_explicit_InvalidDataException ) ) )
-            {
-                d.Modify( TestHelper.Monitor, () => new ForgetToCallBaseDeserializationCtor() );
-                d.AllInternalObjects.Should().HaveCount( 1 );
+        //    using( var d = new ObservableDomain( TestHelper.Monitor, nameof( forgetting_to_call_base_deserialization_ctor_throws_explicit_InvalidDataException ) ) )
+        //    {
+        //        d.Modify( TestHelper.Monitor, () => new ForgetToCallBaseDeserializationCtor() );
+        //        d.AllInternalObjects.Should().HaveCount( 1 );
 
-                d.Invoking( x => TestHelper.SaveAndLoad( d, debugMode: mode == "debugMode" ) ).Should()
-                      .Throw<InvalidDataException>()
-                      .WithMessage( msgNoDebugMode );
-            }
+        //        d.Invoking( x => TestHelper.SaveAndLoad( d, debugMode: mode == "debugMode" ) ).Should()
+        //              .Throw<InvalidDataException>()
+        //              .WithMessage( msgNoDebugMode );
+        //    }
 
-            string msgDebugModeForSpecialized = $"Read string failure: expected string 'After: CK.Observable.InternalObject*";
-            string msgForSpecialized = mode == "debugMode" ? msgDebugModeForSpecialized : msgNoDebugMode;
+        //    string msgDebugModeForSpecialized = $"Read string failure: expected string 'After: CK.Observable.InternalObject*";
+        //    string msgForSpecialized = mode == "debugMode" ? msgDebugModeForSpecialized : msgNoDebugMode;
 
-            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( forgetting_to_call_base_deserialization_ctor_throws_explicit_InvalidDataException ) ) )
-            {
-                d.Modify( TestHelper.Monitor, () => new ForgetToCallBaseDeserializationCtorSpecialized() );
-                d.AllInternalObjects.Should().HaveCount( 1 );
+        //    using( var d = new ObservableDomain( TestHelper.Monitor, nameof( forgetting_to_call_base_deserialization_ctor_throws_explicit_InvalidDataException ) ) )
+        //    {
+        //        d.Modify( TestHelper.Monitor, () => new ForgetToCallBaseDeserializationCtorSpecialized() );
+        //        d.AllInternalObjects.Should().HaveCount( 1 );
 
-                d.Invoking( x => TestHelper.SaveAndLoad( d, debugMode: mode == "debugMode" ) ).Should()
-                      .Throw<InvalidDataException>()
-                      .WithMessage( msgForSpecialized );
-            }
-        }
+        //        d.Invoking( x => TestHelper.SaveAndLoad( d, debugMode: mode == "debugMode" ) ).Should()
+        //              .Throw<InvalidDataException>()
+        //              .WithMessage( msgForSpecialized );
+        //    }
+        //}
 
         [Test]
         public void simple_idempotence_checks()
@@ -234,10 +234,9 @@ namespace CK.Observable.Domain.Tests
 
             public CustomRoot() { }
 
-            CustomRoot( IBinaryDeserializerContext d )
-                : base( d )
+            CustomRoot( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
             {
-                var r = d.StartReading().Reader;
                 ImmutablesById = (ObservableDictionary<string, CustomImmutable>)r.ReadObject();
                 SomeList = (ObservableList<string>)r.ReadObject();
                 CustomObservableList = (ObservableList<CustomObservable>)r.ReadObject();
@@ -263,9 +262,8 @@ namespace CK.Observable.Domain.Tests
                 Title = title;
             }
 
-            protected CustomImmutable( IBinaryDeserializerContext d )
+            CustomImmutable( IBinaryDeserializer r, TypeReadInfo? info )
             {
-                var r = d.StartReading().Reader;
                 Id = r.ReadNullableString();
                 Title = r.ReadNullableString();
             }
@@ -289,9 +287,9 @@ namespace CK.Observable.Domain.Tests
                 ImmutablesById = new ObservableDictionary<string, CustomImmutable>();
             }
 
-            protected CustomObservable( IBinaryDeserializerContext d )
+            protected CustomObservable( IBinaryDeserializer r, TypeReadInfo? info )
+            : base( RevertSerialization.Default )
             {
-                var r = d.StartReading().Reader;
                 ImmutablesById = (ObservableDictionary<string, CustomImmutable>)r.ReadObject();
             }
 
@@ -314,9 +312,10 @@ namespace CK.Observable.Domain.Tests
                 AlwaysDisposeChild = alwaysDisposeChild;
                 ChildObject = new ObservableList<int>();
             }
-            public TestDisposableObservableObject( IBinaryDeserializerContext c ) : base( c )
+
+            TestDisposableObservableObject( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
             {
-                var r = c.StartReading().Reader;
                 AlwaysDisposeChild = r.ReadBoolean();
                 ChildObject = (ObservableList<int>)r.ReadObject();
             }
@@ -357,9 +356,9 @@ namespace CK.Observable.Domain.Tests
                 _oTimers = new ObservableList<ObservableTimer>();
             }
 
-            ReminderAndTimerBag( IBinaryDeserializerContext d ) : base( d )
+            ReminderAndTimerBag( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
             {
-                var r = d.StartReading().Reader;
                 _identifier = r.ReadInt32();
                 _reminders = (List<ObservableReminder>)r.ReadObject()!;
                 _oReminders = (ObservableList<ObservableReminder>)r.ReadObject()!;

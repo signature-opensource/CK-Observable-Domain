@@ -58,28 +58,32 @@ namespace CK.Observable
             ActualDomain.Register( this );
         }
 
-        /// <summary>
-        /// Deserialization constructor.
-        /// </summary>
-        /// <param name="d">The deserialization context.</param>
-        protected InternalObject( IBinaryDeserializerContext d )
+        protected InternalObject( RevertSerialization _ ) { }
+
+        InternalObject( IBinaryDeserializer r, TypeReadInfo? info )
         {
-            var (r,info) = d.StartReading();
             Debug.Assert( info.Version == 0 );
-            // This enables the Internal object to be serializable/deserializable outside a Domain
-            // (for instance to use BinarySerializer.IdempotenceCheck): we really register the deserialized object
-            // if and only if the available Domain service is the one being deserialized.
-            ActualDomain = r.Services.GetService<ObservableDomain>( throwOnNull: true );
-            //if( ActualDomain == ObservableDomain.CurrentThreadDomain )
-            //{
-            //    ActualDomain.Register( this );
-            //}
-            _disposed = new ObservableEventHandler<ObservableDomainEventArgs>( r );
+            if( r.ReadBoolean() )
+            {
+                // This enables the Internal object to be serializable/deserializable outside a Domain
+                // (for instance to use BinarySerializer.IdempotenceCheck): the domain registers it.
+                ActualDomain = r.Services.GetService<ObservableDomain>( throwOnNull: true );
+                _disposed = new ObservableEventHandler<ObservableDomainEventArgs>( r );
+            }
+            else
+            {
+                Debug.Assert( IsDisposed );
+            }
         }
 
         void Write( BinarySerializer w )
         {
-            _disposed.Write( w );
+            if( IsDisposed ) w.Write( false );
+            else
+            {
+                w.Write( true );
+                _disposed.Write( w );
+            }
         }
 
         /// <summary>

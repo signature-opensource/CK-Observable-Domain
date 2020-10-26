@@ -21,10 +21,13 @@ namespace CK.Observable.Device
             InternalDevices = new ObservableList<AvailableDeviceInfo>();
         }
 
-        private protected ObservableDeviceHostObject( IBinaryDeserializerContext ctx )
-            : base( ctx )
+#pragma warning disable CS8618 // Non-nullable field is uninitialized. Consider declaring as nullable.
+        protected ObservableDeviceHostObject( RevertSerialization _ ) : base( _ ) { }
+#pragma warning restore CS8618 // Non-nullable field is uninitialized. Consider declaring as nullable.
+
+        ObservableDeviceHostObject( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
         {
-            ctx.StartReading();
             InternalDevices = new ObservableList<AvailableDeviceInfo>();
         }
 

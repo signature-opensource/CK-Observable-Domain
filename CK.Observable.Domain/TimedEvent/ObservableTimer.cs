@@ -52,10 +52,10 @@ namespace CK.Observable
             Name = name ?? throw new ArgumentNullException( nameof( name ) );
         }
 
-        ObservableTimer( IBinaryDeserializerContext c )
-            : base( c )
+        ObservableTimer( IBinaryDeserializer r, TypeReadInfo? info )
+            : base( RevertSerialization.Default )
         {
-            var r = c.StartReading().Reader;
+            Debug.Assert( !IsDisposed );
             _milliSeconds = r.ReadInt32();
             if( _milliSeconds < 0 )
             {

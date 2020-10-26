@@ -86,38 +86,41 @@ namespace CK.Observable
             _oid = ActualDomain.Register( this );
         }
 
-        /// <summary>
-        /// Deserialization constructor.
-        /// </summary>
-        /// <param name="d">The deserialization context.</param>
-        protected ObservableObject( IBinaryDeserializerContext d )
+        protected ObservableObject( RevertSerialization _ ) { }
+
+        ObservableObject( IBinaryDeserializer r, TypeReadInfo? info )
         {
-            var r = d.StartReading().Reader;
-            // This enables the Observable object to be serializable/deserializable outside a Domain
-            // (for instance to use BinarySerializer.IdempotenceCheck): we really register the deserialized object
-            // if and only if the available Domain service is the one being deserialized.
-            var domain = r.Services.GetService<ObservableDomain>( throwOnNull: true );
-            if( (ActualDomain = domain) == ObservableDomain.CurrentThreadDomain )
-            {
-                domain.SideEffectsRegister( this );
-            }
-            _exporter = domain._exporters.FindDriver( GetType() );
             _oid = new ObservableObjectId( r );
-            _disposed = new ObservableEventHandler<ObservableDomainEventArgs>( r );
-            _propertyChanged = new ObservableEventHandler<PropertyChangedEventArgs>( r );
+            if( !IsDisposed )
+            {
+                // This enables the Observable object to be serializable/deserializable outside a Domain
+                // (for instance to use BinarySerializer.IdempotenceCheck): we really register the deserialized object
+                // if and only if the available Domain service is the one being deserialized.
+                var domain = r.Services.GetService<ObservableDomain>( throwOnNull: true );
+                if( (ActualDomain = domain) == ObservableDomain.CurrentThreadDomain )
+                {
+                    domain.SideEffectsRegister( this );
+                }
+                _exporter = domain._exporters.FindDriver( GetType() );
+                _disposed = new ObservableEventHandler<ObservableDomainEventArgs>( r );
+                _propertyChanged = new ObservableEventHandler<PropertyChangedEventArgs>( r );
+            }
         }
+
 
         void Write( BinarySerializer w )
         {
             _oid.Write( w );
-            _disposed.Write( w );
-            _propertyChanged.Write( w );
+            if( !IsDisposed )
+            {
+                _disposed.Write( w );
+                _propertyChanged.Write( w );
+            }
         }
 
         /// <summary>
         /// Gets whether this object has been disposed.
         /// </summary>
-        [NotExportable]
         public bool IsDisposed => _oid == ObservableObjectId.Disposed;
 
         /// <summary>
