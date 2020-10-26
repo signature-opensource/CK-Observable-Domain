@@ -89,7 +89,7 @@ namespace CK.Observable.Domain.Tests
             {
             }
 
-            protected ObjWithSKSimple( IBinaryDeserializer r, TypeReadInfo? info )
+            ObjWithSKSimple( IBinaryDeserializer r, TypeReadInfo? info )
                 : base( RevertSerialization.Default )
             {
             }
@@ -109,7 +109,7 @@ namespace CK.Observable.Domain.Tests
             {
             }
 
-            protected ObjWithSKSimpleViaInterface( IBinaryDeserializer r, TypeReadInfo? info )
+            ObjWithSKSimpleViaInterface( IBinaryDeserializer r, TypeReadInfo? info )
                 : base( RevertSerialization.Default )
             {
             }

@@ -40,7 +40,7 @@ namespace CK.Observable.Domain.Tests
             {
             }
 
-            public SerializableOnly( IBinaryDeserializer r, TypeReadInfo? info )
+            SerializableOnly( IBinaryDeserializer r, TypeReadInfo? info )
                 : base( RevertSerialization.Default )
             {
                 Name = r.ReadNullableString();

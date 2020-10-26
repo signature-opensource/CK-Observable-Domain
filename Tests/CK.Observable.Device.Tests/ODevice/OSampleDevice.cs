@@ -21,7 +21,7 @@ namespace CK.Observable.Device.Tests
             Domain.EnsureSidekicks();
         }
 
-        protected OSampleDevice( IBinaryDeserializer r, TypeReadInfo? info )
+        OSampleDevice( IBinaryDeserializer r, TypeReadInfo? info )
                 : base( RevertSerialization.Default )
         {
         }
