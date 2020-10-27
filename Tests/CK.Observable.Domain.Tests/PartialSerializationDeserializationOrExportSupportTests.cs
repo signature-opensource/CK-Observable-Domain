@@ -57,20 +57,19 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void serializable_but_not_exportable()
         {
-            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( serializable_but_not_exportable ) ) )
+            var d = new ObservableDomain( TestHelper.Monitor, nameof( serializable_but_not_exportable ) );
+            d.Modify( TestHelper.Monitor, () =>
             {
-                d.Modify( TestHelper.Monitor, () =>
-                {
-                    new SerializableOnly() { Name = "Albert" };
-                } );
-                using( var d2 = TestHelper.SaveAndLoad( d ) )
-                {
-                    d2.AllObjects.OfType<SerializableOnly>().Single().Name.Should().Be( "Albert" );
+                new SerializableOnly() { Name = "Albert" };
+            } );
+            using( var d2 = TestHelper.SaveAndLoad( d ) )
+            {
+                d2.AllObjects.OfType<SerializableOnly>().Single().Name.Should().Be( "Albert" );
 
-                    d.Invoking( sut => sut.ExportToString() )
-                        .Should().Throw<InvalidOperationException>().WithMessage( "*is not exportable*" );
-                }
+                d2.Invoking( sut => sut.ExportToString() )
+                    .Should().Throw<InvalidOperationException>().WithMessage( "*is not exportable*" );
             }
+            d.IsDisposed.Should().BeTrue( "SaveAndLoad disposed it." );
         }
 
     }

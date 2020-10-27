@@ -29,13 +29,11 @@ namespace CK.Observable
         ObservableTimedEventBase( IBinaryDeserializer r, TypeReadInfo? info )
             : base( RevertSerialization.Default )
         {
-            Debug.Assert( !IsDisposed );
             _handlers = new ObservableEventHandler<TEventArgs>( r );
         }
 
         void Write( BinarySerializer w )
         {
-            Debug.Assert( !IsDisposed );
             _handlers.Write( w );
         }
 

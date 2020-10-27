@@ -7,7 +7,7 @@ using System.Runtime.Serialization.Formatters.Binary;
 using CK.Core;
 using static CK.Testing.MonitorTestHelper;
 
-namespace CK.Serialization.Tests
+namespace CK.Observable.Domain.Tests.Serialization
 {
     [TestFixture]
     public class DictionarySerializationTests
@@ -39,7 +39,7 @@ namespace CK.Serialization.Tests
                 { 9, "Nine" },
                 { 8, "Eight" }
             };
-            object back = TestHelper.SaveAndLoad( int2String );
+            object back = TestHelper.SaveAndLoadObject( int2String );
             back.Should().BeAssignableTo<Dictionary<int, string>>();
             var b = (Dictionary<int, string>)back;
             b.Should().BeEquivalentTo( int2String );
@@ -56,7 +56,7 @@ namespace CK.Serialization.Tests
                 { "Nine", 9 },
                 { "Eight", 8 }
             };
-            object back = TestHelper.SaveAndLoad( string2Int );
+            object back = TestHelper.SaveAndLoadObject( string2Int );
             back.Should().BeAssignableTo<Dictionary<string,int>>();
             var b = (Dictionary<string, int>)back;
             b.Should().BeEquivalentTo( string2Int );

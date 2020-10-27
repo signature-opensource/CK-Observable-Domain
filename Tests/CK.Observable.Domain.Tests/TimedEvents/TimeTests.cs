@@ -284,8 +284,10 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                     // Only half of them (odd ones) are Active.
                     Enumerable.Range( 0, 8 ).Select( i => new ObservableTimer(i.ToString(), now, 1 + i * 5, (i & 1) != 0)).ToArray();
                     d.TimeManager.AllObservableTimedEvents.Where( o => !o.IsActive ).Should().HaveCount( 8 );
+
                 } ).Success.Should().BeTrue();
-                using( var d2 = TestHelper.SaveAndLoad( d ) )
+
+                using( var d2 = TestHelper.SaveAndLoad( d, skipDomainDispose: true ) )
                 {
                     d2.TimeManager.Timers.Should().HaveCount( 8 );
                     d2.TimeManager.AllObservableTimedEvents.Where( o => !o.IsActive ).Should().HaveCount( 8 );
@@ -306,6 +308,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                     }
                     d.TimeManager.AllObservableTimedEvents.Where( o => o.IsActive ).Should().HaveCount( 4 + 5, "4 timers and 5 reminders are Active." );
                     TestHelper.Monitor.Info( "Leaving Primary Domain configuration." );
+
                 } ).Success.Should().BeTrue();
 
                 Thread.Sleep( 50 );
@@ -314,7 +317,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 int secondaryValue = 0;
                 using( TestHelper.Monitor.OpenInfo( "Having slept during 50 ms: now creating Secondary by Save/Load the primary domain." ) )
                 {
-                    using( var d2 = TestHelper.SaveAndLoad( d, "Secondary" ) )
+                    using( var d2 = TestHelper.SaveAndLoad( d, "Secondary", skipDomainDispose: true ) )
                     {
                         d2.TimeManager.Timers.Should().HaveCount( 8 );
                         d2.TimeManager.Reminders.Should().HaveCount( 5 );

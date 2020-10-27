@@ -116,14 +116,14 @@ namespace CK.Observable.Domain.Tests
                 var h = new ObservableEventHandler<EventArgs>();
                 h.Add( StaticOnEvent, nameof( StaticOnEvent ) );
                 {
-                    var h2 = TestHelper.SaveAndLoad( h, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<EventArgs>( r ) );
+                    var h2 = TestHelper.SaveAndLoadObject( h, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<EventArgs>( r ) );
                     h2.HasHandlers.Should().BeTrue();
                     h2.Invoking( _ => _.Raise( this, EArgs ) )
                                             .Should().Throw<Exception>().WithMessage( "Such an ugly test...(EventArgs)" );
                 }
                 h.RemoveAll();
                 {
-                    var h2 = TestHelper.SaveAndLoad( h, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<EventArgs>( r ) );
+                    var h2 = TestHelper.SaveAndLoadObject( h, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<EventArgs>( r ) );
                     h2.HasHandlers.Should().BeFalse();
                     h2.Invoking( _ => _.Raise( this, EArgs ) )
                                             .Should().NotThrow();
@@ -133,14 +133,14 @@ namespace CK.Observable.Domain.Tests
                 var h = new ObservableEventHandler<EventMonitoredArgs>();
                 h.Add( StaticOnEvent, nameof( StaticOnEvent ) );
                 {
-                    var h2 = TestHelper.SaveAndLoad( h, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<EventMonitoredArgs>( r ) );
+                    var h2 = TestHelper.SaveAndLoadObject( h, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<EventMonitoredArgs>( r ) );
                     h2.HasHandlers.Should().BeTrue();
                     h2.Invoking( _ => _.Raise( this, MArgs ) )
                                             .Should().Throw<Exception>().WithMessage( "Such an ugly test...(EventMonitoredArgs)" );
                 }
                 h.RemoveAll();
                 {
-                    var h2 = TestHelper.SaveAndLoad( h, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<EventMonitoredArgs>( r ) );
+                    var h2 = TestHelper.SaveAndLoadObject( h, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<EventMonitoredArgs>( r ) );
                     h2.HasHandlers.Should().BeFalse();
                     h2.Invoking( _ => _.Raise( this, MArgs ) )
                                             .Should().NotThrow();
@@ -150,14 +150,14 @@ namespace CK.Observable.Domain.Tests
                 var h = new ObservableEventHandler<MoreSpecializedEventArgs>();
                 h.Add( StaticOnEvent, nameof( StaticOnEvent ) );
                 {
-                    var h2 = TestHelper.SaveAndLoad( h, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<MoreSpecializedEventArgs>( r ) );
+                    var h2 = TestHelper.SaveAndLoadObject( h, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<MoreSpecializedEventArgs>( r ) );
                     h2.HasHandlers.Should().BeTrue();
                     h2.Invoking( _ => _.Raise( this, OArgs ) )
                                             .Should().Throw<Exception>().WithMessage( "Such an ugly test...(MoreSpecializedEventArgs)" );
                 }
                 h.RemoveAll();
                 {
-                    var h2 = TestHelper.SaveAndLoad( h, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<MoreSpecializedEventArgs>( r ) );
+                    var h2 = TestHelper.SaveAndLoadObject( h, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<MoreSpecializedEventArgs>( r ) );
                     h2.HasHandlers.Should().BeFalse();
                     h2.Invoking( _ => _.Raise( this, OArgs ) )
                                             .Should().NotThrow();
@@ -205,14 +205,14 @@ namespace CK.Observable.Domain.Tests
 
             {
                 _typeCalled = 0;
-                var hM2 = TestHelper.SaveAndLoad( hM, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<EventMonitoredArgs>( r ) );
+                var hM2 = TestHelper.SaveAndLoadObject( hM, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<EventMonitoredArgs>( r ) );
                 hM2.HasHandlers.Should().BeTrue();
                 hM2.Raise( this, MArgs );
                 _typeCalled.Should().Be( 2 );
             }
             {
                 _typeCalled = 0;
-                var hO2 = TestHelper.SaveAndLoad( hO, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<MoreSpecializedEventArgs>( r ) );
+                var hO2 = TestHelper.SaveAndLoadObject( hO, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<MoreSpecializedEventArgs>( r ) );
                 hO2.HasHandlers.Should().BeTrue();
                 hO2.Raise( this, OArgs );
                 _typeCalled.Should().Be( 3 );

@@ -35,6 +35,7 @@ namespace CK.Observable
         TimeSpan _cumulativeOffset;
         DateTime _lastStop;
         bool _isActive;
+        bool _cumulateUnloadedTime;
 
         /// <summary>
         /// Creates a new <see cref="SuspendableClock"/>.
@@ -53,10 +54,23 @@ namespace CK.Observable
         SuspendableClock( IBinaryDeserializer r, TypeReadInfo? info )
             : base( RevertSerialization.Default )
         {
-            Debug.Assert( !IsDisposed );
-            _isActive = r.ReadBoolean();
-            _lastStop = r.ReadDateTime();
             _cumulativeOffset = r.ReadTimeSpan();
+            _isActive = r.ReadBoolean();
+            if( _isActive )
+            {
+                var t = r.ReadDateTime();
+                if( t != Util.UtcMinValue )
+                {
+                    _cumulateUnloadedTime = true;
+                    var unloadedDuration = DateTime.UtcNow - t;
+                    r.ImplementationServices.OnPostDeserialization( () => AdjustCumulativeOffset( unloadedDuration ) );
+                }
+            }
+            else
+            {
+                _cumulateUnloadedTime = r.ReadBoolean();
+                _lastStop = r.ReadDateTime();
+            }
             _firstInClock = (ObservableTimedEventBase?)r.ReadObject();
             _lastInClock = (ObservableTimedEventBase?)r.ReadObject();
             _isActiveChanged = new ObservableEventHandler<ObservableDomainEventArgs>( r );
@@ -64,10 +78,20 @@ namespace CK.Observable
 
         void Write( BinarySerializer w )
         {
-            Debug.Assert( !IsDisposed );
-            w.Write( _isActive );
-            w.Write( _lastStop );
             w.Write( _cumulativeOffset );
+            w.Write( _isActive );
+            if( _isActive )
+            {
+                // Fact: when IsActive is true, we don't care of _lastStop value: it will
+                // be reset next time IsActive is set to false.
+                // We use this fact to handle the "unloaded" time here.
+                w.Write( _cumulateUnloadedTime ? DateTime.UtcNow : Util.UtcMinValue );
+            }
+            else
+            {
+                w.Write( _cumulateUnloadedTime );
+                w.Write( _lastStop );
+            }
             w.WriteObject( _firstInClock );
             w.WriteObject( _lastInClock );
             _isActiveChanged.Write( w );
@@ -90,6 +114,21 @@ namespace CK.Observable
         public TimeSpan CumulativeOffset => _cumulativeOffset;
 
         /// <summary>
+        /// Gets or sets whether the time spent unloaded should be added to <see cref="CumulativeOffset"/> even
+        /// when <see cref="IsActive"/> is true.
+        /// Defaults to true.
+        /// <para>
+        /// When IsActive is false, the time of the last suspension is memorized and will remain the same whether
+        /// the domain is loaded or not: the time spent unloaded will, by design, appear in the CumulativeOffset.
+        /// </para>
+        /// </summary>
+        public bool CumulateUnloadedTime
+        {
+            get => _cumulateUnloadedTime;
+            set => _cumulateUnloadedTime = value;
+        }
+
+        /// <summary>
         /// Gets or sets whether this clock is active.
         /// Defaults to true.
         /// </summary>
@@ -102,15 +141,8 @@ namespace CK.Observable
                 {
                     if( value )
                     {
-                        var lastStopDuration = DateTime.UtcNow - _lastStop;
-                        _cumulativeOffset += lastStopDuration;
                         _isActive = true;
-                        var t = _firstInClock;
-                        while( t != null )
-                        {
-                            t.OnSuspendableClockActivated( lastStopDuration );
-                            t = t.NextInClock;
-                        }
+                        AdjustCumulativeOffset( DateTime.UtcNow - _lastStop );
                     }
                     else
                     {
@@ -128,6 +160,17 @@ namespace CK.Observable
                     }
                     if( _isActiveChanged.HasHandlers ) _isActiveChanged.Raise( this, Domain.DefaultEventArgs );
                 }
+            }
+        }
+
+        void AdjustCumulativeOffset( TimeSpan lastStopDuration )
+        {
+            _cumulativeOffset += lastStopDuration;
+            var t = _firstInClock;
+            while( t != null )
+            {
+                t.OnSuspendableClockActivated( lastStopDuration );
+                t = t.NextInClock;
             }
         }
 

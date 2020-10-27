@@ -12,12 +12,12 @@ namespace CK.Core
     static class TestHelperExtensions
     {
 
-        public static object SaveAndLoad( this IBasicTestHelper @this, object o, IServiceProvider serviceProvider = null, ISerializerResolver serializers = null, IDeserializerResolver deserializers = null )
+        public static object SaveAndLoadObject( this IBasicTestHelper @this, object o, IServiceProvider serviceProvider = null, ISerializerResolver serializers = null, IDeserializerResolver deserializers = null )
         {
-            return SaveAndLoad( @this, o, (x,w) => w.WriteObject( x ), r => r.ReadObject(), serializers, deserializers );
+            return SaveAndLoadObject( @this, o, (x,w) => w.WriteObject( x ), r => r.ReadObject(), serializers, deserializers );
         }
 
-        public static T SaveAndLoad<T>( this IBasicTestHelper @this, T o, Action<T,BinarySerializer> w, Func<BinaryDeserializer,T> r, ISerializerResolver serializers = null, IDeserializerResolver deserializers = null )
+        public static T SaveAndLoadObject<T>( this IBasicTestHelper @this, T o, Action<T,BinarySerializer> w, Func<BinaryDeserializer,T> r, ISerializerResolver serializers = null, IDeserializerResolver deserializers = null )
         {
             using( var s = new MemoryStream() )
             using( var writer = new BinarySerializer( s, serializers, true ) )
@@ -58,12 +58,10 @@ namespace CK.Core
 
             public ObservableDomain Domain { get; private set; }
 
-            public void Reload( IActivityMonitor m, bool idempotenceCheck = false )
+            public void Reload( IActivityMonitor m, bool idempotenceCheck = false, int pauseReloadMilliseconds = 0 )
             {
                 if( idempotenceCheck ) ObservableDomain.IdempotenceSerializationCheck( m, Domain );
-                var d = SaveAndLoad( m, Domain, Domain.DomainName, ServiceProvider, debugMode: true );
-                Domain.Dispose();
-                Domain = d;
+                Domain = MonitorTestHelper.TestHelper.SaveAndLoad( Domain, serviceProvider: ServiceProvider, debugMode: true, pauseMilliseconds: pauseReloadMilliseconds );
             }
 
             public void Dispose()
@@ -77,21 +75,37 @@ namespace CK.Core
             return new DomainTestHandler( @this.Monitor, domainName, serviceProvider );
         }
 
-        static ObservableDomain SaveAndLoad( IActivityMonitor m, ObservableDomain domain, string? renamed, IServiceProvider? serviceProvider, bool debugMode )
+        static ObservableDomain SaveAndLoad( IActivityMonitor m,
+                                             ObservableDomain domain,
+                                             string? renamed,
+                                             IServiceProvider? serviceProvider,
+                                             bool debugMode,
+                                             Func<ObservableDomain, bool>? loadHook,
+                                             int pauseMilliseconds,
+                                             bool skipDomainDispose )
         {
             using( var s = new MemoryStream() )
             {
                 domain.Save( m, s, leaveOpen: true, debugMode );
+                if( !skipDomainDispose ) domain.Dispose();
+                System.Threading.Thread.Sleep( pauseMilliseconds );
                 var d = new ObservableDomain( m, renamed ?? domain.DomainName, serviceProvider );
                 s.Position = 0;
-                d.Load( m, s, domain.DomainName );
+                d.Load( m, s, domain.DomainName, loadHook: loadHook );
                 return d;
             }
         }
 
-        public static ObservableDomain SaveAndLoad( this IMonitorTestHelper @this, ObservableDomain domain, string? renamed = null, IServiceProvider? serviceProvider = null, bool debugMode = true )
+        public static ObservableDomain SaveAndLoad( this IMonitorTestHelper @this,
+                                                    ObservableDomain domain,
+                                                    string? renamed = null,
+                                                    IServiceProvider? serviceProvider = null,
+                                                    bool debugMode = true,
+                                                    Func<ObservableDomain, bool>? loadHook = null,
+                                                    int pauseMilliseconds = 0,
+                                                    bool skipDomainDispose = false )
         {
-            return SaveAndLoad( @this.Monitor, domain, renamed, serviceProvider, debugMode );
+            return SaveAndLoad( @this.Monitor, domain, renamed, serviceProvider, debugMode, loadHook, pauseMilliseconds, skipDomainDispose );
         }
 
 

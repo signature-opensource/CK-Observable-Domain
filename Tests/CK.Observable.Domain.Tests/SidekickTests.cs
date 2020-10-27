@@ -123,7 +123,8 @@ namespace CK.Observable.Domain.Tests
         [TestCase( "ISidekickClientObject<>" )]
         public void sidekick_simple_instantiation_and_serialization( string mode )
         {
-            using var obs = new ObservableDomain( TestHelper.Monitor, nameof( sidekick_simple_instantiation_and_serialization ) + '-' + mode );
+            // Will be disposed by TestHelper.SaveAndLoad at the end of this test.
+            var obs = new ObservableDomain( TestHelper.Monitor, nameof( sidekick_simple_instantiation_and_serialization ) + '-' + mode );
 
             IReadOnlyList<ActivityMonitorSimpleCollector.Entry> logs = null;
             using( TestHelper.Monitor.CollectEntries( entries => logs = entries, LogLevelFilter.Info ) )
@@ -183,12 +184,13 @@ namespace CK.Observable.Domain.Tests
                 TransactionResult t = obs2.Modify( TestHelper.Monitor, () =>
                 {
                     var o = (ObjWithSKBase)obs2.AllObjects.First();
-                    var a = (ObjWithSKBase)obs2.AllObjects.Skip(1).First();
+                    var a = (ObjWithSKBase)obs2.AllObjects.Skip( 1 ).First();
                     o.Message = "O!";
                     a.Message = "A!";
                 } );
                 t.Success.Should().BeTrue();
             }
+            obs.IsDisposed.Should().BeTrue( "SaveAndLoad disposed it." );
             logs.SingleOrDefault( l => l.Text == "Handling [O!]" ).Should().NotBeNull();
             logs.SingleOrDefault( l => l.Text == "Handling [A!]" ).Should().NotBeNull();
             if( mode == "UseSidekickAttribute" )

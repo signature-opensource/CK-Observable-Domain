@@ -5,6 +5,7 @@ using NUnit.Framework;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -77,10 +78,38 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             }
         }
 
+        const int enoughMilliseconds = 500;
+
+        [Test]
+        public void SuspendableClock_CumulateUnloadedTime_tests()
+        {
+            using var handler = TestHelper.CreateDomainHandler( nameof( SuspendableClock_serialization ), serviceProvider: null );
+
+            DateTime initialExpected = Util.UtcMinValue;
+            handler.Domain.Modify( TestHelper.Monitor, () =>
+            {
+                var r = new ObservableReminder( DateTime.UtcNow.AddMilliseconds( enoughMilliseconds / 2 ) );
+                var c = new SuspendableClock();
+                Debug.Assert( c.IsActive && c.CumulateUnloadedTime, "By default, CumulateUnloadedTime is true." );
+
+                r.Elapsed += Reminder_Elapsed;
+                r.SuspendableClock = c;
+                r.IsActive.Should().BeTrue( "The clock is active and the duetime is later." );
+
+                initialExpected = r.DueTimeUtc;
+            } );
+            handler.Reload( TestHelper.Monitor, idempotenceCheck: false, pauseReloadMilliseconds: 2*enoughMilliseconds );
+            using( handler.Domain.AcquireReadLock() )
+            {
+                var r = handler.Domain.TimeManager.Reminders.Single();
+                var minActual = initialExpected.AddMilliseconds( enoughMilliseconds );
+                r.DueTimeUtc.Should().BeAfter( minActual );
+            }
+        }
+
         [Test]
         public void SuspendableClock_serialization()
         {
-            int enoughMilliseconds = 500;
             ReminderHasElapsed = false;
             ClockIsActiveChanged = false;
 
@@ -199,7 +228,6 @@ namespace CK.Observable.Domain.Tests.TimedEvents
 
         static bool ReminderHasElapsed = false;
         static bool ClockIsActiveChanged = false;
-
 
         static void Clock_IsActiveChanged( object sender, ObservableDomainEventArgs e )
         {
