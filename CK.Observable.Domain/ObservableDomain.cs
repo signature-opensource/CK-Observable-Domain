@@ -1284,7 +1284,7 @@ namespace CK.Observable
                             if( disposedObjectsCount == 0 ) monitor.Trace( "No disposed objects found." );
                             else
                             {
-                                var message = $"Found {disposedObjectsCount} disposed objects: " + disposedList.Select( t => $"{t.Item2} instances of '{t.Item1.Name}'" ).Concatenate();
+                                var message = $"Found {disposedObjectsCount} disposed objects: {disposedList.Select( t => $"{t.Item2} instances of '{t.Item1.Name}'" ).Concatenate()}.";
                                 monitor.Log( saveDisposed == SaveDisposedObjectBehavior.LogWarning ? LogLevel.Warn : LogLevel.Error, message );
                                 if( saveDisposed == SaveDisposedObjectBehavior.Throw )
                                 {

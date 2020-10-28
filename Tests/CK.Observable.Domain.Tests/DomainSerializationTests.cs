@@ -188,9 +188,9 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
-        public void persisting_disposed_objects()
+        public void persisting_disposed_objects_and_SaveDisposedObjectBehavior()
         {
-            using var d = new ObservableDomain( TestHelper.Monitor, nameof( loadHooks_can_skip_the_TimedEvents_update ) );
+            var d = new ObservableDomain( TestHelper.Monitor, nameof( loadHooks_can_skip_the_TimedEvents_update ) );
             d.Modify( TestHelper.Monitor, () =>
             {
                 var list = new ObservableList<object>();
@@ -203,7 +203,13 @@ namespace CK.Observable.Domain.Tests
                 list.Add( obsOject );
                 list.Add( intObject );
             } );
+
+            // This reloads the domain instance.
             ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
+
+            // This disposes the domain and returns a brand new one. This doesn't throw.
+            d = TestHelper.SaveAndLoad( d, saveDisposed: SaveDisposedObjectBehavior.Throw );
+
             d.Modify( TestHelper.Monitor, () =>
             {
                 var list = d.AllObjects.OfType<ObservableList<object>>().Single();
@@ -225,6 +231,10 @@ namespace CK.Observable.Domain.Tests
                     o.IsDisposed.Should().BeTrue();
                 }
             } );
+
+            TestHelper.Invoking( x => x.SaveAndLoad( d, saveDisposed: SaveDisposedObjectBehavior.Throw ) )
+                .Should().Throw<CKException>()
+                .WithMessage( "Found 4 disposed objects: 1 instances of 'ObservableTimer', 1 instances of 'ObservableReminder', 1 instances of 'Person', 1 instances of 'SuspendableClock'." );
         }
 
 
