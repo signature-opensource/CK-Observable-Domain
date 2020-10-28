@@ -260,6 +260,7 @@ namespace CK.Observable
             var f = _first;
             while( f != null )
             {
+                Debug.Assert( !f.IsDisposed, "Disposed Timed event objects are removed from the list." );
                 w.WriteObject( f );
                 f = f.Next;
             }

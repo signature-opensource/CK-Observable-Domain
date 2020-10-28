@@ -15,10 +15,10 @@ namespace CK.Observable
     public class BinarySerializer : CKBinaryWriter
     {
         readonly Dictionary<Type, TypeInfo> _types;
-        // This is a fix.
-        // Until the serialization is refactored...
-        readonly internal Dictionary<object, int> _seen;
+        readonly Dictionary<object, int> _seen;
         readonly ISerializerResolver _drivers;
+        readonly IList<(Type, int)>? _disposedTracker;
+
         BinaryFormatter? _binaryFormatter;
 
         int _debugModeCounter;
@@ -43,16 +43,19 @@ namespace CK.Observable
         /// <param name="drivers">Optional driver resolver to use. Uses <see cref="SerializerRegistry.Default"/> by default.</param>
         /// <param name="leaveOpen">True to leave the stram opened when disposing. False to close it.</param>
         /// <param name="encoding">Optional encoding for texts. Defaults to UTF-8.</param>
+        /// <param name="disposedTracker">Optional collector of disposed instance. See <see cref="DisposedTracker"/>.</param>
         public BinarySerializer(
             Stream output,
             ISerializerResolver? drivers = null,
             bool leaveOpen = false,
-            Encoding? encoding = null )
+            Encoding? encoding = null,
+            Action<IDisposableObject>? disposedTracker = null )
             : base( output, encoding ?? Encoding.UTF8, leaveOpen )
         {
             _types = new Dictionary<Type, TypeInfo>();
             _seen = new Dictionary<object, int>( PureObjectRefEqualityComparer<object>.Default );
             _drivers = drivers ?? SerializerRegistry.Default;
+            DisposedTracker = disposedTracker;
         }
 
         /// <summary>
@@ -282,6 +285,18 @@ namespace CK.Observable
             }
             return false;
         }
+
+        /// <summary>
+        /// Called by <see cref="AutoTypeRegistry"/> serialization drivers when a disposed <see cref="IDisposableObject"/> has been
+        /// written.
+        /// <para>
+        /// This should clearly be on "ImplementationServices" or any other of this writer extensions. But currently, the
+        /// serialization is embedded inside the Observable library, so we don't care.
+        /// Note that if a IDisposableObject { bool IsDiposed { get; } } basic interface (without Disposed event) in the "generic" serialization library
+        /// (or deeper? "System.ComponentModel.IDisposableObject, CK.Core"?), then this could remain this way. 
+        /// </para>
+        /// </summary>
+        public Action<IDisposableObject>? DisposedTracker { get; }
 
         /// <summary>
         /// Magic yet simple helper to check the serialization implementation: the object (and potentially the whole graph behind)

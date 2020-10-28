@@ -1,4 +1,5 @@
 using CK.Core;
+using CK.Text;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections;
@@ -48,7 +49,7 @@ namespace CK.Observable
         /// <summary>
         /// Current serialization version.
         /// </summary>
-        public const int CurrentSerializationVersion = 4;
+        public const int CurrentSerializationVersion = 5;
 
         /// <summary>
         /// The length in bytes of the <see cref="SecretKey"/>.
@@ -1171,7 +1172,13 @@ namespace CK.Observable
         }
 
         /// <inheritdoc/>
-        public bool Save( IActivityMonitor monitor, Stream stream, bool leaveOpen = false, bool debugMode = false, Encoding? encoding = null, int millisecondsTimeout = -1 )
+        public bool Save( IActivityMonitor monitor,
+                          Stream stream,
+                          bool leaveOpen = false,
+                          bool debugMode = false,
+                          Encoding? encoding = null,
+                          SaveDisposedObjectBehavior saveDisposed = SaveDisposedObjectBehavior.None,
+                          int millisecondsTimeout = -1 )
         {
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
             if( stream == null ) throw new ArgumentNullException( nameof( stream ) );
@@ -1182,7 +1189,32 @@ namespace CK.Observable
             // only one Save at a time can be executed and no other "read with a monitor (even in a fake transaction)" exists.
             // Since this is clearly an edge case, we use a lock with the same timeout and we don't care of a potential 2x wait time.
             if( !Monitor.TryEnter( _saveLock, millisecondsTimeout ) ) return false;
-            using( var w = new BinarySerializer( stream, _serializers, leaveOpen, encoding ) )
+
+            static void TrackDisposable( List<(Type, int)> disposedList, IDisposableObject o )
+            {
+                var t = o.GetType();
+                int idx = disposedList.IndexOf( t => t.Item1 == o.GetType() );
+                if( idx >= 0 ) disposedList[idx] = (t, disposedList[idx].Item2 + 1);
+                else disposedList.Add( (t, 1) );
+            }
+
+            int disposedObjectsCount = 0;
+            List<(Type, int)>? disposedList = null;
+            Action<IDisposableObject>? disposedTracker = null;
+            if( saveDisposed != SaveDisposedObjectBehavior.None )
+            {
+                disposedList = new List<(Type, int)>();
+                disposedTracker = o =>
+                {
+                    ++disposedObjectsCount;
+                    var t = o.GetType();
+                    int idx = disposedList.IndexOf( t => t.Item1 == o.GetType() );
+                    if( idx >= 0 ) disposedList[idx] = (t, disposedList[idx].Item2 + 1);
+                    else disposedList.Add( (t, 1) );
+                };
+            }
+
+            using( var w = new BinarySerializer( stream, _serializers, leaveOpen, encoding, disposedTracker ) )
             {
                 bool isWrite = _lock.IsWriteLockHeld;
                 bool isRead = _lock.IsReadLockHeld;
@@ -1219,12 +1251,13 @@ namespace CK.Observable
                         {
                             w.Write( p.PropertyName );
                         }
-
                         w.DebugWriteSentinel();
                         Debug.Assert( _objectsListCount == _actualObjectCount + _freeList.Count );
                         for( int i = 0; i < _objectsListCount; ++i )
                         {
-                            w.WriteObject( _objects[i] );
+                            var o = _objects[i];
+                            Debug.Assert( o == null || !o.IsDisposed, "Either it is a free cell (that appears in the free list) or the object is NOT disposed." );
+                            w.WriteObject( o );
                         }
 
                         w.DebugWriteSentinel();
@@ -1236,6 +1269,7 @@ namespace CK.Observable
                         var f = _firstInternalObject;
                         while( f != null )
                         {
+                            Debug.Assert( !f.IsDisposed, "Disposed internal objects are removed from the list." );
                             w.WriteObject( f );
                             f = f.Next;
                         }
@@ -1244,6 +1278,20 @@ namespace CK.Observable
                         w.DebugWriteSentinel();
                         _sidekickManager.Save( w );
                         w.DebugWriteSentinel();
+
+                        if( disposedList != null )
+                        {
+                            if( disposedObjectsCount == 0 ) monitor.Trace( "No disposed objects found." );
+                            else
+                            {
+                                var message = $"Found {disposedObjectsCount} disposed objects: " + disposedList.Select( t => $"{t.Item2} instances of '{t.Item1.Name}'" ).Concatenate();
+                                monitor.Log( saveDisposed == SaveDisposedObjectBehavior.LogWarning ? LogLevel.Warn : LogLevel.Error, message );
+                                if( saveDisposed == SaveDisposedObjectBehavior.Throw )
+                                {
+                                    throw new CKException( message );
+                                }
+                            }
+                        }
                         return true;
                     }
                 }
@@ -1286,29 +1334,20 @@ namespace CK.Observable
                 _sidekickManager.Clear( monitor );
 
                 int version = r.ReadSmallInt32();
-                if( version < 0 || version > CurrentSerializationVersion )
+                if( version < 5 || version > CurrentSerializationVersion )
                 {
-                    throw new InvalidDataException( $"Version must be between 0 and {CurrentSerializationVersion}. Version read: {version}." );
+                    throw new InvalidDataException( $"Version must be between 5 and {CurrentSerializationVersion}. Version read: {version}." );
                 }
                 r.SerializationVersion = version;
                 _currentObjectUniquifier = 0;
-                if( version > 0 )
-                {
-                    if( version > 1 )
-                    {
-                        r.DebugReadMode();
-                        _currentObjectUniquifier = r.ReadInt32();
-                        _domainSecret = r.ReadBytes( DomainSecretKeyLength );
-                    }
-                    else
-                    {
-                        _domainSecret = CreateSecret();
-                    }
-                    var loaded = r.ReadString();
-                    if( loaded != expectedName ) throw new InvalidDataException( $"Domain name mismatch: loading domain named '{loaded}' but expected '{expectedName}'." );
-                }
+                r.DebugReadMode();
+                _currentObjectUniquifier = r.ReadInt32();
+                _domainSecret = r.ReadBytes( DomainSecretKeyLength );
+                var loaded = r.ReadString();
+                if( loaded != expectedName ) throw new InvalidDataException( $"Domain name mismatch: loading domain named '{loaded}' but expected '{expectedName}'." );
+
                 _transactionSerialNumber = r.ReadInt32();
-                if( version >= 3 ) _transactionCommitTimeUtc = r.ReadDateTime();
+                _transactionCommitTimeUtc = r.ReadDateTime();
                 _actualObjectCount = r.ReadInt32();
 
                 r.DebugCheckSentinel();
@@ -1373,32 +1412,28 @@ namespace CK.Observable
                     _roots.Add( _objects[r.ReadNonNegativeSmallInt32()] as ObservableRootObject );
                 }
 
-                if( version > 1 )
-                {
-                    // Reading InternalObjects.
-                    r.DebugCheckSentinel();
-                    count = r.ReadNonNegativeSmallInt32();
-                    while( --count >= 0 )
-                    {
-                        var o = (InternalObject)r.ReadObject();
-                        Debug.Assert( !o.IsDisposed );
-                        Register( o );
-                    }
-
-                    // Reading Timed events.
-                    r.DebugCheckSentinel();
-                    _timeManager.Load( monitor, r );
-                    if( version > 3 )
-                    {
-                        r.DebugCheckSentinel();
-                        _sidekickManager.Load( r );
-                    }
-                }
+                // Reading InternalObjects.
                 r.DebugCheckSentinel();
-                r.ImplementationServices.ExecutePostDeserializationActions();
+                count = r.ReadNonNegativeSmallInt32();
+                while( --count >= 0 )
+                {
+                    var o = (InternalObject)r.ReadObject();
+                    Debug.Assert( !o.IsDisposed );
+                    Register( o );
+                }
+
+                // Reading Timed events.
+                r.DebugCheckSentinel();
+                _timeManager.Load( monitor, r );
+                r.DebugCheckSentinel();
+                _sidekickManager.Load( r );
+                r.DebugCheckSentinel();
                 // This is where specialized typed ObservableDomain bind their roots.
                 OnLoaded();
-                // Calls the loadHook.
+                // Calling PostDeserializationActions finalizes the object's graph.
+                r.ImplementationServices.ExecutePostDeserializationActions();
+
+                // Calls the loadHook if any.
                 bool callUpdateTimers = true;
                 if( loadHook != null )
                 {

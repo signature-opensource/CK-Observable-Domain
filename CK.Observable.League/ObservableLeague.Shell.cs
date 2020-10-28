@@ -214,7 +214,8 @@ namespace CK.Observable.League
                             snapshotKeepDuration: Client.SnapshotKeepDuration,
                             snapshotMaximalTotalKiB: Client.SnapshotMaximalTotalKiB,
                             eventKeepDuration: Client.JsonEventCollector.KeepDuration,
-                            eventKeepLimit: Client.JsonEventCollector.KeepLimit );
+                            eventKeepLimit: Client.JsonEventCollector.KeepLimit,
+                            saveBehavior: Client.SaveDisposedObjectBehavior );
             }
 
             void IManagedDomain.Destroy( IActivityMonitor monitor, IManagedLeague league )
@@ -235,6 +236,7 @@ namespace CK.Observable.League
                     Client.SnapshotSaveDelay = (int)options.SnapshotSaveDelay.TotalMilliseconds;
                     Client.SnapshotKeepDuration = options.SnapshotKeepDuration;
                     Client.SnapshotMaximalTotalKiB = options.SnapshotMaximalTotalKiB;
+                    Client.SaveDisposedObjectBehavior = options.SaveDisposedObjectBehavior;
                     Client.JsonEventCollector.KeepDuration = options.ExportedEventKeepDuration;
                     Client.JsonEventCollector.KeepLimit = options.ExportedEventKeepLimit;
                 }

@@ -45,7 +45,7 @@ namespace CK.Observable
             readonly int _version;
 
             // Deserialization.
-            readonly ConstructorInfo _ctorNEWSER;
+            readonly ConstructorInfo _ctor;
 
             // Export.
             readonly MethodInfo? _exporter;
@@ -114,7 +114,7 @@ namespace CK.Observable
                     return $"Missing base type constructor {readInfo.SimpleTypeName}( IBinaryDeserializer, TypeReadInfo?).";
                 }
                 callParams[1] = readInfo;
-                _ctorNEWSER?.Invoke( o, callParams );
+                _ctor?.Invoke( o, callParams );
                 return null;
             }
 
@@ -127,7 +127,7 @@ namespace CK.Observable
                     var callParams = new object[] { r, null };
                     if( readInfo == null )
                     {
-                        _ctorNEWSER?.Invoke( o, callParams );
+                        _ctor?.Invoke( o, callParams );
                     }
                     else
                     {
@@ -190,6 +190,7 @@ namespace CK.Observable
                 if( o is IDisposableObject d && d.IsDisposed )
                 {
                     _typePath[0]._writer?.Invoke( o, w );
+                    w.DisposedTracker?.Invoke( d );
                 }
                 else
                 {
@@ -242,7 +243,7 @@ namespace CK.Observable
 
             internal AutoTypeDriver( Type t, AutoTypeDriver baseType )
             {
-                GetAndCheckTypeAutoParts( t, out _version, out _ctorNEWSER, out _writer, out _exporter, out _exporterBase );
+                GetAndCheckTypeAutoParts( t, out _version, out _ctor, out _writer, out _exporter, out _exporterBase );
                 _type = t;
                 _baseType = baseType;
                 if( baseType != null )

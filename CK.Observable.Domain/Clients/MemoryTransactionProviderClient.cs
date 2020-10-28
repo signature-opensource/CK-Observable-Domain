@@ -73,6 +73,12 @@ namespace CK.Observable
         public CompressionKind CompressionKind { get; set; }
 
         /// <summary>
+        /// Gets or sets the behavior regarding disposed objects during <see cref="IObservableDomain.Save"/>.
+        /// Defaults to <see cref="SaveDisposedObjectBehavior.None"/>.
+        /// </summary>
+        public SaveDisposedObjectBehavior SaveDisposedObjectBehavior { get; set; }
+
+        /// <summary>
         /// Gets the next client if any.
         /// This is usesful if the default behavior of the virtual methods must be changed.
         /// </summary>
@@ -318,13 +324,13 @@ namespace CK.Observable
                 {
                     using( var gz = new GZipStream( _memory, CompressionLevel.Optimal, leaveOpen: true ) )
                     {
-                        d.Save( monitor, gz, leaveOpen: true );
+                        d.Save( monitor, gz, leaveOpen: true, saveDisposed: SaveDisposedObjectBehavior );
                     }
                 }
                 else
                 {
                     Debug.Assert( CompressionKind == CompressionKind.None );
-                    d.Save( monitor, _memory, leaveOpen: true );
+                    d.Save( monitor, _memory, leaveOpen: true, saveDisposed: SaveDisposedObjectBehavior );
                 }
                 _currentSnapshotKind = CompressionKind;
                 _snapshotSerialNumber = d.TransactionSerialNumber;
