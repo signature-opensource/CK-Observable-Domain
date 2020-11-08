@@ -61,7 +61,7 @@ namespace CK.Observable.Device
             BasicControlDeviceCommand ObservableDeviceObject.IDeviceBridge.CreateBasicCommand() => new BasicControlDeviceCommand<THost>();
 
             IEnumerable<string> ObservableDeviceObject.IDeviceBridge.CurrentlyAvailableDeviceNames => _sidekick._objectHost?.Devices.Select( d => d.Name )
-                                                                                                        ?? _sidekick.Host.DeviceConfigurations.Select( d => d.Name );
+                                                                                                        ?? _sidekick.Host.GetConfiguredDevices().Select( d => d.Item2.Name );
 
             string? ObservableDeviceObject.IDeviceBridge.ControllerKey => Device?.ControllerKey;
 

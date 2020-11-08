@@ -17,7 +17,6 @@ namespace CK.Observable
         readonly Dictionary<Type, TypeInfo> _types;
         readonly Dictionary<object, int> _seen;
         readonly ISerializerResolver _drivers;
-        readonly IList<(Type, int)>? _disposedTracker;
 
         BinaryFormatter? _binaryFormatter;
 
@@ -298,16 +297,68 @@ namespace CK.Observable
         /// </summary>
         public Action<IDisposableObject>? DisposedTracker { get; }
 
+
+        internal class CheckedWriteStream : Stream
+        {
+            readonly byte[] _already;
+            int _position;
+
+            public CheckedWriteStream( byte[] already )
+            {
+                _already = already;
+            }
+
+            public override bool CanRead => false;
+
+            public override bool CanSeek => false;
+
+            public override bool CanWrite => true;
+
+            public override long Length => throw new NotSupportedException();
+
+            public override long Position { get => _position; set => throw new NotSupportedException(); }
+
+            public override void Flush()
+            {
+            }
+
+            public override int Read( byte[] buffer, int offset, int count )
+            {
+                throw new NotSupportedException();
+            }
+
+            public override long Seek( long offset, SeekOrigin origin )
+            {
+                throw new NotSupportedException();
+            }
+
+            public override void SetLength( long value )
+            {
+                throw new NotSupportedException();
+            }
+
+            public override void Write( byte[] buffer, int offset, int count )
+            {
+                for( int i = offset; i < count; ++i )
+                {
+                    var actual = _already[_position++];
+                    if( buffer[i] != actual )
+                    {
+                        throw new CKException( $"Write stream differ @{_position - 1}. Expected byte '{actual}', got '{buffer[i]}'." );
+                    }
+                }
+            }
+        }
+
         /// <summary>
         /// Magic yet simple helper to check the serialization implementation: the object (and potentially the whole graph behind)
-        /// is serialized then deserialized and the result of the deserialization is the serialized again.
-        /// Once this 3 steps have been done, the bytes that are the result of the first serialization are checked against the ones of the second serialization.
-        /// The 2 byte sequences must be exactly the same.
+        /// is serialized then deserialized and the result of the deserialization is then serialized again but in a special stream
+        /// that throws a <see cref="CKException"/> as soon as a byte differ.
         /// </summary>
         /// <param name="o">The object to check.</param>
         /// <param name="services">Optional services that deserialization may require.</param>
         /// <param name="throwOnFailure">False to log silently fail and return false.</param>
-        /// <returns>True on success, fasle on error (if <paramref name="throwOnFailure"/> is false).</returns>
+        /// <returns>True on success, false on error (if <paramref name="throwOnFailure"/> is false).</returns>
         public static bool IdempotenceCheck( object o, IServiceProvider services, bool throwOnFailure = true )
         {
             try
@@ -322,15 +373,10 @@ namespace CK.Observable
                     {
                         var o2 = r.ReadObject();
                         r.ImplementationServices.ExecutePostDeserializationActions();
-                        using( var s2 = new MemoryStream() )
-                        using( var w2 = new BinarySerializer( s2, null, true ) )
+                        using( var checker = new CheckedWriteStream( originalBytes ) )
+                        using( var w2 = new BinarySerializer( checker, null, true ) )
                         {
                             w2.WriteObject( o2 );
-                            var rewriteBytes = s2.ToArray();
-                            if( !originalBytes.SequenceEqual( rewriteBytes ) )
-                            {
-                                throw new Exception( "Reserialized bytes differ from original serialized bytes." );
-                            }
                         }
                     }
                 }

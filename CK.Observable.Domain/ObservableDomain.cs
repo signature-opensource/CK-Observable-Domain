@@ -1190,14 +1190,6 @@ namespace CK.Observable
             // Since this is clearly an edge case, we use a lock with the same timeout and we don't care of a potential 2x wait time.
             if( !Monitor.TryEnter( _saveLock, millisecondsTimeout ) ) return false;
 
-            static void TrackDisposable( List<(Type, int)> disposedList, IDisposableObject o )
-            {
-                var t = o.GetType();
-                int idx = disposedList.IndexOf( t => t.Item1 == o.GetType() );
-                if( idx >= 0 ) disposedList[idx] = (t, disposedList[idx].Item2 + 1);
-                else disposedList.Add( (t, 1) );
-            }
-
             int disposedObjectsCount = 0;
             List<(Type, int)>? disposedList = null;
             Action<IDisposableObject>? disposedTracker = null;
@@ -1919,58 +1911,6 @@ namespace CK.Observable
             return o;
         }
 
-        class CheckedWriteStream : Stream
-        {
-            readonly byte[] _already;
-            int _position;
-
-            public CheckedWriteStream( byte[] already )
-            {
-                _already = already;
-            }
-
-            public override bool CanRead => false;
-
-            public override bool CanSeek => false;
-
-            public override bool CanWrite => true;
-
-            public override long Length => throw new NotSupportedException();
-
-            public override long Position { get => _position; set => throw new NotSupportedException(); }
-
-            public override void Flush()
-            {
-            }
-
-            public override int Read( byte[] buffer, int offset, int count )
-            {
-                throw new NotSupportedException();
-            }
-
-            public override long Seek( long offset, SeekOrigin origin )
-            {
-                throw new NotSupportedException();
-            }
-
-            public override void SetLength( long value )
-            {
-                throw new NotSupportedException();
-            }
-
-            public override void Write( byte[] buffer, int offset, int count )
-            {
-                for( int i = offset; i < count; ++i )
-                {
-                    var actual = _already[_position++];
-                    if( buffer[i] != actual )
-                    {
-                        throw new CKException( $"Write stream differ @{_position-1}. Expected byte '{actual}', got '{buffer[i]}'." );
-                    }
-                }
-            }
-        }
-
         /// <summary>
         /// Small helper for tests: ensures that a domain that is Saved, Loaded and Saved again results
         /// in the exact same sequence of bytes.
@@ -1990,7 +1930,7 @@ namespace CK.Observable
                 s.Position = 0;
                 if( !domain.Load( monitor, s, true, millisecondsTimeout: milliSecondsTimeout, loadHook: d => true ) ) throw new Exception( "Reload failed: Unable to acquire lock." );
 
-                var checker = new CheckedWriteStream( originalBytes );
+                using var checker = new BinarySerializer.CheckedWriteStream( originalBytes );
                 if( !domain.Save( monitor, checker, true, millisecondsTimeout: milliSecondsTimeout, debugMode: useDebugMode ) ) throw new Exception( "Second Save failed: Unable to acquire lock." );
             }
         }

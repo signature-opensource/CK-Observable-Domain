@@ -148,7 +148,7 @@ namespace CK.Observable.Device
             Debug.Assert( _objectHost != null );
             // Takes a snapshot: the hosted devices list may change concurrently (when called from RegisterClientObject).
             // This can be optimized: here the intermediate list is concretized for nothing.
-            var configs = Host.DeviceConfigurations.ToDictionary( c => c.Name );
+            var configs = Host.GetConfiguredDevices().Select( x => x.Item2 ).ToDictionary( c => c.Name );
             for( int i = 0; i < _objectHost.InternalDevices.Count; ++i )
             {
                 var d = _objectHost.Devices[i];

@@ -18,7 +18,7 @@ namespace CK.Observable.Device.Tests
         [Test]
         public async Task sample_obervable()
         {
-            var host = new SampleDeviceHost();
+            var host = new SampleDeviceHost( new DefaultDeviceAlwaysRunningPolicy() );
             var sp = new SimpleServiceContainer();
             sp.Add( host );
 
@@ -115,7 +115,7 @@ namespace CK.Observable.Device.Tests
         {
             DeviceStatusChanged = false;
 
-            var host = new SampleDeviceHost();
+            var host = new SampleDeviceHost( new DefaultDeviceAlwaysRunningPolicy() );
             var sp = new SimpleServiceContainer();
             sp.Add( host );
             var config = new SampleDeviceConfiguration()
@@ -190,7 +190,7 @@ namespace CK.Observable.Device.Tests
         [Test]
         public async Task commands_are_easy_to_send()
         {
-            var host = new SampleDeviceHost();
+            var host = new SampleDeviceHost( new DefaultDeviceAlwaysRunningPolicy() );
             var sp = new SimpleServiceContainer();
             sp.Add( host );
             var config = new SampleDeviceConfiguration()
