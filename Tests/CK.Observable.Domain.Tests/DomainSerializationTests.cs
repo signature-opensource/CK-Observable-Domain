@@ -197,7 +197,8 @@ namespace CK.Observable.Domain.Tests
                 var timer = new ObservableTimer( DateTime.UtcNow.AddDays( 1 ) );
                 var reminder = new ObservableReminder( DateTime.UtcNow.AddDays( 1 ) );
                 var obsOject = new Person();
-                var intObject = new SuspendableClock();
+                // CumulateUnloadedTime changes the CumulativeOffset at reload: serialization cannot be idempotent.
+                var intObject = new SuspendableClock() { CumulateUnloadedTime = false };
                 list.Add( timer );
                 list.Add( reminder );
                 list.Add( obsOject );

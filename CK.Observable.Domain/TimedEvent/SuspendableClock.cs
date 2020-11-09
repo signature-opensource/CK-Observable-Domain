@@ -44,6 +44,7 @@ namespace CK.Observable
         public SuspendableClock( bool isActive = true )
         {
             Debug.Assert( _cumulativeOffset == TimeSpan.Zero );
+            _cumulateUnloadedTime = true;
             _isActive = isActive;
             if( !isActive )
             {

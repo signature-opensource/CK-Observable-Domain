@@ -80,10 +80,11 @@ namespace CK.Observable.Domain.Tests.TimedEvents
 
         const int enoughMilliseconds = 500;
 
-        [Test]
-        public void SuspendableClock_CumulateUnloadedTime_tests()
+        [TestCase( "" )]
+        [TestCase( "CumulateUnloadedTime = false" )]
+        public void SuspendableClock_CumulateUnloadedTime_tests( string mode )
         {
-            using var handler = TestHelper.CreateDomainHandler( nameof( SuspendableClock_serialization ), serviceProvider: null );
+            using var handler = TestHelper.CreateDomainHandler( nameof( SuspendableClock_CumulateUnloadedTime_tests ), serviceProvider: null );
 
             DateTime initialExpected = Util.UtcMinValue;
             handler.Domain.Modify( TestHelper.Monitor, () =>
@@ -91,20 +92,33 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 var r = new ObservableReminder( DateTime.UtcNow.AddMilliseconds( enoughMilliseconds / 2 ) );
                 var c = new SuspendableClock();
                 Debug.Assert( c.IsActive && c.CumulateUnloadedTime, "By default, CumulateUnloadedTime is true." );
-
+                if( mode == "CumulateUnloadedTime = false" )
+                {
+                    c.CumulateUnloadedTime = false;
+                }
                 r.Elapsed += Reminder_Elapsed;
                 r.SuspendableClock = c;
                 r.IsActive.Should().BeTrue( "The clock is active and the duetime is later." );
 
                 initialExpected = r.DueTimeUtc;
             } );
+            // We pause for 2*enoughMilliseconds before reloading.
             handler.Reload( TestHelper.Monitor, idempotenceCheck: false, pauseReloadMilliseconds: 2*enoughMilliseconds );
-            using( handler.Domain.AcquireReadLock() )
+            var minUpdated = initialExpected.AddMilliseconds( 2 * enoughMilliseconds );
+            // Using Modify to trigger the timed events without waiting for the AutoTimer to fire.
+            handler.Domain.Modify( TestHelper.Monitor, () =>
             {
                 var r = handler.Domain.TimeManager.Reminders.Single();
-                var minActual = initialExpected.AddMilliseconds( enoughMilliseconds );
-                r.DueTimeUtc.Should().BeAfter( minActual );
-            }
+                if( mode == "CumulateUnloadedTime = false" )
+                {
+                    r.IsActive.Should().BeFalse( "Already fired." );
+                    r.DueTimeUtc.Should().Be( Util.UtcMinValue );
+                }
+                else
+                {
+                    r.DueTimeUtc.Should().BeCloseTo( minUpdated, enoughMilliseconds / 6 );
+                }
+            } ).Success.Should().BeTrue();
         }
 
         [Test]
@@ -211,7 +225,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 reminder.IsActive.Should().BeFalse();
             }
 
-            // Reactivating the Reminder.
+            TestHelper.Monitor.Info( "*** Reactivating the Reminder. ***" );
             handler.Domain.Modify( TestHelper.Monitor, () =>
             {
                 reminder.DueTimeUtc = DateTime.UtcNow.AddMilliseconds( enoughMilliseconds / 2 );
@@ -219,7 +233,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
 
             } ).Success.Should().BeTrue();
 
-            handler.Reload( TestHelper.Monitor, idempotenceCheck: true );
+            handler.Reload( TestHelper.Monitor, idempotenceCheck: false );
             Thread.Sleep( enoughMilliseconds );
 
             ReminderHasElapsed.Should().BeTrue();

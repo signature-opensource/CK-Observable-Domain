@@ -49,6 +49,7 @@ namespace CK.Observable
 
         /// <summary>
         /// This must compute whether this timed event is logically active.
+        /// Always true at this level. ObservableTimers override this to return their <see cref="ObservableTimer.IsActive"/> mutable flag.
         /// </summary>
         /// <returns>True if this timed event is logically active.</returns>
         private protected virtual bool GetIsActiveFlag() => true;

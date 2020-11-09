@@ -305,7 +305,8 @@ namespace CK.Observable.Domain.Tests
             {
                 _timer = new ObservableTimer( DateTime.UtcNow, 20 );
                 _timer.Elapsed += _timer_Elapsed;
-                _clock = new SuspendableClock();
+                // CumulateUnloadedTime changes the CumulativeOffset at reload: serialization cannot be idempotent.
+                _clock = new SuspendableClock() { CumulateUnloadedTime = false };
                 _clock.IsActiveChanged += _clock_IsActiveChanged;
                 _timer.SuspendableClock = _clock;
             }

@@ -25,6 +25,8 @@ namespace CK.Observable.League.Tests.MicroMachine
             d.Modify( TestHelper.Monitor, () =>
             {
                 d.Root.Machine.Clock.IsActive = true;
+                // CumulateUnloadedTime changes the CumulativeOffset at reload: serialization cannot be idempotent.
+                d.Root.Machine.Clock.CumulateUnloadedTime = false;
                 d.Root.Machine.IsRunning.Should().BeTrue();
                 d.Root.Machine.CreateThing( 1 );
             } );

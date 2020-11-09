@@ -1445,7 +1445,7 @@ namespace CK.Observable
                 }
                 if( callUpdateTimers )
                 {
-                    using( monitor.OpenDebug( "Load hook returned true: raising potential timed events." ) )
+                    using( monitor.OpenDebug( "Load hook returned true: updating timed events and activating the AutoTimer on closest timed event to fire." ) )
                     {
                         _timeManager.SetNextDueTimeUtc( monitor, _timeManager.ApplyChanges() );
                     }
@@ -1922,13 +1922,14 @@ namespace CK.Observable
         /// <param name="useDebugMode">False to not activate <see cref="BinarySerializer.IsDebugMode"/>.</param>
         public static void IdempotenceSerializationCheck( IActivityMonitor monitor, ObservableDomain domain, int milliSecondsTimeout = -1, bool useDebugMode = true )
         {
+            using( monitor.OpenInfo( $"Idempotence check of '{domain.DomainName}'." ) )
             using( var s = new MemoryStream() )
             {
                 if( !domain.Save( monitor, s, true, millisecondsTimeout: milliSecondsTimeout, debugMode: useDebugMode ) ) throw new Exception( "First Save failed: Unable to acquire lock." );
                 var originalBytes = s.ToArray();
                 var originalTransactionSerialNumber = domain.TransactionSerialNumber;
                 s.Position = 0;
-                if( !domain.Load( monitor, s, true, millisecondsTimeout: milliSecondsTimeout, loadHook: d => true ) ) throw new Exception( "Reload failed: Unable to acquire lock." );
+                if( !domain.Load( monitor, s, true, millisecondsTimeout: milliSecondsTimeout, loadHook: d => false ) ) throw new Exception( "Reload failed: Unable to acquire lock." );
 
                 using var checker = new BinarySerializer.CheckedWriteStream( originalBytes );
                 if( !domain.Save( monitor, checker, true, millisecondsTimeout: milliSecondsTimeout, debugMode: useDebugMode ) ) throw new Exception( "Second Save failed: Unable to acquire lock." );
