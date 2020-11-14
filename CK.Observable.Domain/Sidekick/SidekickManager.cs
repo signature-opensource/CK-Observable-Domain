@@ -151,7 +151,7 @@ namespace CK.Observable
                     else
                     {
                         Debug.Assert( tOrS is Type );
-                        Debug.Assert( _alreadyHandled.ContainsKey( tOrS ), "The type has been already registered. But is can be on error!" );
+                        Debug.Assert( _alreadyHandled.ContainsKey( tOrS ), "The type has been already registered. But it can be on error!" );
                         var mapped = _alreadyHandled[tOrS];
                         if( mapped is Exception ex )
                         {

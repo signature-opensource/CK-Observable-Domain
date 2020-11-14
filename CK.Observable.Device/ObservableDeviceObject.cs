@@ -1,6 +1,5 @@
 using CK.Core;
 using CK.DeviceModel;
-using CK.DeviceModel.Command;
 using CK.Text;
 using System;
 using System.Collections.Generic;
