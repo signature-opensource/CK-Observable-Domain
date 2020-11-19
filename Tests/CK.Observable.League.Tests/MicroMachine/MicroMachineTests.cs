@@ -1,9 +1,11 @@
+using CK.Core;
 using FluentAssertions;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
 
 namespace CK.Observable.League.Tests.MicroMachine
@@ -11,13 +13,6 @@ namespace CK.Observable.League.Tests.MicroMachine
     [TestFixture]
     public class MicroMachineTests
     {
-        [Test]
-        public void empty_serialization()
-        {
-            var d = new ObservableDomain<Root>( TestHelper.Monitor, "TEST" );
-            ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
-        }
-
         [Test]
         public void AutoDisposed_works_accross_serialization()
         {
@@ -47,5 +42,46 @@ namespace CK.Observable.League.Tests.MicroMachine
             } );
         }
 
+        [Test]
+        public async Task initial_configuration_and_subsequent_work()
+        {
+            var store = BasicLeagueTests.CreateStore( nameof( initial_configuration_and_subsequent_work ) );
+            var league = (await ObservableLeague.LoadAsync( TestHelper.Monitor, store ))!;
+            await league.Coordinator.ModifyAsync( TestHelper.Monitor, ( m, coodinator ) =>
+            {
+                var d = coodinator.Root.CreateDomain( "M", typeof( Root ).AssemblyQualifiedName! );
+                d.Options = d.Options.SetLifeCycleOption( DomainLifeCycleOption.Never );
+            } );
+
+            using( TestHelper.Monitor.OpenInfo( "Initializing Machine Domain." ) )
+            {
+                await using( var shell = (await league.Find( "M" )!.LoadAsync<Root>( TestHelper.Monitor ))! )
+                {
+                    await shell.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) =>
+                    {
+                        d.Root.Machine.Clock.IsActive = true;
+                        d.Root.Machine.IsRunning.Should().BeTrue();
+                        d.Root.Machine.CreateThing( 1 );
+                        d.Root.Machine.CreateThing( 3712 );
+                        d.Root.Machine.CmdToTheMachine();
+
+                        d.Root.Machine.BridgeToTheSidekick.Should().BeNull( "The sidekick is not yet instantiated." );
+                        d.Root.Machine.TestCallEnsureBridge();
+                        d.Root.Machine.BridgeToTheSidekick.Should().NotBeNull( "Now it is." );
+                    } );
+                }
+            }
+
+            using( TestHelper.Monitor.OpenInfo( "Restoring Machine Domain." ) )
+            {
+                await using( var shell = (await league.Find( "M" )!.LoadAsync<Root>( TestHelper.Monitor ))! )
+                {
+                    await shell.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) =>
+                    {
+                        d.Root.Machine.CmdToTheMachine();
+                    } );
+                }
+            }
+        }
     }
 }

@@ -37,7 +37,8 @@ namespace CK.Observable
         /// <summary>
         /// Initializes a new sidekick for a domain.
         /// <para>
-        /// This is called after an external modification of the domain where an object with a [UseSidekick( ... )] attribute has been instantiated.
+        /// This is called after an external modification of the domain where an object with a [UseSidekick( ... )] attribute or a <see cref="ISidekickClientObject{TSidekick}"/>
+        /// interface marker has been instantiated.
         /// If the sidekick type has not any instance yet, this is called just before sollicitating the <see cref="ObservableDomain.DomainClient"/>.
         /// The domain has the write lock held and this constructor can interact with the domain objects (its interaction is part of the transaction).
         /// </para>

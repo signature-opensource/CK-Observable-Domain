@@ -186,7 +186,7 @@ namespace CK.Observable
                 if( nextDueTimeUtc == Util.UtcMinValue || nextDueTimeUtc == Util.UtcMaxValue || !IsActive )
                 {
                     _timer.Change( Timeout.Infinite, Timeout.Infinite );
-                    monitor.Debug( $"Timer paused ({_timer.GetHashCode()})." );
+                    monitor.Debug( $"System.Timer paused." );
                 }
                 else
                 {
@@ -195,7 +195,7 @@ namespace CK.Observable
                     if( ms <= 0 ) ms = 0;
                     if( !_timer.Change( ms, Timeout.Infinite ) )
                     {
-                        var msg = $"Timer.Change({ms}) failed.";
+                        var msg = $"System.Timer.Change({ms}) failed.";
                         monitor.Warn( msg );
                         _timer.Change( Timeout.Infinite, Timeout.Infinite );
                         if( !_timer.Change( ms, Timeout.Infinite ) )
@@ -204,12 +204,12 @@ namespace CK.Observable
                             return;
                         }
                     }
-                    monitor.Debug( $"Timer set in {ms} ms ({_timer.GetHashCode()})." );
+                    monitor.Debug( $"System.Timer set in {ms} ms." );
                 }
             }
 
             /// <summary>
-            /// Disposed the internal <see cref="System.Threading.Timer"/> object.
+            /// Disposes the internal <see cref="System.Threading.Timer"/> object.
             /// This is automatically called by <see cref="ObservableDomain.Dispose()"/> on the <see cref="TimeManager.Timer"/>:
             /// this must be called only when explicit AutoTimer are created/assigned.
             /// </summary>

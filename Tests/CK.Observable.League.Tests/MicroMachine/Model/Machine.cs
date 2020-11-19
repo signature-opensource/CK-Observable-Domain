@@ -7,7 +7,7 @@ using System.Text;
 namespace CK.Observable.League.Tests.MicroMachine
 {
     [SerializationVersion( 0 )]
-    public abstract class Machine : ObservableObject
+    public abstract class Machine : ObservableObject, ISidekickClientObject<MachineSideKick>
     {
         readonly SuspendableClock _clock;
 
@@ -28,6 +28,7 @@ namespace CK.Observable.League.Tests.MicroMachine
             Configuration = (MachineConfiguration)r.ReadObject()!;
             _clock = (SuspendableClock)r.ReadObject()!;
             Name = r.ReadString();
+            r.ImplementationServices.OnPostDeserialization( () => IsRunning = _clock.IsActive );
         }
 
         void Write( BinarySerializer w )
@@ -39,6 +40,17 @@ namespace CK.Observable.League.Tests.MicroMachine
         }
 
         public string Name { get; }
+
+        /// <summary>
+        /// This is NOT to be exposed in real life.
+        /// This shows that the observable object may interact with its sidekick if needed.
+        /// </summary>
+        public MachineSideKick.MicroBridge BridgeToTheSidekick { get; internal set; }
+
+        /// <summary>
+        /// This is typically done in the constructor...
+        /// </summary>
+        public void TestCallEnsureBridge() => Domain.EnsureSidekicks();
 
         public MachineConfiguration Configuration { get; }
 

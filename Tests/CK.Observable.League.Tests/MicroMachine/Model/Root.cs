@@ -5,7 +5,6 @@ using System.Text;
 namespace CK.Observable.League.Tests.MicroMachine
 {
     [SerializationVersion( 0 )]
-    //[UseSidekick(typeof(ArtemisSidekick))]
     public class Root : ObservableRootObject
     {
         public Root()

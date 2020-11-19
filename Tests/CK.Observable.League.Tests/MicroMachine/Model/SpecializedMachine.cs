@@ -21,6 +21,11 @@ namespace CK.Observable.League.Tests.MicroMachine
         {
         }
 
+        public void CmdToTheMachine()
+        {
+            Domain.SendCommand( new MachineCommand() );
+        }
+
         public void CreateThing( int productId )
         {
             OnNewThing( productId );
