@@ -176,5 +176,16 @@ namespace CK.Observable.Device.Tests
             return base.DoHandleCommandAsync( monitor, command );
         }
 
+        /// <summary>
+        /// This must clenap the device's resources.
+        /// Typically events should be cleared (thanks to <c>RemoveAll()</c>).
+        /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
+        /// <returns>the awaitable.</returns>
+        protected override Task DoDestroyAsync( IActivityMonitor monitor )
+        {
+            _messageChanged.RemoveAll();
+            return Task.CompletedTask;
+        }
     }
 }
