@@ -19,6 +19,7 @@ namespace CK.Observable
         DateTimeOffset,
         Type,
 
+        DeferredObject = 250,
         EmptyObject = 251,
         StructBinaryFormatter = 252,
         ObjectBinaryFormatter = 253,

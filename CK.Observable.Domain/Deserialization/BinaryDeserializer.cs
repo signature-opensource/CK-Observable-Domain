@@ -24,6 +24,9 @@ namespace CK.Observable
         readonly Stack<ConstructorContext?> _ctorContextStack;
         BinaryFormatter? _binaryFormatter;
 
+        Stack<(IDeserializationDeferredDriver, object, TypeReadInfo)>? _deferred;
+        int _recurseCount;
+
         int _debugModeCounter;
         int _debugSentinel;
         string? _lastWriteSentinel;
@@ -236,6 +239,7 @@ namespace CK.Observable
                           || b == SerializationMarker.ObjectBinaryFormatter
                           || b == SerializationMarker.StructBinaryFormatter
                           || b == SerializationMarker.Object
+                          || b == SerializationMarker.DeferredObject
                           || b == SerializationMarker.Struct );
             object result;
             if( b == SerializationMarker.EmptyObject )
@@ -253,13 +257,37 @@ namespace CK.Observable
             }
             else 
             {
-                var info = ReadTypeReadInfo( b == SerializationMarker.Object );
+                var info = ReadTypeReadInfo( b == SerializationMarker.Object || b == SerializationMarker.DeferredObject );
                 var d = info.GetDeserializationDriver( _drivers );
                 if( d == null )
                 {
                     throw new InvalidOperationException( $"Unable to find a deserialization driver for Assembly Qualified Name '{info.TypeName}'." );
                 }
-                result = d.ReadInstance( this, info );
+                if( b == SerializationMarker.DeferredObject )
+                {
+                    if( !(d is IDeserializationDeferredDriver defer) )
+                    {
+                        throw new InvalidOperationException( $"Type '{info.TypeName}' has been serialized as a deferred object but its deserializer ({d.GetType().FullName}) is not a {nameof(IDeserializationDeferredDriver)}." );
+                    }
+                    if( _deferred == null ) _deferred = new Stack<(IDeserializationDeferredDriver, object, TypeReadInfo)>( 100 );
+                    result = defer.Allocate( this, info );
+                    _deferred.Push( (defer, result, info) );
+                }
+                else
+                {
+                    ++_recurseCount;
+                    result = d.ReadInstance( this, info );
+                    --_recurseCount;
+                }
+                if( _recurseCount == 0 && _deferred != null )
+                {
+                    while( _deferred.TryPop( out var s ) )
+                    {
+                        ++_recurseCount;
+                        s.Item1.ReadInstance( this, s.Item3, s.Item2 );
+                        --_recurseCount;
+                    }
+                }
             }
             Debug.Assert( result.GetType().IsClass == !(result is ValueType) );
             return result;

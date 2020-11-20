@@ -15,6 +15,20 @@ namespace CK.Observable
         bool IsFinalType { get; }
 
         /// <summary>
+        /// Gets whether this type can be written in two parts (header and then the actual data).
+        /// This enables to handle too deep recursion in object graphs (typically because of linked list).
+        /// When an object is written in defferred mode, its deserialization driver must be able to handle this: it must be
+        /// a  <see cref="IDeserializationDeferredDriver"/>.
+        /// Defaults to false.
+        /// </summary>
+        /// <remarks>
+        /// Currently only <see cref="IUnifiedTypeDriver"/> automatic implementation allows deferred deserialization
+        /// and since this is the one used for every objects other tha array, list and dictionary, it is fine: regular
+        /// objects benefit from this behavior (and they are the ones that may be chained).
+        /// </remarks>
+        bool AllowDeferred => false;
+
+        /// <summary>
         /// Writes the type descriptor in the serializer.
         /// </summary>
         /// <param name="s">The serializer.</param>

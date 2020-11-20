@@ -46,30 +46,6 @@ namespace CK.Observable
         public IReadOnlyList<TypeReadInfo> TypePath => _typePath;
 
         /// <summary>
-        /// Returns a string that describes a type that MUST appear in the <see cref="TypePath"/>
-        /// (that can be this one).
-        /// This MUST be the same as the string produced by <see cref="AutoTypeRegistry.AutoTypeDriver.DescribeAutoTypePathItem"/>.
-        /// </summary>
-        /// <param name="infoInPath">The path item to describe relatively to this leaf.</param>
-        /// <returns>A descriptive string.</returns>
-        internal string DescribeAutoTypePathItem( TypeReadInfo infoInPath )
-        {
-            Debug.Assert( Version >= 0, "Must be called only for TypeBased serialization." );
-            Debug.Assert( TypePath.IndexOf( x => x == infoInPath ) >= 0 );
-            bool isRoot = BaseType == null;
-            bool isLeaf = this == infoInPath;
-            var msg = isRoot
-                        ? (
-                            isLeaf ? " (root and final)" : $" (root type of {SimpleTypeName})"
-                          )
-                        : (
-                            isLeaf ? " (final type)" : $" (base type of {SimpleTypeName})"
-                          );
-            msg = infoInPath.SimpleTypeName + msg;
-            return msg;
-        }
-
-        /// <summary>
         /// Gets the Type if it can be resolved locally, null otherwise.
         /// </summary>
         public Type LocalType

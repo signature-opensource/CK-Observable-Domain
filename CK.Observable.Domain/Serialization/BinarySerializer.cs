@@ -14,10 +14,13 @@ namespace CK.Observable
     /// </summary>
     public class BinarySerializer : CKBinaryWriter
     {
+        public const int MaxRecurse = 50;
+
         readonly Dictionary<Type, TypeInfo> _types;
         readonly Dictionary<object, int> _seen;
         readonly ISerializerResolver _drivers;
-
+        int _recurseCount;
+        Stack<(object, ITypeSerializationDriver)>? _deferred;
         BinaryFormatter? _binaryFormatter;
 
         int _debugModeCounter;
@@ -150,7 +153,6 @@ namespace CK.Observable
             }
             SerializationMarker marker;
             Type t = o.GetType();
-            int idxSeen = -1;
             if( t.IsClass )
             {
                 if( _seen.TryGetValue( o, out var num ) )
@@ -159,7 +161,6 @@ namespace CK.Observable
                     Write( num );
                     return;
                 }
-                idxSeen = _seen.Count;
                 _seen.Add( o, _seen.Count );
                 if( t == typeof( object ) )
                 {
@@ -180,9 +181,32 @@ namespace CK.Observable
             }
             else
             {
-                Write( (byte)marker );
-                driver.WriteTypeInformation( this );
-                driver.WriteData( this, o );
+                if( _recurseCount > MaxRecurse
+                    && marker == SerializationMarker.Object
+                    && driver.AllowDeferred )
+                {
+                    if( _deferred == null ) _deferred = new Stack<(object, ITypeSerializationDriver)>( 200 );
+                    _deferred.Push( (o, driver) );
+                    Write( (byte)SerializationMarker.DeferredObject );
+                    driver.WriteTypeInformation( this );
+                }
+                else
+                {
+                    ++_recurseCount;
+                    Write( (byte)marker );
+                    driver.WriteTypeInformation( this );
+                    driver.WriteData( this, o );
+                    --_recurseCount;
+                }
+                if( _recurseCount == 0 && _deferred != null )
+                {
+                    while( _deferred.TryPop( out var d ) )
+                    {
+                        ++_recurseCount;
+                        d.Item2.WriteData( this, d.Item1 );
+                        --_recurseCount;
+                    }
+                }
             }
         }
 

@@ -30,7 +30,7 @@ namespace CK.Observable
         /// <summary>
         /// Type based unified driver.
         /// </summary>
-        class AutoTypeDriver : IUnifiedTypeDriver, ITypeSerializationDriver, IDeserializationDriver, IObjectExportTypeDriver
+        class AutoTypeDriver : IUnifiedTypeDriver, ITypeSerializationDriver, IDeserializationDeferredDriver, IObjectExportTypeDriver
         {
             readonly Type _type;
             readonly AutoTypeDriver? _baseType;
@@ -83,6 +83,8 @@ namespace CK.Observable
 
             Type IObjectExportTypeDriver.BaseType => Type;
 
+            bool ITypeSerializationDriver.AllowDeferred => true;
+
             /// <summary>
             /// Invokes the deserialization constructor.
             /// </summary>
@@ -92,7 +94,16 @@ namespace CK.Observable
             /// Null if the type has been previously written by an external driver.
             /// </param>
             /// <returns>The new instance.</returns>
-            object IDeserializationDriver.ReadInstance( IBinaryDeserializer r, TypeReadInfo? readInfo ) 
+            void IDeserializationDeferredDriver.ReadInstance( IBinaryDeserializer r, TypeReadInfo? readInfo, object o )
+            {
+                DoReadInstance( r, readInfo, o );
+            }
+            object IDeserializationDeferredDriver.Allocate( IBinaryDeserializer r, TypeReadInfo readInfo )
+            {
+                return r.ImplementationServices.CreateUninitializedInstance( Type, readInfo.IsTrackedObject );
+            }
+
+            object IDeserializationDriver.ReadInstance( IBinaryDeserializer r, TypeReadInfo? readInfo )
             {
                 return DoReadInstance( r, readInfo );
             }
@@ -121,7 +132,11 @@ namespace CK.Observable
             protected object DoReadInstance( IBinaryDeserializer r, TypeReadInfo? readInfo )
             {
                 var o = r.ImplementationServices.CreateUninitializedInstance( Type, readInfo?.IsTrackedObject ?? false );
+                return DoReadInstance( r, readInfo, o );
+            }
 
+            object DoReadInstance( IBinaryDeserializer r, TypeReadInfo? readInfo, object o )
+            {
                 try
                 {
                     var callParams = new object[] { r, null };
@@ -167,22 +182,6 @@ namespace CK.Observable
             void ITypeSerializationDriver.WriteData( BinarySerializer w, object o ) => DoWriteData( w, o );
 
             string SimpleTypeName => _type.AssemblyQualifiedName.Split( ',' )[0];
-
-            string DescribeAutoTypePathItem( AutoTypeDriver infoInPath )
-            {
-                Debug.Assert( Array.IndexOf( _typePath, infoInPath ) >= 0 );
-                bool isRoot = _baseType == null;
-                bool isLeaf = this == infoInPath;
-                var msg = isRoot
-                            ? (
-                                isLeaf ? " (root and final)" : $" (root type of {SimpleTypeName})"
-                              )
-                            : (
-                                isLeaf ? " (final type)" : $" (base type of {SimpleTypeName})"
-                              );
-                msg = infoInPath.SimpleTypeName + msg;
-                return msg;
-            }
 
             protected void DoWriteData( BinarySerializer w, object o )
             {

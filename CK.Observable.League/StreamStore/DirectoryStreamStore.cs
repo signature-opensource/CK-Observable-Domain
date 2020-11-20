@@ -84,8 +84,8 @@ namespace CK.Observable
             string tempFilePath = Path.GetTempFileName();
             using( var output = File.Open( tempFilePath, FileMode.Create ) )
             {
-                await writer( output );
-                await output.FlushAsync();
+                await writer( output ).ConfigureAwait( false );
+                await output.FlushAsync().ConfigureAwait( false );
             }
             if( exists )
             {

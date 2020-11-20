@@ -440,7 +440,7 @@ namespace CK.Observable
                 DateTime nextTimerDueDate = Util.UtcMinValue;
                 if( _errors.Length == 0 )
                 {
-                    Monitor.Debug( "Committing a sucessful transaction (updating and raising Timed events)." );
+                    Monitor.Trace( "Committing a sucessful transaction (updating and raising Timed events)." );
                     try
                     {
                         nextTimerDueDate = _domain._timeManager.ApplyChanges();
@@ -454,7 +454,7 @@ namespace CK.Observable
                 SuccessfulTransactionEventArgs? ctx = null;
                 if( _errors.Length != 0 )
                 {
-                    using( Monitor.OpenDebug( "Committing a Transaction on error. Calling DomainClient.OnTransactionFailure." ) )
+                    using( Monitor.OpenWarn( "Committing a Transaction on error. Calling DomainClient.OnTransactionFailure." ) )
                     {
                         // On errors, resets the change tracker, sends the errors to the managers
                         // and creates an error TransactionResult. 
@@ -991,7 +991,7 @@ namespace CK.Observable
             Debug.Assert( t != null );
             try
             {
-                _timeManager.RaiseElapsedEvent( t.Monitor, t.StartTime, false );
+                _timeManager.RaiseElapsedEvent( t.Monitor, t.StartTime, actions == null );
                 bool skipped = false;
                 foreach( var tracker in _trackers )
                 {
@@ -1042,7 +1042,7 @@ namespace CK.Observable
         public async Task<TransactionResult> ModifyAsync( IActivityMonitor monitor, Action actions, int millisecondsTimeout = -1 )
         {
             var tr = Modify( monitor, actions, millisecondsTimeout );
-            await tr.ExecutePostActionsAsync( monitor, throwException: true );
+            await tr.ExecutePostActionsAsync( monitor, throwException: true ).ConfigureAwait( false );
             return tr;
         }
 
@@ -1061,7 +1061,8 @@ namespace CK.Observable
         /// </param>
         public async Task ModifyThrowAsync( IActivityMonitor monitor, Action actions, int millisecondsTimeout = -1 )
         {
-            (await ModifyAsync( monitor, actions, millisecondsTimeout )).ThrowOnTransactionFailure();
+            var r = await ModifyAsync( monitor, actions, millisecondsTimeout ).ConfigureAwait( false );
+            r.ThrowOnTransactionFailure();
         }
 
         /// <summary>
@@ -1099,7 +1100,7 @@ namespace CK.Observable
                 if( tEx.Item2 != null ) return (tr, tEx.Item2);
                 tr = DoModifyAndCommit( actions, tEx.Item1 );
                 Debug.Assert( tr.Errors.Count == 0 || !tr.HasPostActions, "Transaction Errors => No post actions." );
-                postActionError = await tr.ExecutePostActionsAsync( monitor, throwException: false );
+                postActionError = await tr.ExecutePostActionsAsync( monitor, throwException: false ).ConfigureAwait( false );
             }
             else monitor.Warn( $"WriteLock not obtained in {millisecondsTimeout} ms (returning TransactionResult.Empty)." );
             return (tr, postActionError );

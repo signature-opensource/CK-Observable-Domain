@@ -46,7 +46,7 @@ namespace CK.Observable.League.Tests.MicroMachine
         [TestCase( 50 )]
         [TestCase( 100 )]
         [TestCase( 300 )]
-        [TestCase( 1000 )]
+        [TestCase( 500 )]
         public async Task initial_configuration_and_subsequent_work( int numberOfThing )
         {
             var store = BasicLeagueTests.CreateStore( nameof( initial_configuration_and_subsequent_work ) );

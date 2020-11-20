@@ -194,13 +194,13 @@ namespace CK.Observable.League
                 {
                     if( _savedTransactionNumber != CurrentSerialNumber )
                     {
-                        await StreamStore.UpdateAsync( _storeName, WriteSnapshotAsync, true );
+                        await StreamStore.UpdateAsync( _storeName, WriteSnapshotAsync, true ).ConfigureAwait( false );
                         if( _snapshotSaveDelay >= 0 ) _nextSave = CurrentTimeUtc.AddMilliseconds( _snapshotSaveDelay );
                         _savedTransactionNumber = CurrentSerialNumber;
                     }
                     if( sendToArchive )
                     {
-                        await StreamStore.DeleteAsync( _storeName, true );
+                        await StreamStore.DeleteAsync( _storeName, true ).ConfigureAwait( false );
                         monitor.Info( $"Domain '{_storeName}' saved and sent to archives." );
                     }
                     else monitor.Trace( $"Domain '{_storeName}' saved." );
