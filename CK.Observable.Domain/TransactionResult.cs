@@ -19,7 +19,7 @@ namespace CK.Observable
         /// The empty transaction result is used when absolutely nothing happened. It has no events and no commands,
         /// the <see cref="StartTimeUtc"/> and <see cref="NextDueTimeUtc"/> are <see cref="Util.UtcMinValue"/>.
         /// </summary>
-        public static readonly TransactionResult Empty = new TransactionResult( Array.Empty<CKExceptionData>(), Util.UtcMinValue, Util.UtcMinValue );
+        public static readonly TransactionResult Empty = new TransactionResult( Array.Empty<CKExceptionData>(), Util.UtcMinValue );
 
         /// <summary>
         /// Gets whether <see cref="Errors"/> is empty, <see cref="ClientError"/> is null and <see cref="CommandHandlingErrors"/> is empty.
@@ -28,9 +28,12 @@ namespace CK.Observable
 
         /// <summary>
         /// Gets whether the <see cref="ClientError"/> is critical: it is the call to <see cref="IObservableDomainClient.OnTransactionCommit(in SuccessfulTransactionEventArgs)"/>
+        /// (or <see cref="IObservableDomainClient.OnTransactionFailure(IActivityMonitor, ObservableDomain, IReadOnlyList{CKExceptionData})"/>).
         /// that failed.
+        /// <para>
         /// This lets the system in an instable, dangerous, state since the transaction has terminated without errors and some external
-        /// impacts may have been executed before the error occurred so that rolling back the transaction may not be a brilliant idea.
+        /// actions may have been executed before the error occurred so that rolling back the transaction may not be a brilliant idea.
+        /// </para>
         /// </summary>
         public bool IsCriticalError => Errors.Count == 0 && ClientError != null;
 
@@ -77,7 +80,8 @@ namespace CK.Observable
 
         /// <summary>
         /// Gets the next due time (UTC) of the <see cref="ObservableTimedEventBase"/>.
-        /// This is available even if this result is on error.
+        /// This is <see cref="Util.UtcMinValue"/> if the transaction failed (<see cref="Errors"/> is not empty)
+        /// or if this is the <see cref="Empty"/> transaction.
         /// </summary>
         public DateTime NextDueTimeUtc { get; }
 
@@ -85,6 +89,10 @@ namespace CK.Observable
         /// Gets the commands that the transaction generated (all the commands
         /// sent via <see cref="DomainView.SendCommand"/> or <see cref="SuccessfulTransactionEventArgs.SendCommand"/>.
         /// Can be empty (and always empty if there are <see cref="Errors"/>).
+        /// <para>
+        /// These commands have been submitted to the <see cref="ObservableDomainSidekick.ExecuteCommand(IActivityMonitor, in SidekickCommand)"/>
+        /// and may have generated one or more <see cref="CommandHandlingErrors"/>.
+        /// </para>
         /// </summary>
         public IReadOnlyList<object> Commands { get; }
 
@@ -122,6 +130,16 @@ namespace CK.Observable
         /// and <see cref="ExecutePostActionsAsync(IActivityMonitor, bool)"/> has not been called yet.
         /// </summary>
         public bool HasPostActions => _postActions != null && _postActions.ActionCount > 0;
+
+        /// <summary>
+        /// Overridden to return mainly error related information.
+        /// </summary>
+        /// <returns>The success or error detail.</returns>
+        public override string ToString()
+        {
+            if( Success ) return $"Success ({_postActions?.ActionCount ?? 0} post actions to execute).";
+            return $"{Errors.Count} transaction errors, {(IsCriticalError ? "with a" : "no" )} Critical Error, {CommandHandlingErrors.Count} command error handling.";
+        }
 
         /// <summary>
         /// Attempts to execute all registered post actions if any.
@@ -166,12 +184,12 @@ namespace CK.Observable
             CommandHandlingErrors = Array.Empty<(object, CKExceptionData)>();
         }
 
-        internal TransactionResult( IReadOnlyList<CKExceptionData> errors, DateTime startTime, DateTime nextDueTime )
+        internal TransactionResult( IReadOnlyList<CKExceptionData> errors, DateTime startTime )
         {
             Debug.Assert( startTime != Util.UtcMinValue || Empty == null, "startTime == Util.UtcMinValue ==> is Empty" );
             StartTimeUtc = startTime;
             CommitTimeUtc = DateTime.UtcNow;
-            NextDueTimeUtc = nextDueTime;
+            NextDueTimeUtc = Util.UtcMinValue;
             Errors = errors;
             Commands = Array.Empty<object>();
             SuccessfulTransactionErrors = Array.Empty<CKExceptionData>();

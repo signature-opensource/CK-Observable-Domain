@@ -141,7 +141,7 @@ namespace CK.Observable
 
         // A reusable domain monitor is created on-demand and is protected by an exclusive lock.
         DomainActivityMonitor _domainMonitor;
-        readonly object _domainMonitorLock;
+        readonly SemaphoreSlim _domainMonitorLock;
 
         // This lock is used to allow one and only one Save at a time: this is to protect
         // the potential fake transaction that is used when saving.
@@ -432,76 +432,95 @@ namespace CK.Observable
                 // If result has already been initialized, we exit immediately.
                 if( _resultInitialized ) return _result;
 
-                Monitor.Debug( "Starting Commit." );
                 _resultInitialized = true;
+
                 Debug.Assert( _domain._currentTran == this );
                 Debug.Assert( _domain._lock.IsWriteLockHeld );
+
                 DateTime nextTimerDueDate = Util.UtcMinValue;
-                try
+                if( _errors.Length == 0 )
                 {
-                    nextTimerDueDate = _domain._timeManager.ApplyChanges();
-                }
-                catch( Exception ex )
-                {
-                    Monitor.Error( ex );
-                    AddError( CKExceptionData.CreateFrom( ex ) );
-                }
-                SuccessfulTransactionEventArgs? ctx = null;
-                CurrentThreadDomain = _previous;
-                if( _errors.Length != 0 )
-                {
-                    // On errors, resets the change tracker, sends the errors to the managers
-                    // and creates an error TransactionResult. 
-                    _result = new TransactionResult( _errors, _startTime, nextTimerDueDate );
-                    _domain._changeTracker.Reset();
+                    Monitor.Debug( "Committing a sucessful transaction (updating and raising Timed events)." );
                     try
                     {
-                        _domain.DomainClient?.OnTransactionFailure( Monitor, _domain, _errors );
+                        nextTimerDueDate = _domain._timeManager.ApplyChanges();
                     }
                     catch( Exception ex )
                     {
-                        Monitor.Error( "Error in IObservableTransactionManager.OnTransactionFailure.", ex );
-                        _result.SetClientError( ex );
+                        Monitor.Error( ex );
+                        AddError( CKExceptionData.CreateFrom( ex ) );
+                    }
+                }
+                SuccessfulTransactionEventArgs? ctx = null;
+                if( _errors.Length != 0 )
+                {
+                    using( Monitor.OpenDebug( "Committing a Transaction on error. Calling DomainClient.OnTransactionFailure." ) )
+                    {
+                        // On errors, resets the change tracker, sends the errors to the managers
+                        // and creates an error TransactionResult. 
+                        _result = new TransactionResult( _errors, _startTime );
+                        _domain._changeTracker.Reset();
+                        try
+                        {
+                            _domain.DomainClient?.OnTransactionFailure( Monitor, _domain, _errors );
+                        }
+                        catch( Exception ex )
+                        {
+                            Monitor.Error( "Error in DomainClient.OnTransactionFailure.", ex );
+                            _result.SetClientError( ex );
+                        }
                     }
                 }
                 else
                 {
-                    ctx = _domain._changeTracker.Commit( _domain, _domain.EnsurePropertyInfo, _startTime, nextTimerDueDate );
-                    ++_domain._transactionSerialNumber;
-                    _domain._transactionCommitTimeUtc = ctx.CommitTimeUtc;
-                    try
+                    using( Monitor.OpenDebug( "Transaction has no error. Calling DomainClient.OnTransactionCommit." ) )
                     {
-                        _result = new TransactionResult( ctx, _domain._postActionMarshaller );
-                        _domain.DomainClient?.OnTransactionCommit( ctx );
-                    }
-                    catch( Exception ex )
-                    {
-                        Monitor.Fatal( "Error in IObservableTransactionManager.OnTransactionCommit. This is a Critical error since the Domain state integrity may be compromised.", ex );
-                        _result.SetClientError( ex );
-                        ctx = null;
+                        ctx = _domain._changeTracker.Commit( _domain, _domain.EnsurePropertyInfo, _startTime, nextTimerDueDate );
+                        ++_domain._transactionSerialNumber;
+                        _domain._transactionCommitTimeUtc = ctx.CommitTimeUtc;
+                        try
+                        {
+                            _result = new TransactionResult( ctx, _domain._postActionMarshaller );
+                            _domain.DomainClient?.OnTransactionCommit( ctx );
+                        }
+                        catch( Exception ex )
+                        {
+                            Monitor.Fatal( "Error in IObservableTransactionManager.OnTransactionCommit. This is a Critical error since the Domain state integrity may be compromised.", ex );
+                            _result.SetClientError( ex );
+                            ctx = null;
+                        }
                     }
                 }
+
+                CurrentThreadDomain = _previous;
                 var next = _result.NextDueTimeUtc;
                 if( next != Util.UtcMinValue ) _domain._timeManager.SetNextDueTimeUtc( Monitor, next );
                 _monitorGroup.Dispose();
                 _domain._currentTran = null;
 
-                _domain._lock.ExitWriteLock();
-                // Back to Readeable lock: publishes SuccessfulTransaction.
-                if( _result.Success )
+                using( Monitor.OpenDebug( "Leaving WriteLock. Raising SuccessfulTransaction event." ) )
                 {
-                    Debug.Assert( ctx != null );
-                    
-                    var errors = _domain.RaiseOnSuccessfulTransaction( ctx );
-                    if( errors != null ) _result.SetSuccessfulTransactionErrors( errors );
+                    _domain._lock.ExitWriteLock();
+                    // Back to Readeable lock: publishes SuccessfulTransaction.
+                    if( _result.Success )
+                    {
+                        Debug.Assert( ctx != null );
+
+                        var errors = _domain.RaiseOnSuccessfulTransaction( ctx );
+                        if( errors != null ) _result.SetSuccessfulTransactionErrors( errors );
+                    }
                 }
                 _domain._lock.ExitUpgradeableReadLock();
-                // Outside of the lock: on success, the sidekicks execute the Command objects.
+                // Outside of the lock: on success, sidekicks execute the Command objects.
                 if( _result.Success )
                 {
-                    var errors = _domain._sidekickManager.ExecuteCommands( Monitor, _result, _result._postActions );
-                    if( errors != null ) _result.SetCommandHandlingErrors( errors );
+                    using( Monitor.OpenDebug( "Leaving UpgradeableReadLock and no error so far: submitting Commands to side kicks." ) )
+                    {
+                        var errors = _domain._sidekickManager.ExecuteCommands( Monitor, _result, _result._postActions );
+                        if( errors != null ) _result.SetCommandHandlingErrors( errors );
+                    }
                 }
+                Monitor.Debug( () => "Committed: " + _result.ToString() );
                 return _result;
             }
 
@@ -610,7 +629,7 @@ namespace CK.Observable
             // LockRecursionPolicy.NoRecursion: reentrancy must NOT be allowed.
             _lock = new ReaderWriterLockSlim( LockRecursionPolicy.NoRecursion );
             _saveLock = new Object();
-            _domainMonitorLock = new Object();
+            _domainMonitorLock = new SemaphoreSlim( 1, 1 );
 
             if( callClientOnCreate )
             {
@@ -759,7 +778,7 @@ namespace CK.Observable
             readonly ObservableDomain? _domain;
 
             public DomainActivityMonitor( string topic, ObservableDomain? domain, int timeout )
-                : base( $"Observable domain '{topic}'." )
+                : base( topic )
             {
                 if( (_domain = domain) == null ) this.Error( $"Failed to obtain the locked domain monitor in less than {timeout} ms." );
             }
@@ -773,7 +792,7 @@ namespace CK.Observable
                 else
                 {
                     while( CloseGroup( new DateTimeStamp( LastLogTime, DateTime.UtcNow ) ) ) ;
-                    Monitor.Exit( _domain._domainMonitorLock );
+                    _domain._domainMonitorLock.Release();
                 }
             }
         }
@@ -1685,9 +1704,9 @@ namespace CK.Observable
         /// <returns>The cached monitor bound to this timer or null if <paramref name="createAutonomousOnTimeout"/> was false and the monitor has not been obtained.</returns>
         public IDisposableActivityMonitor? ObtainDomainMonitor( int milliSecondTimeout = LockedDomainMonitorTimeout, bool createAutonomousOnTimeout = true )
         {
-            if( !Monitor.TryEnter( _domainMonitorLock, milliSecondTimeout ) )
+            if( !_domainMonitorLock.Wait( milliSecondTimeout ) )
             {
-                return createAutonomousOnTimeout ? new DomainActivityMonitor( $"Autonomous monitor for observable domain '{DomainName}'.", null, milliSecondTimeout ) : null;
+                return createAutonomousOnTimeout ? new DomainActivityMonitor( $"Autonomous monitor for Observable Domain '{DomainName}'.", null, milliSecondTimeout ) : null;
             }
             if( _domainMonitor == null )
             {
@@ -1754,10 +1773,10 @@ namespace CK.Observable
                 _disposed = true;
                 _timeManager.Timer.Dispose();
                 _sidekickManager.Clear( monitor );
-                if( monitor != _domainMonitor && Monitor.TryEnter( _domainMonitorLock, 0 ) )
+                if( monitor != _domainMonitor && _domainMonitorLock.Wait( 0 ) )
                 {
                     if( _domainMonitor != null ) _domainMonitor.MonitorEnd( "Domain disposed." );
-                    Monitor.Exit( _domainMonitorLock );
+                    _domainMonitorLock.Release();
                 }
                 _lock.ExitWriteLock();
                 // There is a race condition here. AcquireReadLock, BeginTransaction (and others)

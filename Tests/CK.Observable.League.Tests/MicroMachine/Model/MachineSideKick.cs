@@ -33,9 +33,10 @@ namespace CK.Observable.League.Tests.MicroMachine
 
         protected override bool ExecuteCommand( IActivityMonitor monitor, in SidekickCommand command )
         {
-            if( command.Command is MachineCommand )
+            if( command.Command is MachineCommand c )
             {
-                monitor.Info( "Sidekick handled MachineCommand.");
+                monitor.Info( $"Sidekick handled MachineCommand '{c.BugOrNot}'.");
+                if( c.BugOrNot == "bug" ) throw new CKException( "Sorry, I'm asked to bug." );
                 return true;
             }
             return false;

@@ -15,15 +15,21 @@ namespace CK.Observable.League.Tests.MicroMachine
         SpecializedMachine( IBinaryDeserializer r, TypeReadInfo? info )
                 : base( RevertSerialization.Default )
         {
+            CommandReceivedCount = r.ReadInt32();
         }
 
-        void Write( BinarySerializer s )
+        void Write( BinarySerializer w )
         {
+            w.Write( CommandReceivedCount );
         }
 
-        public void CmdToTheMachine()
+        public int CommandReceivedCount { get; private set; }
+
+        public void CmdToTheMachine( string bugOrNot )
         {
-            Domain.SendCommand( new MachineCommand() );
+            ++CommandReceivedCount;
+            Domain.SendCommand( new MachineCommand( bugOrNot ) );
+            if( bugOrNot == "bug in sending" ) throw new Exception( "Bug in sending command (inside the transaction)." );
         }
 
         public void CreateThing( int productId )

@@ -282,7 +282,7 @@ namespace CK.Observable
                 }
                 catch( Exception ex )
                 {
-                    result.Monitor.Error( "Error while raising OnSuccessfulTransaction event.", ex );
+                    result.Monitor.Error( "Error while calling ObservableDomainSideKick.OnSuccessfulTransaction.", ex );
                     if( errors == null ) errors = new List<CKExceptionData>();
                     errors.Add( CKExceptionData.CreateFrom( ex ) );
                 }

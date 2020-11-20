@@ -63,7 +63,10 @@ namespace CK.Observable.League.Tests.MicroMachine
                         d.Root.Machine.IsRunning.Should().BeTrue();
                         d.Root.Machine.CreateThing( 1 );
                         d.Root.Machine.CreateThing( 3712 );
-                        d.Root.Machine.CmdToTheMachine();
+                        // This will be processed by the sidekick even if we had no TestCallEnsureBridge:
+                        // commands are handled after the new sidekick initialization (and after the release of
+                        // the write lock).
+                        d.Root.Machine.CmdToTheMachine( "no bug" );
 
                         d.Root.Machine.BridgeToTheSidekick.Should().BeNull( "The sidekick is not yet instantiated." );
                         d.Root.Machine.TestCallEnsureBridge();
@@ -72,14 +75,38 @@ namespace CK.Observable.League.Tests.MicroMachine
                 }
             }
 
-            using( TestHelper.Monitor.OpenInfo( "Restoring Machine Domain." ) )
+            using( TestHelper.Monitor.OpenInfo( "When commands bugs,  Machine Domain." ) )
             {
                 await using( var shell = (await league.Find( "M" )!.LoadAsync<Root>( TestHelper.Monitor ))! )
                 {
                     await shell.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) =>
                     {
-                        d.Root.Machine.CmdToTheMachine();
+                        d.Root.Machine.CmdToTheMachine( "no bug" );
+                        d.Root.Machine.CommandReceivedCount.Should().Be( 2 );
+
                     } );
+                    var result = await shell.ModifyAsync( TestHelper.Monitor, ( m, d ) =>
+                    {
+                        d.Root.Machine.CmdToTheMachine( "bug" );
+                        d.Root.Machine.CommandReceivedCount.Should().Be( 3 );
+                    } );
+                    result.Success.Should().BeFalse();
+                    result.CommandHandlingErrors.Should().NotBeEmpty();
+
+                    result = await shell.ModifyAsync( TestHelper.Monitor, ( m, d ) =>
+                    {
+                        d.Root.Machine.CommandReceivedCount.Should().Be( 3, "This has been committed." );
+                        d.Root.Machine.CmdToTheMachine( "bug in sending" );
+                        Assert.Fail( "We never hit this: line above threw an exception." );
+                    } );
+                    result.Success.Should().BeFalse();
+                    result.Errors.Should().NotBeEmpty();
+
+                    result = await shell.ModifyAsync( TestHelper.Monitor, ( m, d ) =>
+                    {
+                        d.Root.Machine.CommandReceivedCount.Should().Be( 3, "The 4th call has been rollbacked." );
+                    } );
+                    result.Success.Should().BeTrue();
                 }
             }
         }
