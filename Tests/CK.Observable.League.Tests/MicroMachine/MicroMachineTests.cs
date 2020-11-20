@@ -42,15 +42,20 @@ namespace CK.Observable.League.Tests.MicroMachine
             } );
         }
 
-        [Test]
-        public async Task initial_configuration_and_subsequent_work()
+        [TestCase( 10 )]
+        [TestCase( 50 )]
+        [TestCase( 100 )]
+        [TestCase( 300 )]
+        [TestCase( 1000 )]
+        public async Task initial_configuration_and_subsequent_work( int numberOfThing )
         {
             var store = BasicLeagueTests.CreateStore( nameof( initial_configuration_and_subsequent_work ) );
             var league = (await ObservableLeague.LoadAsync( TestHelper.Monitor, store ))!;
             await league.Coordinator.ModifyAsync( TestHelper.Monitor, ( m, coodinator ) =>
             {
                 var d = coodinator.Root.CreateDomain( "M", typeof( Root ).AssemblyQualifiedName! );
-                d.Options = d.Options.SetLifeCycleOption( DomainLifeCycleOption.Never );
+                d.Options = d.Options.SetLifeCycleOption( DomainLifeCycleOption.Never )
+                                     .SetCompressionKind( CompressionKind.GZiped );
             } );
 
             using( TestHelper.Monitor.OpenInfo( "Initializing Machine Domain." ) )
@@ -81,6 +86,10 @@ namespace CK.Observable.League.Tests.MicroMachine
                 {
                     await shell.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) =>
                     {
+                        for( int i = 0; i < numberOfThing; ++i )
+                        {
+                            d.Root.Machine.CreateThing( 3712 + i );
+                        }
                         d.Root.Machine.CmdToTheMachine( "no bug" );
                         d.Root.Machine.CommandReceivedCount.Should().Be( 2 );
 

@@ -514,7 +514,7 @@ namespace CK.Observable
                 // Outside of the lock: on success, sidekicks execute the Command objects.
                 if( _result.Success )
                 {
-                    using( Monitor.OpenDebug( "Leaving UpgradeableReadLock and no error so far: submitting Commands to side kicks." ) )
+                    using( Monitor.OpenDebug( "Leaving UpgradeableReadLock and no error so far: submitting Commands to sidekicks." ) )
                     {
                         var errors = _domain._sidekickManager.ExecuteCommands( Monitor, _result, _result._postActions );
                         if( errors != null ) _result.SetCommandHandlingErrors( errors );

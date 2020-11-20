@@ -259,7 +259,6 @@ namespace CK.Observable
             // when LoadOrCreateAndInitializeSnapshot is calling, or false when RestoreSnapshot is at stake.
             Func<ObservableDomain, bool> loadHook = d => { loadAction?.Invoke( d ); return !restoring; };
 
-            long p = _memory.Position;
             _memory.Position = SnapshotHeaderLength;
             if( _currentSnapshotKind == CompressionKind.GZiped )
             {
@@ -273,7 +272,6 @@ namespace CK.Observable
                 Debug.Assert( CompressionKind == CompressionKind.None );
                 Ensure( monitor, ref domain, _memory, loadHook );
             }
-            if( _memory.Position != p ) throw new Exception( $"Internal error: stream position should be {p} but was {_memory.Position} after reload." );
         }
 
 
