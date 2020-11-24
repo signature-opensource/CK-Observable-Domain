@@ -255,6 +255,7 @@ namespace CK.Observable
 
         internal void Save( IActivityMonitor m, BinarySerializer w )
         {
+            CheckEventsInvariant();
             w.WriteNonNegativeSmallInt32( 0 );
             w.WriteNonNegativeSmallInt32( _count );
             var f = _first;
@@ -282,6 +283,7 @@ namespace CK.Observable
                     ++_activeCount;
                 }
             }
+            CheckEventsInvariant();
 #if DEBUG
             int expectedCount = _count;
             ObservableTimedEventBase? last = null;
@@ -319,6 +321,24 @@ namespace CK.Observable
             return _activeCount > 0 ? _activeEvents[1].ExpectedDueTimeUtc : Util.UtcMinValue;
         }
 
+        [Conditional("DEBUG")]
+        void CheckEventsInvariant()
+        {
+            Debug.Assert( _activeEvents[0] == null );
+            int i = 1;
+            while( i <= _activeCount )
+            {
+                Debug.Assert( _activeEvents[i].ActiveIndex == i );
+                Debug.Assert( _activeEvents[i].IsActive );
+                ++i;
+            }
+            while( i < _activeEvents.Length )
+            {
+                Debug.Assert( _activeEvents[i] == null );
+                ++i;
+            }
+        }
+
         void DoApplyChanges()
         {
             Debug.Assert( _changedCleanupBuffer.Count == 0 );
@@ -335,6 +355,7 @@ namespace CK.Observable
                     _changedCleanupBuffer.Add( ev );
                 }
             }
+            CheckEventsInvariant();
             if( _changedCleanupBuffer.Count > 0 )
             {
                 foreach( var rem in _changedCleanupBuffer )
@@ -369,25 +390,31 @@ namespace CK.Observable
                     {
                         _totalEventRaised++;
                         _changed.Remove( first );
-                        first.DoRaise( m, current, !IgnoreTimedEventException );
-                        if( !_changed.Remove( first ) )
+                        try
                         {
-                            first.OnAfterRaiseUnchanged( current, m );
+                            first.DoRaise( m, current, !IgnoreTimedEventException );
                         }
-                        if( !first.IsDisposed )
+                        finally
                         {
-                            if( !first.IsActive )
+                            if( !_changed.Remove( first ) )
                             {
-                                Deactivate( first );
+                                first.OnAfterRaiseUnchanged( current, m );
                             }
-                            else
+                            if( !first.IsDisposed )
                             {
-                                if( first.ExpectedDueTimeUtc <= current )
+                                if( !first.IsActive )
                                 {
-                                    // 10 ms is a "very minimal" step: it is smaller than the approximate thread time slice (20 ms). 
-                                    first.ForwardExpectedDueTime( m, current.AddMilliseconds( 10 ) );
+                                    Deactivate( first );
                                 }
-                                OnNextDueTimeUpdated( first );
+                                else
+                                {
+                                    if( first.ExpectedDueTimeUtc <= current )
+                                    {
+                                        // 10 ms is a "very minimal" step: it is smaller than the approximate thread time slice (20 ms). 
+                                        first.ForwardExpectedDueTime( m, current.AddMilliseconds( 10 ) );
+                                    }
+                                    OnNextDueTimeUpdated( first );
+                                }
                             }
                         }
                         m.Debug( $"{first}: ActiveIndex={first.ActiveIndex}." );
@@ -407,6 +434,7 @@ namespace CK.Observable
             }
             finally
             {
+                CheckEventsInvariant();
                 IsRaising = false;
             }
         }

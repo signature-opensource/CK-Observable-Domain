@@ -641,6 +641,78 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             }
         }
 
+        [Test]
+        public void testing_reminders()
+        {
+            using var d = new ObservableDomain( TestHelper.Monitor, nameof( AutoTime_is_obviously_not_reentrant_and_has_a_safety_trampoline ) );
+
+            var dates = Enumerable.Range( 0, 100 ).Select( i => DateTime.UtcNow.AddDays( 1 + i ) ).ToArray();
+            var revert = dates.Reverse().ToArray();
+            var random = new Random();
+
+            static void RequiredForActivation( object sender, ObservableReminderEventArgs e ) { }
+
+            CreateDates( d, dates );
+            ApplyDates( d, revert );
+            DisposeAllReminders( d, false );
+
+            CreateDates( d, revert );
+            ApplyDates( d, dates );
+            DisposeAllReminders( d, true );
+
+            for( int i = 0; i < 200; ++i )
+            {
+                CreateDates( d, dates );
+                ApplyDates( d, Shuffled() );
+                ApplyDates( d, Shuffled() );
+                DisposeAllReminders( d, true );
+            }
+            for( int i = 0; i < 200; ++i )
+            {
+                CreateDates( d, Shuffled() );
+                DisposeAllReminders( d, true );
+            }
+
+            static void CreateDates( ObservableDomain d, DateTime[] dates )
+            {
+                d.Modify( TestHelper.Monitor, () =>
+                {
+                    for( int i = 0; i < dates.Length; ++i )
+                    {
+                        var o = new ObservableReminder( dates[i] );
+                        o.Elapsed += RequiredForActivation;
+                    }
+                } ).Success.Should().BeTrue();
+            }
+
+            static void ApplyDates( ObservableDomain d, DateTime[] newDates )
+            {
+                d.Modify( TestHelper.Monitor, () =>
+                {
+                    for( int i = 0; i < newDates.Length; ++i )
+                    {
+                        d.TimeManager.Reminders.ElementAt( i ).DueTimeUtc = newDates[i];
+                    }
+                } ).Success.Should().BeTrue();
+            }
+
+            void DisposeAllReminders( ObservableDomain d, bool rand )
+            {
+                d.Modify( TestHelper.Monitor, () =>
+                {
+                    while( d.TimeManager.Reminders.Count > 0 )
+                    {
+                        d.TimeManager.Reminders.ElementAt( random.Next( d.TimeManager.Reminders.Count ) ).Dispose();
+                    }
+                } ).Success.Should().BeTrue();
+            }
+
+            DateTime[] Shuffled()
+            {
+                return dates.OrderBy( x => random.Next() ).ToArray();
+            }
+        }
+
 
     }
 }
