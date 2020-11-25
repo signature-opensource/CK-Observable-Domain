@@ -308,6 +308,7 @@ namespace CK.Observable
             _first = _last = null;
             _autoTimer.SetNextDueTimeUtc( monitor, Util.UtcMinValue );
             _firstFreeReminder = null;
+            _changed.Clear();
         }
 
         /// <summary>
