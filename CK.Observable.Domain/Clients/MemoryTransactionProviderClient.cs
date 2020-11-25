@@ -289,7 +289,7 @@ namespace CK.Observable
 
         /// <summary>
         /// Extension point that can only be called from <see cref="LoadOrCreateAndInitializeSnapshot(IActivityMonitor, ref ObservableDomain, Stream)"/>
-        /// with a null domain: instead of reloading the existing domain, this methos must call the deserialization constructor.
+        /// with a null domain: instead of reloading the existing domain, this method must call the deserialization constructor.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="stream">The stream fromw wich the domain must be deserialized.</param>

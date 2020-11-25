@@ -85,6 +85,11 @@ namespace CK.Observable
             }
         }
 
+        /// <summary>
+        /// Gets whether the timed events are raised.
+        /// </summary>
+        public bool IsRunning => _autoTimer.IsActive;
+
         /// <inheritdoc/>
         public DateTime NextDueTimeUtc => _currentNext;
 
@@ -250,13 +255,14 @@ namespace CK.Observable
         /// The change is handled in <see cref="DoApplyChanges"/> called at the start
         /// and at the end of the ObservableDomain.Modify.
         /// </summary>
-        /// <param name="t">The tiemd event to add.</param>
+        /// <param name="t">The timed event to add.</param>
         internal void OnChanged( ObservableTimedEventBase t ) => _changed.Add( t );
 
         internal void Save( IActivityMonitor m, BinarySerializer w )
         {
             CheckEventsInvariant();
-            w.WriteNonNegativeSmallInt32( 0 );
+            w.WriteNonNegativeSmallInt32( 1 );
+            w.Write( _autoTimer.IsActive );
             w.WriteNonNegativeSmallInt32( _count );
             var f = _first;
             while( f != null )
@@ -267,9 +273,10 @@ namespace CK.Observable
             }
         }
 
-        internal void Load( IActivityMonitor m, BinaryDeserializer r )
+        internal bool Load( IActivityMonitor m, BinaryDeserializer r )
         {
             int version = r.ReadNonNegativeSmallInt32();
+            bool running = version > 0 ? r.ReadBoolean() : true;
             int count = r.ReadNonNegativeSmallInt32();
             while( --count >= 0 )
             {
@@ -298,12 +305,16 @@ namespace CK.Observable
             Debug.Assert( expectedCount == 0 );
             Debug.Assert( _last == last );
 #endif
+            return running;
         }
 
-        internal void Clear( IActivityMonitor monitor )
+        internal void ClearAndStop( IActivityMonitor monitor )
         {
+            _autoTimer.IsActive = false;
+
             Debug.Assert( _activeEvents[0] == null );
             Array.Clear( _activeEvents, 1, _activeCount );
+
             _timerCount = _count = _activeCount = 0;
             _first = _last = null;
             _autoTimer.SetNextDueTimeUtc( monitor, Util.UtcMinValue );
@@ -378,6 +389,7 @@ namespace CK.Observable
         /// <returns>The number of timers that have fired.</returns>
         internal int RaiseElapsedEvent( IActivityMonitor m, DateTime current, bool checkChanges )
         {
+            Debug.Assert( IsRunning );
             if( checkChanges ) DoApplyChanges();
             IsRaising = true;
             try

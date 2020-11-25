@@ -245,7 +245,9 @@ namespace CK.Observable.League
                 if( _preLoaded != shouldBeLoaded )
                 {
                     _preLoaded = shouldBeLoaded;
-                    return shouldBeLoaded ? DoShellLoadAsync( monitor, throwError: true ) : DoShellDisposeAsync( monitor ).AsTask();
+                    return shouldBeLoaded
+                                ? DoShellLoadAsync( monitor, throwError: true, startTimer: _hasActiveTimedEvents )
+                                : DoShellDisposeAsync( monitor ).AsTask();
                 }
                 return Task.CompletedTask;
             }
@@ -313,17 +315,18 @@ namespace CK.Observable.League
             /// Primary load method (overloads call this one after having checked the root types).
             /// </summary>
             /// <param name="monitor">The monitor.</param>
+            /// <param name="startTimer">TimeManager activation.</param>
             /// <returns>The shell.</returns>
-            public async Task<IObservableDomainShell?> LoadAsync( IActivityMonitor monitor )
+            public async Task<IObservableDomainShell?> LoadAsync( IActivityMonitor monitor, bool? startTimer = null )
             {
                 if( !IsLoadable || IsDestroyed || ClosingLeague ) return null;
-                await DoShellLoadAsync( monitor, false );
+                await DoShellLoadAsync( monitor, false, startTimer );
                 if( _domain == null ) return null;
                 if( _initialMonitor == monitor ) return this;
                 return CreateIndependentShell( monitor );
             }
 
-            async Task<bool> DoShellLoadAsync( IActivityMonitor monitor, bool throwError )
+            async Task<bool> DoShellLoadAsync( IActivityMonitor monitor, bool throwError, bool? startTimer = null )
             {
                 bool updateDone = false;
                 await _loadLock!.WaitAsync();
@@ -367,7 +370,7 @@ namespace CK.Observable.League
 
             private protected virtual IObservableDomainShell CreateIndependentShell( IActivityMonitor monitor ) => new IndependentShell( this, monitor );
 
-            public async Task<IObservableDomainShell<T>?> LoadAsync<T>( IActivityMonitor monitor ) where T : ObservableRootObject
+            public async Task<IObservableDomainShell<T>?> LoadAsync<T>( IActivityMonitor monitor, bool? startTimer = null ) where T : ObservableRootObject
             {
                 if( !IsLoadable || IsDestroyed || ClosingLeague ) return null;
                 if( _rootTypes.Length != 1 || !typeof( T ).IsAssignableFrom( _rootTypes[0] ) )
@@ -375,10 +378,10 @@ namespace CK.Observable.League
                     monitor.Error( $"Typed domain error: Domain {DomainName} cannot be loaded as a ObservableDomain<{typeof( T ).FullName}> (actual type is '{_domainType}')." );
                     return null;
                 }
-                return (IObservableDomainShell<T>?)await LoadAsync( monitor );
+                return (IObservableDomainShell<T>?)await LoadAsync( monitor, startTimer );
             }
 
-            public async Task<IObservableDomainShell<T1,T2>?> LoadAsync<T1,T2>( IActivityMonitor monitor )
+            public async Task<IObservableDomainShell<T1,T2>?> LoadAsync<T1,T2>( IActivityMonitor monitor, bool? startTimer = null )
                 where T1 : ObservableRootObject
                 where T2 : ObservableRootObject
             {
@@ -390,10 +393,10 @@ namespace CK.Observable.League
                     monitor.Error( $"Typed domain error: Domain {DomainName} cannot be loaded as a ObservableDomain<{typeof( T1 ).FullName},{typeof( T2 ).FullName}> (actual type is '{_domainType}')." );
                     return null;
                 }
-                return (IObservableDomainShell<T1,T2>?)await LoadAsync( monitor );
+                return (IObservableDomainShell<T1,T2>?)await LoadAsync( monitor, startTimer );
             }
 
-            public async Task<IObservableDomainShell<T1,T2,T3>?> LoadAsync<T1,T2,T3>( IActivityMonitor monitor )
+            public async Task<IObservableDomainShell<T1,T2,T3>?> LoadAsync<T1,T2,T3>( IActivityMonitor monitor, bool? startTimer = null )
                 where T1 : ObservableRootObject
                 where T2 : ObservableRootObject
                 where T3 : ObservableRootObject
@@ -407,10 +410,10 @@ namespace CK.Observable.League
                     monitor.Error( $"Typed domain error: Domain {DomainName} cannot be loaded as a ObservableDomain<{typeof( T1 ).Name},{typeof( T2 ).Name},{typeof( T3 ).Name}> (actual type is '{_domainType}')." );
                     return null;
                 }
-                return (IObservableDomainShell<T1, T2, T3>?)await LoadAsync( monitor );
+                return (IObservableDomainShell<T1, T2, T3>?)await LoadAsync( monitor, startTimer );
             }
 
-            public async Task<IObservableDomainShell<T1,T2,T3,T4>?> LoadAsync<T1,T2, T3, T4>( IActivityMonitor monitor )
+            public async Task<IObservableDomainShell<T1,T2,T3,T4>?> LoadAsync<T1,T2, T3, T4>( IActivityMonitor monitor, bool? startTimer = null )
                 where T1 : ObservableRootObject
                 where T2 : ObservableRootObject
                 where T3 : ObservableRootObject
@@ -426,7 +429,7 @@ namespace CK.Observable.League
                     monitor.Error( $"Typed domain error: Domain {DomainName} cannot be loaded as a ObservableDomain<{typeof( T1 ).Name},{typeof( T2 ).Name},{typeof( T3 ).Name},{typeof( T4 ).Name}> (actual type is '{_domainType}')." );
                     return null;
                 }
-                return (IObservableDomainShell<T1, T2, T3, T4>?)await LoadAsync( monitor );
+                return (IObservableDomainShell<T1, T2, T3, T4>?)await LoadAsync( monitor, startTimer );
             }
 
             #region IObservableDomainShell (non generic) implementation

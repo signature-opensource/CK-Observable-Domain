@@ -817,7 +817,7 @@ namespace CK.Observable
         /// <summary>
         /// Raised whenever when a successful transaction has been successfully handled by the <see cref="ObservableDomain.DomainClient"/>.
         /// <para>
-        /// When this is called, the <see cref="Domain"/>'s lock is held in read mode: objects can be read (but no write/modifications
+        /// When this is called, the <see cref="ObservableDomain"/>'s lock is held in read mode: objects can be read (but no write/modifications
         /// should occur).
         /// </para>
         /// <para>
@@ -991,7 +991,7 @@ namespace CK.Observable
             Debug.Assert( t != null );
             try
             {
-                _timeManager.RaiseElapsedEvent( t.Monitor, t.StartTime, actions == null );
+                if( _timeManager.IsRunning ) _timeManager.RaiseElapsedEvent( t.Monitor, t.StartTime, false );
                 bool skipped = false;
                 foreach( var tracker in _trackers )
                 {
@@ -1008,7 +1008,7 @@ namespace CK.Observable
                     {
                         var now = DateTime.UtcNow;
                         foreach( var tracker in _trackers ) tracker.AfterModify( t.Monitor, t.StartTime, now - t.StartTime );
-                        _timeManager.RaiseElapsedEvent( t.Monitor, now, true );
+                        if( _timeManager.IsRunning ) _timeManager.RaiseElapsedEvent( t.Monitor, now, true );
                     }
                 }
             }
@@ -1316,7 +1316,7 @@ namespace CK.Observable
             }
         }
 
-        void DoLoad( IActivityMonitor monitor, BinaryDeserializer r, string expectedName, Func<ObservableDomain, bool>? loadHook )
+        void DoLoad( IActivityMonitor monitor, BinaryDeserializer r, string expectedName, bool? startTimer )
         {
             Debug.Assert( _lock.IsWriteLockHeld );
             _deserializeOrInitializing = true;
@@ -1399,7 +1399,7 @@ namespace CK.Observable
                 _internalObjectCount = 0;
 
                 // Clears any time event objects.
-                _timeManager.Clear( monitor );
+                _timeManager.ClearAndStop( monitor );
 
                 // Resize _objects array.
                 _objectsListCount = count = _actualObjectCount + _freeList.Count;
@@ -1436,7 +1436,7 @@ namespace CK.Observable
 
                 // Reading Timed events.
                 r.DebugCheckSentinel();
-                _timeManager.Load( monitor, r );
+                bool timerRunning = _timeManager.Load( monitor, r );
                 r.DebugCheckSentinel();
                 _sidekickManager.Load( r );
                 r.DebugCheckSentinel();
@@ -1445,26 +1445,20 @@ namespace CK.Observable
                 // Calling PostDeserializationActions finalizes the object's graph.
                 r.ImplementationServices.ExecutePostDeserializationActions();
 
-                // Calls the loadHook if any.
-                bool callUpdateTimers = true;
-                if( loadHook != null )
-                {
-                    try
-                    {
-                        callUpdateTimers = loadHook( this );
-                    }
-                    catch( Exception ex )
-                    {
-                        monitor.Error( "Error while calling load hook.", ex );
-                        throw;
-                    }
-                }
+                if( startTimer.HasValue ) timerRunning = startTimer.Value;
                 if( !_sidekickManager.CreateWaitingSidekicks( monitor, ex => { } ) )
                 {
-                    monitor.Error( $"At least one critical error occurred while activating sidekicks. The error should be investigated since this may well be a blocking error." );
+                    var msg = "At least one critical error occurred while activating sidekicks. The error should be investigated since this may well be a blocking error.";
+                    if( timerRunning )
+                    {
+                        timerRunning = false;
+                        msg += " The TimeManager (that should have ran) has been stopped.";
+                    }
+                    monitor.Error( msg );
                 }
-                if( callUpdateTimers )
+                if( timerRunning )
                 {
+                    !!!!!!!!!!!!!!!!!!!!
                     using( monitor.OpenDebug( "Load hook returned true: updating timed events and activating the AutoTimer on closest timed event to fire." ) )
                     {
                         _timeManager.SetNextDueTimeUtc( monitor, _timeManager.ApplyChanges() );
@@ -1926,7 +1920,7 @@ namespace CK.Observable
             {
                 if( _currentTran == null ) throw new InvalidOperationException( "A transaction is required." );
                 if( _lock.IsReadLockHeld ) throw new InvalidOperationException( "Concurrent access: only Read lock has been acquired." );
-                throw new InvalidOperationException( "Concurrent access: no lock has been acquired." );
+                throw new InvalidOperationException( "Concurrent access: write lock must be acquired." );
             }
             return o;
         }

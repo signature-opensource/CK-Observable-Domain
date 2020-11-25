@@ -254,11 +254,6 @@ namespace CK.Observable
             return firstDueTimeUtc;
         }
 
-        internal override void OnDeactivate()
-        {
-            // A timer has nothing special to do on deactivation.
-        }
-
         /// <summary>
         /// Overridden to return the <see cref="Name"/> of this timer.
         /// </summary>

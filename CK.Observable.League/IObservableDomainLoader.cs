@@ -52,8 +52,13 @@ namespace CK.Observable.League
         /// If <see cref="IsDestroyed"/> is true or if the containing <see cref="ObservableLeague"/> is closing, or an error occurred,
         /// then this returns null.
         /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
+        /// <param name="startTimer">
+        /// Ensures that the <see cref="ObservableDomain.TimeManager"/> is running or stopped.
+        /// When null, it keeps its previous state (it is initially stopped at domain creation) and then its current state is persisted.
+        /// </param>
         /// <returns>The shell to use. Null on error or if the domain is destroyed or the league is closing.</returns>
-        Task<IObservableDomainShell?> LoadAsync( IActivityMonitor monitor );
+        Task<IObservableDomainShell?> LoadAsync( IActivityMonitor monitor, bool? startTimer = null );
 
         /// <summary>
         /// Loads this domain (if it is not yet loaded) as a strongly typed one and returns a
@@ -61,8 +66,13 @@ namespace CK.Observable.League
         /// If the actual type is not compatible with this or <see cref="IsDestroyed"/> is true or if the containing <see cref="ObservableLeague"/>
         /// is closing, or an error occurred, then this returns null.
         /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
+        /// <param name="startTimer">
+        /// Ensures that the <see cref="ObservableDomain.TimeManager"/> is running or stopped.
+        /// When null, it keeps its previous state (it is initially stopped at domain creation) and then its current state is persisted.
+        /// </param>
         /// <returns>The shell to use. Null on error or if the domain is destroyed or the league is closing.</returns>
-        Task<IObservableDomainShell<T>?> LoadAsync<T>( IActivityMonitor monitor ) where T : ObservableRootObject;
+        Task<IObservableDomainShell<T>?> LoadAsync<T>( IActivityMonitor monitor, bool? startTimer = null ) where T : ObservableRootObject;
 
         /// <summary>
         /// Loads this domain (if it is not yet loaded) as a strongly typed one and returns a
@@ -70,8 +80,13 @@ namespace CK.Observable.League
         /// If the actual type is not compatible with this or <see cref="IsDestroyed"/> is true or if the containing <see cref="ObservableLeague"/>
         /// is closing, or an error occurred, then this returns null.
         /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
+        /// <param name="startTimer">
+        /// Ensures that the <see cref="ObservableDomain.TimeManager"/> is running or stopped.
+        /// When null, it keeps its previous state (it is initially stopped at domain creation) and then its current state is persisted.
+        /// </param>
         /// <returns>The shell to use. Null on error or if the domain is destroyed or the league is closing.</returns>
-        Task<IObservableDomainShell<T1, T2>?> LoadAsync<T1, T2>( IActivityMonitor monitor )
+        Task<IObservableDomainShell<T1, T2>?> LoadAsync<T1, T2>( IActivityMonitor monitor, bool? startTimer = null )
             where T1 : ObservableRootObject
             where T2 : ObservableRootObject;
 
@@ -81,8 +96,13 @@ namespace CK.Observable.League
         /// If the actual type is not compatible with this or <see cref="IsDestroyed"/> is true or if the containing <see cref="ObservableLeague"/>
         /// is closing, or an error occurred, then this returns null.
         /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
+        /// <param name="startTimer">
+        /// Ensures that the <see cref="ObservableDomain.TimeManager"/> is running or stopped.
+        /// When null, it keeps its previous state (it is initially stopped at domain creation) and then its current state is persisted.
+        /// </param>
         /// <returns>The shell to use. Null on error or if the domain is destroyed or the league is closing.</returns>
-        Task<IObservableDomainShell<T1, T2, T3>?> LoadAsync<T1, T2, T3>( IActivityMonitor monitor )
+        Task<IObservableDomainShell<T1, T2, T3>?> LoadAsync<T1, T2, T3>( IActivityMonitor monitor, bool? startTimer = null )
             where T1 : ObservableRootObject
             where T2 : ObservableRootObject
             where T3 : ObservableRootObject;
@@ -93,8 +113,13 @@ namespace CK.Observable.League
         /// If the actual type is not compatible with this or <see cref="IsDestroyed"/> is true or if the containing <see cref="ObservableLeague"/>
         /// is closing, or an error occurred, then this returns null.
         /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
+        /// <param name="startTimer">
+        /// Ensures that the <see cref="ObservableDomain.TimeManager"/> is running or stopped.
+        /// When null, it keeps its previous state (it is initially stopped at domain creation) and then its current state is persisted.
+        /// </param>
         /// <returns>The shell to use. Null on error or if the domain is destroyed or the league is closing.</returns>
-        Task<IObservableDomainShell<T1, T2, T3, T4>?> LoadAsync<T1, T2, T3, T4>( IActivityMonitor monitor )
+        Task<IObservableDomainShell<T1, T2, T3, T4>?> LoadAsync<T1, T2, T3, T4>( IActivityMonitor monitor, bool? startTimer = null )
             where T1 : ObservableRootObject
             where T2 : ObservableRootObject
             where T3 : ObservableRootObject
