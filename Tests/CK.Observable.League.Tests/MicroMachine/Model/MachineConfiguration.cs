@@ -39,7 +39,7 @@ namespace CK.Observable.League.Tests.MicroMachine
 
         public TimeSpan IdentifyThingTimeout { get; set; } = TimeSpan.FromMilliseconds( 200 );
 
-        public TimeSpan AutoDisposedTimeout { get; set; } = TimeSpan.FromMilliseconds( 200 );
+        public TimeSpan AutoDisposedTimeout { get; set; } = TimeSpan.FromMilliseconds( 400 );
 
     }
 }
