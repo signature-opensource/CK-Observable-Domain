@@ -90,7 +90,7 @@ namespace CK.Observable
 
         /// <summary>
         /// Gets whether this timed event is active.
-        /// There must be at least one <see cref="Elapsed"/> registered callback for this to be true. and if a
+        /// There must be at least one Elapsed registered callback for this to be true, and if a
         /// bound <see cref="SuspendableClock"/> exists, it must be active.
         /// </summary>
         public abstract bool IsActive { get; }

@@ -24,22 +24,29 @@ namespace CK.Observable.League.Tests.MicroMachine
                 d.Root.Machine.Clock.CumulateUnloadedTime = false;
                 d.Root.Machine.IsRunning.Should().BeTrue();
                 d.Root.Machine.CreateThing( 1 );
-            } );
+                d.Root.Machine.Things.Should().HaveCount( 1 );
+
+            } ).Success.Should().BeTrue();
+
             // No Identification appears: => IdentificationTimeout.
             Thread.Sleep( 250 );
             ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
             d.Modify( TestHelper.Monitor, () =>
             {
+                d.Root.Machine.Things.Should().HaveCount( 1 );
                 d.Root.Machine.Things[0].IdentifiedId.Should().BeNull();
                 d.Root.Machine.Things[0].Error.Should().Be( "IdentificationTimeout" );
-            } );
+
+            } ).Success.Should().BeTrue();
+
             ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
             // AutoDisposed fired.
             Thread.Sleep( 200 );
             d.Modify( TestHelper.Monitor, () =>
             {
                 d.Root.Machine.Things.Should().BeEmpty();
-            } );
+
+            } ).Success.Should().BeTrue();
         }
 
         [TestCase( 10 )]
@@ -119,5 +126,47 @@ namespace CK.Observable.League.Tests.MicroMachine
                 }
             }
         }
+
+        [Test]
+        public void waiting_for_timeouts()
+        {
+            const int thingCount = 50;
+            const int waitTimeBetweenThings = 50;
+
+            using var d = new ObservableDomain<Root>( TestHelper.Monitor, "TEST" );
+            d.Modify( TestHelper.Monitor, () =>
+            {
+                d.Root.Machine.Configuration.IdentifyThingTimeout = TimeSpan.FromMilliseconds( 200 );
+                d.Root.Machine.Configuration.AutoDisposedTimeout = TimeSpan.FromMilliseconds( 200 );
+                d.Root.Machine.Clock.IsActive = true;
+                d.Root.Machine.IsRunning.Should().BeTrue();
+                for( int i = 0; i < thingCount; ++i )
+                {
+                    d.Root.Machine.CreateThing( i );
+                    Thread.Sleep( waitTimeBetweenThings );
+                }
+            } ).Success.Should().BeTrue();
+
+            // No Identification appears: => IdentificationTimeout.
+            Thread.Sleep( 200 + (thingCount * waitTimeBetweenThings) );
+            d.Modify( TestHelper.Monitor, () =>
+            {
+                int count = d.Root.Machine.Things.Count;
+                for( int i = 0; i < count; ++i )
+                {
+                    d.Root.Machine.Things[i].IdentifiedId.Should().BeNull();
+                    d.Root.Machine.Things[i].Error.Should().Be( "IdentificationTimeout" );
+                }
+            } ).Success.Should().BeTrue();
+
+            // AutoDisposed fired.
+            Thread.Sleep( (thingCount * waitTimeBetweenThings) );
+            d.Modify( TestHelper.Monitor, () =>
+            {
+                d.Root.Machine.Things.Should().BeEmpty();
+
+            } ).Success.Should().BeTrue();
+        }
+
     }
 }

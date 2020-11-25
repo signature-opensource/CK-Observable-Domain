@@ -11,7 +11,8 @@ namespace CK.Observable
 
     /// <summary>
     /// Simple reminder that raises its <see cref="ObservableTimedEventBase{T}.Elapsed"/> event once at <see cref="DueTimeUtc"/> time.
-    /// This should not be used directly since <see cref="DomainView.Remind"/> method is easier to use.
+    /// This should not be used directly since <see cref="DomainView.Remind(DateTime, SafeEventHandler{ObservableReminderEventArgs}, object?)"/> method
+    /// is easier to use.
     /// </summary>
     [SerializationVersion(0)]
     public sealed class ObservableReminder : ObservableTimedEventBase<ObservableReminderEventArgs>
@@ -60,7 +61,7 @@ namespace CK.Observable
 
         /// <summary>
         /// Gets whether this reminder is a pooled one.
-        /// Pooled reminders are created and managed by <see cref="DomainView.Remind"/>.
+        /// Pooled reminders are created and managed by <see cref="DomainView.Remind(DateTime, SafeEventHandler{ObservableReminderEventArgs}, object?)"/>.
         /// Calling <see cref="Dispose"/> when this is true is an error.
         /// </summary>
         public bool IsPooled { get; }
