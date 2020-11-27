@@ -20,7 +20,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void an_observable_must_be_created_in_the_context_of_a_transaction()
         {
-            using( var d = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
+            using( var d = new ObservableDomain(TestHelper.Monitor, "TEST", startTimer: true ) )
             {
                 Action outOfTran = () => new Car( "" );
                 outOfTran.Should().Throw<InvalidOperationException>().WithMessage( "A transaction is required*" );
@@ -30,7 +30,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void an_observable_must_be_modified_in_the_context_of_a_transaction()
         {
-            using( var d = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
+            using( var d = new ObservableDomain(TestHelper.Monitor, "TEST", startTimer: true ) )
             {
                 IReadOnlyList<ObservableEvent>? events = null;
                 d.OnSuccessfulTransaction += ( d, ev ) => events = ev.Events;
@@ -64,7 +64,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void Export_can_NOT_be_called_within_a_transaction_because_of_LockRecursionPolicy_NoRecursion()
         {
-            using( var d = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
+            using( var d = new ObservableDomain(TestHelper.Monitor, "TEST", startTimer: true ) )
             {
                 using( d.BeginTransaction( TestHelper.Monitor ) )
                 {
@@ -77,7 +77,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void Save_can_be_called_from_inside_a_transaction()
         {
-            using( var d = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
+            using( var d = new ObservableDomain(TestHelper.Monitor, "TEST", startTimer: true ) )
             {
                 using( d.BeginTransaction( TestHelper.Monitor ) )
                 {
@@ -91,7 +91,7 @@ namespace CK.Observable.Domain.Tests
         public void Load_and_Save_can_be_called_from_inside_a_transaction_or_outside_any_transaction()
         {
             using( var s = new MemoryStream() )
-            using( var d = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
+            using( var d = new ObservableDomain(TestHelper.Monitor, "TEST", startTimer: true ) )
             {
                 using( d.BeginTransaction( TestHelper.Monitor ) )
                 {
@@ -109,7 +109,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void BeginTransaction_and_AcquireReadLock_reentrant_calls_are_detected_by_the_LockRecursionPolicy_NoRecursion()
         {
-            using( var d = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
+            using( var d = new ObservableDomain(TestHelper.Monitor, "TEST", startTimer: true ) )
             {
                 using( d.BeginTransaction( TestHelper.Monitor ) )
                 {
@@ -137,7 +137,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void ObservableObject_exposes_Disposed_event()
         {
-            using( var d = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
+            using( var d = new ObservableDomain(TestHelper.Monitor, "TEST", startTimer: true ) )
             {
                 d.Modify( TestHelper.Monitor, () =>
                 {

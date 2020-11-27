@@ -11,9 +11,9 @@ namespace CK.Observable
     /// Sidekicks of a domain interact with the external world.
     /// A sidekick is not serializable (it is the role of the <see cref="InternalObject"/> or <see cref="ObservableObject"/> to
     /// maintain state), a sidekick is an interface to the world (typically an asynchronous world of interactions) that in one
-    /// way handles the commands that domain objects have sent during a transaction (via <see cref="DomainView.SendCommand(object)"/>),
+    /// way handles the commands that domain objects have sent during a transaction (via <see cref="DomainView.SendCommand(in ObservableDomainCommand)"/>),
     /// and on the other way can monitor/react to any number of "external events" and call one of the Modify/ModifiyAsync domain's method to
-    /// inform the domain objects.
+    /// inform, update, modify the domain objects.
     /// <para>
     /// This is not a singleton for the Dependency Injection since a sidekick is bound to its <see cref="Domain"/> but its dependencies MUST
     /// be singletons.
@@ -56,7 +56,7 @@ namespace CK.Observable
         /// <summary>
         /// Gets the domain.
         /// </summary>
-        protected ObservableDomain Domain { get; }
+        internal protected ObservableDomain Domain { get; }
 
         /// <summary>
         /// Must register the provided <see cref="InternalObject"/> or <see cref="ObservableObject"/> as a client
@@ -82,7 +82,10 @@ namespace CK.Observable
         /// Default implementation does nothing at this level.
         /// <para>
         /// When this is called, the <see cref="Domain"/>'s lock is held in read mode: objects can be read (but no write/modifications
-        /// should occur).
+        /// should occur). A typical implementation is to capture any required domain object's state and use
+        /// <see cref="SuccessfulTransactionEventArgs.LocalPostActions"/> or <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/>
+        /// to post asynchronous actions (or to send commands thanks to <see cref="SuccessfulTransactionEventArgs.SendCommand(ObservableDomainCommand)"/>
+        /// that will be processed by this or other sidekicks).
         /// </para>
         /// <para>
         /// Exceptions raised by this method are collected in <see cref="TransactionResult.SuccessfulTransactionErrors"/>.

@@ -48,12 +48,12 @@ namespace CK.Observable.League
         /// The updated options if called by the <see cref="Coordinator"/> domain or
         /// by the initial <see cref="ObservableLeague.LoadAsync"/>, null otherwise.
         /// </param>
-        /// <param name="hasActiveTimedEvents">
-        /// Whether the <see cref="ITimeManager.ActiveTimedEventsCount"/> is positive or not when called after
-        /// each successful commit by the domain itself or by the initial <see cref="ObservableLeague.LoadAsync"/>, null otherwise.
+        /// <param name="nextActiveTime">
+        /// The <see cref="ITimeManager.NextActiveTime"/> when called after each successful commit by the domain itself
+        /// or by the initial <see cref="ObservableLeague.LoadAsync"/>, null otherwise.
         /// </param>
         /// <returns>The awaitable.</returns>
-        Task SynchronizeOptionsAsync( IActivityMonitor monitor, ManagedDomainOptions? options, bool? hasActiveTimedEvents );
+        Task SynchronizeOptionsAsync( IActivityMonitor monitor, ManagedDomainOptions? options, DateTime? nextActiveTime );
 
         /// <summary>
         /// Destroys the managed domain: the <see cref="Domain"/> has been disposed.

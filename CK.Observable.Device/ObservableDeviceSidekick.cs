@@ -21,7 +21,7 @@ namespace CK.Observable.Device
         where TDeviceObject : ObservableDeviceObject
         where TDeviceHostObject: ObservableDeviceHostObject
     {
-        readonly Dictionary<string, DeviceBridge> _objects;
+        readonly Dictionary<string, DeviceBridge> _bridges;
         TDeviceHostObject? _objectHost;
         DeviceBridge? _firstUnbound;
 
@@ -34,7 +34,7 @@ namespace CK.Observable.Device
             : base( domain )
         {
             Host = host;
-            _objects = new Dictionary<string, DeviceBridge>();
+            _bridges = new Dictionary<string, DeviceBridge>();
             host.DevicesChanged.Async += OnDevicesChangedAsync;
         }
 
@@ -80,7 +80,7 @@ namespace CK.Observable.Device
         {
             if( o is TDeviceObject device )
             {
-                if( _objects.TryGetValue( device.DeviceName, out var bridge ) )
+                if( _bridges.TryGetValue( device.DeviceName, out var bridge ) )
                 {
                     throw new Exception( $"Duplicate device error: A device named '{device.DeviceName}' already in the domain (index {bridge.Object.OId.Index})." );
                 }
@@ -88,7 +88,7 @@ namespace CK.Observable.Device
                 // ObservableDelegate skips sidekicks while serializing.
                 o.Disposed += OnObjectDeviceDisposed;
                 bridge = CreateBridge( monitor, device );
-                _objects.Add( device.DeviceName, bridge );
+                _bridges.Add( device.DeviceName, bridge );
                 bridge.Initialize( monitor, this, Host.Find( device.DeviceName ) );
             }
             else if( o is TDeviceHostObject host )
@@ -113,7 +113,7 @@ namespace CK.Observable.Device
         void OnObjectDeviceDisposed( object sender, ObservableDomainEventArgs e )
         {
             var o = (TDeviceObject)sender;
-            _objects.Remove( o.DeviceName, out var bridge );
+            _bridges.Remove( o.DeviceName, out var bridge );
             Debug.Assert( bridge != null );
             bridge.OnDestroy( e.Monitor, true );
         }
@@ -169,7 +169,7 @@ namespace CK.Observable.Device
         /// <summary>
         /// Handles the command if it is a <see cref="DeviceCommand"/> that the <see cref="Host"/> agrees to
         /// handle (see <see cref="IDeviceHost.Handle(IActivityMonitor, DeviceCommand)"/>) by executing it
-        /// directly if it is a <see cref="SyncDeviceCommand"/> or defer its execution to the <see cref="SidekickCommand.PostActions"/>
+        /// directly if it is a <see cref="SyncDeviceCommand"/> or defer its execution to the <see cref="SidekickCommand.LocalPostActions"/>
         /// if it is a <see cref="AsyncDeviceCommand"/>.
         /// </summary>
         /// <remarks>
@@ -186,7 +186,7 @@ namespace CK.Observable.Device
                 if( e.Success )
                 {
                     if( e.IsAsync == false ) e.Execute( monitor );
-                    else command.PostActions.Add( c => e.ExecuteAsync( c.Monitor ) );
+                    else command.LocalPostActions.Add( c => e.ExecuteAsync( c.Monitor ) );
                     return true;
                 }
             }
@@ -201,7 +201,7 @@ namespace CK.Observable.Device
         protected sealed override void Dispose( IActivityMonitor monitor )
         {
             Host.DevicesChanged.Async -= OnDevicesChangedAsync;
-            foreach( var b in _objects.Values )
+            foreach( var b in _bridges.Values )
             {
                 b.OnDestroy( monitor, false );
             }

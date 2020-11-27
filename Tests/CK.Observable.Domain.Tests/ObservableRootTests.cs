@@ -17,7 +17,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void initializing_and_persisting_new_empty_domain()
         {
-            var d = new ObservableDomain<ApplicationState>( TestHelper.Monitor, "TEST" );
+            var d = new ObservableDomain<ApplicationState>(TestHelper.Monitor, "TEST", startTimer: true );
             d.Root.Should().NotBeNull();
             d.TransactionSerialNumber.Should().Be( 0 );
 
@@ -32,7 +32,7 @@ namespace CK.Observable.Domain.Tests
             var eventCollector = new JsonEventCollector();
             eventCollector.LastEventChanged += TrackLastEvent;
 
-            using( var d = new ObservableDomain<ApplicationState>( TestHelper.Monitor, "TEST" ) )
+            using( var d = new ObservableDomain<ApplicationState>(TestHelper.Monitor, "TEST", startTimer: true ) )
             {
                 eventCollector.CollectEvent( d, false );
                 d.Root.ToDoNumbers.Should().BeEmpty();
@@ -57,7 +57,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void serialization_tests()
         {
-            using( var d = new ObservableDomain<ApplicationState>( TestHelper.Monitor, "TEST" ) )
+            using( var d = new ObservableDomain<ApplicationState>(TestHelper.Monitor, "TEST", startTimer: true ) )
             {
                 d.Modify( TestHelper.Monitor, () =>
                 {
@@ -71,7 +71,7 @@ namespace CK.Observable.Domain.Tests
                     }
                 } );
                 var services = new SimpleServiceContainer();
-                services.Add<ObservableDomain>( new ObservableDomain<ApplicationState>( TestHelper.Monitor, "TEST" ) );
+                services.Add<ObservableDomain>( new ObservableDomain<ApplicationState>(TestHelper.Monitor, "TEST", startTimer: true ) );
                 BinarySerializer.IdempotenceCheck( d.Root, services );
             }
         }

@@ -222,7 +222,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void testing_auto_cleanup()
         {
-            using( var domain = new ObservableDomain( TestHelper.Monitor, nameof( testing_auto_cleanup ) ) )
+            using( var domain = new ObservableDomain(TestHelper.Monitor, nameof(testing_auto_cleanup), startTimer: true ) )
             {
                 domain.Modify( TestHelper.Monitor, () =>
                 {
@@ -366,7 +366,7 @@ namespace CK.Observable.Domain.Tests
         [TestCase( "UseBase" )]
         public void private_event_handler_serialization( string type )
         {
-            var domain = new ObservableDomain( TestHelper.Monitor, nameof( private_event_handler_serialization ) );
+            var domain = new ObservableDomain(TestHelper.Monitor, nameof(private_event_handler_serialization), startTimer: true );
 
             PrivateHandlerObject? o = null;
             domain.Modify( TestHelper.Monitor, () =>

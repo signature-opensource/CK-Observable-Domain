@@ -16,7 +16,7 @@ namespace CK.Observable
     /// and stores it at regular intervals - or when calling <see cref="Flush"/>.
     /// </summary>
     /// <remarks>
-    /// This client is not the best way to handle persistence since, when <see cref="OnDomainCreated(IActivityMonitor, ObservableDomain)"/>
+    /// This client is not the best way to handle persistence since, when <see cref="OnDomainCreated"/>
     /// is called, it loads the already instantiated domain from the file: the contstuctor(s) of the root(s) have already been called and
     /// this reloads the domain instead of directly deserializing a brand new instance from the file stream.
     /// <para>
@@ -76,12 +76,16 @@ namespace CK.Observable
 
         /// <summary>
         /// If the <see cref="ObservableDomain.TransactionSerialNumber"/> is 0 and the file exists, the base method
-        /// <see cref="MemoryTransactionProviderClient.LoadOrCreateAndInitializeSnapshot(IActivityMonitor, ObservableDomain, Stream)"/>
+        /// <see cref="MemoryTransactionProviderClient.LoadOrCreateAndInitializeSnapshot"/>
         /// is called: the snapshot is created from the file content and the domain is restored.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="d">The newly created domain.</param>
-        public override void OnDomainCreated( IActivityMonitor monitor, ObservableDomain d )
+        /// <param name="startTimer">
+        /// Whether the <see cref="ObservableDomain.TimeManager"/> must be running or stopped.
+        /// The current value is honored.
+        /// </param>
+        public override void OnDomainCreated( IActivityMonitor monitor, ObservableDomain d, ref bool startTimer )
         {
             if( d.TransactionSerialNumber == 0 )
             {
@@ -91,14 +95,14 @@ namespace CK.Observable
                     {
                         using( var f = new FileStream( _filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.SequentialScan ) )
                         {
-                            LoadOrCreateAndInitializeSnapshot( monitor, ref d, f );
+                            LoadOrCreateAndInitializeSnapshot( monitor, ref d, f, startTimer );
                             _fileTransactionNumber = CurrentSerialNumber;
                         }
                     }
                 }
                 RescheduleDueTime( DateTime.UtcNow );
             }
-            base.OnDomainCreated( monitor, d );
+            base.OnDomainCreated( monitor, d, ref startTimer );
         }
 
         /// <inheritdoc />
@@ -197,12 +201,12 @@ namespace CK.Observable
         /// this throws a <see cref="NotSupportedException"/>: this <see cref="FileTransactionProviderClient"/> is
         /// not able to manage domains "from the outside".
         /// </summary>
-        /// <param name="monitor">The monitor to use.</param>
-        /// <param name="stream">The stream fromw wich the domain must be deserialized.</param>
-        /// <param name="loadHook">The load hook to use.</param>
+        /// <param name="monitor">Unused.</param>
+        /// <param name="stream">Unused.</param>
+        /// <param name="startTimer">Unused.</param>
         /// <returns>Never: throws a <see cref="NotSupportedException"/>.</returns>
         [DoesNotReturn]
-        protected override ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, Func<ObservableDomain, bool> loadHook )
+        protected override ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, bool? startTimer )
         {
             throw new NotSupportedException( "FileTransactionProviderClient is not a domain manager." );
         }

@@ -2,6 +2,7 @@ using CK.Core;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CK.Observable
@@ -12,8 +13,12 @@ namespace CK.Observable
     /// </summary>
     public class TransactionResult
     {
-        internal ActionRegistrar<PostActionContext> _postActions;
-        IPostActionContextMarshaller? _postActionMarshaller;
+        // These are used by SideKickManager.
+        internal ActionRegistrar<PostActionContext>? _localPostActions;
+        internal ActionRegistrar<PostActionContext>? _domainPostActions;
+
+        Task? _domainLockPrevious;
+        TaskCompletionSource<bool>? _domainLockCurrent;
 
         /// <summary>
         /// The empty transaction result is used when absolutely nothing happened. It has no events and no commands,
@@ -22,17 +27,21 @@ namespace CK.Observable
         public static readonly TransactionResult Empty = new TransactionResult( Array.Empty<CKExceptionData>(), Util.UtcMinValue );
 
         /// <summary>
-        /// Gets whether <see cref="Errors"/> is empty, <see cref="ClientError"/> is null and <see cref="CommandHandlingErrors"/> is empty.
+        /// Gets whether <see cref="Errors"/> is empty, <see cref="ClientError"/> is null and both <see cref="SuccessfulTransactionErrors"/>
+        /// and <see cref="CommandHandlingErrors"/> are empty.
         /// </summary>
-        public bool Success => Errors.Count == 0 && ClientError == null && CommandHandlingErrors.Count == 0;
+        public bool Success => Errors.Count == 0 && ClientError == null && SuccessfulTransactionErrors.Count == 0 && CommandHandlingErrors.Count == 0;
 
         /// <summary>
         /// Gets whether the <see cref="ClientError"/> is critical: it is the call to <see cref="IObservableDomainClient.OnTransactionCommit(in SuccessfulTransactionEventArgs)"/>
-        /// (or <see cref="IObservableDomainClient.OnTransactionFailure(IActivityMonitor, ObservableDomain, IReadOnlyList{CKExceptionData})"/>).
         /// that failed.
         /// <para>
         /// This lets the system in an instable, dangerous, state since the transaction has terminated without errors and some external
         /// actions may have been executed before the error occurred so that rolling back the transaction may not be a brilliant idea.
+        /// </para>
+        /// <para>
+        /// Note that if there are transaction <see cref="Errors"/>, then <see cref="IObservableDomainClient.OnTransactionFailure(IActivityMonitor, ObservableDomain, IReadOnlyList{CKExceptionData})"/>
+        /// has been called, and even it failed, this is not considered critical.
         /// </para>
         /// </summary>
         public bool IsCriticalError => Errors.Count == 0 && ClientError != null;
@@ -54,11 +63,11 @@ namespace CK.Observable
                 }
                 if( Errors.Count > 0 )
                 {
-                    if( Errors.Count == 1 )
-                    {
-                        throw new Exception( $"There has been {Errors.Count} error(s) during the transaction. See logs for details.", CKException.CreateFrom( Errors[0] ) );
-                    }
                     throw new Exception( $"There has been {Errors.Count} error(s) during the transaction. See logs for details." );
+                }
+                if( SuccessfulTransactionErrors.Count > 0 )
+                {
+                    throw new Exception( $"There has been {SuccessfulTransactionErrors.Count} error(s) during the transaction OnSuccessful event. See logs for details." );
                 }
                 if( CommandHandlingErrors.Count > 0 )
                 {
@@ -79,22 +88,15 @@ namespace CK.Observable
         public DateTime CommitTimeUtc { get; }
 
         /// <summary>
-        /// Gets the next due time (UTC) of the <see cref="ObservableTimedEventBase"/>.
-        /// This is <see cref="Util.UtcMinValue"/> if the transaction failed (<see cref="Errors"/> is not empty)
-        /// or if this is the <see cref="Empty"/> transaction.
-        /// </summary>
-        public DateTime NextDueTimeUtc { get; }
-
-        /// <summary>
         /// Gets the commands that the transaction generated (all the commands
-        /// sent via <see cref="DomainView.SendCommand"/> or <see cref="SuccessfulTransactionEventArgs.SendCommand"/>.
+        /// sent via <see cref="DomainView.SendCommand(in ObservableDomainCommand)"/> or <see cref="SuccessfulTransactionEventArgs.SendCommand(in ObservableDomainCommand)"/>.
         /// Can be empty (and always empty if there are <see cref="Errors"/>).
         /// <para>
         /// These commands have been submitted to the <see cref="ObservableDomainSidekick.ExecuteCommand(IActivityMonitor, in SidekickCommand)"/>
         /// and may have generated one or more <see cref="CommandHandlingErrors"/>.
         /// </para>
         /// </summary>
-        public IReadOnlyList<object> Commands { get; }
+        public IReadOnlyList<ObservableDomainCommand> Commands { get; }
 
         /// <summary>
         /// Gets the errors that actually aborted the transaction.
@@ -109,7 +111,7 @@ namespace CK.Observable
 
         /// <summary>
         /// Gets the error that occured during the call to <see cref="IObservableDomainClient.OnTransactionCommit"/> (when <see cref="Errors"/>
-        /// is empty) or <see cref="IObservableDomainClient.OnTransactionFailure"/> (when <see cref="Errors"/> is NOT empty).
+        /// is empty) or <see cref="IObservableDomainClient.OnTransactionFailure"/> (when <see cref="Errors"/> is not empty).
         /// </summary>
         public CKExceptionData ClientError { get; private set; }
 
@@ -126,10 +128,16 @@ namespace CK.Observable
         public IReadOnlyList<(object, CKExceptionData)> CommandHandlingErrors { get; private set; }
 
         /// <summary>
-        /// Gets whether at least one post actions has been enlisted thanks to <see cref="IActionRegistrar{T}"/>
-        /// and <see cref="ExecutePostActionsAsync(IActivityMonitor, bool)"/> has not been called yet.
+        /// Gets whether at least one post actions has been enlisted thanks to the <see cref="SuccessfulTransactionEventArgs.LocalPostActions"/>
+        /// <see cref="IActionRegistrar{T}"/> and <see cref="ExecutePostActionsAsync(IActivityMonitor, bool)"/> has not been called yet.
         /// </summary>
-        public bool HasPostActions => _postActions != null && _postActions.ActionCount > 0;
+        public bool HasLocalPostActions => (_localPostActions?.ActionCount ?? 0) > 0;
+
+        /// <summary>
+        /// Gets whether at least one post actions has been enlisted thanks to the <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/>
+        /// <see cref="IActionRegistrar{T}"/> and <see cref="ExecutePostActionsAsync(IActivityMonitor, bool)"/> has not been called yet.
+        /// </summary>
+        public bool HasDomainPostActions => (_domainPostActions?.ActionCount ?? 0) > 0;
 
         /// <summary>
         /// Overridden to return mainly error related information.
@@ -137,12 +145,13 @@ namespace CK.Observable
         /// <returns>The success or error detail.</returns>
         public override string ToString()
         {
-            if( Success ) return $"Success ({_postActions?.ActionCount ?? 0} post actions to execute).";
-            return $"{Errors.Count} transaction errors, {(IsCriticalError ? "with a" : "no" )} Critical Error, {CommandHandlingErrors.Count} command error handling.";
+            if( Success ) return $"Success ({(_localPostActions?.ActionCount ?? 0) + (_domainPostActions?.ActionCount ?? 0)} post actions waiting).";
+            return $"{Errors.Count} transaction errors, {(IsCriticalError ? "with a" : "no" )} Critical Error, {SuccessfulTransactionErrors.Count} successful transaction errors, {CommandHandlingErrors.Count} command errors handling.";
         }
 
         /// <summary>
-        /// Attempts to execute all registered post actions if any.
+        /// Attempts to execute all registered post actions if any. First the local post actions
+        /// and then the one's bound to the domain.
         /// <para>
         /// Note that there may be post actions to execute even if a <see cref="ClientError"/> exists.
         /// </para>
@@ -152,34 +161,66 @@ namespace CK.Observable
         /// <returns>The exception (if <paramref name="throwException"/> is false) or null if no error occurred.</returns>
         public async Task<Exception?> ExecutePostActionsAsync( IActivityMonitor m, bool throwException = true )
         {
-            var actions = System.Threading.Interlocked.Exchange( ref _postActions, null );
-            if( actions != null )
+            if( !Success )
             {
-                var ctx = new PostActionContext( m, actions, this );
-                if( _postActionMarshaller == null || !_postActionMarshaller.MarshallExecution( m, ctx, throwException ) )
+                // We cannot release our lock here without waiting for the previous one.
+                if( _domainLockPrevious != null ) await _domainLockPrevious;
+                _domainLockCurrent?.TrySetResult( true );
+                return null;
+            }
+            Exception? result = null;
+            var l = _localPostActions;
+            _localPostActions = null;
+            if( l != null && l.ActionCount > 0 )
+            {
+                result = await DoExecute( m, throwException, l, "Local" );
+            }
+            var d = _domainPostActions;
+            if( d != null && d.ActionCount > 0 )
+            {
+                if( _domainLockPrevious != null ) await _domainLockPrevious;
+                if( result != null )
                 {
+                    m.Warn( $"Skipping execution of {d.ActionCount} domain post actions since executing local post actions raised an error." );
+                }
+                else
+                {
+                    _domainPostActions = null;
                     try
                     {
-                        await ctx.ExecuteAsync( throwException );
+                        result = await DoExecute( m, throwException, d, "Domain" );
                     }
                     finally
                     {
-                        await ctx.DisposeAsync();
+                        _domainLockCurrent?.TrySetResult( true );
                     }
                 }
             }
-            return null;
+            return result;
         }
 
-        internal TransactionResult( SuccessfulTransactionEventArgs c, IPostActionContextMarshaller? postActionMarshaller )
+        async Task<Exception?> DoExecute( IActivityMonitor m, bool throwException, ActionRegistrar<PostActionContext> actions, string name )
+        {
+            Debug.Assert( actions != null && actions.ActionCount > 0 );
+            var ctx = new PostActionContext( m, actions, this );
+            try
+            {
+                return await ctx.ExecuteAsync( throwException, name: name );
+            }
+            finally
+            {
+                await ctx.DisposeAsync();
+            }
+        }
+
+        internal TransactionResult( SuccessfulTransactionEventArgs c )
         {
             StartTimeUtc = c.StartTimeUtc;
             CommitTimeUtc = c.CommitTimeUtc;
-            NextDueTimeUtc = c.NextDueTimeUtc;
             Commands = c._commands;
             Errors = Array.Empty<CKExceptionData>();
-            _postActions = c._postActions;
-            _postActionMarshaller = postActionMarshaller;
+            _domainPostActions = c._domainPostActions;
+            _localPostActions = c._localPostActions;
             SuccessfulTransactionErrors = Array.Empty<CKExceptionData>();
             CommandHandlingErrors = Array.Empty<(object, CKExceptionData)>();
         }
@@ -189,30 +230,31 @@ namespace CK.Observable
             Debug.Assert( startTime != Util.UtcMinValue || Empty == null, "startTime == Util.UtcMinValue ==> is Empty" );
             StartTimeUtc = startTime;
             CommitTimeUtc = DateTime.UtcNow;
-            NextDueTimeUtc = Util.UtcMinValue;
             Errors = errors;
-            Commands = Array.Empty<object>();
+            Commands = Array.Empty<ObservableDomainCommand>();
             SuccessfulTransactionErrors = Array.Empty<CKExceptionData>();
             CommandHandlingErrors = Array.Empty<(object, CKExceptionData)>();
         }
 
-        internal TransactionResult SetClientError( Exception ex )
+        internal void SetClientError( Exception ex )
         {
             ClientError = CKExceptionData.CreateFrom( ex );
-            return this;
         }
 
-        internal TransactionResult SetSuccessfulTransactionErrors( IReadOnlyList<CKExceptionData> errors )
+        internal void SetSuccessfulTransactionErrors( IReadOnlyList<CKExceptionData> errors )
         {
             SuccessfulTransactionErrors = errors;
-            return this;
         }
 
-        internal TransactionResult SetCommandHandlingErrors( IReadOnlyList<(object, CKExceptionData)> errors )
+        internal void SetCommandHandlingErrors( IReadOnlyList<(object, CKExceptionData)> errors )
         {
             CommandHandlingErrors = errors;
-            return this;
         }
 
+        internal void SetDomainPostActionsLocks( Task? previous, TaskCompletionSource<bool>? current )
+        {
+            _domainLockPrevious = previous;
+            _domainLockCurrent = current;
+        }
     }
 }

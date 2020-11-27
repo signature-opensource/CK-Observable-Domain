@@ -23,7 +23,7 @@ namespace CK.Observable.Device
         /// </summary>
         /// <param name="deviceObject">The device object.</param>
         /// <returns>The bridge (that should certainly be downcasted).</returns>
-        protected DeviceBridge FindBridge( TDeviceObject deviceObject ) => _objects[deviceObject.DeviceName];
+        protected DeviceBridge FindBridge( TDeviceObject deviceObject ) => _bridges[deviceObject.DeviceName];
 
         /// <summary>
         /// Non generic bridge between observable <typeparamref name="TDeviceObject"/> and its actual <see cref="Device"/>.
@@ -44,7 +44,7 @@ namespace CK.Observable.Device
             /// </summary>
             internal protected IDevice? Device { get; private set; }
 
-#pragma warning disable CS8618 // Non-nullable _sidekick uninitialized. Consider declaring as nullable.
+            #pragma warning disable CS8618 // Non-nullable _sidekick uninitialized. Consider declaring as nullable.
             /// <summary>
             /// This is private protected so that developers are obliged to use the <see cref="Bridge{TSidekick,TDevice}"/> generic adapter.
             /// </summary>
@@ -55,7 +55,9 @@ namespace CK.Observable.Device
                 Object = o;
                 o._bridge = this;
             }
-#pragma warning restore CS8618
+            #pragma warning restore CS8618
+
+            ObservableDomainSidekick ObservableDeviceObject.IDeviceBridge.Sidekick => _sidekick;
 
             BasicControlDeviceCommand ObservableDeviceObject.IDeviceBridge.CreateBasicCommand() => new BasicControlDeviceCommand<THost>();
 

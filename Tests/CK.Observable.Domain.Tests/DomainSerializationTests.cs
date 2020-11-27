@@ -17,7 +17,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void simple_serialization()
         {
-            var domain = new ObservableDomain( TestHelper.Monitor, "TEST" );
+            var domain = new ObservableDomain( TestHelper.Monitor, "TEST", startTimer: true );
             domain.Modify( TestHelper.Monitor, () =>
             {
                 var car = new Car( "Hello" );
@@ -44,7 +44,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void serialization_with_mutiple_types()
         {
-            var domain = new ObservableDomain( TestHelper.Monitor, "TEST" );
+            var domain = new ObservableDomain( TestHelper.Monitor, "TEST", startTimer: true );
             MultiPropertyType defValue = null;
             domain.Modify( TestHelper.Monitor, () =>
             {
@@ -75,7 +75,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void with_cycle_serialization()
         {
-            var domain = new ObservableDomain( TestHelper.Monitor, "TEST" );
+            var domain = new ObservableDomain( TestHelper.Monitor, "TEST", startTimer: true );
             domain.Modify( TestHelper.Monitor, () =>
             {
                 var g = new Garage();
@@ -95,7 +95,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void with_cycle_serialization_between_2_objects()
         {
-            var domain = new ObservableDomain( TestHelper.Monitor, "TEST" );
+            var domain = new ObservableDomain( TestHelper.Monitor, "TEST", startTimer: true );
             domain.Modify( TestHelper.Monitor, () =>
             {
                 var p1 = new Person() { FirstName = "A" };
@@ -119,7 +119,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void ultimate_cycle_serialization()
         {
-            var domain = new ObservableDomain( TestHelper.Monitor, "TEST" );
+            var domain = new ObservableDomain( TestHelper.Monitor, "TEST", startTimer: true );
             domain.Modify( TestHelper.Monitor, () =>
             {
                 var p = new Person() { FirstName = "P" };
@@ -190,7 +190,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void persisting_disposed_objects_and_SaveDisposedObjectBehavior()
         {
-            var d = new ObservableDomain( TestHelper.Monitor, nameof( loadHooks_can_skip_the_TimedEvents_update ) );
+            var d = new ObservableDomain( TestHelper.Monitor, nameof( loadHooks_can_skip_the_TimedEvents_update ), startTimer: true );
             d.Modify( TestHelper.Monitor, () =>
             {
                 var list = new ObservableList<object>();
@@ -244,7 +244,7 @@ namespace CK.Observable.Domain.Tests
         {
             ElapsedFired = false;
 
-            using var d = new ObservableDomain( TestHelper.Monitor, nameof( loadHooks_can_skip_the_TimedEvents_update ) );
+            using var d = new ObservableDomain( TestHelper.Monitor, nameof( loadHooks_can_skip_the_TimedEvents_update ), startTimer: true );
             d.Modify( TestHelper.Monitor, () =>
             {
                 var r = new ObservableReminder( DateTime.UtcNow.AddMilliseconds( 100 ) );
@@ -252,7 +252,7 @@ namespace CK.Observable.Domain.Tests
                 d.TimeManager.Reminders.Single().Should().BeSameAs( r );
                 r.IsActive.Should().BeTrue();
             } );
-            using var d2 = TestHelper.SaveAndLoad( d, loadHook: _ => false, pauseMilliseconds: 150 );
+            using var d2 = TestHelper.SaveAndLoad( d, startTimer: false, pauseMilliseconds: 150 );
             d.IsDisposed.Should().BeTrue();
 
             using( d2.AcquireReadLock() )

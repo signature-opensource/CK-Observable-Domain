@@ -53,7 +53,7 @@ namespace CK.Observable.Domain.Tests.Serialization
         [Test]
         public void auto_reference_of_container()
         {
-            using( var d = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
+            using( var d = new ObservableDomain(TestHelper.Monitor, "TEST", startTimer: true ) )
             {
                 d.Modify( TestHelper.Monitor, () =>
                 {
@@ -67,7 +67,7 @@ namespace CK.Observable.Domain.Tests.Serialization
         [Test]
         public void auto_reference_of_list()
         {
-            using( var d = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
+            using( var d = new ObservableDomain(TestHelper.Monitor, "TEST", startTimer: true ) )
             {
                 d.Modify( TestHelper.Monitor, () =>
                 {
@@ -83,7 +83,7 @@ namespace CK.Observable.Domain.Tests.Serialization
         [TestCase( false )]
         public void cross_reference_of_containers( bool sameOrder )
         {
-            using( var d = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
+            using( var d = new ObservableDomain(TestHelper.Monitor, "TEST", startTimer: true ) )
             {
                 long c0Id = 0, c1Id = 0;
                 C originalC0 = null;
@@ -117,7 +117,7 @@ namespace CK.Observable.Domain.Tests.Serialization
         [Test]
         public void Self_registering_ObservableObject_can_be_serialized()
         {
-            using( var d = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
+            using( var d = new ObservableDomain(TestHelper.Monitor, "TEST", startTimer: true ) )
             {
                 d.Modify( TestHelper.Monitor, () =>
                 {

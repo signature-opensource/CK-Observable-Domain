@@ -3,6 +3,7 @@ using CK.Text;
 using FluentAssertions;
 using NUnit.Framework;
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
@@ -23,14 +24,18 @@ namespace CK.Observable.League.Tests
         {
             var store = BasicLeagueTests.CreateStore( nameof( always_option_keeps_the_domain_in_memory ) );
             var league = await ObservableLeague.LoadAsync( TestHelper.Monitor, store );
+            Debug.Assert( league != null );
 
             await league.Coordinator.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) =>
             {
-                var alwaysLoaded = d.Root.CreateDomain( "AlwaysLoaded", typeof( Model.School ).AssemblyQualifiedName );
+                var alwaysLoaded = d.Root.CreateDomain( "AlwaysLoaded", typeof( Model.School ).AssemblyQualifiedName! );
                 alwaysLoaded.Options = alwaysLoaded.Options.SetLifeCycleOption( DomainLifeCycleOption.Always );
             } );
 
-            league["AlwaysLoaded"].IsLoaded.Should().BeTrue( "The domain is kept alive." );
+            var loader = league["AlwaysLoaded"];
+            Debug.Assert( loader != null );
+
+            loader.IsLoaded.Should().BeTrue( "The domain is kept alive." );
 
             await league.Coordinator.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) =>
             {
@@ -38,7 +43,7 @@ namespace CK.Observable.League.Tests
                 loaded.Options = loaded.Options.SetLifeCycleOption( DomainLifeCycleOption.Default );
             } );
 
-            league["AlwaysLoaded"].IsLoaded.Should().BeFalse( "The domain is no more alive since its LoadOption is Default and there is no active timed events." );
+            loader.IsLoaded.Should().BeFalse( "The domain is no more alive since its LoadOption is Default and there is no active timed events." );
         }
 
         static bool OnTimerCalled = false;
@@ -47,7 +52,7 @@ namespace CK.Observable.League.Tests
         static void OnTimer( object sender, ObservableReminderEventArgs arg )
         {
             OnTimerCalled = true;
-            TestHelper.Monitor.Info( $"Reminder fired. Tag: '{arg.Reminder.Tag}'." );
+            arg.Monitor.Info( $"Reminder fired. Tag: '{arg.Reminder.Tag}'." );
         }
 
         [Test]
@@ -55,22 +60,27 @@ namespace CK.Observable.League.Tests
         {
             var store = BasicLeagueTests.CreateStore( nameof( never_option_unloads_the_domain_even_if_there_is_active_timed_events ) );
             var league = await ObservableLeague.LoadAsync( TestHelper.Monitor, store );
+            Debug.Assert( league != null );
+
             OnTimerCalled = false;
 
             await league.Coordinator.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) =>
             {
-                var alwaysLoaded = d.Root.CreateDomain( "NeverLoaded", typeof( Model.School ).AssemblyQualifiedName );
+                var alwaysLoaded = d.Root.CreateDomain( "NeverLoaded", typeof( Model.School ).AssemblyQualifiedName! );
                 alwaysLoaded.Options = alwaysLoaded.Options.SetLifeCycleOption( DomainLifeCycleOption.Never );
             } );
 
             var loader = league["NeverLoaded"];
+            Debug.Assert( loader != null );
 
             loader.IsLoaded.Should().BeFalse( "The domain is NEVER loaded." );
 
-            await using( var shell = await loader.LoadAsync( TestHelper.Monitor ) )
+            await using( var shell = await loader.LoadAsync( TestHelper.Monitor, startTimer: true ) )
             {
+                Debug.Assert( shell != null );
                 await shell.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) =>
                 {
+                    d.TimeManager.IsRunning.Should().BeTrue();
                     d.TimeManager.Remind( DateTime.UtcNow.AddMilliseconds( 100 ), OnTimer, null, null );
                 } );
             }
@@ -90,21 +100,26 @@ namespace CK.Observable.League.Tests
         {
             var store = BasicLeagueTests.CreateStore( nameof( default_option_is_to_keep_the_domain_in_memory_as_long_as_there_is_active_timed_events ) );
             var league = await ObservableLeague.LoadAsync( TestHelper.Monitor, store );
+            Debug.Assert( league != null );
+
             OnTimerCalled = false;
 
             await league.Coordinator.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) =>
             {
-                var alwaysLoaded = d.Root.CreateDomain( "DefaultLoaded", typeof( Model.School ).AssemblyQualifiedName );
+                var alwaysLoaded = d.Root.CreateDomain( "DefaultLoaded", typeof( Model.School ).AssemblyQualifiedName! );
             } );
 
             var loader = league["DefaultLoaded"];
+            Debug.Assert( loader != null );
 
             loader.IsLoaded.Should().BeFalse( "The domain has been unloaded since there is no active timed events." );
 
-            await using( var shell = await loader.LoadAsync( TestHelper.Monitor ) )
+            await using( var shell = await loader.LoadAsync( TestHelper.Monitor, startTimer: true ) )
             {
+                Debug.Assert( shell != null );
                 await shell.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) =>
                 {
+                    d.TimeManager.IsRunning.Should().BeTrue();
                     d.TimeManager.AllObservableTimedEvents.Should().BeEmpty();
 
                     d.TimeManager.Remind( DateTime.UtcNow.AddMilliseconds( 100 ), OnTimer, null, null );

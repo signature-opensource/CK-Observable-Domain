@@ -20,22 +20,16 @@ namespace CK.Observable.League
         readonly ConcurrentDictionary<string, Shell> _domains;
         readonly IStreamStore _streamStore;
         readonly CoordinatorClient _coordinator;
-        readonly Func<string, Action<IActivityMonitor, ObservableDomain>?>? _initializers;
-        readonly Func<string, IPostActionContextMarshaller?>? _postActionsMarshallers;
         readonly IServiceProvider _serviceProvider;
 
         ObservableLeague( IStreamStore streamStore,
                           IServiceProvider serviceProvider,
                           CoordinatorClient coordinator,
-                          ConcurrentDictionary<string, Shell> domains,
-                          Func<string, Action<IActivityMonitor, ObservableDomain>?>? initializers,
-                          Func<string, IPostActionContextMarshaller?>? postActionsMarshallers )
+                          ConcurrentDictionary<string, Shell> domains )
         {
             _domains = domains;
             _streamStore = streamStore;
             _coordinator = coordinator;
-            _initializers = initializers;
-            _postActionsMarshallers = postActionsMarshallers;
             _serviceProvider = serviceProvider;
             // Associates the league to the coordinator. This finalizes the initialization of the league. 
             _coordinator.FinalizeConstruct( this );
@@ -46,10 +40,6 @@ namespace CK.Observable.League
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="store">The store to use.</param>
-        /// <param name="initializers">
-        /// Optional factory for domain initializers. These initializers are called inside the load method and on brand new domains.
-        /// </param>
-        /// <param name="postActionsMarshallers">Optional factory for <see cref="IPostActionContextMarshaller"/>.</param>
         /// <param name="serviceProvider">
         /// The service provider used to instantiate <see cref="ObservableDomainSidekick"/> objects.
         /// When null, a dummy service provider (<see cref="EmptyServiceProvider.Default"/>) is provided to the domains.
@@ -57,8 +47,6 @@ namespace CK.Observable.League
         /// <returns>A new league or null on error.</returns>
         public static async Task<ObservableLeague?> LoadAsync( IActivityMonitor monitor,
                                                                IStreamStore store,
-                                                               Func<string, Action<IActivityMonitor, ObservableDomain>?>? initializers = null,
-                                                               Func<string, IPostActionContextMarshaller?>? postActionsMarshallers = null,
                                                                IServiceProvider? serviceProvider = null )
         {
             if( serviceProvider == null ) serviceProvider = EmptyServiceProvider.Default;
@@ -67,24 +55,23 @@ namespace CK.Observable.League
                 // The CoordinatorClient creates its ObservableDomain<Coordinator> domain.
                 var client = new CoordinatorClient( monitor, store, serviceProvider );
                 // Async initialization here, just like other managed domains.
-                client.Domain = (ObservableDomain<Coordinator>)await client.InitializeAsync( monitor, m => new ObservableDomain<Coordinator>( m, String.Empty, client, serviceProvider ) );
+                // Contrary to other domains, it is created with an active timer (that may be stopped later if needed).
+                client.Domain = (ObservableDomain<Coordinator>)await client.InitializeAsync( monitor, startTimer: true, (m,startTimer) => new ObservableDomain<Coordinator>(m, String.Empty, startTimer, client, serviceProvider));
                 // No need to acquire a read lock here.
                 var domains = new ConcurrentDictionary<string, Shell>( StringComparer.OrdinalIgnoreCase );
                 IEnumerable<Domain> observableDomains = client.Domain.Root.Domains.Values;
                 foreach( var d in observableDomains )
                 {
-                    Action<IActivityMonitor, ObservableDomain>? init = initializers != null ? initializers( d.DomainName ) : null;
-                    IPostActionContextMarshaller? postActions = postActionsMarshallers != null ? postActionsMarshallers( d.DomainName ) : null;
-                    var shell = Shell.Create( monitor, client, d.DomainName, store, init, postActions, serviceProvider, d.RootTypes );
+                    var shell = Shell.Create( monitor, client, d.DomainName, store, serviceProvider, d.RootTypes );
                     d.Initialize( shell );
                     domains.TryAdd( d.DomainName, shell );
                 }
                 // Shells have been created: we can create the whole structure.
-                var o = new ObservableLeague( store, serviceProvider, client, domains, initializers, postActionsMarshallers );
+                var o = new ObservableLeague( store, serviceProvider, client, domains );
                 // And immediately loads the domains that need to be.
                 foreach( Domain d in observableDomains )
                 {
-                    await d.Shell.SynchronizeOptionsAsync( monitor, d.Options, d.HasActiveTimedEvents );
+                    await d.Shell.SynchronizeOptionsAsync( monitor, d.Options, d.NextActiveTime );
                 }
                 return o;
             }
@@ -139,19 +126,15 @@ namespace CK.Observable.League
         IManagedDomain IManagedLeague.CreateDomain( IActivityMonitor monitor, string name, IReadOnlyList<string> rootTypes )
         {
             Debug.Assert( !_coordinator.Domain.IsDisposed );
-            Action<IActivityMonitor, ObservableDomain>? init = _initializers != null ? _initializers( name ) : null;
-            IPostActionContextMarshaller postActions = _postActionsMarshallers != null ? _postActionsMarshallers( name ) : null;
             return _domains.AddOrUpdate( name,
-                                         Shell.Create( monitor, _coordinator, name, _streamStore, init, postActions, _serviceProvider, rootTypes ),
+                                         Shell.Create( monitor, _coordinator, name, _streamStore, _serviceProvider, rootTypes ),
                                          ( n, s ) => throw new Exception( $"Internal error: domain name '{n}' already exists." ) );
         }
 
         IManagedDomain IManagedLeague.RebindDomain( IActivityMonitor monitor, string name, IReadOnlyList<string> rootTypes )
         {
-            Action<IActivityMonitor, ObservableDomain>? init = _initializers != null ? _initializers( name ) : null;
-            IPostActionContextMarshaller postActions = _postActionsMarshallers != null ? _postActionsMarshallers( name ) : null;
             return _domains.AddOrUpdate( name,
-                                         n => Shell.Create( monitor, _coordinator, name, _streamStore, init, postActions, _serviceProvider, rootTypes ),
+                                         n => Shell.Create( monitor, _coordinator, name, _streamStore, _serviceProvider, rootTypes ),
                                          ( n, s ) =>
                                          {
                                              if( !s.RootTypes.SequenceEqual( rootTypes ) )

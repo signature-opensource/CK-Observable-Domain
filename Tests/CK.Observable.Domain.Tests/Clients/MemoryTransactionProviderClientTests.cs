@@ -15,7 +15,7 @@ namespace CK.Observable.Domain.Tests.Clients
         public void Modify_creates_snapshot()
         {
             var client = new ConcreteMemoryTransactionProviderClient();
-            var d = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, "TEST", client);
+            var d = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, "TEST", startTimer: true, client: client );
 
             var transactionResult = d.Modify( TestHelper.Monitor, () =>
             {
@@ -34,7 +34,7 @@ namespace CK.Observable.Domain.Tests.Clients
         [Test]
         public void Exception_during_Write_adds_ClientError()
         {
-            using var d = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, "TEST", new ConcreteMemoryTransactionProviderClient());
+            using var d = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, "TEST", startTimer: true, client: new ConcreteMemoryTransactionProviderClient() );
 
             IReadOnlyList<ObservableEvent>? events = null;
             d.OnSuccessfulTransaction += ( d, ev ) => events = ev.Events;
@@ -73,7 +73,7 @@ namespace CK.Observable.Domain.Tests.Clients
         [Test]
         public void Exception_during_Modify_rolls_ObservableDomain_back()
         {
-            using var d = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, "TEST", new ConcreteMemoryTransactionProviderClient());
+            using var d = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, "TEST", startTimer: true, client: new ConcreteMemoryTransactionProviderClient() );
             IReadOnlyList<ObservableEvent>? events = null;
             d.OnSuccessfulTransaction += ( d, ev ) => events = ev.Events;
 
@@ -115,7 +115,7 @@ namespace CK.Observable.Domain.Tests.Clients
         public void WriteSnapshotTo_creates_valid_stream_for_ObservableDomain_ctor()
         {
             var client1 = new TestMemoryTransactionProviderClient();
-            var d1 = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, "TEST", client1);
+            var d1 = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, "TEST", startTimer: true, client: client1 );
             // Initial successful Modify
             d1.Modify( TestHelper.Monitor, () =>
             {
@@ -146,7 +146,7 @@ namespace CK.Observable.Domain.Tests.Clients
         public void WriteSnapshotTo_creates_valid_stream_for_Client_OnDomainCreated()
         {
             var client1 = new TestMemoryTransactionProviderClient();
-            var d1 = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, "TEST", client1);
+            var d1 = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, "TEST", startTimer: true, client: client1 );
             // Initial successful Modify
             d1.Modify( TestHelper.Monitor, () =>
             {
@@ -158,10 +158,9 @@ namespace CK.Observable.Domain.Tests.Clients
             {
                 // Create domain using a client with this snapshot
                 var d2 = new ObservableDomain<TestObservableRootObject>(
-                    TestHelper.Monitor
-,
-                    "TEST",
-                    new TestMemoryTransactionProviderClient(domainStream));
+                    TestHelper.Monitor, "TEST",
+                    startTimer: true,
+                    client: new TestMemoryTransactionProviderClient( domainStream ) );
 
                 using( d2.AcquireReadLock() )
                 {
@@ -177,7 +176,7 @@ namespace CK.Observable.Domain.Tests.Clients
         public void ObservableDomain_loads_from_Client_when_given_both_Client_and_ctor_Stream()
         {
             var client1 = new TestMemoryTransactionProviderClient();
-            var d1 = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, "TEST", client1);
+            var d1 = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, "TEST", startTimer: true, client: client1 );
             // Initial successful Modify
             d1.Modify( TestHelper.Monitor, () =>
             {
@@ -219,7 +218,7 @@ namespace CK.Observable.Domain.Tests.Clients
         [Test]
         public void Rollback_disposes_replaced_ObservableObjects()
         {
-            var d = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, "TEST", new ConcreteMemoryTransactionProviderClient());
+            var d = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, "TEST", startTimer: true, client: new ConcreteMemoryTransactionProviderClient() );
             // Initial successful Modify
             TestObservableRootObject initialObservableObject = null;
             TestObservableRootObject restoredObservableObject = null;

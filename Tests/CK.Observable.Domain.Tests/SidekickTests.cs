@@ -71,7 +71,7 @@ namespace CK.Observable.Domain.Tests
             void OnMessageChanged( object before, object after )
             {
                 if( Domain.IsDeserializing ) return;
-                Domain.SendCommand( new CmdSimple() { Text = Message } );
+                Domain.SendCommand( new CmdSimple() { Text = Message }, null );
             }
 
         }
@@ -124,7 +124,7 @@ namespace CK.Observable.Domain.Tests
         public void sidekick_simple_instantiation_and_serialization( string mode )
         {
             // Will be disposed by TestHelper.SaveAndLoad at the end of this test.
-            var obs = new ObservableDomain( TestHelper.Monitor, nameof( sidekick_simple_instantiation_and_serialization ) + '-' + mode );
+            var obs = new ObservableDomain(TestHelper.Monitor, nameof(sidekick_simple_instantiation_and_serialization) + '-' + mode, startTimer: true );
 
             IReadOnlyList<ActivityMonitorSimpleCollector.Entry> logs = null;
             using( TestHelper.Monitor.CollectEntries( entries => logs = entries, LogLevelFilter.Info ) )
@@ -288,7 +288,7 @@ namespace CK.Observable.Domain.Tests
 
             IReadOnlyList<ActivityMonitorSimpleCollector.Entry> logs = null;
 
-            using var obs = new ObservableDomain( TestHelper.Monitor, nameof( sidekick_with_ExternalService ) + '_' + mode, services );
+            using var obs = new ObservableDomain(TestHelper.Monitor, nameof(sidekick_with_ExternalService) + '_' + mode, startTimer: true, serviceProvider: services );
 
             using( TestHelper.Monitor.CollectEntries( entries => logs = entries, LogLevelFilter.Info ) )
             {

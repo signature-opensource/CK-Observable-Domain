@@ -19,7 +19,7 @@ namespace CK.Observable.Domain.Tests
         //[TestCase( "AutoCounter" )]
         public void one_object_serialization( string type )
         {
-            using var handler = TestHelper.CreateDomainHandler( $"{nameof( one_object_serialization )}-{type}", serviceProvider: null );
+            using var handler = TestHelper.CreateDomainHandler( $"{nameof( one_object_serialization )}-{type}", startTimer: false, serviceProvider: null );
 
             object o = null;
             handler.Domain.Modify( TestHelper.Monitor, () =>
@@ -130,7 +130,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void simple_idempotence_checks()
         {
-            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( simple_idempotence_checks ) ) )
+            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( simple_idempotence_checks ), startTimer: true ) )
             {
                 TestHelper.Monitor.Info( "Test 1" );
                 d.Modify( TestHelper.Monitor, () => new Sample.Car( "Zoé" ) );
@@ -151,7 +151,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void immutable_string_serialization_test()
         {
-            using( var od = new ObservableDomain<CustomRoot>( TestHelper.Monitor, nameof( immutable_string_serialization_test ) ) )
+            using( var od = new ObservableDomain<CustomRoot>( TestHelper.Monitor, nameof( immutable_string_serialization_test ), startTimer: false) )
             {
                 od.Modify( TestHelper.Monitor, () =>
                 {
@@ -168,7 +168,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void created_then_disposed_event_test()
         {
-            using( var od = new ObservableDomain<CustomRoot>( TestHelper.Monitor, nameof( created_then_disposed_event_test ) ) )
+            using( var od = new ObservableDomain<CustomRoot>( TestHelper.Monitor, nameof( created_then_disposed_event_test ), startTimer: true ) )
             {
                 // Prepare initial state
                 od.Modify( TestHelper.Monitor, () =>
@@ -208,7 +208,7 @@ namespace CK.Observable.Domain.Tests
         [TestCase( false )]
         public void IdempotenceSerializationCheck_works_on_disposing_Observables( bool alwaysDisposeChild )
         {
-            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( IdempotenceSerializationCheck_works_on_disposing_Observables ) ) )
+            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( IdempotenceSerializationCheck_works_on_disposing_Observables ), startTimer: true ) )
             {
                 TestDisposableObservableObject oldObject = null;
                 d.Modify( TestHelper.Monitor, () =>
@@ -394,7 +394,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void lot_of_timed_events_test()
         {
-            using( var od = new ObservableDomain( TestHelper.Monitor, nameof( lot_of_timed_events_test ) ) )
+            using( var od = new ObservableDomain( TestHelper.Monitor, nameof( lot_of_timed_events_test ), startTimer: true ) )
             {
                 od.Modify( TestHelper.Monitor, () =>
                 {

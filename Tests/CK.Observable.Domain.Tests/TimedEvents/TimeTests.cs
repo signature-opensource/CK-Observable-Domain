@@ -31,7 +31,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             IReadOnlyList<ActivityMonitorSimpleCollector.Entry> entries = null;
 
             using( TestHelper.Monitor.CollectEntries( e => entries = e, LogLevelFilter.Info ) )
-            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( timed_events_trigger_at_the_end_of_the_Modify_for_immediate_handling ) ) )
+            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( timed_events_trigger_at_the_end_of_the_Modify_for_immediate_handling ), startTimer: true ) )
             {
                 d.Modify( TestHelper.Monitor, () =>
                 {
@@ -51,7 +51,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
         public void timed_event_trigger_on_Timer_or_at_the_start_of_the_Modify()
         {
             RawTraces.Clear();
-            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( timed_event_trigger_on_Timer_or_at_the_start_of_the_Modify ) ) )
+            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( timed_event_trigger_on_Timer_or_at_the_start_of_the_Modify ), startTimer: true ) )
             {
                 d.Modify( TestHelper.Monitor, () =>
                 {
@@ -72,38 +72,6 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             RawTraces.Concatenate().Should().Match( "*Before!*Not Yet!*Elapsed:*After!*" );
         }
 
-        [Test]
-        public void when_loadHook_returned_false_timed_events_are_not_activated()
-        {
-            RawTraces.Clear();
-            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( when_loadHook_returned_false_timed_events_are_not_activated ) ) )
-            {
-                d.Modify( TestHelper.Monitor, () =>
-                {
-                    RawTraces.Enqueue( "Before!" );
-                    new ObservableTimer( DateTime.UtcNow.AddMilliseconds( 50 ), 50 ).Elapsed += StaticElapsed;
-
-                } ).Success.Should().BeTrue();
-
-                // This reloads the domain with a loadHook that returns false.
-                ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
-                Thread.Sleep( 500 );
-
-                RawTraces.Enqueue( "Not Yet!" );
-                d.TimeManager.AllObservableTimedEvents.Single().IsActive.Should().BeTrue();
-                // Calling modify reactivates the timed events.
-                d.Modify( TestHelper.Monitor, () =>
-                {
-                    RawTraces.Enqueue( "After!" );
-
-                } ).Success.Should().BeTrue();
-                Thread.Sleep( 200 );
-
-                RawTraces.Concatenate().Should().Match( "Before!, Not Yet!, Elapsed: *, After!, Elapsed: *, Elapsed: *" );
-            }
-
-        }
-
         class FakeAutoTimer : TimeManager.AutoTimer
         {
             public FakeAutoTimer( ObservableDomain d )
@@ -122,7 +90,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             IReadOnlyList<ActivityMonitorSimpleCollector.Entry> entries = null;
 
             using( TestHelper.Monitor.CollectEntries( e => entries = e, LogLevelFilter.Info ) )
-            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( timed_event_trigger_at_the_start_of_the_Modify ) ) )
+            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( timed_event_trigger_at_the_start_of_the_Modify ), startTimer: true ) )
             {
                 var autoTimer = d.TimeManager.Timer;
                 d.TimeManager.Timer = new FakeAutoTimer( d );
@@ -163,13 +131,14 @@ namespace CK.Observable.Domain.Tests.TimedEvents
         {
             RelayedCounter = 0;
             const int waitTime = 100 * 10;
-            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( auto_counter_works_as_expected ) ) )
+            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( auto_counter_works_as_expected ), startTimer: true ) )
             {
                 AutoCounter counter = null;
                 d.Modify( TestHelper.Monitor, () =>
                 {
                     counter = new AutoCounter( 100 );
                     counter.CountChanged += Counter_CountChanged;
+
                 } ).Success.Should().BeTrue();
                 TestHelper.Monitor.Trace( $"new AutoCounter( 100 ) done. Waiting {waitTime} ms." );
                 Thread.Sleep( waitTime );
@@ -179,7 +148,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 {
                     TestHelper.Monitor.Trace( $"counter.Count = {counter.Count}." );
                     d.AllObjects.Single().Should().BeSameAs( counter );
-                    counter.Count.Should().Match( c => c == 10 || c == 11 );
+                    counter.Count.Should().Match( c => c == 11 || c == 12 );
                     RelayedCounter.Should().Be( counter.Count );
                 }
             }
@@ -191,7 +160,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             IReadOnlyList<ActivityMonitorSimpleCollector.Entry> entries = null;
 
             using( TestHelper.Monitor.CollectEntries( e => entries = e ) )
-            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( auto_counter_works_uses_Critical_mode ) ) )
+            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( auto_counter_works_uses_Critical_mode ), startTimer: true ) )
             {
                 AutoCounter counter = null;
                 d.Modify( TestHelper.Monitor, () =>
@@ -217,7 +186,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
         [Test]
         public void callbacks_for_reminders_as_well_as_timers_must_be_regular_object_methods_or_static()
         {
-            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( callbacks_for_reminders_as_well_as_timers_must_be_regular_object_methods_or_static ) ) )
+            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( callbacks_for_reminders_as_well_as_timers_must_be_regular_object_methods_or_static ), startTimer: true ) )
             {
                 var tranResult = d.Modify( TestHelper.Monitor, () =>
                 {
@@ -276,7 +245,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
         public void serializing_timers_and_reminders()
         {
             var now = DateTime.UtcNow;
-            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( serializing_timers_and_reminders ) + " (Primary)" ) )
+            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( serializing_timers_and_reminders ) + " (Primary)", startTimer: true ) )
             {
                 d.Modify( TestHelper.Monitor, () =>
                 {
@@ -354,7 +323,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             const int testTime = 5000;
             AutoCounter[] counters = null;
 
-            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( fifty_timers_from_20_to_1000_ms_in_action ) ) )
+            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( fifty_timers_from_20_to_1000_ms_in_action ), startTimer: true ) )
             {
                 TestHelper.Monitor.Info( $"Creating 50 active counters with interval from 20 to 1000 ms." );
                 var tranResult = d.Modify( TestHelper.Monitor, () =>
@@ -362,11 +331,9 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                     counters = Enumerable.Range( 0, 50 ).Select( i => new AutoCounter( 1000 - i*20 ) ).ToArray();
                 } );
                 tranResult.Success.Should().BeTrue();
-                tranResult.NextDueTimeUtc.Should().BeCloseTo( DateTime.UtcNow.AddMilliseconds( 20 ), precision: 20 );
 
                 TestHelper.Monitor.Info( $"Waiting for {testTime} ms." );
                 Thread.Sleep( testTime );
-                d.TimeManager.Timer.WaitForNext();
 
                 tranResult = d.Modify( TestHelper.Monitor, () =>
                 {
@@ -443,7 +410,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             AutoTimeFiredSleepTime = autoTimeFiredSleepTime;
             AutoTimeFiredCount = 0;
 
-            using( var d = new ObservableDomain( monitor, nameof( AutoTime_is_obviously_not_reentrant_and_has_a_safety_trampoline ) ) )
+            using( var d = new ObservableDomain( monitor, nameof( AutoTime_is_obviously_not_reentrant_and_has_a_safety_trampoline ), startTimer: true ) )
             {
                 int current = 0, previous = 0, delta = 0;
                 void UpdateCount()
@@ -538,7 +505,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
         public void reminder_helper_uses_pooled_ObservableReminders( string mode )
         {
             IReadOnlyList<ActivityMonitorSimpleCollector.Entry> logs = null;
-            using( var d = TestHelper.CreateDomainHandler( nameof( reminder_helper_uses_pooled_ObservableReminders)+mode, serviceProvider: null ) )
+            using( var d = TestHelper.CreateDomainHandler( nameof( reminder_helper_uses_pooled_ObservableReminders)+mode, startTimer: true, serviceProvider: null ) )
             {
                 TimeSpan ReloadIfNeeded()
                 {
@@ -557,7 +524,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
 
                     } ).Success.Should().BeTrue();
                     TimeSpan reloadDelta = ReloadIfNeeded();
-                    Thread.Sleep( 5 * 100 + (int)reloadDelta.TotalMilliseconds );
+                    Thread.Sleep( 3 * 100 + (int)reloadDelta.TotalMilliseconds );
                     ReloadIfNeeded();
                 }
                 logs.Select( l => l.Text ).Should().Contain( "TestReminder: Working: Hello! (count:3)", "The 2 other logs are on the domain monitor!" );
@@ -644,7 +611,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
         [Test]
         public void testing_reminders()
         {
-            using var d = new ObservableDomain( TestHelper.Monitor, nameof( AutoTime_is_obviously_not_reentrant_and_has_a_safety_trampoline ) );
+            using var d = new ObservableDomain( TestHelper.Monitor, nameof( AutoTime_is_obviously_not_reentrant_and_has_a_safety_trampoline ), startTimer: true );
 
             var dates = Enumerable.Range( 0, 100 ).Select( i => DateTime.UtcNow.AddDays( 1 + i ) ).ToArray();
             var revert = dates.Reverse().ToArray();

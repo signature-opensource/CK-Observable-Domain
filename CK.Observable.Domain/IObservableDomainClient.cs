@@ -20,7 +20,11 @@ namespace CK.Observable
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="d">The newly created or loaded domain.</param>
-        void OnDomainCreated( IActivityMonitor monitor, ObservableDomain d );
+        /// <param name="startTimer">
+        /// Whether the <see cref="ObservableDomain.TimeManager"/> must be running or stopped.
+        /// A client can alter the value (typically setting it to false if needed).
+        /// </param>
+        void OnDomainCreated( IActivityMonitor monitor, ObservableDomain d, ref bool startTimer );
 
         /// <summary>
         /// Called before a transaction starts.
@@ -33,6 +37,12 @@ namespace CK.Observable
         /// <summary>
         /// Called when a transaction ends successfully. The domain's write lock is held while this is called.
         /// Any exception raised by this method will set <see cref="TransactionResult.IsCriticalError"/> to true.
+        /// <para>
+        /// Implementations may capture any required domain object's state and use
+        /// <see cref="SuccessfulTransactionEventArgs.LocalPostActions"/> or <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/>
+        /// to post asynchronous actions (or to send commands thanks to <see cref="SuccessfulTransactionEventArgs.SendCommand(ObservableDomainCommand)"/>
+        /// that will be processed by the sidekicks).
+        /// </para>
         /// </summary>
         /// <param name="context">The successful context.</param>
         void OnTransactionCommit( in SuccessfulTransactionEventArgs context );

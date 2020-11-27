@@ -23,7 +23,7 @@ namespace CK.Observable.Domain.Tests
         public void doc_demo()
         {
             var eventCollector = new JsonEventCollector();
-            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( doc_demo ) ) )
+            using( var d = new ObservableDomain(TestHelper.Monitor, nameof(doc_demo), startTimer: true ) )
             {
                 eventCollector.CollectEvent( d, false );
                 Car car = null;
@@ -62,7 +62,7 @@ namespace CK.Observable.Domain.Tests
         {
             var eventCollector = new JsonEventCollector();
 
-            using( var d = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
+            using( var d = new ObservableDomain( TestHelper.Monitor, "TEST", startTimer: true ) )
             {
                 eventCollector.CollectEvent( d, false );
                 eventCollector.LastEventChanged += TrackLastEvent;
@@ -151,7 +151,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void GetTransactionEvents_semantics()
         {
-            using( var d = new ObservableDomain( TestHelper.Monitor, "TEST" ) )
+            using( var d = new ObservableDomain(TestHelper.Monitor, "TEST", startTimer: true ) )
             {
                 var eventCollector = new JsonEventCollector( d );
                 eventCollector.LastEventChanged += TrackLastEvent;
@@ -269,7 +269,7 @@ namespace CK.Observable.Domain.Tests
             var eventCollector = new JsonEventCollector();
             eventCollector.LastEventChanged += TrackLastEvent;
 
-            using( var d = new ObservableDomain<RootSample.ApplicationState>( TestHelper.Monitor, "TEST", new Clients.ConcreteMemoryTransactionProviderClient() ) )
+            using( var d = new ObservableDomain<RootSample.ApplicationState>(TestHelper.Monitor, "TEST", startTimer: true, client: new Clients.ConcreteMemoryTransactionProviderClient() ) )
             {
                 eventCollector.CollectEvent( d, false );
                 d.Modify( TestHelper.Monitor, () =>
@@ -344,7 +344,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void ObservableDomain_and_DomainView_is_NotExportable_and_any_other_types_can_be()
         {
-            using var d = new ObservableDomain( TestHelper.Monitor, nameof( ObservableDomain_and_DomainView_is_NotExportable_and_any_other_types_can_be ) );
+            using var d = new ObservableDomain(TestHelper.Monitor, nameof(ObservableDomain_and_DomainView_is_NotExportable_and_any_other_types_can_be), startTimer: true );
             var eventCollector = new JsonEventCollector( d );
             d.Modify( TestHelper.Monitor, () =>
             {
@@ -398,7 +398,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void timers_and_reminders_are_NotExportable()
         {
-            using var d = new ObservableDomain( TestHelper.Monitor, nameof( timers_and_reminders_are_NotExportable ) );
+            using var d = new ObservableDomain(TestHelper.Monitor, nameof(timers_and_reminders_are_NotExportable), startTimer: true );
             var eventCollector = new JsonEventCollector( d );
             // To skip the initial transaction where no events are collectable.
             d.Modify( TestHelper.Monitor, null );

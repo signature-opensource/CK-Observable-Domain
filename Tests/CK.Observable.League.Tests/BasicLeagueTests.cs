@@ -156,7 +156,7 @@ namespace CK.Observable.League.Tests
 
             await league.Coordinator.ModifyAsync( TestHelper.Monitor, ( m, d ) =>
             {
-                Domain newOne = d.Root.CreateDomain( "4Roots", roots.Select( t => t.AssemblyQualifiedName ) );
+                Domain newOne = d.Root.CreateDomain("4Roots", roots.Select(t => t.AssemblyQualifiedName));
                 newOne.DomainName.Should().Be( "4Roots" );
                 newOne.RootTypes.Should().BeEquivalentTo( roots.Select( t => t.AssemblyQualifiedName ) );
             } );
