@@ -6,7 +6,7 @@ namespace CK.Observable.Domain.Tests.Clients
 {
     class ConcreteMemoryTransactionProviderClient : MemoryTransactionProviderClient
     {
-        protected override ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, Func<ObservableDomain, bool> loadHook )
+        protected override ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, bool? startTimer )
         {
             throw new NotSupportedException( "ConcreteMemoryTransactionProviderClient is not a domain manager." );
         }

@@ -62,6 +62,10 @@ namespace CK.Observable
             _map = new Dictionary<TKey, TValue>();
         }
 
+        /// <summary>
+        /// Specialized deserialization constructor for specialized classes.
+        /// </summary>
+        /// <param name="_">Unused parameter.</param>
         protected ObservableDictionary( RevertSerialization _ ) : base( _ ) { }
 
         ObservableDictionary( IBinaryDeserializer r, TypeReadInfo? info )
@@ -173,7 +177,7 @@ namespace CK.Observable
         {
             if( _map.Remove( key ) )
             {
-                CollectionRemoveKeyEvent e = ActualDomain.OnCollectionRemoveKey( this, key );
+                CollectionRemoveKeyEvent? e = ActualDomain.OnCollectionRemoveKey( this, key );
                 if( e != null && _itemRemoved.HasHandlers ) _itemRemoved.Raise( this, e );
                 return true;
             }
@@ -185,7 +189,7 @@ namespace CK.Observable
             // Removing a pair from a dictionary also checks the value equality.
             if( ((IDictionary<TKey, TValue>)_map).Remove( item ) )
             {
-                CollectionRemoveKeyEvent e = ActualDomain.OnCollectionRemoveKey( this, item.Key );
+                CollectionRemoveKeyEvent? e = ActualDomain.OnCollectionRemoveKey( this, item.Key );
                 if( e != null && _itemRemoved.HasHandlers ) _itemRemoved.Raise( this, e );
                 return true;
             }

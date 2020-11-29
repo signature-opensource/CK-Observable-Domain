@@ -17,8 +17,17 @@ namespace CK.Observable.Device
         {
         }
 
+        /// <summary>
+        /// Specialized deserialization constructor for specialized classes.
+        /// </summary>
+        /// <param name="_">Unused parameter.</param>
         protected ObservableDeviceHostObject( RevertSerialization _ ) : base( _ ) { }
 
+        /// <summary>
+        /// Deserialization constructor for specialized classes.
+        /// </summary>
+        /// <param name="r">The deserializer.</param>
+        /// <param name="info">The information.</param>
         protected ObservableDeviceHostObject( IBinaryDeserializer r, TypeReadInfo? info )
                 : base( RevertSerialization.Default )
         {

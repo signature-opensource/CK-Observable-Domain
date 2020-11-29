@@ -22,7 +22,7 @@ namespace CK.Observable.Device.Tests
             var sp = new SimpleServiceContainer();
             sp.Add( host );
 
-            using var obs = new ObservableDomain( TestHelper.Monitor, nameof( sample_obervable ), sp );
+            using var obs = new ObservableDomain(TestHelper.Monitor, nameof(sample_obervable), false, serviceProvider: sp );
 
             OSampleDevice? device1 = null;
             await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
@@ -127,7 +127,7 @@ namespace CK.Observable.Device.Tests
             };
             (await host.ApplyDeviceConfigurationAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.CreateAndStartSucceeded );
 
-            using var obs = new ObservableDomain( TestHelper.Monitor, nameof( Start_and_Stop_commands ), sp );
+            using var obs = new ObservableDomain(TestHelper.Monitor, nameof(Start_and_Stop_commands), true, serviceProvider: sp );
 
 
             OSampleDevice? device = null;
@@ -202,7 +202,7 @@ namespace CK.Observable.Device.Tests
             };
             (await host.ApplyDeviceConfigurationAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.CreateAndStartSucceeded );
 
-            using var obs = new ObservableDomain( TestHelper.Monitor, nameof( commands_are_easy_to_send ), sp );
+            using var obs = new ObservableDomain(TestHelper.Monitor, nameof(commands_are_easy_to_send), true, serviceProvider: sp );
 
             OSampleDevice? device = null;
             await obs.ModifyThrowAsync( TestHelper.Monitor, () =>

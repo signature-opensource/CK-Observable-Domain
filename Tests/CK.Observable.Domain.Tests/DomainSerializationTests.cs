@@ -17,7 +17,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void simple_serialization()
         {
-            var domain = new ObservableDomain( TestHelper.Monitor, "TEST" );
+            using var domain = new ObservableDomain( TestHelper.Monitor, "TEST", startTimer: false );
             domain.Modify( TestHelper.Monitor, () =>
             {
                 var car = new Car( "Hello" );
@@ -44,7 +44,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void serialization_with_mutiple_types()
         {
-            var domain = new ObservableDomain( TestHelper.Monitor, "TEST" );
+            using var domain = new ObservableDomain( TestHelper.Monitor, nameof( serialization_with_mutiple_types ), startTimer: true );
             MultiPropertyType defValue = null;
             domain.Modify( TestHelper.Monitor, () =>
             {
@@ -75,7 +75,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void with_cycle_serialization()
         {
-            var domain = new ObservableDomain( TestHelper.Monitor, "TEST" );
+            using var domain = new ObservableDomain( TestHelper.Monitor, nameof( with_cycle_serialization ), startTimer: true );
             domain.Modify( TestHelper.Monitor, () =>
             {
                 var g = new Garage();
@@ -95,7 +95,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void with_cycle_serialization_between_2_objects()
         {
-            var domain = new ObservableDomain( TestHelper.Monitor, "TEST" );
+            using var domain = new ObservableDomain( TestHelper.Monitor, nameof( with_cycle_serialization_between_2_objects ), startTimer: true );
             domain.Modify( TestHelper.Monitor, () =>
             {
                 var p1 = new Person() { FirstName = "A" };
@@ -119,7 +119,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void ultimate_cycle_serialization()
         {
-            var domain = new ObservableDomain( TestHelper.Monitor, "TEST" );
+            using var domain = new ObservableDomain( TestHelper.Monitor, nameof( ultimate_cycle_serialization ), startTimer: true );
             domain.Modify( TestHelper.Monitor, () =>
             {
                 var p = new Person() { FirstName = "P" };
@@ -190,7 +190,8 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void persisting_disposed_objects_and_SaveDisposedObjectBehavior()
         {
-            var d = new ObservableDomain( TestHelper.Monitor, nameof( loadHooks_can_skip_the_TimedEvents_update ) );
+            // Will be disposed by SaveAndLoad.
+            var d = new ObservableDomain( TestHelper.Monitor, nameof( loadHooks_can_skip_the_TimedEvents_update ), startTimer: true );
             d.Modify( TestHelper.Monitor, () =>
             {
                 var list = new ObservableList<object>();
@@ -209,11 +210,11 @@ namespace CK.Observable.Domain.Tests
             ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
 
             // This disposes the domain and returns a brand new one. This doesn't throw.
-            d = TestHelper.SaveAndLoad( d, saveDisposed: SaveDisposedObjectBehavior.Throw );
+            using var d2 = TestHelper.SaveAndLoad( d, saveDisposed: SaveDisposedObjectBehavior.Throw );
 
-            d.Modify( TestHelper.Monitor, () =>
+            d2.Modify( TestHelper.Monitor, () =>
             {
-                var list = d.AllObjects.OfType<ObservableList<object>>().Single();
+                var list = d2.AllObjects.OfType<ObservableList<object>>().Single();
 
                 int i = 0;
                 var timer = (ObservableTimer)list[i++]; timer.Dispose();
@@ -221,11 +222,11 @@ namespace CK.Observable.Domain.Tests
                 var obsOject = (Person)list[i++]; obsOject.Dispose();
                 var intObject = (SuspendableClock)list[i++]; intObject.Dispose();
             } );
-            ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
+            ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d2 );
 
-            d.Modify( TestHelper.Monitor, () =>
+            d2.Modify( TestHelper.Monitor, () =>
             {
-                var list = d.AllObjects.OfType<ObservableList<object>>().Single();
+                var list = d2.AllObjects.OfType<ObservableList<object>>().Single();
                 list.Count.Should().Be( 4 );
                 foreach( IDisposableObject o in list )
                 {
@@ -233,7 +234,7 @@ namespace CK.Observable.Domain.Tests
                 }
             } );
 
-            TestHelper.Invoking( x => x.SaveAndLoad( d, saveDisposed: SaveDisposedObjectBehavior.Throw ) )
+            TestHelper.Invoking( x => x.SaveAndLoad( d2, saveDisposed: SaveDisposedObjectBehavior.Throw ) )
                 .Should().Throw<CKException>()
                 .WithMessage( "Found 4 disposed objects: 1 instances of 'ObservableTimer', 1 instances of 'ObservableReminder', 1 instances of 'Person', 1 instances of 'SuspendableClock'." );
         }
@@ -244,7 +245,7 @@ namespace CK.Observable.Domain.Tests
         {
             ElapsedFired = false;
 
-            using var d = new ObservableDomain( TestHelper.Monitor, nameof( loadHooks_can_skip_the_TimedEvents_update ) );
+            using var d = new ObservableDomain( TestHelper.Monitor, nameof( loadHooks_can_skip_the_TimedEvents_update ), startTimer: true );
             d.Modify( TestHelper.Monitor, () =>
             {
                 var r = new ObservableReminder( DateTime.UtcNow.AddMilliseconds( 100 ) );
@@ -252,7 +253,7 @@ namespace CK.Observable.Domain.Tests
                 d.TimeManager.Reminders.Single().Should().BeSameAs( r );
                 r.IsActive.Should().BeTrue();
             } );
-            using var d2 = TestHelper.SaveAndLoad( d, loadHook: _ => false, pauseMilliseconds: 150 );
+            using var d2 = TestHelper.SaveAndLoad( d, startTimer: false, pauseMilliseconds: 150 );
             d.IsDisposed.Should().BeTrue();
 
             using( d2.AcquireReadLock() )

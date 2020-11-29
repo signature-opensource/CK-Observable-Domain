@@ -48,10 +48,10 @@ namespace CK.Core
 
         public class DomainTestHandler : IDisposable
         {
-            public DomainTestHandler( IActivityMonitor m, string domainName, IServiceProvider serviceProvider )
+            public DomainTestHandler( IActivityMonitor m, string domainName, IServiceProvider serviceProvider, bool startTimer )
             {
                 ServiceProvider = serviceProvider;
-                Domain = new ObservableDomain( m, domainName, serviceProvider );
+                Domain = new ObservableDomain( m, domainName, startTimer, serviceProvider );
             }
 
             public IServiceProvider ServiceProvider { get; set; }
@@ -70,9 +70,9 @@ namespace CK.Core
             }
         }
 
-        public static DomainTestHandler CreateDomainHandler( this IMonitorTestHelper @this, string domainName, IServiceProvider? serviceProvider )
+        public static DomainTestHandler CreateDomainHandler( this IMonitorTestHelper @this, string domainName, IServiceProvider? serviceProvider, bool startTimer )
         {
-            return new DomainTestHandler( @this.Monitor, domainName, serviceProvider );
+            return new DomainTestHandler( @this.Monitor, domainName, serviceProvider, startTimer );
         }
 
         static ObservableDomain SaveAndLoad( IActivityMonitor m,
@@ -80,7 +80,7 @@ namespace CK.Core
                                              string? renamed,
                                              IServiceProvider? serviceProvider,
                                              bool debugMode,
-                                             Func<ObservableDomain, bool>? loadHook,
+                                             bool? startTimer,
                                              int pauseMilliseconds,
                                              bool skipDomainDispose,
                                              SaveDisposedObjectBehavior saveDisposed )
@@ -90,9 +90,9 @@ namespace CK.Core
                 domain.Save( m, s, leaveOpen: true, debugMode: debugMode, saveDisposed: saveDisposed );
                 if( !skipDomainDispose ) domain.Dispose();
                 System.Threading.Thread.Sleep( pauseMilliseconds );
-                var d = new ObservableDomain( m, renamed ?? domain.DomainName, serviceProvider );
+                var d = new ObservableDomain( m, renamed ?? domain.DomainName, false, serviceProvider );
                 s.Position = 0;
-                d.Load( m, s, domain.DomainName, loadHook: loadHook );
+                d.Load( m, s, domain.DomainName, startTimer: startTimer );
                 return d;
             }
         }
@@ -102,12 +102,12 @@ namespace CK.Core
                                                     string? renamed = null,
                                                     IServiceProvider? serviceProvider = null,
                                                     bool debugMode = true,
-                                                    Func<ObservableDomain, bool>? loadHook = null,
+                                                    bool? startTimer = null,
                                                     int pauseMilliseconds = 0,
                                                     bool skipDomainDispose = false,
                                                     SaveDisposedObjectBehavior saveDisposed = SaveDisposedObjectBehavior.None )
         {
-            return SaveAndLoad( @this.Monitor, domain, renamed, serviceProvider, debugMode, loadHook, pauseMilliseconds, skipDomainDispose, saveDisposed );
+            return SaveAndLoad( @this.Monitor, domain, renamed, serviceProvider, debugMode, startTimer, pauseMilliseconds, skipDomainDispose, saveDisposed );
         }
 
 

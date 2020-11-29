@@ -3,11 +3,13 @@
   <Import Project="..\Common\Shared.props" />
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
-    <Nullable>annotations</Nullable>
+    <Nullable>enable</Nullable>
+    <LangVersion>9</LangVersion>
   </PropertyGroup>
   
   <ItemGroup>
     <PackageReference Include="CK.StObj.Model" />
+    <PackageReference Include="System.Threading.Channels" />
   </ItemGroup>
 
 </Project>

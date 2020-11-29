@@ -19,7 +19,7 @@ namespace CK.Observable.League
         int? _optionsPropertyId;
 
         public CoordinatorClient( IActivityMonitor monitor, IStreamStore store, IServiceProvider serviceProvider )
-            : base( String.Empty, store, initializer: null, next: null )
+            : base( String.Empty, store, next: null )
         {
             _serviceProvider = serviceProvider;
         }
@@ -53,7 +53,7 @@ namespace CK.Observable.League
                 }
                 if( d != null )
                 {
-                    c.PostActions.Add( ctx => d.Shell.SynchronizeOptionsAsync( ctx.Monitor, d.Options, hasActiveTimedEvents: null ) );
+                    c.DomainPostActions.Add( ctx => d.Shell.SynchronizeOptionsAsync( ctx.Monitor, d.Options, nextActiveTime: null ) );
                 }
             }
         }
@@ -71,16 +71,16 @@ namespace CK.Observable.League
             Domain.Root.FinalizeConstruct( league );
         }
 
-        protected override void DoLoadOrCreateFromSnapshot( IActivityMonitor monitor, ref ObservableDomain? d, bool restoring )
+        protected override void DoLoadOrCreateFromSnapshot( IActivityMonitor monitor, ref ObservableDomain? d, bool restoring, bool? startTimer )
         {
             Debug.Assert( Domain == d );
-            base.DoLoadOrCreateFromSnapshot( monitor, ref d, restoring );
+            base.DoLoadOrCreateFromSnapshot( monitor, ref d, restoring, startTimer );
             if( _league != null ) Domain.Root.Initialize( monitor, _league );
         }
 
-        protected override ObservableDomain DoDeserializeDomain( IActivityMonitor monitor, Stream stream, Func<ObservableDomain, bool> loadHook )
+        protected override ObservableDomain DoDeserializeDomain( IActivityMonitor monitor, Stream stream, bool? startTimer )
         {
-            return new ObservableDomain<Coordinator>( monitor, String.Empty, this, stream, leaveOpen: true, encoding: null, _serviceProvider, loadHook );
+            return new ObservableDomain<Coordinator>( monitor, String.Empty, this, stream, leaveOpen: true, encoding: null, _serviceProvider, startTimer );
         }
 
         #region Coordinator: IObservableDomainAccess<Coordinator>.
@@ -105,19 +105,19 @@ namespace CK.Observable.League
             return Domain.ModifyAsync( monitor, () => actions.Invoke( monitor, Domain ), millisecondsTimeout );
         }
         
-        Task IObservableDomainAccess<Coordinator>.ModifyThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<Coordinator>> actions, int millisecondsTimeout )
+        Task<TransactionResult> IObservableDomainAccess<Coordinator>.ModifyThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<Coordinator>> actions, int millisecondsTimeout )
         {
             return Domain.ModifyThrowAsync( monitor, () => actions.Invoke( monitor, Domain ), millisecondsTimeout );
         }
 
-        async Task<TResult> IObservableDomainAccess<Coordinator>.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<Coordinator>, TResult> actions, int millisecondsTimeout )
+        async Task<(TResult, TransactionResult)> IObservableDomainAccess<Coordinator>.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<Coordinator>, TResult> actions, int millisecondsTimeout )
         {
             TResult r = default;
-            await Domain.ModifyThrowAsync( monitor, () => r = actions.Invoke( monitor, Domain ), millisecondsTimeout );
-            return r;
+            var tr = await Domain.ModifyThrowAsync( monitor, () => r = actions.Invoke( monitor, Domain ), millisecondsTimeout );
+            return (r,tr);
         }
 
-        Task<(TransactionResult, Exception)> IObservableDomainAccess<Coordinator>.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<Coordinator>> actions, int millisecondsTimeout )
+        Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> IObservableDomainAccess<Coordinator>.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<Coordinator>> actions, int millisecondsTimeout )
         {
             return Domain.ModifyNoThrowAsync( monitor, () => actions.Invoke( monitor, Domain ), millisecondsTimeout );
         }

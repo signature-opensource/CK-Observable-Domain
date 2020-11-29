@@ -122,8 +122,11 @@ namespace CK.Observable
         {
             // Clearing the handlers first makes this timed event logically inactive
             // if it was active.
-            if( !IsDisposed ) _handlers.RemoveAll();
-            base.Dispose();
+            if( !IsDisposed )
+            {
+                _handlers.RemoveAll();
+                base.Dispose();
+            }
         }
     }
 

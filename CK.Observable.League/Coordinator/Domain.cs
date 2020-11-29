@@ -10,20 +10,21 @@ namespace CK.Observable.League
     /// <summary>
     /// Describes a domain available in the <see cref="ObservableLeague"/>.
     /// </summary>
-    [SerializationVersion(0)]
+    [SerializationVersion(1)]
     public sealed class Domain : ObservableObject
     {
         IManagedDomain? _shell;
         string? _displayName;
 
-        internal Domain( Coordinator coordinator, IManagedDomain shell, string[] rootTypes )
+        internal Domain( Coordinator coordinator, IManagedDomain shell, string[] rootTypes, ManagedDomainOptions? initialOptions )
         {
             Coordinator = coordinator;
             DomainName = shell.DomainName;
             RootTypes = rootTypes;
             // This enables the Shell/Client to centralize the default values of the Options.
-            Options = shell.Options;
+            Options = initialOptions ?? shell.Options;
             _shell = shell;
+            NextActiveTime = Util.UtcMinValue;
         }
 
         Domain( IBinaryDeserializer r, TypeReadInfo? info )
@@ -34,7 +35,14 @@ namespace CK.Observable.League
             _displayName = r.ReadNullableString();
             RootTypes = (string[])r.ReadObject();
             Options = (ManagedDomainOptions)r.ReadObject();
-            HasActiveTimedEvents = r.ReadBoolean();
+            if( info.Version > 0 )
+            {
+                NextActiveTime = r.ReadDateTime();
+            }
+            else
+            {
+                NextActiveTime = r.ReadBoolean() ? DateTime.UtcNow : Util.UtcMinValue;
+            }
         }
 
         void Write( BinarySerializer w )
@@ -44,7 +52,7 @@ namespace CK.Observable.League
             w.WriteNullableString( _displayName );
             w.WriteObject( (string[])RootTypes );
             w.WriteObject( Options );
-            w.Write( HasActiveTimedEvents );
+            w.Write( NextActiveTime );
         }
 
         internal IManagedDomain Shell => _shell!;
@@ -96,12 +104,12 @@ namespace CK.Observable.League
 
         /// <summary>
         /// Internal information that is managed by the Shell.
-        /// This handles the case when this <see cref="ManagedDomainOptions.LifeCycleOption"/> is <see cref="DomainLifeCycleOption.Default"/>.
+        /// This supports the <see cref="ManagedDomainOptions.LifeCycleOption"/> when <see cref="DomainLifeCycleOption.Default"/>.
         /// This is serialized so that when reloading a League, we know that the actual ObservableDomain
         /// must be pre loaded. When the ObservableDomain is loaded, this is updated by
         /// <see cref="ObservableLeague.DomainClient.OnTransactionCommit(in SuccessfulTransactionEventArgs)"/>.
         /// </summary>
-        internal bool HasActiveTimedEvents { get; set; }
+        internal DateTime NextActiveTime;
 
         /// <summary>
         /// Gets the types' assembly qualified names of the root objects (if any).

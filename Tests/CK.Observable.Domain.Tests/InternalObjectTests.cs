@@ -77,7 +77,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void internal_objects_should_not_be_exported()
         {
-            using var domain = new ObservableDomain( TestHelper.Monitor, nameof( internal_objects_should_not_be_exported ) );
+            using var domain = new ObservableDomain(TestHelper.Monitor, nameof(internal_objects_should_not_be_exported), startTimer: true );
             var collector = new JsonEventCollector( domain );
 
             // The first event is always empty.

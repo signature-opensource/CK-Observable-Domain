@@ -17,7 +17,7 @@ namespace CK.Observable
     /// the internal memory.
     /// <para>
     /// This class is abstract to be able to deserialize typed domains (thanks to <see cref="DeserializeDomain"/> abstract method).
-    /// This is used only when <see cref="LoadOrCreateAndInitializeSnapshot(IActivityMonitor, ref ObservableDomain, Stream)"/> is
+    /// This is used only when <see cref="LoadOrCreateAndInitializeSnapshot"/> is
     /// called that happens outside of the <see cref="IObservableDomainClient"/> responsibilities and has been designed mostly to 
     /// support domain management by Observable leagues (or other domain managers).
     /// </para>
@@ -90,9 +90,13 @@ namespace CK.Observable
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="d">The newly created domain.</param>
-        public virtual void OnDomainCreated( IActivityMonitor monitor, ObservableDomain d )
+        /// <param name="startTimer">
+        /// Whether the <see cref="ObservableDomain.TimeManager"/> must be running or stopped.
+        /// A client can alter the value (typically setting it to false if needed).
+        /// </param>
+        public virtual void OnDomainCreated( IActivityMonitor monitor, ObservableDomain d, ref bool startTimer )
         {
-            Next?.OnDomainCreated( monitor, d );
+            Next?.OnDomainCreated( monitor, d, ref startTimer );
         }
 
         /// <summary>
@@ -110,6 +114,7 @@ namespace CK.Observable
         /// Default behavior is FIRST to relay the failure to the next client if any, and
         /// THEN to call <see cref="RestoreSnapshot"/> (and throws an <see cref="Exception"/>
         /// if no snapshot was available or if an error occured).
+        /// By default, <see cref="ObservableDomain.TimeManager"/> is started if it was previously started.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="d">The associated domain.</param>
@@ -117,7 +122,7 @@ namespace CK.Observable
         public virtual void OnTransactionFailure( IActivityMonitor monitor, ObservableDomain d, IReadOnlyList<CKExceptionData> errors )
         {
             Next?.OnTransactionFailure( monitor, d, errors );
-            if( !RestoreSnapshot( monitor, d ) )
+            if( !RestoreSnapshot( monitor, d, null ) )
             {
                 throw new Exception( "No snapshot available or error while restoring the last snapshot." );
             }
@@ -138,13 +143,17 @@ namespace CK.Observable
 
         /// <summary>
         /// Initializes the current snapshot with the provided stream content and
-        /// calls <see cref="DoLoadFromSnapshot(IActivityMonitor, ObservableDomain)"/> to reload the existing domina or
-        /// instantiates a new domain.
+        /// calls <see cref="DoLoadOrCreateFromSnapshot"/> to reload the existing domain or
+        /// instantiates a new instance.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="d">The domain to reload or the new instantiated domain.</param>
         /// <param name="s">The readable stream (will be copied into the memory).</param>
-        protected void LoadOrCreateAndInitializeSnapshot( IActivityMonitor monitor, [AllowNull]ref ObservableDomain d, Stream s )
+        /// <param name="startTimer">
+        /// Ensures that the <see cref="ObservableDomain.TimeManager"/> is running or stopped.
+        /// When null, it keeps its previous state (it is initially stopped at domain creation) and then its current state is persisted.
+        /// </param>
+        protected void LoadOrCreateAndInitializeSnapshot( IActivityMonitor monitor, [AllowNull]ref ObservableDomain d, Stream s, bool? startTimer )
         {
             _memory.Position = 0;
             s.CopyTo( _memory );
@@ -153,7 +162,7 @@ namespace CK.Observable
             if( rawBytes[0] != 0 ) throw new InvalidDataException( "Invalid Snapshot version. Only 0 is currently supported." );
             _currentSnapshotKind = (CompressionKind)rawBytes[1];
             if( _currentSnapshotKind != CompressionKind.None && _currentSnapshotKind != CompressionKind.GZiped ) throw new InvalidDataException( "Invalid CompressionKind marker." );
-            DoLoadOrCreateFromSnapshot( monitor, ref d, false );
+            DoLoadOrCreateFromSnapshot( monitor, ref d, false, startTimer );
             _snapshotSerialNumber = d.TransactionSerialNumber;
             _snapshotTimeUtc = d.TransactionCommitTimeUtc;
         }
@@ -194,8 +203,12 @@ namespace CK.Observable
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="d">The associated domain.</param>
+        /// <param name="startTimer">
+        /// Ensures that the <see cref="ObservableDomain.TimeManager"/> is running or stopped.
+        /// When null, it keeps its previous state (it is initially stopped at domain creation) and then its current state is persisted.
+        /// </param>
         /// <returns>False if no snapshot is available or if the restoration failed. True otherwise.</returns>
-        protected bool RestoreSnapshot( IActivityMonitor monitor, ObservableDomain d )
+        protected bool RestoreSnapshot( IActivityMonitor monitor, ObservableDomain d, bool? startTimer )
         {
             if( _snapshotSerialNumber == -1 )
             {
@@ -207,13 +220,12 @@ namespace CK.Observable
             {
                 try
                 {
-                    DoLoadOrCreateFromSnapshot( monitor, ref d, true );
+                    DoLoadOrCreateFromSnapshot( monitor, ref d, true, startTimer );
                     monitor.CloseGroup( "Success." );
                     return true;
                 }
-                catch( Exception ex )
+                catch( Exception )
                 {
-                    monitor.Error( "Error while restoring snapshot.", ex );
                     monitor.CloseGroup( "Failed." );
                     return false;
                 }
@@ -229,73 +241,61 @@ namespace CK.Observable
         /// <param name="restoring">
         /// True when called from <see cref="RestoreSnapshot"/>, false when called by <see cref="LoadOrCreateAndInitializeSnapshot"/>.
         /// </param>
-        protected virtual void DoLoadOrCreateFromSnapshot( IActivityMonitor monitor, ref ObservableDomain? domain, bool restoring )
+        /// <param name="startTimer">
+        /// Ensures that the <see cref="ObservableDomain.TimeManager"/> is running or stopped.
+        /// When null, it keeps its previous state (it is initially stopped at domain creation) and then its current state is persisted.
+        /// </param>
+        protected virtual void DoLoadOrCreateFromSnapshot( IActivityMonitor monitor, ref ObservableDomain? domain, bool restoring, bool? startTimer )
         {
             static void ReloadOrThrow( IActivityMonitor monitor,
                                        ObservableDomain domain,
                                        Stream stream,
-                                       Func<ObservableDomain,bool>? loadHook )
+                                       bool? startTimer )
             {
-                if( !domain.Load( monitor, stream, leaveOpen: true, loadHook: loadHook ) )
+                if( !domain.Load( monitor, stream, leaveOpen: true, startTimer: startTimer ) )
                 {
                     throw new CKException( $"Error while loading serialized domain. Please see logs." );
                 }
             }
 
-            void Ensure( IActivityMonitor monitor, ref ObservableDomain? domain, Stream stream, Func<ObservableDomain, bool> loadHook )
+            void Ensure( IActivityMonitor monitor, ref ObservableDomain? domain, Stream stream, bool? startTimer )
             {
                 if( domain != null )
                 {
-                    ReloadOrThrow( monitor, domain, stream, loadHook );
+                    ReloadOrThrow( monitor, domain, stream, startTimer );
                 }
                 else
                 {
-                    domain = DeserializeDomain( monitor, stream, loadHook );
+                    domain = DeserializeDomain( monitor, stream, startTimer );
                 }
             }
-
-            var loadAction = GetLoadHook( monitor, restoring );
-            // Hook that wraps the GetLoadHook() value (if not null) and returns true (to activate the timed events)
-            // when LoadOrCreateAndInitializeSnapshot is calling, or false when RestoreSnapshot is at stake.
-            Func<ObservableDomain, bool> loadHook = d => { loadAction?.Invoke( d ); return !restoring; };
-
             _memory.Position = SnapshotHeaderLength;
             if( _currentSnapshotKind == CompressionKind.GZiped )
             {
                 using( var gz = new GZipStream( _memory, CompressionMode.Decompress, leaveOpen: true ) )
                 {
-                    Ensure( monitor, ref domain, gz, loadHook );
+                    Ensure( monitor, ref domain, gz, startTimer );
                 }
             }
             else
             {
                 Debug.Assert( CompressionKind == CompressionKind.None );
-                Ensure( monitor, ref domain, _memory, loadHook );
+                Ensure( monitor, ref domain, _memory, startTimer );
             }
         }
 
-
         /// <summary>
-        /// Extension point called when loading the domain.
-        /// See <see cref="ObservableDomain.Load(IActivityMonitor, Stream, bool, System.Text.Encoding?, int, Func{ObservableDomain, bool}?)"/> loadHook
-        /// parameter.
-        /// </summary>
-        /// <param name="monitor">The monitor to use.</param>
-        /// <param name="restoring">
-        /// True when called from <see cref="RestoreSnapshot"/>, false when called by <see cref="LoadOrCreateAndInitializeSnapshot"/>.
-        /// </param>
-        /// <returns>Defaults to null.</returns>
-        protected virtual Action<ObservableDomain>? GetLoadHook( IActivityMonitor monitor, bool restoring ) => null;
-
-        /// <summary>
-        /// Extension point that can only be called from <see cref="LoadOrCreateAndInitializeSnapshot(IActivityMonitor, ref ObservableDomain, Stream)"/>
-        /// with a null domain: instead of reloading the existing domain, this methos must call the deserialization constructor.
+        /// Extension point that can only be called from <see cref="LoadOrCreateAndInitializeSnapshot"/>
+        /// with a null domain: instead of reloading the non-existing domain, this method must call the deserialization constructor.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="stream">The stream fromw wich the domain must be deserialized.</param>
-        /// <param name="loadHook">The load hook to use.</param>
+        /// <param name="startTimer">
+        /// Ensures that the <see cref="ObservableDomain.TimeManager"/> is running or stopped.
+        /// When null, it keeps its previous state (it is initially stopped at domain creation) and then its current state is persisted.
+        /// </param>
         /// <returns>The new domain.</returns>
-        protected abstract ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, Func<ObservableDomain, bool> loadHook );
+        protected abstract ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, bool? startTimer );
 
         /// <summary>
         /// Creates a snapshot, respecting the <see cref="CompressionKind"/>.
@@ -313,7 +313,7 @@ namespace CK.Observable
         /// </param>
         protected virtual void CreateSnapshot( IActivityMonitor monitor, IObservableDomain d, bool initialOne )
         {
-            using( monitor.OpenTrace( $"Creating snapshot." ) )
+            using( monitor.OpenTrace( $"Creating snapshot of '{d.DomainName}'." ) )
             {
                 _memory.Position = 0;
                 _memory.WriteByte( CurrentSerializationVersion );

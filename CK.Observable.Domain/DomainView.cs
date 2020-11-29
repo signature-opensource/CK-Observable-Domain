@@ -39,14 +39,25 @@ namespace CK.Observable
         public int CurrentTransactionNumber => _d.TransactionSerialNumber + 1;
 
         /// <summary>
-        /// Sends a command to the external world. Commands are enlisted
+        /// Sends a <see cref="ObservableDomainCommand"/> to the external world. Commands are enlisted
         /// into <see cref="TransactionResult.Commands"/> (when the transaction succeeds)
-        /// and can be processed by any <see cref="IObservableDomainClient"/> or by a <see cref="ObservableDomainSidekick"/>.
+        /// and will be processed by one (or more) <see cref="ObservableDomainSidekick"/>.
         /// </summary>
-        /// <param name="command">Any command description.</param>
-        public void SendCommand( object command )
+        /// <param name="command">The command to send.</param>
+        public void SendCommand( in ObservableDomainCommand command )
         {
             _d.SendCommand( _o, command );
+        }
+
+        /// <summary>
+        /// Helper that <see cref="SendCommand(in ObservableDomainCommand)"/>.
+        /// </summary>
+        /// <param name="command">The command payload.</param>
+        /// <param name="knownTarget">The optional known target.</param>
+        /// <param name="isOptionalExecution">See <see cref="ObservableDomainCommand.IsOptionalExecution"/>.</param>
+        public void SendCommand( object command, object? knownTarget = null, bool isOptionalExecution = false )
+        {
+            _d.SendCommand( _o, new ObservableDomainCommand( command, knownTarget, isOptionalExecution ) );
         }
 
         /// <summary>
@@ -99,5 +110,7 @@ namespace CK.Observable
         /// </summary>
         /// <returns>True on success, false if one required sidekick failed to be instantiated.</returns>
         public bool EnsureSidekicks() => _d.EnsureSidekicks( _o );
+
+        public Random Random => _d._random;
     }
 }

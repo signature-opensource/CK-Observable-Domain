@@ -1,4 +1,5 @@
 using CK.Core;
+using CK.Text;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
@@ -22,14 +23,12 @@ namespace CK.Observable
         int _timerCount;
         // Tracking is basic: any change are tracked with a simple hash set.
         readonly HashSet<ObservableTimedEventBase> _changed;
-        readonly List<ObservableTimedEventBase> _changedCleanupBuffer;
         readonly TimedEventCollection _exposedTimedEvents;
         readonly TimerCollection _exposedTimers;
         readonly ReminderCollection _exposedReminders;
         ObservableTimedEventBase _first;
         ObservableTimedEventBase _last;
         AutoTimer _autoTimer;
-        DateTime _currentNext;
         int _totalEventRaised;
 
         internal TimeManager( ObservableDomain domain )
@@ -37,9 +36,7 @@ namespace CK.Observable
             Domain = domain;
             _activeEvents = new ObservableTimedEventBase[16];
             _changed = new HashSet<ObservableTimedEventBase>();
-            _changedCleanupBuffer = new List<ObservableTimedEventBase>();
             _autoTimer = new AutoTimer( Domain );
-            _currentNext = Util.UtcMinValue;
             _exposedTimedEvents = new TimedEventCollection( this );
             _exposedTimers = new TimerCollection( this );
             _exposedReminders = new ReminderCollection( this );
@@ -79,17 +76,28 @@ namespace CK.Observable
                 if( value == null ) throw new ArgumentNullException( nameof( Timer ) );
                 if( _autoTimer != value )
                 {
-                    _currentNext = Util.UtcMinValue;
                     _autoTimer = value;
                 }
             }
         }
 
-        /// <inheritdoc/>
-        public DateTime NextDueTimeUtc => _currentNext;
+        /// <inheritdoc />
+        public bool IsRunning { get; private set; }
+
+        /// <inheritdoc />
+        public void Start()
+        {
+            if( !IsRunning ) Domain.StartOrStopTimeManager( true );
+        }
+
+        /// <inheritdoc />
+        public void Stop()
+        {
+            if( IsRunning ) Domain.StartOrStopTimeManager( false );
+        }
 
         /// <inheritdoc/>
-        public int ActiveTimedEventsCount => _activeCount;
+        public DateTime NextActiveTime => _autoTimer.NextDueTime;
 
         class TimerCollection : IReadOnlyCollection<ObservableTimer>
         {
@@ -194,27 +202,6 @@ namespace CK.Observable
             r.SuspendableClock = null;
         }
 
-        /// <summary>
-        /// This doesn't throw.
-        /// </summary>
-        /// <param name="m">The monitor to use.</param>
-        /// <param name="nextDueTimeUtc">The next due time to consider.</param>
-        internal void SetNextDueTimeUtc( IActivityMonitor m, DateTime nextDueTimeUtc )
-        {
-            if( _currentNext != nextDueTimeUtc )
-            {
-                try
-                {
-                    _autoTimer.SetNextDueTimeUtc( m, nextDueTimeUtc );
-                    _currentNext = nextDueTimeUtc;
-                }
-                catch( Exception ex )
-                {
-                    m.Error( ex );
-                }
-            }
-        }
-
         internal void OnCreated( ObservableTimedEventBase t )
         {
             Debug.Assert( t is ObservableTimer || t is ObservableReminder );
@@ -247,16 +234,17 @@ namespace CK.Observable
 
         /// <summary>
         /// Adds the timed event into the set of changed ones.
-        /// The change is handled in <see cref="DoApplyChanges"/> called at the start
+        /// The change is handled in <see cref="UpdateMinHeap"/> called at the start
         /// and at the end of the ObservableDomain.Modify.
         /// </summary>
-        /// <param name="t">The tiemd event to add.</param>
+        /// <param name="t">The timed event to add.</param>
         internal void OnChanged( ObservableTimedEventBase t ) => _changed.Add( t );
 
         internal void Save( IActivityMonitor m, BinarySerializer w )
         {
-            CheckEventsInvariant();
-            w.WriteNonNegativeSmallInt32( 0 );
+            CheckMinHeapInvariant();
+            w.WriteNonNegativeSmallInt32( 1 );
+            w.Write( IsRunning );
             w.WriteNonNegativeSmallInt32( _count );
             var f = _first;
             while( f != null )
@@ -267,9 +255,10 @@ namespace CK.Observable
             }
         }
 
-        internal void Load( IActivityMonitor m, BinaryDeserializer r )
+        internal bool Load( IActivityMonitor m, BinaryDeserializer r )
         {
             int version = r.ReadNonNegativeSmallInt32();
+            bool running = version > 0 ? r.ReadBoolean() : true;
             int count = r.ReadNonNegativeSmallInt32();
             while( --count >= 0 )
             {
@@ -283,7 +272,7 @@ namespace CK.Observable
                     ++_activeCount;
                 }
             }
-            CheckEventsInvariant();
+            CheckMinHeapInvariant();
 #if DEBUG
             int expectedCount = _count;
             ObservableTimedEventBase? last = null;
@@ -298,12 +287,16 @@ namespace CK.Observable
             Debug.Assert( expectedCount == 0 );
             Debug.Assert( _last == last );
 #endif
+            return running;
         }
 
-        internal void Clear( IActivityMonitor monitor )
+        internal void ClearAndStop( IActivityMonitor monitor )
         {
+            DoStartOrStop( monitor, false );
+
             Debug.Assert( _activeEvents[0] == null );
             Array.Clear( _activeEvents, 1, _activeCount );
+
             _timerCount = _count = _activeCount = 0;
             _first = _last = null;
             _autoTimer.SetNextDueTimeUtc( monitor, Util.UtcMinValue );
@@ -311,19 +304,23 @@ namespace CK.Observable
             _changed.Clear();
         }
 
-        /// <summary>
-        /// Applies all changes: current IsActive property of all changed timed event is handled
-        /// and the first next due time is returned so that an external timer can be setup on it.
-        /// </summary>
-        /// <returns>The first next due time or <see cref="Util.UtcMinValue"/>.</returns>
-        internal DateTime ApplyChanges()
+        internal void DoStartOrStop( IActivityMonitor monitor, bool start )
         {
-            DoApplyChanges();
-            return _activeCount > 0 ? _activeEvents[1].ExpectedDueTimeUtc : Util.UtcMinValue;
+            if( start != IsRunning )
+            {
+                DateTime next = Util.UtcMinValue;
+                if( start )
+                {
+                    UpdateMinHeap();
+                    if( _activeCount > 0 ) next = _activeEvents[1].ExpectedDueTimeUtc;
+                }
+                IsRunning = start;
+                _autoTimer.SetNextDueTimeUtc( monitor, next );
+            }
         }
 
         [Conditional("DEBUG")]
-        void CheckEventsInvariant()
+        void CheckMinHeapInvariant()
         {
             Debug.Assert( _activeEvents[0] == null );
             int i = 1;
@@ -340,9 +337,11 @@ namespace CK.Observable
             }
         }
 
-        void DoApplyChanges()
+        /// <summary>
+        /// Updates the heap based on all timed event that has changed.
+        /// </summary>
+        void UpdateMinHeap()
         {
-            Debug.Assert( _changedCleanupBuffer.Count == 0 );
             foreach( var ev in _changed )
             {
                 if( ev.IsActive )
@@ -353,18 +352,10 @@ namespace CK.Observable
                 else
                 {
                     if( ev.ActiveIndex != 0 ) Deactivate( ev );
-                    _changedCleanupBuffer.Add( ev );
                 }
             }
-            CheckEventsInvariant();
-            if( _changedCleanupBuffer.Count > 0 )
-            {
-                foreach( var rem in _changedCleanupBuffer )
-                {
-                    _changed.Remove( rem );
-                }
-                _changedCleanupBuffer.Clear();
-            }
+            _changed.Clear();
+            CheckMinHeapInvariant();
         }
 
         internal bool IsRaising { get; private set; }
@@ -376,66 +367,87 @@ namespace CK.Observable
         /// <param name="m">The monitor: should be the Domain.Monitor that has been obtained by the AutoTimer.</param>
         /// <param name="current">The current time.</param>
         /// <param name="checkChanges">True to check timed event next due time.</param>
-        /// <returns>The number of timers that have fired.</returns>
-        internal int RaiseElapsedEvent( IActivityMonitor m, DateTime current, bool checkChanges )
+        /// <param name="fromTimer">True if this is called from the timer.</param>
+        internal void RaiseElapsedEvent( IActivityMonitor m, DateTime current, bool fromTimer )
         {
-            if( checkChanges ) DoApplyChanges();
+            Debug.Assert( IsRunning );
+            UpdateMinHeap();
             IsRaising = true;
             try
             {
+                int loopCount = 100;
                 int count = 0;
-                while( _activeCount > 0 )
+                DateTime nextFire = Util.UtcMinValue;
+                again:
+                if( _activeCount == 0 )
                 {
-                    var first = _activeEvents[1];
-                    if( first.ExpectedDueTimeUtc <= current )
-                    {
-                        _totalEventRaised++;
-                        _changed.Remove( first );
-                        try
-                        {
-                            first.DoRaise( m, current, !IgnoreTimedEventException );
-                        }
-                        finally
-                        {
-                            if( !_changed.Remove( first ) )
-                            {
-                                first.OnAfterRaiseUnchanged( current, m );
-                            }
-                            if( !first.IsDisposed )
-                            {
-                                if( !first.IsActive )
-                                {
-                                    Deactivate( first );
-                                }
-                                else
-                                {
-                                    if( first.ExpectedDueTimeUtc <= current )
-                                    {
-                                        // 10 ms is a "very minimal" step: it is smaller than the approximate thread time slice (20 ms). 
-                                        first.ForwardExpectedDueTime( m, current.AddMilliseconds( 10 ) );
-                                    }
-                                    OnNextDueTimeUpdated( first );
-                                }
-                            }
-                        }
-                        m.Debug( $"{first}: ActiveIndex={first.ActiveIndex}." );
-                        ++count;
-                    }
-                    else
-                    {
-                        if( count == 0 )
-                        {
-                            m.Debug( "Timer raised too early. Reset it." );
-                            Timer.SetNextDueTimeUtc( m, first.ExpectedDueTimeUtc );
-                        }
-                        break;
-                    }
+                    nextFire = Util.UtcMinValue;
                 }
-                return count;
+                else
+                {
+                    do
+                    {
+                        var first = _activeEvents[1];
+                        if( first.ExpectedDueTimeUtc > current )
+                        {
+                            if( fromTimer && count == 0 )
+                            {
+                                m.Debug( "Timer raised too early. Reset it." );
+                            }
+                            nextFire = first.ExpectedDueTimeUtc;
+                            break;
+                        }
+                        else
+                        {
+                            _totalEventRaised++;
+                            _changed.Remove( first );
+                            try
+                            {
+                                first.DoRaise( m, current, !IgnoreTimedEventException );
+                            }
+                            finally
+                            {
+                                if( !_changed.Remove( first ) )
+                                {
+                                    first.OnAfterRaiseUnchanged( current, m );
+                                }
+                                if( !first.IsDisposed )
+                                {
+                                    if( !first.IsActive )
+                                    {
+                                        Deactivate( first );
+                                    }
+                                    else
+                                    {
+                                        if( first.ExpectedDueTimeUtc <= current )
+                                        {
+                                            // 10 ms is a "very minimal" step: it is smaller than the approximate thread time slice (20 ms). 
+                                            first.ForwardExpectedDueTime( m, current.AddMilliseconds( 10 ) );
+                                        }
+                                        OnNextDueTimeUpdated( first );
+                                    }
+                                }
+                            }
+                            m.Debug( $"{first}: ActiveIndex={first.ActiveIndex}." );
+                            ++count;
+                        }
+                    }
+                    while( _activeCount > 0 );
+                }
+                if( count != 0 && _changed.Count > 0 )
+                {
+                    if( --loopCount >= 0 )
+                    {
+                        UpdateMinHeap();
+                        goto again;
+                    }
+                    m.Warn( $"Too many Timer or Reminder update cycles. Possible culprits are: {_changed.Select( c => c.ToString() ).Concatenate()}" );
+                }
+                _autoTimer.SetNextDueTimeUtc( m, nextFire );
             }
             finally
             {
-                CheckEventsInvariant();
+                CheckMinHeapInvariant();
                 IsRaising = false;
             }
         }

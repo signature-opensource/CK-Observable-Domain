@@ -17,7 +17,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void simple_property_changed_events()
         {
-            using( var domain = new ObservableDomain( TestHelper.Monitor, nameof( simple_property_changed_events ) ) )
+            using( var domain = new ObservableDomain(TestHelper.Monitor, nameof(simple_property_changed_events), startTimer: true ))
             {
                 Car c0 = null;
                 Car c1 = null;
@@ -75,7 +75,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void property_changed_events_use_the_last_value()
         {
-            using( var domain = new ObservableDomain( TestHelper.Monitor, nameof( property_changed_events_use_the_last_value ) ) )
+            using( var domain = new ObservableDomain(TestHelper.Monitor, nameof(property_changed_events_use_the_last_value), startTimer: true ) )
             {
                 IReadOnlyList<ObservableEvent>? events = null;
                 domain.OnSuccessfulTransaction += ( d, ev ) => events = ev.Events;
@@ -102,7 +102,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void INotifyPropertyChanged_is_supported_only_because_of_PropertyChanged_Fody_and_NotSupportedException_is_raised()
         {
-            using( var domain = new ObservableDomain( TestHelper.Monitor, nameof( INotifyPropertyChanged_is_supported_only_because_of_PropertyChanged_Fody_and_NotSupportedException_is_raised ) ) )
+            using( var domain = new ObservableDomain(TestHelper.Monitor, nameof(INotifyPropertyChanged_is_supported_only_because_of_PropertyChanged_Fody_and_NotSupportedException_is_raised), startTimer: true ) )
             {
                 domain.Modify( TestHelper.Monitor, () =>
                 {
@@ -116,7 +116,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void the_way_PropertyChanged_Fody_works()
         {
-            using var d = new ObservableDomain( TestHelper.Monitor, nameof( the_way_PropertyChanged_Fody_works ) ); 
+            using var d = new ObservableDomain(TestHelper.Monitor, nameof(the_way_PropertyChanged_Fody_works), startTimer: true ); 
             d.Modify( TestHelper.Monitor, () =>
             {
                 TestCounter counter = new TestCounter();
@@ -141,7 +141,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void SafeEvent_automatically_cleanup_Disposed_targets()
         {
-            using( var domain = new ObservableDomain( TestHelper.Monitor, nameof( SafeEvent_automatically_cleanup_Disposed_targets ) ) )
+            using( var domain = new ObservableDomain(TestHelper.Monitor, nameof(SafeEvent_automatically_cleanup_Disposed_targets), startTimer: true ) )
             {
                 domain.Modify( TestHelper.Monitor, () =>
                 {
@@ -193,7 +193,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void explicit_property_changed_events_are_automatically_triggered()
         {
-            using( var domain = new ObservableDomain( TestHelper.Monitor, nameof( explicit_property_changed_events_are_automatically_triggered ) ) )
+            using( var domain = new ObservableDomain(TestHelper.Monitor, nameof(explicit_property_changed_events_are_automatically_triggered), startTimer: true ) )
             {
                 domain.Modify( TestHelper.Monitor, () =>
                 {
@@ -229,7 +229,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void ObservableList_is_observable_thanks_to_Item_Inserted_Set_RemovedAt_and_CollectionCleared_events()
         {
-            using( var domain = new ObservableDomain( TestHelper.Monitor, nameof( ObservableList_is_observable_thanks_to_Item_Inserted_Set_RemovedAt_and_CollectionCleared_events ) ) )
+            using( var domain = new ObservableDomain(TestHelper.Monitor, nameof(ObservableList_is_observable_thanks_to_Item_Inserted_Set_RemovedAt_and_CollectionCleared_events), startTimer: true ) )
             {
                 domain.Modify( TestHelper.Monitor, () =>
                 {
@@ -285,7 +285,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void list_changed_events()
         {
-            using( var domain = new ObservableDomain( TestHelper.Monitor, nameof( list_changed_events ) ) )
+            using( var domain = new ObservableDomain(TestHelper.Monitor, nameof(list_changed_events), startTimer: true ) )
             {
                 Car c0 = null;
                 Car c1 = null;
@@ -315,7 +315,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void simple_reflexes()
         {
-            using( var domain = new ObservableDomain( TestHelper.Monitor, nameof( simple_reflexes ) ) )
+            using( var domain = new ObservableDomain(TestHelper.Monitor, nameof(simple_reflexes), startTimer: true ) )
             {
                 Car c = null;
                 Mechanic m = null;
@@ -357,7 +357,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void ObservableDictionary_is_observable_thanks_to_Item_Added_Set_Removed_and_CollectionCleared_events()
         {
-            using( var domain = new ObservableDomain( TestHelper.Monitor, nameof( ObservableDictionary_is_observable_thanks_to_Item_Added_Set_Removed_and_CollectionCleared_events ) ) )
+            using( var domain = new ObservableDomain(TestHelper.Monitor, nameof(ObservableDictionary_is_observable_thanks_to_Item_Added_Set_Removed_and_CollectionCleared_events), startTimer: true ) )
             {
                 domain.Modify( TestHelper.Monitor, () =>
                 {

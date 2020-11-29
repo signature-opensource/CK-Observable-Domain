@@ -20,16 +20,14 @@ namespace CK.Observable.League
     {
         readonly string _storeName;
         readonly JsonEventCollector _eventCollector;
-        readonly Action<IActivityMonitor, ObservableDomain>? _domainInitializer;
         int _savedTransactionNumber;
         DateTime _nextSave;
         int _snapshotSaveDelay;
 
-        public StreamStoreClient( string domainName, IStreamStore store, Action<IActivityMonitor, ObservableDomain>? initializer, IObservableDomainClient? next = null )
+        public StreamStoreClient( string domainName, IStreamStore store, IObservableDomainClient? next = null )
             : base( next )
         {
             _eventCollector = new JsonEventCollector();
-            _domainInitializer = initializer;
             DomainName = domainName;
             _storeName = domainName.Length == 0 ? "Coordinator" : "D-" + domainName;
             StreamStore = store;
@@ -102,67 +100,47 @@ namespace CK.Observable.League
             Next?.OnTransactionStart( monitor, d, timeUtc );
         }
 
-        protected override Action<ObservableDomain>? GetLoadHook( IActivityMonitor monitor, bool restoring )
-        {
-            return _domainInitializer != null
-                        ? d => _domainInitializer( monitor, d )
-                        : (Action<ObservableDomain>?)null;
-        }
-
         /// <summary>
         /// See base <see cref="MemoryTransactionProviderClient.LoadOrCreateAndInitializeSnapshot"/> comments.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="stream">The stream fromw wich the domain must be deserialized.</param>
-        /// <param name="loadHook">The load hook to use.</param>
+        /// <param name="startTimer">Whether to start the domain's <see cref="TimeManager"/>.</param>
         /// <returns>Never: throws a <see cref="NotSupportedException"/>.</returns>
-        protected override sealed ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, Func<ObservableDomain, bool> loadHook )
+        protected override sealed ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, bool? startTimer )
         {
-            var d = DoDeserializeDomain( monitor, stream, loadHook );
+            var d = DoDeserializeDomain( monitor, stream, startTimer );
             _eventCollector.CollectEvent( d, clearEvents: false );
             return d;
         }
 
-        protected abstract ObservableDomain DoDeserializeDomain( IActivityMonitor monitor, Stream stream, Func<ObservableDomain, bool> loadHook );
+        protected abstract ObservableDomain DoDeserializeDomain( IActivityMonitor monitor, Stream stream, bool? startTimer );
 
         /// <summary>
         /// Initializes the domain from the store or initializes the store with a new domain.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="factory">The domain factory to use if no stream exists in the store.</param>
+        /// <param name="startTimer">Whether to start the <see cref="TimeManager"/>.</param>
         /// <returns>The awaitable.</returns>
-        public async Task<ObservableDomain> InitializeAsync( IActivityMonitor monitor, Func<IActivityMonitor,ObservableDomain> factory )
+        public async Task<ObservableDomain> InitializeAsync( IActivityMonitor monitor, bool? startTimer, Func<IActivityMonitor,bool,ObservableDomain> factory )
         {
             ObservableDomain result = null;
             using( var s = await StreamStore.OpenReadAsync( _storeName ) )
             {
                 if( s != null )
                 {
-                    LoadOrCreateAndInitializeSnapshot( monitor, ref result, s );
+                    LoadOrCreateAndInitializeSnapshot( monitor, ref result, s, startTimer );
                     _savedTransactionNumber = CurrentSerialNumber;
                 }
                 else
                 {
-                    result = factory( monitor );
+                    result = factory( monitor, startTimer ?? false );
                     _eventCollector.CollectEvent( result, clearEvents: true );
-                    if( _domainInitializer != null )
-                    {
-                        // Applies the initializer to the newly created domain.
-                        // Since this is an "initializer": new domains are de facto
-                        // initialized just like the loaded ones.
-                        await result.ModifyThrowAsync( monitor, () => _domainInitializer( monitor, result ) );
-                        // It is useless to call CreateSnapshot: ModifyThrowAsync has committed the
-                        // very first transaction.
-                        Debug.Assert( result.TransactionSerialNumber == 1 );
-                    }
-                    else
-                    {
-                        // When there is no initializer, we call CreateSnapshot so that
-                        // the initial snapshot can be saved to the Store: this initializes
-                        // the Store for this domain.
-                        // From now on, it will be reloaded.
-                        CreateSnapshot( monitor, result, true );
-                    }
+                    // Calling CreateSnapshot so that
+                    // the initial snapshot can be saved to the Store: this initializes
+                    // the Store for this domain. From now on, it will be reloaded.
+                    CreateSnapshot( monitor, result, true );
                     if( !await SaveAsync( monitor ) )
                     {
                         throw new Exception( $"Unable to initialize the store for '{_storeName}'." );

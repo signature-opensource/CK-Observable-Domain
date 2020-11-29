@@ -14,7 +14,7 @@ namespace CK.Observable.League
     /// </para>
     /// <para>
     /// Note that this <see cref="IAsyncDisposable.DisposeAsync"/> implementation will use the activity monitor that has been
-    /// used to <see cref="IObservableDomainLoader.LoadAsync(IActivityMonitor)"/> this shell.
+    /// used to <see cref="IObservableDomainLoader.LoadAsync(IActivityMonitor, bool?)"/> this shell.
     /// </para>
     /// </summary>
     /// <typeparam name="T1">Type of the first root object.</typeparam>
@@ -83,9 +83,9 @@ namespace CK.Observable.League
         /// The maximum number of milliseconds to wait for a read access before giving up. Wait indefinitely by default.
         /// </param>
         /// <returns>
-        /// Returns the transaction result (that may be <see cref="TransactionResult.Empty"/>) and any exception outside of the observable transaction itself.
+        /// Returns any initial exception, the transaction result (that may be <see cref="TransactionResult.Empty"/>).
         /// </returns>
-        Task<(TransactionResult, Exception)> ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2>> actions, int millisecondsTimeout = -1 );
+        Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2>> actions, int millisecondsTimeout = -1 );
 
         /// <summary>
         /// Reads the domain by protecting the <paramref name="reader"/> function in a <see cref="ObservableDomain.AcquireReadLock(int)"/>.

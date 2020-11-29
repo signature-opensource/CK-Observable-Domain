@@ -82,13 +82,14 @@ namespace CK.Core
         /// <param name="reverseInitialActions">
         /// True to revert the initial action list: the last registered will be the first to be called.
         /// </param>
+        /// <param name="name">Optional name that tags the execution (for logs).</param>
         /// <returns>The first exception that occurred or null on success.</returns>
-        public async Task<Exception?> ExecuteAsync( bool throwException = true, bool reverseInitialActions = false )
+        public async Task<Exception?> ExecuteAsync( bool throwException = true, bool reverseInitialActions = false, string name = "(unnamed)" )
         {
             if( _executing ) throw new InvalidOperationException( "ExecuteAsync reentrancy detected." );
             var actions = _reg._actions;
             if( reverseInitialActions ) actions.Reverse();
-            using( _monitor.OpenInfo( $"Executing {actions.Count} initial actions{(reverseInitialActions ? " in reverse order" : "")}." ) )
+            using( _monitor.OpenInfo( $"[{name}]: {actions.Count} initial actions{(reverseInitialActions ? " in reverse order" : "")}." ) )
             {
                 _executing = true;
                 int idxCulprit = 0;
@@ -102,7 +103,7 @@ namespace CK.Core
                         {
                             while( idxCulprit < roundCount )
                             {
-                                await actions[idxCulprit].Invoke( (TThis)this );
+                                await actions[idxCulprit].Invoke( (TThis)this ).ConfigureAwait( false );
                                 ++idxCulprit;
                             }
                         }
@@ -115,7 +116,7 @@ namespace CK.Core
                     {
                         using( _monitor.OpenTrace( $"Calling {onSuccess.Count} success handlers." ) )
                         {
-                            await RaiseSuccess( onSuccess );
+                            await RaiseSuccess( onSuccess, name );
                         }
                     }
                     return null;
@@ -123,14 +124,14 @@ namespace CK.Core
                 catch( Exception ex )
                 {
                     actions.RemoveRange( 0, idxCulprit );
-                    using( _monitor.OpenError( ex ) )
+                    using( _monitor.OpenError( $"[{name}]: error, leaving {actions.Count} not executed actions.", ex ) )
                     {
                         if( _reg._onError == null ) _monitor.Trace( "There is no registered error handler." );
                         else
                         {
-                            using( _monitor.OpenTrace( $"Calling {_reg._onError.Count} error handlers." ) )
+                            using( _monitor.OpenInfo( $"Calling {_reg._onError.Count} error handlers." ) )
                             {
-                                await RaiseError( _reg._onError, ex );
+                                await RaiseError( _reg._onError, ex, name ).ConfigureAwait( false );
                             }
                         }
                         if( throwException )
@@ -146,9 +147,9 @@ namespace CK.Core
                     if( _reg._onFinally == null ) _monitor.Trace( "There is no registered final handler." );
                     else
                     {
-                        using( _monitor.OpenTrace( $"Calling {_reg._onFinally.Count} final handlers." ) )
+                        using( _monitor.OpenInfo( $"Calling {_reg._onFinally.Count} final handlers." ) )
                         {
-                            await RaiseFinally( _reg._onFinally );
+                            await RaiseFinally( _reg._onFinally, name );
                         }
                     }
                     _executing = false;
@@ -160,8 +161,9 @@ namespace CK.Core
         /// Executes the registered success handlers. This never throws.
         /// </summary>
         /// <param name="success">The success handlers.</param>
+        /// <param name="name">Execution name (for logs).</param>
         /// <returns>The awaitable.</returns>
-        async Task RaiseSuccess( List<Func<TThis, Task>> success )
+        async Task RaiseSuccess( List<Func<TThis, Task>> success, string name )
         {
             _reg.SetHandlingSuccess();
             int roundNumber = 0;
@@ -174,11 +176,11 @@ namespace CK.Core
                     {
                         try
                         {
-                            await success[i].Invoke( (TThis)this );
+                            await success[i].Invoke( (TThis)this ).ConfigureAwait( false );
                         }
                         catch( Exception ex )
                         {
-                            _monitor.Error( "While executing success handler. This is ignored.", ex );
+                            _monitor.Error( $"[{name}]: While executing success handler. This is ignored.", ex );
                         }
                     }
                     success.RemoveRange( 0, roundCount );
@@ -192,8 +194,9 @@ namespace CK.Core
         /// </summary>
         /// <param name="errors">The error handlers.</param>
         /// <param name="ex">The exception that has been raised by the action.</param>
+        /// <param name="name">Execution name (for logs).</param>
         /// <returns>The awaitable.</returns>
-        async ValueTask RaiseError( List<Func<TThis, Exception, Task>> errors, Exception ex )
+        async ValueTask RaiseError( List<Func<TThis, Exception, Task>> errors, Exception ex, string name )
         {
             _reg.SetHandlingError();
             int roundNumber = 0;
@@ -206,11 +209,11 @@ namespace CK.Core
                     {
                         try
                         {
-                            await errors[i].Invoke( (TThis)this, ex );
+                            await errors[i].Invoke( (TThis)this, ex ).ConfigureAwait( false );
                         }
                         catch( Exception exError )
                         {
-                            _monitor.Error( "While handling error. This is ignored.", exError );
+                            _monitor.Error( $"[{name}]: While handling error. This is ignored.", exError );
                         }
                     }
                     errors.RemoveRange( 0, roundCount );
@@ -223,8 +226,9 @@ namespace CK.Core
         /// Executes the registered finally actions. This never throws.
         /// </summary>
         /// <param name="final">The final actions to execute.</param>
+        /// <param name="name">Execution name (for logs).</param>
         /// <returns>The awaitable.</returns>
-        async Task RaiseFinally( List<Func<TThis, Task>> final )
+        async Task RaiseFinally( List<Func<TThis, Task>> final, string name )
         {
             _reg.SetHandlingFinally();
             int roundNumber = 0;
@@ -237,11 +241,11 @@ namespace CK.Core
                     {
                         try
                         {
-                            await final[i].Invoke( (TThis)this );
+                            await final[i].Invoke( (TThis)this ).ConfigureAwait( false );
                         }
                         catch( Exception ex )
                         {
-                            _monitor.Error( "While executing final handler. This is ignored.", ex );
+                            _monitor.Error( $"[{name}]: While executing final handler. This is ignored.", ex );
                         }
                     }
                     final.RemoveRange( 0, roundCount );
@@ -263,7 +267,7 @@ namespace CK.Core
                 {
                     try
                     {
-                        if( kv.Value is IAsyncDisposable ad ) await ad.DisposeAsync();
+                        if( kv.Value is IAsyncDisposable ad ) await ad.DisposeAsync().ConfigureAwait( false );
                         else if( kv.Value is IDisposable d ) d.Dispose();
                     }
                     catch( Exception ex )

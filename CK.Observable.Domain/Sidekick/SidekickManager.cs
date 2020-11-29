@@ -15,8 +15,8 @@ namespace CK.Observable
     class SidekickManager
     {
         readonly ObservableDomain _domain;
-        // This is used as a cache of "already done" job. Depending on the stage, different type of keys and values
-        // are used.
+        // This is used as a cache of "already done" job. Depending on the stage, keys are type and or strings and values
+        // can be the instance, a type or an exception.
         readonly Dictionary<object,object?> _alreadyHandled;
 
         /// <summary>
@@ -31,12 +31,19 @@ namespace CK.Observable
         /// This list is:
         /// - filled by <see cref="DiscoverSidekicks"/> each time a new object with ISidekickClientObject base interfaces appears.
         /// - emptied by <see cref="CreateWaitingSidekicks"/> (after having ensured that the sidekick instances are available)
-        /// where <see cref="ObservableDomainSidekick.RegisterClientObject(IActivityMonitor, IDisposableObject)"/> is called
-        /// with the Item1 object.
+        ///   where <see cref="ObservableDomainSidekick.RegisterClientObject(IActivityMonitor, IDisposableObject)"/> is called
+        ///   with the IDisposableObject Item1.
         /// </summary>
         readonly List<(IDisposableObject, object[])> _toAutoregister;
         readonly List<ObservableDomainSidekick> _sidekicks;
         readonly IServiceProvider _serviceProvider;
+
+        /// <summary>
+        /// A new instance is created at the end of each transaction if at least one new sidekick appeared.
+        /// This is required because the <see cref="ExecuteCommands"/> is called outside of the domain lock.
+        /// This is used to resolve sidekicks by type but also for broadcasting (to the Values).
+        /// </summary>
+        Dictionary<Type, ObservableDomainSidekick> _currentIndex;
 
         public SidekickManager( ObservableDomain domain, IServiceProvider sp )
         {
@@ -45,6 +52,7 @@ namespace CK.Observable
             _toInstantiate = new List<(object, bool)>();
             _toAutoregister = new List<(IDisposableObject, object[])>();
             _sidekicks = new List<ObservableDomainSidekick>();
+            _currentIndex = new Dictionary<Type, ObservableDomainSidekick>();
             _serviceProvider = sp;
         }
 
@@ -113,8 +121,9 @@ namespace CK.Observable
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="errorCollector">Error collector (note that errors are already logged).</param>
+        /// <param name="finalCall">Whether this is called from the commit conclusion.</param>
         /// <returns>True on success, false if one required (non optional) sidekick failed to be instantiated.</returns>
-        public bool CreateWaitingSidekicks( IActivityMonitor monitor, Action<Exception> errorCollector )
+        internal bool CreateWaitingSidekicks( IActivityMonitor monitor, Action<Exception> errorCollector, bool finalCall )
         {
             bool success = true;
             if( _toInstantiate.Count > 0 )
@@ -132,6 +141,10 @@ namespace CK.Observable
                     success &= AutoRegisterClientObject( monitor, r, errorCollector );
                 }
                 _toAutoregister.Clear();
+            }
+            if( finalCall && _currentIndex.Count != _sidekicks.Count )
+            {
+                _currentIndex = _sidekicks.ToDictionary( s => s.GetType() );
             }
             return success;
         }
@@ -293,46 +306,93 @@ namespace CK.Observable
         /// Executes the commands by calling <see cref="ObservableDomainSidekick.ExecuteCommand(IActivityMonitor, in SidekickCommand)"/> for each sidekick.
         /// If a command is not executed because no sidekick has accepted it, this is an error that, just as other execution errors will
         /// appear in <see cref="TransactionResult.CommandHandlingErrors"/>.
+        /// <para>
+        /// This executes outside of any locks on the domain. Doamin's objects must not be touched in any way (read or write).
+        /// </para>
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="r">The successful transaction result.</param>
-        /// <param name="postActions">The registrar for post actions.</param>
+        /// <param name="localPostActions">The registrar for post actions.</param>
+        /// <param name="domainPostActions">The registrar for domain post actions.</param>
         /// <returns>Null on success, otherwise the command and their respective error.</returns>
-        public IReadOnlyList<(object,CKExceptionData)>? ExecuteCommands( IActivityMonitor monitor, TransactionResult r, ActionRegistrar<PostActionContext> postActions )
+        public IReadOnlyList<(object,CKExceptionData)>? ExecuteCommands( IActivityMonitor monitor,
+                                                                         TransactionResult r,
+                                                                         ActionRegistrar<PostActionContext> localPostActions,
+                                                                         ActionRegistrar<PostActionContext> domainPostActions )
         {
             Debug.Assert( monitor != null );
             Debug.Assert( r.Success );
             List<(object, CKExceptionData)>? results = null;
             foreach( var c in r.Commands )
             {
-                SidekickCommand cmd = new SidekickCommand( r.StartTimeUtc, r.CommitTimeUtc, c, postActions );
+                SidekickCommand cmd = new SidekickCommand( r.StartTimeUtc, r.CommitTimeUtc, c.Command, localPostActions, domainPostActions );
                 bool foundHandler = false;
-                foreach( var h in _sidekicks )
+                ObservableDomainSidekick? known = c.KnownTarget as ObservableDomainSidekick;
+                if( known != null )
                 {
-                    try
+                    if( known.Domain != _domain )
                     {
-                        if( h.ExecuteCommand( monitor, in cmd ) )
-                        {
-                            foundHandler = true;
-                            break;
-                        }
-                    }
-                    catch( Exception ex )
-                    {
-                        monitor.Error( "Error while handling command.", ex );
                         if( results == null ) results = new List<(object, CKExceptionData)>();
-                        results.Add( (c, CKExceptionData.CreateFrom( ex ) ) );
+                        results.Add( (c, CKExceptionData.Create( $"Domain mismatch error. Cannot execute a command by a sidekick of domain '{known.Domain.DomainName}' while in domain '{_domain.DomainName}'." )) );
+                        known = null;
+                    }
+                    else
+                    {
+                        foundHandler = ExecuteCommand( monitor, known, in cmd, c, ref results );
+                    }
+                }
+                else if( c.KnownTarget is Type t )
+                {
+                    if( !_currentIndex.TryGetValue( t, out known ) )
+                    {
+                        if( results == null ) results = new List<(object, CKExceptionData)>();
+                        results.Add( (c, CKExceptionData.Create( $"Sidekick type '{t}' not found. An error may have prevented its instantiation, see previous logs." )) );
+                    }
+                }
+                else
+                {
+                    // Broadcast.
+                    foreach( var h in _currentIndex.Values )
+                    {
+                        foundHandler |= ExecuteCommand( monitor, h, in cmd, c, ref results );
                     }
                 }
                 if( !foundHandler )
                 {
                     var msg = $"No sidekick found to handle command type '{c.GetType().FullName}'.";
-                    monitor.Error( msg );
-                    if( results == null ) results = new List<(object, CKExceptionData)>();
-                    results.Add( (c, CKExceptionData.Create( msg ) ) );
+                    if( known != null )
+                    {
+                        msg += " The presumably known target rejects it.";
+                    }
+                    if( c.IsOptionalExecution )
+                    {
+                        monitor.Warn( msg );
+                    }
+                    else
+                    {
+                        monitor.Error( msg );
+                        if( results == null ) results = new List<(object, CKExceptionData)>();
+                        results.Add( (c, CKExceptionData.Create( msg )) );
+                    }
                 }
             }
             return results;
+        }
+
+        static bool ExecuteCommand(IActivityMonitor monitor, ObservableDomainSidekick h, in SidekickCommand cmd, ObservableDomainCommand c, ref List<(object, CKExceptionData)>? errors)
+        {
+            try
+            {
+                return h.ExecuteCommand( monitor, in cmd );
+            }
+            catch( Exception ex )
+            {
+                monitor.Error( "Error while handling command.", ex );
+                if( errors == null ) errors = new List<(object, CKExceptionData)>();
+                errors.Add( (c, CKExceptionData.CreateFrom( ex )) );
+            }
+            // If an error occured, it's because, somehow it has been handled.
+            return true;
         }
 
         /// <summary>
@@ -364,6 +424,7 @@ namespace CK.Observable
                 }
             }
             _sidekicks.Clear();
+            _currentIndex.Clear();
         }
 
         internal void Load( BinaryDeserializer r )

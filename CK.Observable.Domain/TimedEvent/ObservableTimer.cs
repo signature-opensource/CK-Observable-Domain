@@ -21,16 +21,14 @@ namespace CK.Observable
 
         /// <summary>
         /// Initializes a new unnamed <see cref="ObservableTimer"/> bound to the current <see cref="ObservableDomain"/>.
-        /// Initial configuration is adjusted by <see cref="AdjustNextDueTimeUtc(DateTime, DateTime, int)"/> with base time <see cref="DateTime.UtcNow"/>.
         /// </summary>
-        /// <param name="firstDueTimeUtc">
-        /// The first time where the event must be fired. This is adjusted by <see cref="AdjustNextDueTimeUtc(DateTime, DateTime, int)"/> based on <see cref="DateTime.UtcNow"/>.
-        /// </param>
+        /// <param name="firstDueTimeUtc">The first time where the event must be fired.</param>
         /// <param name="intervalMilliSeconds">The interval in millisecond (defaults to 1 second). Must be positive.</param>
         /// <param name="isActive">False to initially deactivate this timer. By default, <see cref="IsActive"/> is true.</param>
         public ObservableTimer( DateTime firstDueTimeUtc, int intervalMilliSeconds = 1000, bool isActive = true )
         {
-            ExpectedDueTimeUtc = AdjustNextDueTimeUtc( DateTime.UtcNow, firstDueTimeUtc, intervalMilliSeconds );
+            CheckArguments( firstDueTimeUtc, intervalMilliSeconds );
+            ExpectedDueTimeUtc = firstDueTimeUtc;
             _milliSeconds = intervalMilliSeconds;
             _isActive = isActive;
             ReusableArgs = new ObservableTimerEventArgs( this );
@@ -38,12 +36,9 @@ namespace CK.Observable
 
         /// <summary>
         /// Initializes a new named <see cref="ObservableTimer"/> bound to the current <see cref="ObservableDomain"/>.
-        /// Initial configuration is adjusted by <see cref="AdjustNextDueTimeUtc(DateTime, DateTime, int)"/> with base time <see cref="DateTime.UtcNow"/>.
         /// </summary>
         /// <param name="name">Name of the timer. Can be null.</param>
-        /// <param name="firstDueTimeUtc">
-        /// The first time where the event must be fired. This is adjusted by <see cref="AdjustNextDueTimeUtc(DateTime, DateTime, int)"/> based on <see cref="DateTime.UtcNow"/>.
-        /// </param>
+        /// <param name="firstDueTimeUtc">The first time where the event must be fired.</param>
         /// <param name="intervalMilliSeconds">The interval in millisecond (defaults to 1 second). Must be positive.</param>
         /// <param name="isActive">False to initially deactivate this timer. By default, <see cref="IsActive"/> is true.</param>
         public ObservableTimer( string name, DateTime firstDueTimeUtc, int intervalMilliSeconds = 1000, bool isActive = true )
@@ -143,15 +138,13 @@ namespace CK.Observable
         /// <summary>
         /// Reconfigures this <see cref="ObservableTimer"/> with a new <see cref="DueTimeUtc"/> and <see cref="IntervalMilliSeconds"/>.
         /// </summary>
-        /// <param name="firstDueTimeUtc">
-        /// The first time where the event must be fired. If this time is in the past (but not <see cref="Util.UtcMinValue"/> nor <see cref="Util.UtcMaxValue"/>),
-        /// the event will be raised as soon as possible.
-        /// </param>
+        /// <param name="firstDueTimeUtc">The first time where the event must be fired.</param>
         /// <param name="intervalMilliSeconds">The interval in millisecond (defaults to 1 second).</param>
         public void Reconfigure( DateTime firstDueTimeUtc, int intervalMilliSeconds )
         {
             this.CheckDisposed();
-            ExpectedDueTimeUtc = AdjustNextDueTimeUtc( DateTime.UtcNow, firstDueTimeUtc, intervalMilliSeconds );
+            CheckArguments( firstDueTimeUtc, intervalMilliSeconds );
+            ExpectedDueTimeUtc = firstDueTimeUtc;
             _milliSeconds = intervalMilliSeconds;
             TimeManager.OnChanged( this );
         }
@@ -241,8 +234,7 @@ namespace CK.Observable
         /// <returns>The adjusted first due time, necessarily after the <paramref name="timeNowUtc"/>.</returns>
         public static DateTime AdjustNextDueTimeUtc( DateTime timeNowUtc, DateTime firstDueTimeUtc, int intervalMilliSeconds )
         {
-            if( firstDueTimeUtc.Kind != DateTimeKind.Utc ) throw new ArgumentException( nameof( firstDueTimeUtc ), "Must be a Utc DateTime." );
-            if( intervalMilliSeconds <= 0 ) throw new ArgumentOutOfRangeException( nameof( intervalMilliSeconds ) );
+            CheckArguments( firstDueTimeUtc, intervalMilliSeconds );
             if( firstDueTimeUtc != Util.UtcMinValue && firstDueTimeUtc != Util.UtcMaxValue )
             {
                 if( firstDueTimeUtc < timeNowUtc )
@@ -254,9 +246,10 @@ namespace CK.Observable
             return firstDueTimeUtc;
         }
 
-        internal override void OnDeactivate()
+        static void CheckArguments( DateTime firstDueTimeUtc, int intervalMilliSeconds )
         {
-            // A timer has nothing special to do on deactivation.
+            if( firstDueTimeUtc.Kind != DateTimeKind.Utc ) throw new ArgumentException( nameof( firstDueTimeUtc ), "Must be a Utc DateTime." );
+            if( intervalMilliSeconds <= 0 ) throw new ArgumentOutOfRangeException( nameof( intervalMilliSeconds ) );
         }
 
         /// <summary>

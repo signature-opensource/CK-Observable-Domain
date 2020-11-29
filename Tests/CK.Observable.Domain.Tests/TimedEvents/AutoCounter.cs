@@ -1,3 +1,4 @@
+using CK.Core;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -11,12 +12,12 @@ namespace CK.Observable.Domain.Tests.TimedEvents
         ObservableEventHandler _countChanged;
 
         /// <summary>
-        /// Initializes a new <see cref="AutoCounter"/> that start immediately.
+        /// Initializes a new <see cref="AutoCounter"/> that starts immediately.
         /// </summary>
         /// <param name="intervalMilliSeconds">Interval between <see cref="Count"/> increment.</param>
         public AutoCounter( int intervalMilliSeconds )
         {
-            _timer = new ObservableTimer(DateTime.UtcNow, intervalMilliSeconds, true) { Mode = ObservableTimerMode.Critical };
+            _timer = new ObservableTimer( DateTime.UtcNow, intervalMilliSeconds, true ) { Mode = ObservableTimerMode.Critical };
             _timer.Elapsed += IncrementCount;
         }
 
@@ -25,7 +26,11 @@ namespace CK.Observable.Domain.Tests.TimedEvents
         /// </summary>
         /// <param name="sender">The sender is our private ObservableTimer.</param>
         /// <param name="e">The event argument.</param>
-        void IncrementCount( object sender, ObservableTimedEventArgs e ) => Count++;
+        void IncrementCount( object sender, ObservableTimedEventArgs e )
+        {
+            Count++;
+            e.Monitor.Info( $"AutoCounter call n°{Count}." );
+        }
 
         AutoCounter( IBinaryDeserializer r, TypeReadInfo? info )
                 : base( RevertSerialization.Default )

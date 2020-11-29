@@ -16,7 +16,7 @@ namespace CK.Observable.League.Tests.MicroMachine
         [Test]
         public void AutoDisposed_works_accross_serialization()
         {
-            using var d = new ObservableDomain<Root>( TestHelper.Monitor, "TEST" );
+            using var d = new ObservableDomain<Root>(TestHelper.Monitor, "TEST", startTimer: true );
             d.Modify( TestHelper.Monitor, () =>
             {
                 d.Root.Machine.Clock.IsActive = true;
@@ -133,7 +133,7 @@ namespace CK.Observable.League.Tests.MicroMachine
             const int thingCount = 50;
             const int waitTimeBetweenThings = 50;
 
-            using var d = new ObservableDomain<Root>( TestHelper.Monitor, "TEST" );
+            using var d = new ObservableDomain<Root>(TestHelper.Monitor, "TEST", startTimer: true );
             d.Modify( TestHelper.Monitor, () =>
             {
                 d.Root.Machine.Configuration.IdentifyThingTimeout = TimeSpan.FromMilliseconds( 200 );

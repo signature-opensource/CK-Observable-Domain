@@ -41,7 +41,7 @@ public void Main()
 {
     // The generic ObservableDomain takes a class type - that is your ObservableRootObject.
     // Such strongly typed domain can have up to 4 roots.
-    var d = new ObservableDomain<MyApplicationRoot>();
+    using var d = new ObservableDomain<MyApplicationRoot>();
 
     // When using Modify(), you hold a write lock, and can change properties.
     TransactionResult tr = d.Modify( () =>

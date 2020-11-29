@@ -45,6 +45,8 @@ namespace CK.Observable.Device
 
         internal interface IDeviceBridge
         {
+            ObservableDomainSidekick Sidekick { get; }
+
             BasicControlDeviceCommand CreateBasicCommand();
 
             IEnumerable<string> CurrentlyAvailableDeviceNames { get; }
@@ -177,7 +179,7 @@ namespace CK.Observable.Device
             c.DeviceName = DeviceName;
             c.Operation = operation;
             c.ControllerKey = nullControllerKey ? null : _bridge.ControllerKey;
-            Domain.SendCommand( c );
+            Domain.SendCommand( c, _bridge.Sidekick );
         }
 
         /// <summary>
@@ -191,13 +193,13 @@ namespace CK.Observable.Device
         protected T CreateCommand<T>( Action<T>? configuration = null ) where T : DeviceCommand, new() => _bridge.CreateCommand<T>( configuration );
 
         /// <summary>
-        /// Simple helper that calls <see cref="CreateCommand{T}(Action{T}?)"/> and <see cref="DomainView.SendCommand(object)"/>.
+        /// Simple helper that calls <see cref="CreateCommand{T}(Action{T}?)"/> and <see cref="DomainView.SendCommand(in ObservableDomainCommand)"/>.
         /// </summary>
         /// <typeparam name="T">The type of the command to create.</typeparam>
         /// <param name="configuration">Optional configurator of the command.</param>
         protected void CmdSend<T>( Action<T>? configuration = null ) where T : DeviceCommand, new()
         {
-            Domain.SendCommand( CreateCommand( configuration ) );
+            Domain.SendCommand( CreateCommand( configuration ), _bridge.Sidekick );
         }
 
     }

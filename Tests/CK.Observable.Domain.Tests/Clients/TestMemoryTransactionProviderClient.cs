@@ -13,13 +13,13 @@ namespace CK.Observable.Domain.Tests.Clients
             _domainCreatedStream = domainCreatedStream;
         }
 
-        public override void OnDomainCreated( IActivityMonitor monitor, ObservableDomain d )
+        public override void OnDomainCreated( IActivityMonitor monitor, ObservableDomain d, ref bool startTimer )
         {
             if( _domainCreatedStream != null )
             {
                 d.Load( monitor, _domainCreatedStream );
             }
-            base.OnDomainCreated( monitor, d );
+            base.OnDomainCreated( monitor, d, ref startTimer );
         }
 
         public MemoryStream CreateStreamFromSnapshot()
@@ -30,7 +30,7 @@ namespace CK.Observable.Domain.Tests.Clients
             return ms;
         }
 
-        protected override ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, Func<ObservableDomain, bool> loadHook )
+        protected override ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, bool? startTimer )
         {
             throw new NotImplementedException( "This is not called since LoadOrCreateAndInitializeSnapshot is not called here." );
         }

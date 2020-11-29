@@ -24,9 +24,10 @@ namespace CK.Observable
         /// </summary>
         /// <param name="monitor">The monitor used to log the construction of this domain. Cannot be null.</param>
         /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
+        /// <param name="startTimer">Whether to initially start the <see cref="TimeManager"/>.</param>
         /// <param name="serviceProvider">The service providers that will be used to resolve the <see cref="ObservableDomainSidekick"/> objects.</param>
-        public ObservableDomain( IActivityMonitor monitor, string domainName, IServiceProvider? serviceProvider = null )
-            : this( monitor, domainName, null, serviceProvider )
+        public ObservableDomain( IActivityMonitor monitor, string domainName, bool startTimer, IServiceProvider? serviceProvider = null )
+            : this(monitor, domainName, startTimer, null, serviceProvider)
         {
         }
 
@@ -37,14 +38,14 @@ namespace CK.Observable
         /// </summary>
         /// <param name="monitor">The monitor used to log the construction of this domain. Cannot be null.</param>
         /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
+        /// <param name="startTimer">Whether to initially start the <see cref="TimeManager"/>.</param>
         /// <param name="client">The observable client (head of the Chain of Responsibility) to use. Can be null.</param>
         /// <param name="serviceProvider">The service providers that will be used to resolve the <see cref="ObservableDomainSidekick"/> objects.</param>
-        /// <param name="postActionsMarshaller">Optional marshaller for post actions execution.</param>
         public ObservableDomain( IActivityMonitor monitor, string domainName,
+                                 bool startTimer,
                                  IObservableDomainClient? client,
-                                 IServiceProvider? serviceProvider = null,
-                                 IPostActionContextMarshaller? postActionsMarshaller = null )
-            : base( monitor, domainName, client, serviceProvider, postActionsMarshaller )
+                                 IServiceProvider? serviceProvider = null )
+            : base( monitor, domainName, startTimer, client, serviceProvider )
         {
             if( AllRoots.Count != 0 ) BindRoots();
             else using( var initialization = new InitializationTransaction( monitor, this ) )
@@ -64,8 +65,10 @@ namespace CK.Observable
         /// <param name="leaveOpen">True to leave the stream opened.</param>
         /// <param name="encoding">Optional encoding for characters. Defaults to UTF-8.</param>
         /// <param name="serviceProvider">The service providers that will be used to resolve the <see cref="ObservableDomainSidekick"/> objects.</param>
-        /// <param name="loadHook">The load hook to apply. See loadHook parameter of <see cref="ObservableDomain.Load(IActivityMonitor, Stream, bool, Encoding?, int, Func{ObservableDomain, bool}?)"/>.</param>
-        /// <param name="postActionsMarshaller">Optional marshaller for post actions execution.</param>
+        /// <param name="startTimer">
+        /// Ensures that the <see cref="ObservableDomain.TimeManager"/> is running or stopped.
+        /// When null, it keeps its previous state (it is initially stopped at domain creation) and then its current state is persisted.
+        /// </param>
         public ObservableDomain( IActivityMonitor monitor,
                                  string domainName,
                                  IObservableDomainClient client,
@@ -73,9 +76,8 @@ namespace CK.Observable
                                  bool leaveOpen = false,
                                  Encoding encoding = null,
                                  IServiceProvider? serviceProvider = null,
-                                 Func<ObservableDomain, bool>? loadHook = null,
-                                 IPostActionContextMarshaller? postActionsMarshaller = null )
-            : base( monitor, domainName, client, stream, leaveOpen, encoding, serviceProvider, loadHook, postActionsMarshaller )
+                                 bool? startTimer = null )
+            : base( monitor, domainName, client, stream, leaveOpen, encoding, serviceProvider, startTimer )
         {
             BindRoots();
         }

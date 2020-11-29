@@ -156,7 +156,11 @@ namespace CK.Observable
 
         internal abstract void OnAfterRaiseUnchanged( DateTime current, IActivityMonitor m );
 
-        internal abstract void OnDeactivate();
+        /// <summary>
+        /// A timer does nothing on dactivation. Reminders override this: if they are pooled, are
+        /// cleared and returned to the reminders' pool. 
+        /// </summary>
+        internal virtual void OnDeactivate() { }
 
         internal void OnSuspendableClockActivated( TimeSpan lastStopDuration )
         {

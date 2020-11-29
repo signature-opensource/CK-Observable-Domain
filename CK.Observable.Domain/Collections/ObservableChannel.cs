@@ -29,6 +29,10 @@ namespace CK.Observable
         {
         }
 
+        /// <summary>
+        /// Special no-op constructor fo specializations.
+        /// </summary>
+        /// <param name="_">unused parameter.</param>
         protected ObservableChannel( RevertSerialization _ ) : base( _ ) { }
 
         ObservableChannel( IBinaryDeserializer r, TypeReadInfo? info )

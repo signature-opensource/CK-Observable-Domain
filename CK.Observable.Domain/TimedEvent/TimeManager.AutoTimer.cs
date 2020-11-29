@@ -21,14 +21,16 @@ namespace CK.Observable
             // This is the shell for the trampoline state and the object used
             // for the RaiseWait().
             readonly TrampolineWorkItem _fromWorkItem;
+            DateTime _nextDueTime;
             // int.MinValue when this AutoTimer is disposed,
+            // -1 when it will be disposed.
             // 0 when no lost tick,
             // 1 when a reentrant tick has been detected (a trampoline is waiting).
             int _onTimeLostFlag;
 
             /// <summary>
             /// Initializes a new <see cref="AutoTimer"/> for a domain.
-            /// <see cref="IsActive"/> is initially true.
+            /// <see cref="IsActive"/> is initially false.
             /// </summary>
             /// <param name="domain">The associated domain.</param>
             public AutoTimer( ObservableDomain domain )
@@ -36,7 +38,7 @@ namespace CK.Observable
                 Domain = domain ?? throw new ArgumentNullException( nameof( domain ) );
                 _timer = new Timer( _timerCallback, this, Timeout.Infinite, Timeout.Infinite );
                 _fromWorkItem = new TrampolineWorkItem( this );
-                IsActive = true;
+                _nextDueTime = Util.UtcMinValue;
             }
 
             class TrampolineWorkItem
@@ -53,7 +55,7 @@ namespace CK.Observable
                 bool trampolineRequired = false;
                 var ts = state as TrampolineWorkItem;
                 var t = ts?.Timer ?? (AutoTimer)state;
-                if( !t.IsActive ) return;
+                if( t._nextDueTime == Util.UtcMinValue || t._onTimeLostFlag < 0 ) return;
 
                 var domain = t.Domain;
                 var m = domain.ObtainDomainMonitor( 10, createAutonomousOnTimeout: false );
@@ -106,7 +108,7 @@ namespace CK.Observable
                         else
                         {
                             if( r.IsCanceled ) m.Warn( "Async operation canceled." );
-                            else if( r.Result.Item1 == TransactionResult.Empty )
+                            else if( r.Result.OnStartTransactionError == null && r.Result.Transaction == TransactionResult.Empty )
                             {
                                 // Failed to obtain the write lock.
                                 trampolineRequired = true;
@@ -125,14 +127,6 @@ namespace CK.Observable
                     ThreadPool.QueueUserWorkItem( _waitCallback, t._fromWorkItem );
                 }
             }
-
-            /// <summary>
-            /// Gets or sets whether the actual system timer is running or not.
-            /// This is the ultimate flag that can suspend totally timed events raising.
-            /// Setting it to true has no direct effect. The internal timer will be activated at
-            /// the start of the next domain Modify call.
-            /// </summary>
-            public bool IsActive { get; set; }
 
             /// <summary>
             /// Waits until the next call to <see cref="OnDueTimeAsync(IActivityMonitor)"/> from the internal timer finished.
@@ -164,11 +158,17 @@ namespace CK.Observable
             public ObservableDomain Domain { get; }
 
             /// <summary>
-            /// Simply calls <see cref="ObservableDomain.ModifyNoThrowAsync"/> with the shared <see cref="ObservableDomain.ObtainDomainMonitor(int, bool)"/>, null actions
+            /// Gets the next due time of the timer.
+            /// Defaults to <see cref="Util.UtcMinValue"/> when nothing is planned.
+            /// </summary>
+            public DateTime NextDueTime => _nextDueTime;
+
+            /// <summary>
+            /// Calls an internal version of <see cref="ObservableDomain.ModifyNoThrowAsync"/> with the shared <see cref="ObservableDomain.ObtainDomainMonitor(int, bool)"/>, null actions
             /// and 10 ms timeout: pending timed events are handled if any and if there is no current transaction: <see cref="TransactionResult.Empty"/> is
             /// returned if the write lock failed to be obtained.
             /// </summary>
-            protected virtual Task<(TransactionResult, Exception)> OnDueTimeAsync( IActivityMonitor m ) => Domain.ModifyNoThrowAsync( m, null, 10 );
+            protected virtual Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> OnDueTimeAsync( IActivityMonitor m ) => Domain.DoModifyNoThrowAsync( m, null, 10, true );
 
             /// <summary>
             /// Must do whatever is needed to call back this <see cref="OnDueTimeAsync(IActivityMonitor)"/> at <paramref name="nextDueTimeUtc"/> (or
@@ -177,13 +177,23 @@ namespace CK.Observable
             /// </summary>
             /// <param name="monitor">The monitor to use.</param>
             /// <param name="nextDueTimeUtc">
-            /// The expected callback time. <see cref="Util.UtcMinValue"/> or <see cref="Util.UtcMaxValue"/> pauses the timer.
+            /// The expected callback time. <see cref="Util.UtcMinValue"/> pauses the timer (just like when <see cref="IsActive"/> is false).
             /// </param>
             public virtual void SetNextDueTimeUtc( IActivityMonitor monitor, DateTime nextDueTimeUtc )
             {
-                if( IsDisposed ) throw new ObjectDisposedException( ToString() );
+                // Fast path (nonetheless, normalizing max to min).
+                if( nextDueTimeUtc == Util.UtcMaxValue ) nextDueTimeUtc = Util.UtcMinValue;
+                if( nextDueTimeUtc == _nextDueTime ) return;
+
+                // Allow Dispose to have been called here.
+                if( _onTimeLostFlag < 0 )
+                {
+                    monitor.Warn( _onTimeLostFlag == -1 ? "Domain is being disposed." : "Domain has been disposed." );
+                    nextDueTimeUtc = Util.UtcMinValue;
+                }
                 if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
-                if( nextDueTimeUtc == Util.UtcMinValue || nextDueTimeUtc == Util.UtcMaxValue || !IsActive )
+                _nextDueTime = nextDueTimeUtc;
+                if( nextDueTimeUtc == Util.UtcMinValue )
                 {
                     _timer.Change( Timeout.Infinite, Timeout.Infinite );
                     monitor.Debug( $"System.Timer paused." );
@@ -208,6 +218,11 @@ namespace CK.Observable
                 }
             }
 
+            internal void QuickStopBeforeDispose()
+            {
+                Interlocked.Exchange( ref _onTimeLostFlag, -1 );
+            }
+
             /// <summary>
             /// Disposes the internal <see cref="System.Threading.Timer"/> object.
             /// This is automatically called by <see cref="ObservableDomain.Dispose()"/> on the <see cref="TimeManager.Timer"/>:
@@ -215,14 +230,10 @@ namespace CK.Observable
             /// </summary>
             public void Dispose()
             {
-                if( _onTimeLostFlag >= 0 )
+                if( _onTimeLostFlag >= -1 )
                 {
                     _onTimeLostFlag = int.MinValue;
-                    using( var waiter = new AutoResetEvent( false ) )
-                    {
-                        _timer.Dispose( waiter );
-                        waiter.WaitOne();
-                    }
+                    _timer.Dispose();
                 }
             }
         }

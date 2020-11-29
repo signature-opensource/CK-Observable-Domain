@@ -49,14 +49,17 @@ namespace CK.Observable.League
         /// </summary>
         /// <param name="domainName">The new domain name.</param>
         /// <param name="rootTypes">The root types.</param>
+        /// <param name="initialOptions">The optional initial <see cref="Domain.Options"/>.</param>
         /// <returns>The new domain or null on error.</returns>
-        public Domain CreateDomain( string domainName, IEnumerable<string>? rootTypes )
+        public Domain CreateDomain(string domainName, IEnumerable<string>? rootTypes, ManagedDomainOptions? initialOptions = null)
         {
             if( String.IsNullOrWhiteSpace( domainName ) ) throw new ArgumentOutOfRangeException( nameof( domainName ) );
             Debug.Assert( _league != null );
             var roots = rootTypes?.ToArray() ?? Array.Empty<string>();
             IManagedDomain shell = _league!.CreateDomain( Domain.Monitor, domainName, roots );
-            var d = new Domain( this, shell, roots );
+            // Default options are provided by the shell: their default values are provided by the
+            // Client and JsonEventCollector code.
+            var d = new Domain( this, shell, roots, initialOptions ); 
             _domains.Add( domainName, d );
             return d;
         }
@@ -69,7 +72,7 @@ namespace CK.Observable.League
         /// <param name="domainName">The new domain name.</param>
         /// <param name="rootTypes">The root types.</param>
         /// <returns>The new domain or null on error.</returns>
-        public Domain CreateDomain( string domainName, params string[] rootTypes ) => CreateDomain( domainName, (IEnumerable<string>)rootTypes );
+        public Domain CreateDomain( string domainName, params string[] rootTypes ) => CreateDomain(domainName, (IEnumerable<string>)rootTypes);
 
 
         internal void OnDisposeDomain( Domain domain )
