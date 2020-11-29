@@ -105,19 +105,19 @@ namespace CK.Observable.League
             return Domain.ModifyAsync( monitor, () => actions.Invoke( monitor, Domain ), millisecondsTimeout );
         }
         
-        Task IObservableDomainAccess<Coordinator>.ModifyThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<Coordinator>> actions, int millisecondsTimeout )
+        Task<TransactionResult> IObservableDomainAccess<Coordinator>.ModifyThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<Coordinator>> actions, int millisecondsTimeout )
         {
             return Domain.ModifyThrowAsync( monitor, () => actions.Invoke( monitor, Domain ), millisecondsTimeout );
         }
 
-        async Task<TResult> IObservableDomainAccess<Coordinator>.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<Coordinator>, TResult> actions, int millisecondsTimeout )
+        async Task<(TResult, TransactionResult)> IObservableDomainAccess<Coordinator>.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<Coordinator>, TResult> actions, int millisecondsTimeout )
         {
             TResult r = default;
-            await Domain.ModifyThrowAsync( monitor, () => r = actions.Invoke( monitor, Domain ), millisecondsTimeout );
-            return r;
+            var tr = await Domain.ModifyThrowAsync( monitor, () => r = actions.Invoke( monitor, Domain ), millisecondsTimeout );
+            return (r,tr);
         }
 
-        Task<(Exception? OnStartTransactionError, TransactionResult Transaction, TransactionResult.AsyncResult PostActionsResult)> IObservableDomainAccess<Coordinator>.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<Coordinator>> actions, int millisecondsTimeout )
+        Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> IObservableDomainAccess<Coordinator>.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<Coordinator>> actions, int millisecondsTimeout )
         {
             return Domain.ModifyNoThrowAsync( monitor, () => actions.Invoke( monitor, Domain ), millisecondsTimeout );
         }

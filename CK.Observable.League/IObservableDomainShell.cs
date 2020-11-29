@@ -52,45 +52,14 @@ namespace CK.Observable.League
         /// </returns>
         Task<TransactionResult> ModifyAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> actions, int millisecondsTimeout = -1 );
 
-        /// <summary>
-        /// Same as <see cref="ModifyAsync"/> except that it will always throw on any error.
-        /// </summary>
-        /// <param name="monitor">The monitor to use.</param>
-        /// <param name="actions">The actions to execute on the <see cref="IObservableDomain"/>.</param>
-        /// <param name="millisecondsTimeout">
-        /// The maximum number of milliseconds to wait for a read access before giving up. Wait indefinitely by default.
-        /// </param>
-        /// <returns>The awaitable.</returns>
-        Task ModifyThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> actions, int millisecondsTimeout = -1 );
+        /// <inheritdoc cref="ObservableDomain.ModifyThrowAsync(IActivityMonitor, Action, int)"/>
+        Task<TransactionResult> ModifyThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> actions, int millisecondsTimeout = -1 );
 
-        /// <summary>
-        /// Same as <see cref="ModifyThrowAsync"/> with a returned value. Using this (when errors must be thrown) is easier and avoids a closure.
-        /// </summary>
-        /// <typeparam name="TResult">The type of the result.</typeparam>
-        /// <param name="monitor">The monitor to use.</param>
-        /// <param name="actions">The actions to execute on the <see cref="IObservableDomain"/> that return a value.</param>
-        /// <param name="millisecondsTimeout">
-        /// The maximum number of milliseconds to wait for a read access before giving up. Wait indefinitely by default.
-        /// </param>
-        /// <returns>The result.</returns>
-        Task<TResult> ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain, TResult> actions, int millisecondsTimeout = -1 );
+        /// <inheritdoc cref="IObservableDomainAccess{T}.ModifyThrowAsync(IActivityMonitor, Action{IActivityMonitor, IObservableDomain{T}}, int)"/>
+        Task<(TResult, TransactionResult)> ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain, TResult> actions, int millisecondsTimeout = -1 );
 
-        /// <summary>
-        /// Same as <see cref="ModifyAsync"/> except that it will never throw: any exception raised
-        /// by <see cref="IObservableDomainClient.OnTransactionStart(IActivityMonitor, ObservableDomain, DateTime)"/>
-        /// or <see cref="TransactionResult.ExecutePostActionsAsync(IActivityMonitor, bool)"/> is logged and returned.
-        /// </summary>
-        /// <param name="monitor">The monitor to use.</param>
-        /// <param name="actions">
-        /// The actions to execute on the <see cref="IObservableDomain"/>.
-        /// </param>
-        /// <param name="millisecondsTimeout">
-        /// The maximum number of milliseconds to wait for a read access before giving up. Wait indefinitely by default.
-        /// </param>
-        /// <returns>
-        /// Returns any initial exception, the transaction result (that may be <see cref="TransactionResult.Empty"/>) and post actions results.
-        /// </returns>
-        Task<(Exception? OnStartTransactionError, TransactionResult Transaction, TransactionResult.AsyncResult PostActionsResult)> ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> actions, int millisecondsTimeout = -1 );
+        /// <inheritdoc cref="ObservableDomain.ModifyNoThrowAsync(IActivityMonitor, Action, int)(IActivityMonitor, Action, int)"/>
+        Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> actions, int millisecondsTimeout = -1 );
 
         /// <summary>
         /// Reads the domain by protecting the <paramref name="reader"/> function in a <see cref="ObservableDomain.AcquireReadLock(int)"/>.

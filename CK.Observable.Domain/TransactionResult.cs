@@ -28,15 +28,23 @@ namespace CK.Observable
 
         /// <summary>
         /// The empty transaction result is used when absolutely nothing happened. It has no events and no commands,
-        /// the <see cref="StartTimeUtc"/> and <see cref="NextDueTimeUtc"/> are <see cref="Util.UtcMinValue"/>.
+        /// the <see cref="StartTimeUtc"/> is <see cref="Util.UtcMinValue"/>, <see cref="TransactionNumber"/> is 0
         /// </summary>
         public static readonly TransactionResult Empty = new TransactionResult( Array.Empty<CKExceptionData>(), Util.UtcMinValue );
 
         /// <summary>
-        /// Gets whether <see cref="Errors"/> is empty, <see cref="ClientError"/> is null and both <see cref="SuccessfulTransactionErrors"/>
-        /// and <see cref="CommandHandlingErrors"/> are empty.
+        /// Gets whether <see cref="Errors"/> is empty, <see cref="ClientError"/> is null, both <see cref="SuccessfulTransactionErrors"/>
+        /// and <see cref="CommandHandlingErrors"/> are empty, <see cref="PostActionsError"/> is null.
+        /// <para>
+        /// Note that any error during domain post actions execution (executed by the <see cref="ObservableDomainPostActionExecutor"/>) is outside
+        /// of this scope. 
+        /// </para>
         /// </summary>
-        public bool Success => Errors.Count == 0 && ClientError == null && SuccessfulTransactionErrors.Count == 0 && CommandHandlingErrors.Count == 0;
+        public bool Success => Errors.Count == 0
+                               && ClientError == null
+                               && SuccessfulTransactionErrors.Count == 0
+                               && CommandHandlingErrors.Count == 0
+                               && _postActionsError == null;
 
         /// <summary>
         /// Gets whether the <see cref="ClientError"/> is critical: it is the call to <see cref="IObservableDomainClient.OnTransactionCommit(in SuccessfulTransactionEventArgs)"/>
@@ -55,7 +63,7 @@ namespace CK.Observable
         /// <summary>
         /// Checks that <see cref="Success"/> is true otherwise throws an exception.
         /// </summary>
-        public void ThrowOnTransactionFailure()
+        public void ThrowOnFailure()
         {
             if( !Success )
             {
@@ -65,7 +73,7 @@ namespace CK.Observable
                     {
                         throw new Exception( $"There has been {Errors.Count} error(s) during the transaction and one of the domain client failed during the OnTransactionFailure call. See logs for details." );
                     }
-                    throw new Exception( $"An exception has been thrown by Domain a client during the OnTransactionCommit call. See logs for details.", CKException.CreateFrom( ClientError ) );
+                    throw new Exception( $"An exception has been thrown by a domain client during the OnTransactionCommit call. See logs for details." );
                 }
                 if( Errors.Count > 0 )
                 {
@@ -77,8 +85,14 @@ namespace CK.Observable
                 }
                 if( CommandHandlingErrors.Count > 0 )
                 {
-                    throw new Exception( $"There has been {CommandHandlingErrors.Count} error(s) raised by command handling. See logs for details." );
+                    throw new Exception( $"There has been {CommandHandlingErrors.Count} error(s) raised by sidekicks handling the commands. See logs for details." );
                 }
+                if( _postActionsError != null )
+                {
+                    throw new Exception( $"A post action failed. See logs for details." );
+                }
+                Debug.Assert( _domainPostActionsError != null && _domainPostActionsError.IsCompleted && _domainPostActionsError.Result != null );
+                throw new Exception( $"A domain post action eventually failed. See logs for details." );
             }
         }
 
@@ -116,9 +130,6 @@ namespace CK.Observable
         /// This is empty on success but this doesn't mean that everything went well: a <see cref="ClientError"/> may have occurred
         /// (and that is critical), or <see cref="SuccessfulTransactionErrors"/> or <see cref="CommandHandlingErrors"/> may have been
         /// thrown by sidekicks (this is less critical since the domain's transaction itself is fine).
-        /// <para>
-        /// Note that any errors raised by <see cref="ExecutePostActionsAsync(IActivityMonitor, bool)"/> are outside of the scope of this <see cref="TransactionResult"/>.
-        /// </para>
         /// </summary>
         public IReadOnlyList<CKExceptionData> Errors { get; }
 
@@ -141,16 +152,15 @@ namespace CK.Observable
         public IReadOnlyList<(object, CKExceptionData)> CommandHandlingErrors { get; private set; }
 
         /// <summary>
-        /// Gets whether at least one post actions has been enlisted thanks to the <see cref="SuccessfulTransactionEventArgs.LocalPostActions"/>
-        /// <see cref="IActionRegistrar{T}"/> and <see cref="ExecutePostActionsAsync(IActivityMonitor, bool)"/> has not been called yet.
+        /// Gets the error of the <see cref="SuccessfulTransactionEventArgs.PostActions"/> execution if any.
         /// </summary>
-        public bool HasLocalPostActions => (_postActions?.ActionCount ?? 0) > 0;
+        public Exception? PostActionsError { get; }
 
         /// <summary>
-        /// Gets whether at least one post actions has been enlisted thanks to the <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/>
-        /// <see cref="IActionRegistrar{T}"/> and <see cref="ExecutePostActionsAsync(IActivityMonitor, bool)"/> has not been called yet.
+        /// Gets the future or resolved error of the <see cref="ObservableDomainPostActionExecutor"/> if any.
+        /// Awaiting this enables to wait for the processing of <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/>.
         /// </summary>
-        public bool HasDomainPostActions => (_domainPostActions?.ActionCount ?? 0) > 0;
+        public Task<Exception?> DomainPostActionsError => _domainPostActionsError ?? _noErrorResult;
 
         /// <summary>
         /// Overridden to return mainly error related information.
@@ -162,46 +172,11 @@ namespace CK.Observable
             return $"{Errors.Count} transaction errors, {(IsCriticalError ? "with a" : "no" )} Critical Error, {SuccessfulTransactionErrors.Count} OnSuccessfulTransaction errors, {CommandHandlingErrors.Count} command errors handling.";
         }
 
-        /// <summary>
-        /// Captures the result of the <see cref="ExecutePostActionsAsync(IActivityMonitor, bool)"/>.
-        /// </summary>
-        public readonly struct AsyncResult
+        internal async Task ExecutePostActionsAsync( IActivityMonitor m, bool throwException = true )
         {
-            readonly Task<Exception?> _domainError;
-
-            /// <summary>
-            /// Gets the error if any.
-            /// </summary>
-            public Exception? PostActionsError { get; }
-
-            /// <summary>
-            /// Gets the future error of the <see cref="ObservableDomainPostActionExecutor"/> if any.
-            /// Awaiting this enables to wait for the processiing of <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/>.
-            /// </summary>
-            public Task<Exception?> DomainPostActionsError => _domainError ?? _noErrorResult;
-
-            internal AsyncResult( Exception? e, Task<Exception?> d )
-            {
-                PostActionsError = e;
-                _domainError = d;
-            }
-        }
-
-        /// <summary>
-        /// Attempts to execute all registered post actions if any. On success, the <see cref="ObservableDomainPostActionExecutor"/>
-        /// will execute any <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/>.
-        /// This can be called multiple times: it will always returns the same result.
-        /// </summary>
-        /// <param name="m">The monitor to use.</param>
-        /// <param name="throwException">Set it to false to log any exception and return it instead of rethrowing it.</param>
-        /// <returns>The exception (if <paramref name="throwException"/> is false) or null if no error occurred.</returns>
-        public async Task<AsyncResult> ExecutePostActionsAsync( IActivityMonitor m, bool throwException = true )
-        {
-            AsyncResult CreateResult() => new AsyncResult( _postActionsError, _domainPostActionsError );
-
             // Do this only once.
             var l = Interlocked.Exchange( ref _postActions, null );
-            if( l == null ) return CreateResult();
+            if( l == null ) return;
 
             // We keep the reference to the domain post actions (this may be useful one day).
             var d = _domainPostActions;
@@ -216,7 +191,7 @@ namespace CK.Observable
                     _forDomainPostActionsExecutor.SetResult( null );
                     _domainPostActionsErrorSource.SetResult( null );
                 }
-                return CreateResult();
+                return;
             }
             Debug.Assert( _forDomainPostActionsExecutor != null, "This result has been submitted to the Domain executor." );
 
@@ -249,7 +224,7 @@ namespace CK.Observable
             {
                 _forDomainPostActionsExecutor.SetResult( d );
             }
-            return CreateResult();
+            return;
 
             void ForgetDomainActions()
             {

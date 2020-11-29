@@ -83,7 +83,7 @@ namespace CK.Observable
         /// <para>
         /// When this is called, the <see cref="Domain"/>'s lock is held in read mode: objects can be read (but no write/modifications
         /// should occur). A typical implementation is to capture any required domain object's state and use
-        /// <see cref="SuccessfulTransactionEventArgs.LocalPostActions"/> or <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/>
+        /// <see cref="SuccessfulTransactionEventArgs.PostActions"/> or <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/>
         /// to post asynchronous actions (or to send commands thanks to <see cref="SuccessfulTransactionEventArgs.SendCommand(ObservableDomainCommand)"/>
         /// that will be processed by this or other sidekicks).
         /// </para>

@@ -39,7 +39,7 @@ namespace CK.Observable
         /// Any exception raised by this method will set <see cref="TransactionResult.IsCriticalError"/> to true.
         /// <para>
         /// Implementations may capture any required domain object's state and use
-        /// <see cref="SuccessfulTransactionEventArgs.LocalPostActions"/> or <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/>
+        /// <see cref="SuccessfulTransactionEventArgs.PostActions"/> or <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/>
         /// to post asynchronous actions (or to send commands thanks to <see cref="SuccessfulTransactionEventArgs.SendCommand(ObservableDomainCommand)"/>
         /// that will be processed by the sidekicks).
         /// </para>

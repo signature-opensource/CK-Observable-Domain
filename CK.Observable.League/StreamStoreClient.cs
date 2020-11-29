@@ -90,7 +90,7 @@ namespace CK.Observable.League
         {
             CreateSnapshot( c.Monitor, c.Domain, false );
             // We save the snapshot if we must (and there is no compensation for this of course).
-            if( c.CommitTimeUtc >= _nextSave ) c.LocalPostActions.Add( ctx => SaveAsync( ctx.Monitor ) );
+            if( c.CommitTimeUtc >= _nextSave ) c.PostActions.Add( ctx => SaveAsync( ctx.Monitor ) );
             Next?.OnTransactionCommit( c );
         }
 

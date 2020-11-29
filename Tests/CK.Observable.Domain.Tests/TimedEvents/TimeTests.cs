@@ -79,9 +79,8 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             {
             }
 
-            protected override Task<(Exception? OnStartTransactionError, TransactionResult Transaction, TransactionResult.AsyncResult PostActionsResult)> OnDueTimeAsync( IActivityMonitor m ) => Task.FromResult(((Exception?)null,TransactionResult.Empty,new TransactionResult.AsyncResult()));
+            protected override Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> OnDueTimeAsync( IActivityMonitor m ) => Task.FromResult(((Exception?)null,TransactionResult.Empty));
         }  
-
 
         [Test]
         public void timed_event_trigger_at_the_start_of_the_Modify()
@@ -130,7 +129,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
         public void auto_counter_works_as_expected()
         {
             RelayedCounter = 0;
-            const int waitTime = 100 * 10;
+            const int waitTime = 100 * 10 + 200 /*Security*/;
             using( var d = new ObservableDomain( TestHelper.Monitor, nameof( auto_counter_works_as_expected ), startTimer: true ) )
             {
                 AutoCounter counter = null;
@@ -143,13 +142,13 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 TestHelper.Monitor.Trace( $"new AutoCounter( 100 ) done. Waiting {waitTime} ms." );
                 Thread.Sleep( waitTime );
                 TestHelper.Monitor.Trace( $"End of Waiting." );
-                d.TimeManager.Timer.WaitForNext( 200 ).Should().BeTrue( "AutoTimer is dead." );
+                d.TimeManager.Timer.WaitForNext( 200 ).Should().BeTrue( "AutoTimer must NOT be dead." );
 
                 using( d.AcquireReadLock() )
                 {
                     TestHelper.Monitor.Trace( $"counter.Count = {counter.Count}." );
                     d.AllObjects.Single().Should().BeSameAs( counter );
-                    counter.Count.Should().Match( c => c == 11 || c == 12 );
+                    counter.Count.Should().Match( c => c >= 11 );
                     RelayedCounter.Should().Be( counter.Count );
                 }
             }

@@ -843,7 +843,7 @@ namespace CK.Observable
         /// <para>
         /// When this is called, the <see cref="Domain"/>'s lock is held in read mode: objects can be read (but no write/modifications
         /// should occur). A typical implementation is to capture any required domain object's state and use
-        /// <see cref="SuccessfulTransactionEventArgs.LocalPostActions"/> or <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/>
+        /// <see cref="SuccessfulTransactionEventArgs.PostActions"/> or <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/>
         /// to post asynchronous actions (or to send commands thanks to <see cref="SuccessfulTransactionEventArgs.SendCommand(ObservableDomainCommand)"/>
         /// that will be processed by the sidekicks).
         /// </para>
@@ -982,11 +982,8 @@ namespace CK.Observable
         /// Any exceptions raised by <see cref="IObservableDomainClient.OnTransactionStart(IActivityMonitor,ObservableDomain, DateTime)"/> are thrown
         /// by this method, but any other exceptions are caught, logged, and appears in <see cref="TransactionResult"/>.
         /// <para>
-        /// Pleas note that, being synchronous, this method doesn't execute the <see cref="TransactionResult.ExecutePostActionsAsync"/>.
-        /// If <see cref="TransactionResult.HasLocalPostActions"/> or <see cref="TransactionResult.HasDomainPostActions"/> are true, this
-        /// means that no side effects will be executed which could be dangerous. And if you call this yourself, there will be no differences
-        /// between local and domain post actions (domain post actions will be executed after the local ones but with no guaranty of ordering
-        /// regarding the previous or future transactions).
+        /// Please note that, being synchronous, this method doesn't execute the post actions or domain post actions.
+        /// If there are post action or domain post actions, they won't be executed.
         /// </para>
         /// </summary>
         /// <param name="monitor">Monitor to use. Cannot be null.</param>
@@ -1056,9 +1053,10 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Modifies this ObservableDomain and executes the <see cref="SuccessfulTransactionEventArgs.LocalPostActions"/> and <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/>.
+        /// Modifies this ObservableDomain, executes the <see cref="SuccessfulTransactionEventArgs.PostActions"/> and, on success,
+        /// <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/> are sent to the <see cref="ObservableDomainPostActionExecutor"/>.
         /// Any exceptions raised by <see cref="IObservableDomainClient.OnTransactionStart(IActivityMonitor,ObservableDomain, DateTime)"/> (at the start of the process)
-        /// and by any post actions (after the successful commit or failed transaction) are thrown by this method.
+        /// and by any post actions (after the successful commit) are thrown by this method.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="actions">
@@ -1081,8 +1079,9 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Same as <see cref="ModifyAsync(IActivityMonitor, Action, int)"/> but calls <see cref="TransactionResult.ThrowOnTransactionFailure()"/>:
-        /// this methods always throw on any error.
+        /// Same as <see cref="ModifyAsync(IActivityMonitor, Action, int)"/> but calls <see cref="TransactionResult.ThrowOnFailure()"/>:
+        /// this methods always throw on any error (except the error of the <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/>
+        /// since it may happen later).
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="actions">
@@ -1093,17 +1092,23 @@ namespace CK.Observable
         /// The maximum number of milliseconds to wait for a write access before giving up.
         /// Wait indefinitely by default.
         /// </param>
-        public async Task ModifyThrowAsync( IActivityMonitor monitor, Action actions, int millisecondsTimeout = -1 )
+        /// <returns>
+        /// The transaction result from <see cref="ObservableDomain.Modify"/>. <see cref="TransactionResult.Empty"/> when the
+        /// lock has not been taken before <paramref name="millisecondsTimeout"/>.
+        /// This is necessarily a successful result since otherwise an exception is thrown (note that the domain post actions
+        /// are executed later by the <see cref="ObservableDomainPostActionExecutor"/>).
+        /// </returns>
+        public async Task<TransactionResult> ModifyThrowAsync( IActivityMonitor monitor, Action actions, int millisecondsTimeout = -1 )
         {
             var r = await ModifyAsync( monitor, actions, millisecondsTimeout ).ConfigureAwait( false );
-            r.ThrowOnTransactionFailure();
+            r.ThrowOnFailure();
+            return r;
         }
 
         /// <summary>
         /// Safe version of <see cref="ModifyAsync(IActivityMonitor, Action, int)"/> that will never throw: any exception raised
         /// by <see cref="IObservableDomainClient.OnTransactionStart(IActivityMonitor, ObservableDomain, DateTime)"/>
-        /// or <see cref="TransactionResult.ExecutePostActionsAsync(IActivityMonitor, bool)"/> is logged and returned along with the
-        /// transaction result itself.
+        /// or by post actions execution is logged and returned in the <see cref="TransactionResult"/>.
         /// <para>
         /// If this method can, of course, be called from the application code, it has been designed to be called from background threads,
         /// typically from the <see cref="TimeManager.AutoTimer"/>.
@@ -1119,32 +1124,29 @@ namespace CK.Observable
         /// Wait indefinitely by default.
         /// </param>
         /// <returns>
-        /// Returns any initial exception, the transaction result (that may be <see cref="TransactionResult.Empty"/>) and post actions results.
+        /// Returns any initial exception, the transaction result (that may be <see cref="TransactionResult.Empty"/>).
         /// </returns>
-        public Task<(Exception? OnStartTransactionError, TransactionResult Transaction, TransactionResult.AsyncResult PostActionsResult)>
-                            ModifyNoThrowAsync( IActivityMonitor monitor, Action actions, int millisecondsTimeout = -1 )
+        public Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> ModifyNoThrowAsync( IActivityMonitor monitor, Action actions, int millisecondsTimeout = -1 )
         {
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
             CheckDisposed();
             return DoModifyNoThrowAsync( monitor, actions, millisecondsTimeout, false );
         }
 
-        internal async Task<(Exception?, TransactionResult, TransactionResult.AsyncResult)> DoModifyNoThrowAsync( IActivityMonitor monitor, Action actions, int millisecondsTimeout, bool fromTimer )
+        internal async Task<(Exception?, TransactionResult)> DoModifyNoThrowAsync( IActivityMonitor monitor, Action actions, int millisecondsTimeout, bool fromTimer )
         {
             TransactionResult tr = TransactionResult.Empty;
-            TransactionResult.AsyncResult postAction = default;
             if( TryEnterUpgradeableReadAndWriteLockAtOnce( millisecondsTimeout ) )
             {
                 var tEx = DoCreateObservableTransaction( monitor, throwException: false, fromModifyAsync: true );
                 Debug.Assert( (tEx.Item1 != null) != (tEx.Item2 != null), "The IObservableTransaction XOR IObservableDomainClient.OnTransactionStart() exception." );
-                if( tEx.Item2 != null ) return (tEx.Item2, tr, postAction);
+                if( tEx.Item2 != null ) return (tEx.Item2, tr);
 
                 tr = DoModifyAndCommit( actions, tEx.Item1!, fromTimer );
-                Debug.Assert( tr.Errors.Count == 0 || !tr.HasLocalPostActions, "Transaction Errors => No post actions." );
-                postAction = await tr.ExecutePostActionsAsync( monitor, throwException: false ).ConfigureAwait( false );
+                await tr.ExecutePostActionsAsync( monitor, throwException: false ).ConfigureAwait( false );
             }
             else monitor.Warn( $"WriteLock not obtained in {millisecondsTimeout} ms (returning TransactionResult.Empty)." );
-            return (null, tr, postAction);
+            return (null, tr);
         }
 
         bool TryEnterUpgradeableReadAndWriteLockAtOnce( int millisecondsTimeout )

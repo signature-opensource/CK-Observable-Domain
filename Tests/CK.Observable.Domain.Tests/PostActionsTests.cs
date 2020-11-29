@@ -248,10 +248,10 @@ namespace CK.Observable.Domain.Tests
             LocalNumbers.Select( x => x.Number ).Should().NotBeInAscendingOrder();
             DomainNumbers.Select( x => x.Number ).Should().BeInAscendingOrder();
 
-            Task Run( int num, IActivityMonitor monitor, ObservableDomain<SimpleRoot> d, Barrier b )
+            async Task Run( int num, IActivityMonitor monitor, ObservableDomain<SimpleRoot> d, Barrier b )
             {
                 b.SignalAndWait();
-                return d.ModifyThrowAsync( monitor, () =>
+                var tr = await d.ModifyThrowAsync( monitor, () =>
                 {
                     if( num == 0 ) d.Root.SendWait( 500, WaitTarget.PostActions );
                     d.Root.SendNumber( HandlerTarget.Local, useAsync );
@@ -261,6 +261,7 @@ namespace CK.Observable.Domain.Tests
                     d.Root.SendNumber( HandlerTarget.Local, useAsync );
                     d.Root.SendNumber( HandlerTarget.Domain, useAsync );
                 } );
+                await tr.DomainPostActionsError;
             }
         }
 

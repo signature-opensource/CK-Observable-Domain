@@ -168,10 +168,10 @@ namespace CK.Observable.Device
             protected Task<TransactionResult> ModifyAsync( IActivityMonitor monitor, Action actions, int millisecondsTimeout = -1 ) => _sidekick.Domain.ModifyAsync( monitor, actions, millisecondsTimeout );
 
             /// <inheritdoc cref="ObservableDomain.ModifyNoThrowAsync(IActivityMonitor, Action, int)"/>.
-            protected Task<(Exception? OnStartTransactionError, TransactionResult Transaction, TransactionResult.AsyncResult PostActionsResult)> ModifyNoThrowAsync( IActivityMonitor monitor, Action actions, int millisecondsTimeout = -1 ) => _sidekick.Domain.ModifyNoThrowAsync( monitor, actions, millisecondsTimeout );
+            protected Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> ModifyNoThrowAsync( IActivityMonitor monitor, Action actions, int millisecondsTimeout = -1 ) => _sidekick.Domain.ModifyNoThrowAsync( monitor, actions, millisecondsTimeout );
 
             /// <inheritdoc cref="ObservableDomain.ModifyThrowAsync(IActivityMonitor, Action, int)"/>.
-            protected Task ModifyThrowAsync( IActivityMonitor monitor, Action actions, int millisecondsTimeout = -1 ) => _sidekick.Domain.ModifyThrowAsync( monitor, actions, millisecondsTimeout );
+            protected Task<TransactionResult> ModifyThrowAsync( IActivityMonitor monitor, Action actions, int millisecondsTimeout = -1 ) => _sidekick.Domain.ModifyThrowAsync( monitor, actions, millisecondsTimeout );
 
             /// <summary>
             /// Called whenever the <see cref="Device"/> becames not null.

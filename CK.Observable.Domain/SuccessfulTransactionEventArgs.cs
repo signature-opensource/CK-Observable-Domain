@@ -62,7 +62,7 @@ namespace CK.Observable
         /// Registrar for actions (that can be synchronous as well as asynchronous) that must be executed after
         /// the transaction itself.
         /// </summary>
-        public IActionRegistrar<PostActionContext> LocalPostActions => _localPostActions;
+        public IActionRegistrar<PostActionContext> PostActions => _localPostActions;
 
         /// <summary>
         /// Registrar for actions (that can be synchronous as well as asynchronous) that must be executed after
