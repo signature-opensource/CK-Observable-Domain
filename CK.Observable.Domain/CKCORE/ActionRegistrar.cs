@@ -51,7 +51,7 @@ namespace CK.Core
         public void Add( Func<T, Task> action )
         {
             GuardAdd( action == null );
-            _actions.Add( action );
+            _actions.Add( action! );
         }
 
         /// <summary>
@@ -107,7 +107,7 @@ namespace CK.Core
         public void OnSuccess( Func<T, Task> handler )
         {
             GuardSucces( handler == null );
-            _onSuccess.Add( handler );
+            _onSuccess.Add( handler! );
         }
 
         /// <summary>

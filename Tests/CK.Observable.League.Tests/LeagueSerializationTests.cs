@@ -25,9 +25,11 @@ namespace CK.Observable.League.Tests
         public async Task empty_league_serialization()
         {
             var store = BasicLeagueTests.CreateStore( nameof( empty_league_serialization ) );
-            var league = await ObservableLeague.LoadAsync( TestHelper.Monitor, store )!;
+            var league = await ObservableLeague.LoadAsync( TestHelper.Monitor, store );
+            Debug.Assert( league != null );
             await league.CloseAsync( TestHelper.Monitor );
             var league2 = await ObservableLeague.LoadAsync( TestHelper.Monitor, store );
+            Debug.Assert( league2 != null );
             await league2.CloseAsync( TestHelper.Monitor );
         }
 
@@ -36,15 +38,16 @@ namespace CK.Observable.League.Tests
         {
             var store = BasicLeagueTests.CreateStore( nameof( empty_league_serialization ) );
             var league = await ObservableLeague.LoadAsync( TestHelper.Monitor, store )!;
-            await league.Coordinator.ModifyAsync( TestHelper.Monitor, ( m, d ) => d.Root.CreateDomain( "First", typeof( Model.School ).AssemblyQualifiedName ) );
+            await league.Coordinator.ModifyAsync( TestHelper.Monitor, ( m, d ) => d.Root.CreateDomain( "First", typeof( Model.School ).AssemblyQualifiedName! ) );
             // Using the non generic IObservableDomain.
-            await using( var f = await league.Find( "First" ).LoadAsync( TestHelper.Monitor ) )
+            await using( var f = await league.Find( "First" )!.LoadAsync( TestHelper.Monitor ) )
             {
                 await f.ModifyAsync( TestHelper.Monitor, ( m, d ) => ((IObservableDomain<Model.School>)d).Root.Persons.Add( new Model.Person() { FirstName = "A" } ) );
             }
             await league.CloseAsync( TestHelper.Monitor );
 
             var league2 = await ObservableLeague.LoadAsync( TestHelper.Monitor, store );
+            Debug.Assert( league2 != null );
             league2.Coordinator.Read( TestHelper.Monitor, ( m, d ) => d.Root.Domains.Count ).Should().Be( 1 );
             var first2 = league2.Find( "First" )!;
             first2.Should().NotBeNull();
