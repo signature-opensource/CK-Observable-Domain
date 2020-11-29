@@ -79,7 +79,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             {
             }
 
-            protected override Task<(TransactionResult, Exception)> OnDueTimeAsync( IActivityMonitor m ) => Task.FromResult<(TransactionResult, Exception)>((TransactionResult.Empty,null));
+            protected override Task<(Exception? OnStartTransactionError, TransactionResult Transaction, TransactionResult.AsyncResult PostActionsResult)> OnDueTimeAsync( IActivityMonitor m ) => Task.FromResult(((Exception?)null,TransactionResult.Empty,new TransactionResult.AsyncResult()));
         }  
 
 
@@ -143,7 +143,8 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 TestHelper.Monitor.Trace( $"new AutoCounter( 100 ) done. Waiting {waitTime} ms." );
                 Thread.Sleep( waitTime );
                 TestHelper.Monitor.Trace( $"End of Waiting." );
-                d.TimeManager.Timer.WaitForNext();
+                d.TimeManager.Timer.WaitForNext( 200 ).Should().BeTrue( "AutoTimer is dead." );
+
                 using( d.AcquireReadLock() )
                 {
                     TestHelper.Monitor.Trace( $"counter.Count = {counter.Count}." );
@@ -318,8 +319,10 @@ namespace CK.Observable.Domain.Tests.TimedEvents
         }
 
         [Test]
+        [Explicit]
         public void fifty_timers_from_20_to_1000_ms_in_action()
         {
+            Assume.That( TestHelper.IsExplicitAllowed, "Press Control key to run this test." );
             const int testTime = 5000;
             AutoCounter[] counters = null;
 
@@ -524,7 +527,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
 
                     } ).Success.Should().BeTrue();
                     TimeSpan reloadDelta = ReloadIfNeeded();
-                    Thread.Sleep( 3 * 100 + (int)reloadDelta.TotalMilliseconds );
+                    Thread.Sleep( 3 * 100 + (int)reloadDelta.TotalMilliseconds + 100/*Security*/ );
                     ReloadIfNeeded();
                 }
                 logs.Select( l => l.Text ).Should().Contain( "TestReminder: Working: Hello! (count:3)", "The 2 other logs are on the domain monitor!" );

@@ -82,14 +82,14 @@ namespace CK.Core
         /// <param name="reverseInitialActions">
         /// True to revert the initial action list: the last registered will be the first to be called.
         /// </param>
-        /// <param name="name">Optional name that describes the execution (for logs).</param>
+        /// <param name="name">Optional name that tags the execution (for logs).</param>
         /// <returns>The first exception that occurred or null on success.</returns>
         public async Task<Exception?> ExecuteAsync( bool throwException = true, bool reverseInitialActions = false, string name = "(unnamed)" )
         {
             if( _executing ) throw new InvalidOperationException( "ExecuteAsync reentrancy detected." );
             var actions = _reg._actions;
             if( reverseInitialActions ) actions.Reverse();
-            using( _monitor.OpenInfo( $"Execution '{name}': {actions.Count} initial actions{(reverseInitialActions ? " in reverse order" : "")}." ) )
+            using( _monitor.OpenInfo( $"[{name}]: {actions.Count} initial actions{(reverseInitialActions ? " in reverse order" : "")}." ) )
             {
                 _executing = true;
                 int idxCulprit = 0;
@@ -124,12 +124,12 @@ namespace CK.Core
                 catch( Exception ex )
                 {
                     actions.RemoveRange( 0, idxCulprit );
-                    using( _monitor.OpenError( $"Execution '{name}' error.", ex ) )
+                    using( _monitor.OpenError( $"[{name}]: error, leaving {actions.Count} not executed actions.", ex ) )
                     {
                         if( _reg._onError == null ) _monitor.Trace( "There is no registered error handler." );
                         else
                         {
-                            using( _monitor.OpenTrace( $"Calling {_reg._onError.Count} error handlers." ) )
+                            using( _monitor.OpenInfo( $"Calling {_reg._onError.Count} error handlers." ) )
                             {
                                 await RaiseError( _reg._onError, ex, name ).ConfigureAwait( false );
                             }
@@ -147,7 +147,7 @@ namespace CK.Core
                     if( _reg._onFinally == null ) _monitor.Trace( "There is no registered final handler." );
                     else
                     {
-                        using( _monitor.OpenTrace( $"Calling {_reg._onFinally.Count} final handlers." ) )
+                        using( _monitor.OpenInfo( $"Calling {_reg._onFinally.Count} final handlers." ) )
                         {
                             await RaiseFinally( _reg._onFinally, name );
                         }
@@ -180,7 +180,7 @@ namespace CK.Core
                         }
                         catch( Exception ex )
                         {
-                            _monitor.Error( $"Execution '{name}': While executing success handler. This is ignored.", ex );
+                            _monitor.Error( $"[{name}]: While executing success handler. This is ignored.", ex );
                         }
                     }
                     success.RemoveRange( 0, roundCount );
@@ -213,7 +213,7 @@ namespace CK.Core
                         }
                         catch( Exception exError )
                         {
-                            _monitor.Error( $"Execution '{name}': While handling error. This is ignored.", exError );
+                            _monitor.Error( $"[{name}]: While handling error. This is ignored.", exError );
                         }
                     }
                     errors.RemoveRange( 0, roundCount );
@@ -245,7 +245,7 @@ namespace CK.Core
                         }
                         catch( Exception ex )
                         {
-                            _monitor.Error( $"Execution '{name}': While executing final handler. This is ignored.", ex );
+                            _monitor.Error( $"[{name}]: While executing final handler. This is ignored.", ex );
                         }
                     }
                     final.RemoveRange( 0, roundCount );

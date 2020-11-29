@@ -366,7 +366,7 @@ namespace CK.Observable.Domain.Tests
         [TestCase( "UseBase" )]
         public void private_event_handler_serialization( string type )
         {
-            var domain = new ObservableDomain(TestHelper.Monitor, nameof(private_event_handler_serialization), startTimer: true );
+            using var domain = new ObservableDomain(TestHelper.Monitor, nameof(private_event_handler_serialization), startTimer: true );
 
             PrivateHandlerObject? o = null;
             domain.Modify( TestHelper.Monitor, () =>

@@ -169,7 +169,7 @@ namespace CK.Observable.Device
         /// <summary>
         /// Handles the command if it is a <see cref="DeviceCommand"/> that the <see cref="Host"/> agrees to
         /// handle (see <see cref="IDeviceHost.Handle(IActivityMonitor, DeviceCommand)"/>) by executing it
-        /// directly if it is a <see cref="SyncDeviceCommand"/> or defer its execution to the <see cref="SidekickCommand.LocalPostActions"/>
+        /// directly if it is a <see cref="SyncDeviceCommand"/> or defer its execution to the <see cref="SidekickCommand.PostActions"/>
         /// if it is a <see cref="AsyncDeviceCommand"/>.
         /// </summary>
         /// <remarks>
@@ -186,7 +186,7 @@ namespace CK.Observable.Device
                 if( e.Success )
                 {
                     if( e.IsAsync == false ) e.Execute( monitor );
-                    else command.LocalPostActions.Add( c => e.ExecuteAsync( c.Monitor ) );
+                    else command.PostActions.Add( c => e.ExecuteAsync( c.Monitor ) );
                     return true;
                 }
             }

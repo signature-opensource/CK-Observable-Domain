@@ -108,7 +108,7 @@ namespace CK.Observable
                         else
                         {
                             if( r.IsCanceled ) m.Warn( "Async operation canceled." );
-                            else if( r.Result.Item1 == TransactionResult.Empty )
+                            else if( r.Result.OnStartTransactionError == null && r.Result.Transaction == TransactionResult.Empty )
                             {
                                 // Failed to obtain the write lock.
                                 trampolineRequired = true;
@@ -168,7 +168,7 @@ namespace CK.Observable
             /// and 10 ms timeout: pending timed events are handled if any and if there is no current transaction: <see cref="TransactionResult.Empty"/> is
             /// returned if the write lock failed to be obtained.
             /// </summary>
-            protected virtual Task<(TransactionResult, Exception)> OnDueTimeAsync( IActivityMonitor m ) => Domain.DoModifyNoThrowAsync( m, null, 10, true );
+            protected virtual Task<(Exception? OnStartTransactionError, TransactionResult Transaction, TransactionResult.AsyncResult PostActionsResult)> OnDueTimeAsync( IActivityMonitor m ) => Domain.DoModifyNoThrowAsync( m, null, 10, true );
 
             /// <summary>
             /// Must do whatever is needed to call back this <see cref="OnDueTimeAsync(IActivityMonitor)"/> at <paramref name="nextDueTimeUtc"/> (or
@@ -185,7 +185,12 @@ namespace CK.Observable
                 if( nextDueTimeUtc == Util.UtcMaxValue ) nextDueTimeUtc = Util.UtcMinValue;
                 if( nextDueTimeUtc == _nextDueTime ) return;
 
-                if( IsDisposed ) throw new ObjectDisposedException( ToString() );
+                // Allow Dispose to have been called here.
+                if( _onTimeLostFlag < 0 )
+                {
+                    monitor.Warn( _onTimeLostFlag == -1 ? "Domain is being disposed." : "Domain has been disposed." );
+                    nextDueTimeUtc = Util.UtcMinValue;
+                }
                 if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
                 _nextDueTime = nextDueTimeUtc;
                 if( nextDueTimeUtc == Util.UtcMinValue )
@@ -213,7 +218,10 @@ namespace CK.Observable
                 }
             }
 
-            internal void QuickStopBeforeDispose() => Interlocked.Exchange( ref _onTimeLostFlag, -1 );
+            internal void QuickStopBeforeDispose()
+            {
+                Interlocked.Exchange( ref _onTimeLostFlag, -1 );
+            }
 
             /// <summary>
             /// Disposes the internal <see cref="System.Threading.Timer"/> object.

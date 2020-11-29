@@ -108,9 +108,14 @@ namespace CK.Observable.Device.Tests
             var monitor = new ActivityMonitor( "SampleDevice Loop." );
             for( ; ; )
             {
-                await Task.Delay( _period );
+                await Task.Delay( _period ).ConfigureAwait( false );
                 // Check and break the forever loop make the stop more reactive than the clasical while( !_stopToken.IsCancellationRequested ) { ... }.
-                if( _stopToken.IsCancellationRequested ) break;
+                if( _stopToken.IsCancellationRequested )
+                {
+                    monitor.Debug( "StopToken signaled." );
+                    break;
+                }
+                monitor.Debug( "Running." );
                 // This is where exposed message/count can be incoherent.
                 var message = $"{_messagePrefix} - {_count++}";
                 DangerousCurrentMessage = message;
@@ -121,7 +126,7 @@ namespace CK.Observable.Device.Tests
                 // such events, everything is safe!
                 // However, we should never trust the developper to NOT access such properties
                 // outside of an event context: such dangerous state exposure should be forbidden.
-                await _messageChanged.SafeRaiseAsync( monitor, this, message );
+                await _messageChanged.SafeRaiseAsync( monitor, this, message ).ConfigureAwait( false );
             }
             State = null;
             monitor.MonitorEnd();

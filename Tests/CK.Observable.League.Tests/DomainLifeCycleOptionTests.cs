@@ -42,7 +42,8 @@ namespace CK.Observable.League.Tests
                 Domain loaded = d.Root.Domains["AlwaysLoaded"];
                 loaded.Options = loaded.Options.SetLifeCycleOption( DomainLifeCycleOption.Default );
             } );
-
+            // !!!!!!!!!!!!!!!!!!!!WE SHOULD WAIT FOR THE DOMAIN ASYNC RESULT
+            await Task.Delay( 200 );
             loader.IsLoaded.Should().BeFalse( "The domain is no more alive since its LoadOption is Default and there is no active timed events." );
         }
 

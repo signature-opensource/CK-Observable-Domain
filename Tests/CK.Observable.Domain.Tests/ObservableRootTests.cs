@@ -17,11 +17,11 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void initializing_and_persisting_new_empty_domain()
         {
-            var d = new ObservableDomain<ApplicationState>(TestHelper.Monitor, "TEST", startTimer: true );
+            using var d = new ObservableDomain<ApplicationState>(TestHelper.Monitor, nameof( initializing_and_persisting_new_empty_domain), startTimer: true );
             d.Root.Should().NotBeNull();
             d.TransactionSerialNumber.Should().Be( 0 );
 
-            var d2 = SaveAndLoad( d );
+            using var d2 = SaveAndLoad( d );
             d.Root.Should().NotBeNull();
             d.TransactionSerialNumber.Should().Be( 0 );
         }
@@ -57,7 +57,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void serialization_tests()
         {
-            using( var d = new ObservableDomain<ApplicationState>(TestHelper.Monitor, "TEST", startTimer: true ) )
+            using( var d = new ObservableDomain<ApplicationState>(TestHelper.Monitor, nameof( serialization_tests ), startTimer: true ) )
             {
                 d.Modify( TestHelper.Monitor, () =>
                 {
@@ -71,7 +71,7 @@ namespace CK.Observable.Domain.Tests
                     }
                 } );
                 var services = new SimpleServiceContainer();
-                services.Add<ObservableDomain>( new ObservableDomain<ApplicationState>(TestHelper.Monitor, "TEST", startTimer: true ) );
+                services.Add<ObservableDomain>( new ObservableDomain<ApplicationState>(TestHelper.Monitor, nameof( serialization_tests ), startTimer: true ) );
                 BinarySerializer.IdempotenceCheck( d.Root, services );
             }
         }
@@ -82,7 +82,7 @@ namespace CK.Observable.Domain.Tests
             {
                 domain.Save( TestHelper.Monitor, s, leaveOpen: true );
                 s.Position = 0;
-                return new ObservableDomain<T>( TestHelper.Monitor, "TEST", null, s);
+                return new ObservableDomain<T>( TestHelper.Monitor, domain.DomainName, null, s);
             }
         }
     }

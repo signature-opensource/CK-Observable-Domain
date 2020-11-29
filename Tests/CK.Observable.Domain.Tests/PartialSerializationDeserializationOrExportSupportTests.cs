@@ -57,7 +57,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void serializable_but_not_exportable()
         {
-            var d = new ObservableDomain(TestHelper.Monitor, nameof(serializable_but_not_exportable), startTimer: true );
+            using var d = new ObservableDomain(TestHelper.Monitor, nameof(serializable_but_not_exportable), startTimer: true );
             d.Modify( TestHelper.Monitor, () =>
             {
                 new SerializableOnly() { Name = "Albert" };

@@ -179,7 +179,7 @@ namespace CK.Observable.Device
             c.DeviceName = DeviceName;
             c.Operation = operation;
             c.ControllerKey = nullControllerKey ? null : _bridge.ControllerKey;
-            Domain.SendCommand( c, _bridge );
+            Domain.SendCommand( c, _bridge.Sidekick );
         }
 
         /// <summary>

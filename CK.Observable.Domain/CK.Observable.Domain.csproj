@@ -9,6 +9,7 @@
   
   <ItemGroup>
     <PackageReference Include="CK.StObj.Model" />
+    <PackageReference Include="System.Threading.Channels" />
   </ItemGroup>
 
 </Project>

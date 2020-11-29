@@ -13,12 +13,18 @@ namespace CK.Observable
     /// </summary>
     public class TransactionResult
     {
+        static readonly Task<Exception?> _noErrorResult = Task.FromResult((Exception?)null );
+
         // These are used by SideKickManager.
-        internal ActionRegistrar<PostActionContext>? _localPostActions;
+        internal ActionRegistrar<PostActionContext>? _postActions;
         internal ActionRegistrar<PostActionContext>? _domainPostActions;
 
-        Task? _domainLockPrevious;
-        TaskCompletionSource<bool>? _domainLockCurrent;
+        string _domainName;
+        TaskCompletionSource<ActionRegistrar<PostActionContext>?> _forDomainPostActionsExecutor;
+        TaskCompletionSource<Exception?> _domainPostActionsErrorSource;
+
+        Exception? _postActionsError;
+        Task<Exception?> _domainPostActionsError;
 
         /// <summary>
         /// The empty transaction result is used when absolutely nothing happened. It has no events and no commands,
@@ -84,8 +90,15 @@ namespace CK.Observable
 
         /// <summary>
         /// Gets the time (UTC) of the transaction commit.
+        /// This is the time of the commit, even if the transaction is on error.
         /// </summary>
         public DateTime CommitTimeUtc { get; }
+
+        /// <summary>
+        /// Gets the transaction number.
+        /// This is 0 if if the transaction is on error.
+        /// </summary>
+        public int TransactionNumber { get; }
 
         /// <summary>
         /// Gets the commands that the transaction generated (all the commands
@@ -131,7 +144,7 @@ namespace CK.Observable
         /// Gets whether at least one post actions has been enlisted thanks to the <see cref="SuccessfulTransactionEventArgs.LocalPostActions"/>
         /// <see cref="IActionRegistrar{T}"/> and <see cref="ExecutePostActionsAsync(IActivityMonitor, bool)"/> has not been called yet.
         /// </summary>
-        public bool HasLocalPostActions => (_localPostActions?.ActionCount ?? 0) > 0;
+        public bool HasLocalPostActions => (_postActions?.ActionCount ?? 0) > 0;
 
         /// <summary>
         /// Gets whether at least one post actions has been enlisted thanks to the <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/>
@@ -145,95 +158,160 @@ namespace CK.Observable
         /// <returns>The success or error detail.</returns>
         public override string ToString()
         {
-            if( Success ) return $"Success ({(_localPostActions?.ActionCount ?? 0) + (_domainPostActions?.ActionCount ?? 0)} post actions waiting).";
-            return $"{Errors.Count} transaction errors, {(IsCriticalError ? "with a" : "no" )} Critical Error, {SuccessfulTransactionErrors.Count} successful transaction errors, {CommandHandlingErrors.Count} command errors handling.";
+            if( Success ) return $"Success ({(_postActions?.ActionCount ?? 0) + (_domainPostActions?.ActionCount ?? 0)} post actions waiting).";
+            return $"{Errors.Count} transaction errors, {(IsCriticalError ? "with a" : "no" )} Critical Error, {SuccessfulTransactionErrors.Count} OnSuccessfulTransaction errors, {CommandHandlingErrors.Count} command errors handling.";
         }
 
         /// <summary>
-        /// Attempts to execute all registered post actions if any. First the local post actions
-        /// and then the one's bound to the domain.
-        /// <para>
-        /// Note that there may be post actions to execute even if a <see cref="ClientError"/> exists.
-        /// </para>
+        /// Captures the result of the <see cref="ExecutePostActionsAsync(IActivityMonitor, bool)"/>.
+        /// </summary>
+        public readonly struct AsyncResult
+        {
+            readonly Task<Exception?> _domainError;
+
+            /// <summary>
+            /// Gets the error if any.
+            /// </summary>
+            public Exception? PostActionsError { get; }
+
+            /// <summary>
+            /// Gets the future error of the <see cref="ObservableDomainPostActionExecutor"/> if any.
+            /// Awaiting this enables to wait for the processiing of <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/>.
+            /// </summary>
+            public Task<Exception?> DomainPostActionsError => _domainError ?? _noErrorResult;
+
+            internal AsyncResult( Exception? e, Task<Exception?> d )
+            {
+                PostActionsError = e;
+                _domainError = d;
+            }
+        }
+
+        /// <summary>
+        /// Attempts to execute all registered post actions if any. On success, the <see cref="ObservableDomainPostActionExecutor"/>
+        /// will execute any <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/>.
+        /// This can be called multiple times: it will always returns the same result.
         /// </summary>
         /// <param name="m">The monitor to use.</param>
         /// <param name="throwException">Set it to false to log any exception and return it instead of rethrowing it.</param>
         /// <returns>The exception (if <paramref name="throwException"/> is false) or null if no error occurred.</returns>
-        public async Task<Exception?> ExecutePostActionsAsync( IActivityMonitor m, bool throwException = true )
+        public async Task<AsyncResult> ExecutePostActionsAsync( IActivityMonitor m, bool throwException = true )
         {
+            AsyncResult CreateResult() => new AsyncResult( _postActionsError, _domainPostActionsError );
+
+            // Do this only once.
+            var l = Interlocked.Exchange( ref _postActions, null );
+            if( l == null ) return CreateResult();
+
+            // We keep the reference to the domain post actions (this may be useful one day).
+            var d = _domainPostActions;
+            Debug.Assert( d != null );
+
+            // If an error occurred, directly signal the DomainPostActions with null: the Domain executor will skip it.
             if( !Success )
             {
-                // We cannot release our lock here without waiting for the previous one.
-                if( _domainLockPrevious != null ) await _domainLockPrevious;
-                _domainLockCurrent?.TrySetResult( true );
-                return null;
-            }
-            Exception? result = null;
-            var l = _localPostActions;
-            _localPostActions = null;
-            if( l != null && l.ActionCount > 0 )
-            {
-                result = await DoExecute( m, throwException, l, "Local" );
-            }
-            var d = _domainPostActions;
-            if( d != null && d.ActionCount > 0 )
-            {
-                if( _domainLockPrevious != null ) await _domainLockPrevious;
-                if( result != null )
+                m.Warn( $"Skipping execution of {l.ActionCount} post actions and {d.ActionCount} Domain post actions because of a previous error." );
+                if( _forDomainPostActionsExecutor != null )
                 {
-                    m.Warn( $"Skipping execution of {d.ActionCount} domain post actions since executing local post actions raised an error." );
+                    _forDomainPostActionsExecutor.SetResult( null );
+                    _domainPostActionsErrorSource.SetResult( null );
                 }
-                else
+                return CreateResult();
+            }
+            Debug.Assert( _forDomainPostActionsExecutor != null, "This result has been submitted to the Domain executor." );
+
+            if( l.ActionCount > 0 )
+            {
+                var ctx = new PostActionContext( m, l, this );
+                try
                 {
-                    _domainPostActions = null;
-                    try
+                    _postActionsError = await ctx.ExecuteAsync( throwException, name: $"domain '{_domainName}' (PostActions)" );
+                    if( _postActionsError != null )
                     {
-                        result = await DoExecute( m, throwException, d, "Domain" );
+                        ForgetDomainActions();
                     }
-                    finally
+                    else
                     {
-                        _domainLockCurrent?.TrySetResult( true );
+                        _forDomainPostActionsExecutor.SetResult( d );
                     }
                 }
+                catch( Exception ex )
+                {
+                    _postActionsError = ex; 
+                    ForgetDomainActions();
+                }
+                finally
+                {
+                    await ctx.DisposeAsync();
+                }
             }
-            return result;
+            else
+            {
+                _forDomainPostActionsExecutor.SetResult( d );
+            }
+            return CreateResult();
+
+            void ForgetDomainActions()
+            {
+                if( d != null && d.ActionCount > 0 )
+                {
+                    m.Warn( $"Skipping execution of {d.ActionCount} domain post actions since executing a post action raised an error." );
+                }
+                _forDomainPostActionsExecutor.SetResult( null );
+                // No execution leads to non error.
+                _domainPostActionsErrorSource.SetResult( null );
+            }
         }
 
-        async Task<Exception?> DoExecute( IActivityMonitor m, bool throwException, ActionRegistrar<PostActionContext> actions, string name )
+        internal Task<ActionRegistrar<PostActionContext>?> DomainActions => _forDomainPostActionsExecutor.Task;
+
+        internal void SetDomainPostActionsResult( Exception? result )
         {
-            Debug.Assert( actions != null && actions.ActionCount > 0 );
-            var ctx = new PostActionContext( m, actions, this );
-            try
-            {
-                return await ctx.ExecuteAsync( throwException, name: name );
-            }
-            finally
-            {
-                await ctx.DisposeAsync();
-            }
+            _domainPostActionsErrorSource.SetResult( result );
         }
 
         internal TransactionResult( SuccessfulTransactionEventArgs c )
         {
+            _domainName = c.Domain.DomainName;
             StartTimeUtc = c.StartTimeUtc;
             CommitTimeUtc = c.CommitTimeUtc;
             Commands = c._commands;
             Errors = Array.Empty<CKExceptionData>();
+            TransactionNumber = c.TransactionNumber;
             _domainPostActions = c._domainPostActions;
-            _localPostActions = c._localPostActions;
+            _postActions = c._localPostActions;
             SuccessfulTransactionErrors = Array.Empty<CKExceptionData>();
             CommandHandlingErrors = Array.Empty<(object, CKExceptionData)>();
         }
 
         internal TransactionResult( IReadOnlyList<CKExceptionData> errors, DateTime startTime )
         {
+            Debug.Assert( _postActions == null, "Leave the _postActions null as if the ExecutePostActions has been already called." );
             Debug.Assert( startTime != Util.UtcMinValue || Empty == null, "startTime == Util.UtcMinValue ==> is Empty" );
             StartTimeUtc = startTime;
             CommitTimeUtc = DateTime.UtcNow;
             Errors = errors;
+            Debug.Assert( TransactionNumber == 0 );
             Commands = Array.Empty<ObservableDomainCommand>();
             SuccessfulTransactionErrors = Array.Empty<CKExceptionData>();
             CommandHandlingErrors = Array.Empty<(object, CKExceptionData)>();
+        }
+
+        internal void Initialize( bool domainExecutorEnqueud )
+        {
+            if( domainExecutorEnqueud )
+            {
+                Debug.Assert( _postActions != null, "This result was initially successful." );
+                _forDomainPostActionsExecutor = new TaskCompletionSource<ActionRegistrar<PostActionContext>?>();
+                _domainPostActionsErrorSource = new TaskCompletionSource<Exception?>();
+                _domainPostActionsError = _domainPostActionsErrorSource.Task;
+            }
+            else
+            {
+                Debug.Assert( _forDomainPostActionsExecutor == null, "Useless since the domain executor will never call us." );
+                Debug.Assert( _postActionsError == null, "Non execution leads to non error." );
+                _domainPostActionsError = _noErrorResult;
+            }
         }
 
         internal void SetClientError( Exception ex )
@@ -249,12 +327,6 @@ namespace CK.Observable
         internal void SetCommandHandlingErrors( IReadOnlyList<(object, CKExceptionData)> errors )
         {
             CommandHandlingErrors = errors;
-        }
-
-        internal void SetDomainPostActionsLocks( Task? previous, TaskCompletionSource<bool>? current )
-        {
-            _domainLockPrevious = previous;
-            _domainLockCurrent = current;
         }
     }
 }

@@ -13,10 +13,10 @@ namespace CK.Observable.Domain.Tests
     public class ObservableSerializationTests
     {
         [TestCase( "Person" )]
-        //[TestCase( "SuspendableClock" )]
-        //[TestCase( "Timer" )]
-        //[TestCase( "Reminder" )]
-        //[TestCase( "AutoCounter" )]
+        [TestCase( "SuspendableClock" )]
+        [TestCase( "Timer" )]
+        [TestCase( "Reminder" )]
+        [TestCase( "AutoCounter" )]
         public void one_object_serialization( string type )
         {
             using var handler = TestHelper.CreateDomainHandler( $"{nameof( one_object_serialization )}-{type}", startTimer: false, serviceProvider: null );
@@ -35,7 +35,7 @@ namespace CK.Observable.Domain.Tests
 
             } ).Success.Should().BeTrue();
 
-            handler.Reload( TestHelper.Monitor, idempotenceCheck: true );
+            handler.Reload( TestHelper.Monitor, idempotenceCheck: type != "SuspendableClock" );
 
             using( handler.Domain.AcquireReadLock() )
             {
@@ -57,75 +57,8 @@ namespace CK.Observable.Domain.Tests
                 }
             }
 
-            handler.Reload( TestHelper.Monitor, idempotenceCheck: true );
+            handler.Reload( TestHelper.Monitor, idempotenceCheck: type != "SuspendableClock" );
         }
-
-
-        //[SerializationVersion( 0 )]
-        //class ForgetToCallBaseDeserializationCtor : InternalObject
-        //{
-        //    public ForgetToCallBaseDeserializationCtor()
-        //    {
-        //    }
-
-        //    protected ForgetToCallBaseDeserializationCtor( IBinaryDeserializerContext c )
-        //    // : base( c )
-        //    {
-        //        var r = c.StartReading();
-        //    }
-
-        //    void Write( BinarySerializer w )
-        //    {
-        //    }
-        //}
-
-        //[SerializationVersion( 0 )]
-        //class ForgetToCallBaseDeserializationCtorSpecialized : ForgetToCallBaseDeserializationCtor
-        //{
-        //    public ForgetToCallBaseDeserializationCtorSpecialized()
-        //    {
-        //    }
-
-        //    ForgetToCallBaseDeserializationCtorSpecialized( IBinaryDeserializerContext c )
-        //        : base( c )
-        //    {
-        //        var r = c.StartReading();
-        //    }
-
-        //    void Write( BinarySerializer w )
-        //    {
-        //    }
-        //}
-
-        //[TestCase( "" )]
-        //[TestCase( "debugMode" )]
-        //public void forgetting_to_call_base_deserialization_ctor_throws_explicit_InvalidDataException( string mode )
-        //{
-        //    string msgNoDebugMode = $"Missing \": base( c )\" call in deserialization constructor of '{typeof( ForgetToCallBaseDeserializationCtor ).AssemblyQualifiedName}'.";
-
-        //    using( var d = new ObservableDomain( TestHelper.Monitor, nameof( forgetting_to_call_base_deserialization_ctor_throws_explicit_InvalidDataException ) ) )
-        //    {
-        //        d.Modify( TestHelper.Monitor, () => new ForgetToCallBaseDeserializationCtor() );
-        //        d.AllInternalObjects.Should().HaveCount( 1 );
-
-        //        d.Invoking( x => TestHelper.SaveAndLoad( d, debugMode: mode == "debugMode" ) ).Should()
-        //              .Throw<InvalidDataException>()
-        //              .WithMessage( msgNoDebugMode );
-        //    }
-
-        //    string msgDebugModeForSpecialized = $"Read string failure: expected string 'After: CK.Observable.InternalObject*";
-        //    string msgForSpecialized = mode == "debugMode" ? msgDebugModeForSpecialized : msgNoDebugMode;
-
-        //    using( var d = new ObservableDomain( TestHelper.Monitor, nameof( forgetting_to_call_base_deserialization_ctor_throws_explicit_InvalidDataException ) ) )
-        //    {
-        //        d.Modify( TestHelper.Monitor, () => new ForgetToCallBaseDeserializationCtorSpecialized() );
-        //        d.AllInternalObjects.Should().HaveCount( 1 );
-
-        //        d.Invoking( x => TestHelper.SaveAndLoad( d, debugMode: mode == "debugMode" ) ).Should()
-        //              .Throw<InvalidDataException>()
-        //              .WithMessage( msgForSpecialized );
-        //    }
-        //}
 
         [Test]
         public void simple_idempotence_checks()

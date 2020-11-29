@@ -110,5 +110,7 @@ namespace CK.Observable
         /// </summary>
         /// <returns>True on success, false if one required sidekick failed to be instantiated.</returns>
         public bool EnsureSidekicks() => _d.EnsureSidekicks( _o );
+
+        public Random Random => _d._random;
     }
 }

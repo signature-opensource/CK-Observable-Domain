@@ -15,7 +15,7 @@ namespace CK.Observable.League.Tests
         [Test]
         public void coordinator_serialization()
         {
-            var d = new ObservableDomain<Coordinator>(TestHelper.Monitor, String.Empty, startTimer: true );
+            using var d = new ObservableDomain<Coordinator>(TestHelper.Monitor, String.Empty, startTimer: true );
             var services = new SimpleServiceContainer();
             services.Add<ObservableDomain>( new ObservableDomain<Coordinator>(TestHelper.Monitor, String.Empty, startTimer: true ) );
             BinarySerializer.IdempotenceCheck( d.Root, services );

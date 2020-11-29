@@ -35,6 +35,11 @@ namespace CK.Observable
         public DateTime CommitTimeUtc { get; }
 
         /// <summary>
+        /// Gets the transaction number.
+        /// </summary>
+        public int TransactionNumber { get; }
+
+        /// <summary>
         /// Gets the events that the transaction generated (all <see cref="ObservableObject"/> changes).
         /// Can be empty.
         /// </summary>
@@ -66,7 +71,12 @@ namespace CK.Observable
         /// </summary>
         public IActionRegistrar<PostActionContext> DomainPostActions => _domainPostActions;
 
-        internal SuccessfulTransactionEventArgs( ObservableDomain d, Func<string,int?> propertyId, IReadOnlyList<ObservableEvent> e, List<ObservableDomainCommand> c, DateTime startTime )
+        internal SuccessfulTransactionEventArgs( ObservableDomain d,
+                                                 Func<string,int?> propertyId,
+                                                 IReadOnlyList<ObservableEvent> e,
+                                                 List<ObservableDomainCommand> c,
+                                                 DateTime startTime,
+                                                 int tranNum )
             : base( d.CurrentMonitor )
         {
             _domain = d;
@@ -76,6 +86,7 @@ namespace CK.Observable
             _commands = c;
             StartTimeUtc = startTime;
             CommitTimeUtc = DateTime.UtcNow;
+            TransactionNumber = tranNum;
             Events = e;
         }
 

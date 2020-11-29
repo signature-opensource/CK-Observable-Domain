@@ -27,7 +27,7 @@ namespace CK.Observable
         /// Registrar for actions that will be executed sequentially but independently of any other
         /// actions issued by other transactions.
         /// </summary>
-        public IActionRegistrar<PostActionContext> LocalPostActions { get; }
+        public IActionRegistrar<PostActionContext> PostActions { get; }
 
         /// <summary>
         /// Registrar for actions (that can be synchronous as well as asynchronous) that must be executed after
@@ -41,7 +41,7 @@ namespace CK.Observable
             StartTimeUtc = s;
             CommitTimeUtc = c;
             Command = cmd;
-            LocalPostActions = local;
+            PostActions = local;
             DomainPostActions = domain;
         }
     }
