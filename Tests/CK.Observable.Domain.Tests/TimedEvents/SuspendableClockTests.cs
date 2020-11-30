@@ -122,10 +122,8 @@ namespace CK.Observable.Domain.Tests.TimedEvents
         }
 
         [Test]
-        [Explicit("CI Failure.")]
         public void SuspendableClock_serialization()
         {
-            Assume.That( TestHelper.IsExplicitAllowed, "Press Ctlr key to execute." );
             ReminderHasElapsed = false;
             ClockIsActiveChanged = false;
 
