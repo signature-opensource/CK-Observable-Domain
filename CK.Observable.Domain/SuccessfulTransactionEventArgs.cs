@@ -54,9 +54,20 @@ namespace CK.Observable
         public int? FindPropertyId( string propertyName ) => _propertyId( propertyName );
 
         /// <summary>
-        /// Adds a command to the ones already enqueued by <see cref="DomainView.SendCommand(object)"/>.
+        /// Adds a command to the ones already enqueued by <see cref="DomainView.SendCommand(in ObservableDomainCommand)"/>.
         /// </summary>
         public void SendCommand( in ObservableDomainCommand command ) => _commands.Add( command );
+
+        /// <summary>
+        /// Helper that calls <see cref="SendCommand(in ObservableDomainCommand)"/>.
+        /// </summary>
+        /// <param name="command">The command payload.</param>
+        /// <param name="knownTarget">The optional known target.</param>
+        /// <param name="isOptionalExecution">See <see cref="ObservableDomainCommand.IsOptionalExecution"/>.</param>
+        public void SendCommand( object command, object? knownTarget = null, bool isOptionalExecution = false )
+        {
+            _commands.Add( new ObservableDomainCommand( command, knownTarget, isOptionalExecution ) );
+        }
 
         /// <summary>
         /// Registrar for actions (that can be synchronous as well as asynchronous) that must be executed after

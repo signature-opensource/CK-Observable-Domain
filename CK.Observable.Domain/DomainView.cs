@@ -50,7 +50,7 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Helper that <see cref="SendCommand(in ObservableDomainCommand)"/>.
+        /// Helper that calls <see cref="SendCommand(in ObservableDomainCommand)"/>.
         /// </summary>
         /// <param name="command">The command payload.</param>
         /// <param name="knownTarget">The optional known target.</param>
