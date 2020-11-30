@@ -83,7 +83,7 @@ namespace CK.Observable
             lock( _runSignal )
             {
                 _stopped = true;
-                System.Threading.Monitor.Pulse( _runSignal );
+                System.Threading.Monitor.PulseAll( _runSignal );
             }
             monitor.MonitorEnd( $"Stopping DomainPostAction executor for '{_domain.DomainName}'." );
         }

@@ -203,12 +203,12 @@ namespace CK.Observable
                     var delta = nextDueTimeUtc - DateTime.UtcNow;
                     var ms = (int)Math.Ceiling( delta.TotalMilliseconds );
                     if( ms <= 0 ) ms = 0;
-                    if( !_timer.Change( ms, Timeout.Infinite ) )
+                    if( !_timer.Change( ms, 100 ) )
                     {
                         var msg = $"System.Timer.Change({ms}) failed.";
                         monitor.Warn( msg );
                         _timer.Change( Timeout.Infinite, Timeout.Infinite );
-                        if( !_timer.Change( ms, Timeout.Infinite ) )
+                        if( !_timer.Change( ms, 100 ) )
                         {
                             monitor.Fatal( msg );
                             return;
