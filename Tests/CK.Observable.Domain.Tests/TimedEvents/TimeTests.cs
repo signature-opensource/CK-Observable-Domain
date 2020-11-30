@@ -141,7 +141,10 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 } ).Success.Should().BeTrue();
                 TestHelper.Monitor.Trace( $"new AutoCounter( 100 ) done. Waiting {waitTime} ms." );
                 Thread.Sleep( waitTime );
-                TestHelper.Monitor.Trace( $"End of Waiting." );
+                using( d.AcquireReadLock() )
+                {
+                    TestHelper.Monitor.Trace( $"End of Waiting. counter.Count = {counter.Count}." );
+                }
                 d.TimeManager.Timer.WaitForNext( 200 ).Should().BeTrue( "AutoTimer must NOT be dead." );
 
                 using( d.AcquireReadLock() )
