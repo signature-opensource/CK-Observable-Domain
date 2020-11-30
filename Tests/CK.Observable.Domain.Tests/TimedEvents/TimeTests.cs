@@ -139,11 +139,11 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                     counter.CountChanged += Counter_CountChanged;
 
                 } ).Success.Should().BeTrue();
-                TestHelper.Monitor.Trace( $"new AutoCounter( 100 ) done. Waiting {waitTime} ms." );
+                TestHelper.Monitor.Trace( $"new AutoCounter( 100 ) done. Waiting {waitTime} ms. NextDueTime: '{d.TimeManager.Timer.NextDueTime}'." );
                 Thread.Sleep( waitTime );
                 using( d.AcquireReadLock() )
                 {
-                    TestHelper.Monitor.Trace( $"End of Waiting. counter.Count = {counter.Count}." );
+                    TestHelper.Monitor.Trace( $"End of Waiting. counter.Count = {counter.Count}. NextDueTime: '{d.TimeManager.Timer.NextDueTime}'." );
                 }
                 d.TimeManager.Timer.WaitForNext( 200 ).Should().BeTrue( "AutoTimer must NOT be dead." );
 
