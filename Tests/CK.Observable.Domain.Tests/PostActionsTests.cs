@@ -253,7 +253,7 @@ namespace CK.Observable.Domain.Tests
                 b.SignalAndWait();
                 var tr = await d.ModifyThrowAsync( monitor, () =>
                 {
-                    if( num == 0 ) d.Root.SendWait( 500, WaitTarget.PostActions );
+                    if( (num % 2) == 0 ) d.Root.SendWait( 500, WaitTarget.PostActions );
                     d.Root.SendNumber( HandlerTarget.Local, useAsync );
                     d.Root.SendNumber( HandlerTarget.Domain, useAsync );
                     d.Root.SendNumber( HandlerTarget.Local, useAsync );
@@ -297,7 +297,7 @@ namespace CK.Observable.Domain.Tests
                 b.SignalAndWait();
                 return d.ModifyThrowAsync( monitor, () =>
                 {
-                    if( num == 0 ) d.Root.SendWait( 500, WaitTarget.PostActions );
+                    if( (num % 2) == 0 ) d.Root.SendWait( 500, WaitTarget.PostActions );
                     d.Root.SendNumber( HandlerTarget.Local, useAsync );
                     d.Root.SendNumber( HandlerTarget.Domain, useAsync );
                     d.Root.CreateNewTimers( nbTimers, HandlerTarget.Local, 20, 20 );
