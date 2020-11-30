@@ -133,7 +133,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             SuspendableClock clock = null;
             handler.Domain.Modify( TestHelper.Monitor, () =>
             {
-                counter = new AutoCounter( (7*enoughMilliseconds) / 10 );
+                counter = new AutoCounter( (3*enoughMilliseconds) / 5 );
                 counter.IsRunning.Should().BeTrue();
                 reminder = new ObservableReminder( DateTime.UtcNow.AddMilliseconds( enoughMilliseconds / 2 ) );
                 reminder.Elapsed += Reminder_Elapsed;
@@ -223,7 +223,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             using( handler.Domain.AcquireReadLock() )
             {
                 ReminderHasElapsed.Should().BeFalse();
-                counter.Count.Should().Be( 3 );
+                counter.Count.Should().Be( 4 );
                 reminder.IsActive.Should().BeFalse();
             }
 
