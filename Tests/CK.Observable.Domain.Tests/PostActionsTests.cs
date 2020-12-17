@@ -202,7 +202,7 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
-        public async Task local_are_executed_before_domain_ones()
+        public async Task local_are_executed_before_domain_ones_when_parallelDomainPostActions_is_false()
         {
             ResetContext();
 
@@ -216,7 +216,8 @@ namespace CK.Observable.Domain.Tests
                 d.Root.SendNumber( HandlerTarget.Domain );
                 d.Root.SendNumber( HandlerTarget.Local );
                 d.Root.SendNumber( HandlerTarget.Domain );
-            } );
+            }, parallelDomainPostActions: false );
+
             LocalNumbers.Should().BeEquivalentTo( (0, 1000), (1, 1001), (2, 1002) );
             DomainNumbers.Should().BeEquivalentTo( (3, 0), (4, 1), (5, 2) );
 
@@ -228,7 +229,8 @@ namespace CK.Observable.Domain.Tests
                 d.Root.SendNumber( HandlerTarget.Domain );
                 d.Root.SendNumber( HandlerTarget.Local );
                 d.Root.SendNumber( HandlerTarget.Domain );
-            } );
+            }, parallelDomainPostActions: false );
+
             LocalNumbers.Should().BeEquivalentTo( (0, 1000), (1, 1001), (2, 1002), (6, 1003), (7, 1004), (8, 1005) );
             DomainNumbers.Should().BeEquivalentTo( (3, 0), (4, 1), (5, 2), (9, 3), (10, 4), (11, 5) );
         }

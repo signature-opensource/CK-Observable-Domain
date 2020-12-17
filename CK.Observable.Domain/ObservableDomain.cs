@@ -195,6 +195,7 @@ namespace CK.Observable
 
             public IEnumerator<ObservableObject> GetEnumerator() => _d._objects.Take( _d._objectsListCount )
                                                                                .Where( o => o != null )
+                                                                               .Select( o => o! ) // Waiting for https://github.com/dotnet/roslyn/issues/37468
                                                                                .GetEnumerator();
 
             IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
@@ -1053,10 +1054,12 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Modifies this ObservableDomain, executes the <see cref="SuccessfulTransactionEventArgs.PostActions"/> and, on success,
-        /// <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/> are sent to the <see cref="ObservableDomainPostActionExecutor"/>.
+        /// Modifies this ObservableDomain, and on success executes the <see cref="SuccessfulTransactionEventArgs.PostActions"/> and
+        /// send the <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/> to <see cref="ObservableDomainPostActionExecutor"/>.
+        /// <para>
         /// Any exceptions raised by <see cref="IObservableDomainClient.OnTransactionStart(IActivityMonitor,ObservableDomain, DateTime)"/> (at the start of the process)
         /// and by any post actions (after the successful commit) are thrown by this method.
+        /// </para>
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="actions">
@@ -1067,14 +1070,22 @@ namespace CK.Observable
         /// The maximum number of milliseconds to wait for a write access before giving up.
         /// Wait indefinitely by default.
         /// </param>
+        /// <param name="parallelDomainPostActions">
+        /// False to wait for the success of the <see cref="SuccessfulTransactionEventArgs.PostActions"/> before
+        /// allowing the <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/> to run: when PostActions fail, all domain post actions are skipped.
+        /// <para>
+        /// By default, post actions are executed and domain post actions can immediately be executed by the <see cref="ObservableDomainPostActionExecutor"/> (as
+        /// soon as all previous transaction's domain post actions have ran of course).
+        /// </para>
+        /// </param>
         /// <returns>
         /// The transaction result from <see cref="ObservableDomain.Modify"/>. <see cref="TransactionResult.Empty"/> when the
         /// lock has not been taken before <paramref name="millisecondsTimeout"/>.
         /// </returns>
-        public async Task<TransactionResult> ModifyAsync( IActivityMonitor monitor, Action actions, int millisecondsTimeout = -1 )
+        public async Task<TransactionResult> ModifyAsync( IActivityMonitor monitor, Action actions, int millisecondsTimeout = -1, bool parallelDomainPostActions = true )
         {
             var tr = DoModify( monitor, actions, millisecondsTimeout, fromModifyAsync: true );
-            await tr.ExecutePostActionsAsync( monitor, throwException: true ).ConfigureAwait( false );
+            await tr.ExecutePostActionsAsync( monitor, parallelDomainPostActions, throwException: true ).ConfigureAwait( false );
             return tr;
         }
 
@@ -1098,9 +1109,9 @@ namespace CK.Observable
         /// This is necessarily a successful result since otherwise an exception is thrown (note that the domain post actions
         /// are executed later by the <see cref="ObservableDomainPostActionExecutor"/>).
         /// </returns>
-        public async Task<TransactionResult> ModifyThrowAsync( IActivityMonitor monitor, Action actions, int millisecondsTimeout = -1 )
+        public async Task<TransactionResult> ModifyThrowAsync( IActivityMonitor monitor, Action actions, int millisecondsTimeout = -1, bool parallelDomainPostActions = true )
         {
-            var r = await ModifyAsync( monitor, actions, millisecondsTimeout ).ConfigureAwait( false );
+            var r = await ModifyAsync( monitor, actions, millisecondsTimeout, parallelDomainPostActions ).ConfigureAwait( false );
             r.ThrowOnFailure();
             return r;
         }
@@ -1123,17 +1134,25 @@ namespace CK.Observable
         /// The maximum number of milliseconds to wait for a write access before giving up.
         /// Wait indefinitely by default.
         /// </param>
+        /// <param name="parallelDomainPostActions">
+        /// False to wait for the success of the <see cref="SuccessfulTransactionEventArgs.PostActions"/> before
+        /// allowing the <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/> to run: when PostActions fail, all domain post actions are skipped.
+        /// <para>
+        /// By default, post actions are executed and domain post actions can immediately be executed by the <see cref="ObservableDomainPostActionExecutor"/> (as
+        /// soon as all previous transaction's domain post actions have ran of course).
+        /// </para>
+        /// </param>
         /// <returns>
         /// Returns any initial exception, the transaction result (that may be <see cref="TransactionResult.Empty"/>).
         /// </returns>
-        public Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> ModifyNoThrowAsync( IActivityMonitor monitor, Action actions, int millisecondsTimeout = -1 )
+        public Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> ModifyNoThrowAsync( IActivityMonitor monitor, Action actions, int millisecondsTimeout = -1, bool parallelDomainPostActions = true )
         {
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
             CheckDisposed();
-            return DoModifyNoThrowAsync( monitor, actions, millisecondsTimeout, false );
+            return DoModifyNoThrowAsync( monitor, actions, millisecondsTimeout, false, parallelDomainPostActions );
         }
 
-        internal async Task<(Exception?, TransactionResult)> DoModifyNoThrowAsync( IActivityMonitor monitor, Action actions, int millisecondsTimeout, bool fromTimer )
+        internal async Task<(Exception?, TransactionResult)> DoModifyNoThrowAsync( IActivityMonitor monitor, Action actions, int millisecondsTimeout, bool fromTimer, bool parallelDomainPostActions )
         {
             TransactionResult tr = TransactionResult.Empty;
             if( TryEnterUpgradeableReadAndWriteLockAtOnce( millisecondsTimeout ) )
@@ -1143,7 +1162,7 @@ namespace CK.Observable
                 if( tEx.Item2 != null ) return (tEx.Item2, tr);
 
                 tr = DoModifyAndCommit( actions, tEx.Item1!, fromTimer );
-                await tr.ExecutePostActionsAsync( monitor, throwException: false ).ConfigureAwait( false );
+                await tr.ExecutePostActionsAsync( monitor, parallelDomainPostActions, throwException: false ).ConfigureAwait( false );
             }
             else monitor.Warn( $"WriteLock not obtained in {millisecondsTimeout} ms (returning TransactionResult.Empty)." );
             return (null, tr);

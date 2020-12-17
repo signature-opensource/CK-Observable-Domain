@@ -59,24 +59,24 @@ namespace CK.Observable.League
 
                 string? IObservableDomainShell.ExportToString( int millisecondsTimeout ) => Shell.ExportToString( millisecondsTimeout );
 
-                Task<TransactionResult> IObservableDomainShell.ModifyAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> actions, int millisecondsTimeout )
+                Task<TransactionResult> IObservableDomainShell.ModifyAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> actions, int millisecondsTimeout, bool parallelDomainPostActions )
                 {
-                    return Shell.ModifyAsync( monitor, actions, millisecondsTimeout );
+                    return Shell.ModifyAsync( monitor, actions, millisecondsTimeout, parallelDomainPostActions );
                 }
 
-                Task<TransactionResult> IObservableDomainShell.ModifyThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> actions, int millisecondsTimeout )
+                Task<TransactionResult> IObservableDomainShell.ModifyThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> actions, int millisecondsTimeout, bool parallelDomainPostActions )
                 {
-                    return Shell.ModifyThrowAsync( monitor, actions, millisecondsTimeout );
+                    return Shell.ModifyThrowAsync( monitor, actions, millisecondsTimeout, parallelDomainPostActions );
                 }
 
-                Task<(TResult,TransactionResult)> IObservableDomainShell.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain, TResult> actions, int millisecondsTimeout )
+                Task<(TResult, TransactionResult)> IObservableDomainShell.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain, TResult> actions, int millisecondsTimeout, bool parallelDomainPostActions )
                 {
-                    return Shell.ModifyThrowAsync( monitor, actions, millisecondsTimeout );
+                    return Shell.ModifyThrowAsync( monitor, actions, millisecondsTimeout, parallelDomainPostActions );
                 }
 
-                Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> IObservableDomainShell.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> actions, int millisecondsTimeout )
+                Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> IObservableDomainShell.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> actions, int millisecondsTimeout, bool parallelDomainPostActions )
                 {
-                    return Shell.ModifyNoThrowAsync( monitor, actions, millisecondsTimeout );
+                    return Shell.ModifyNoThrowAsync( monitor, actions, millisecondsTimeout, parallelDomainPostActions );
                 }
 
                 void IObservableDomainShell.Read( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> reader, int millisecondsTimeout )
@@ -436,30 +436,30 @@ namespace CK.Observable.League
                 return d.ExportToString( millisecondsTimeout );
             }
 
-            Task<TransactionResult> IObservableDomainShell.ModifyAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> actions, int millisecondsTimeout )
+            Task<TransactionResult> IObservableDomainShell.ModifyAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> actions, int millisecondsTimeout, bool parallelDomainPostActions )
             {
                 var d = LoadedDomain;
-                return d.ModifyAsync( monitor, () => actions.Invoke( monitor, d ), millisecondsTimeout );
+                return d.ModifyAsync( monitor, () => actions.Invoke( monitor, d ), millisecondsTimeout, parallelDomainPostActions );
             }
 
-            Task<TransactionResult> IObservableDomainShell.ModifyThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> actions, int millisecondsTimeout )
+            Task<TransactionResult> IObservableDomainShell.ModifyThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> actions, int millisecondsTimeout, bool parallelDomainPostActions )
             {
                 var d = LoadedDomain;
-                return d.ModifyThrowAsync( monitor, () => actions.Invoke( monitor, d ), millisecondsTimeout );
+                return d.ModifyThrowAsync( monitor, () => actions.Invoke( monitor, d ), millisecondsTimeout, parallelDomainPostActions );
             }
 
-            async Task<(TResult,TransactionResult)> IObservableDomainShell.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain, TResult> actions, int millisecondsTimeout )
+            async Task<(TResult,TransactionResult)> IObservableDomainShell.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain, TResult> actions, int millisecondsTimeout, bool parallelDomainPostActions )
             {
                 var d = LoadedDomain;
                 TResult r = default;
-                var tr = await d.ModifyThrowAsync( monitor, () => r = actions.Invoke( monitor, d ), millisecondsTimeout );
+                var tr = await d.ModifyThrowAsync( monitor, () => r = actions.Invoke( monitor, d ), millisecondsTimeout, parallelDomainPostActions );
                 return (r, tr);
             }
 
-            Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> IObservableDomainShell.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> actions, int millisecondsTimeout )
+            Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> IObservableDomainShell.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> actions, int millisecondsTimeout, bool parallelDomainPostActions )
             {
                 var d = LoadedDomain;
-                return d.ModifyNoThrowAsync( monitor, () => actions.Invoke( monitor, d ), millisecondsTimeout );
+                return d.ModifyNoThrowAsync( monitor, () => actions.Invoke( monitor, d ), millisecondsTimeout, parallelDomainPostActions );
             }
 
             void IObservableDomainShell.Read( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> reader, int millisecondsTimeout )
@@ -515,19 +515,19 @@ namespace CK.Observable.League
 
                 new IObservableDomainShell<T> Shell => (Shell<T>)base.Shell;
 
-                Task<TransactionResult> IObservableDomainAccess<T>.ModifyAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T>> actions, int millisecondsTimeout )
+                Task<TransactionResult> IObservableDomainAccess<T>.ModifyAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T>> actions, int millisecondsTimeout, bool parallelDomainPostActions )
                 {
-                    return Shell.ModifyAsync( monitor, actions, millisecondsTimeout );
+                    return Shell.ModifyAsync( monitor, actions, millisecondsTimeout, parallelDomainPostActions );
                 }
 
-                Task<TransactionResult> IObservableDomainAccess<T>.ModifyThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T>> actions, int millisecondsTimeout )
+                Task<TransactionResult> IObservableDomainAccess<T>.ModifyThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T>> actions, int millisecondsTimeout, bool parallelDomainPostActions )
                 {
-                    return Shell.ModifyThrowAsync( monitor, actions, millisecondsTimeout );
+                    return Shell.ModifyThrowAsync( monitor, actions, millisecondsTimeout, parallelDomainPostActions );
                 }
 
-                Task<(TResult,TransactionResult)> IObservableDomainAccess<T>.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<T>, TResult> actions, int millisecondsTimeout )
+                Task<(TResult,TransactionResult)> IObservableDomainAccess<T>.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<T>, TResult> actions, int millisecondsTimeout, bool parallelDomainPostActions )
                 {
-                    return Shell.ModifyThrowAsync( monitor, actions, millisecondsTimeout );
+                    return Shell.ModifyThrowAsync( monitor, actions, millisecondsTimeout, parallelDomainPostActions );
                 }
 
                 void IObservableDomainAccess<T>.Read( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T>> reader, int millisecondsTimeout )
@@ -540,9 +540,9 @@ namespace CK.Observable.League
                     return Shell.Read( monitor, reader, millisecondsTimeout );
                 }
 
-                Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> IObservableDomainAccess<T>.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T>> actions, int millisecondsTimeout )
+                Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> IObservableDomainAccess<T>.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T>> actions, int millisecondsTimeout, bool parallelDomainPostActions )
                 {
-                    return Shell.ModifyNoThrowAsync( monitor, actions, millisecondsTimeout );
+                    return Shell.ModifyNoThrowAsync( monitor, actions, millisecondsTimeout, parallelDomainPostActions );
                 }
             }
 
@@ -550,30 +550,30 @@ namespace CK.Observable.League
 
             new ObservableDomain<T> LoadedDomain => (ObservableDomain<T>)base.LoadedDomain;
 
-            Task<TransactionResult> IObservableDomainAccess<T>.ModifyAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T>> actions, int millisecondsTimeout )
+            Task<TransactionResult> IObservableDomainAccess<T>.ModifyAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T>> actions, int millisecondsTimeout, bool parallelDomainPostActions )
             {
                 var d = LoadedDomain;
-                return d.ModifyAsync( monitor, () => actions.Invoke( monitor, d ), millisecondsTimeout );
+                return d.ModifyAsync( monitor, () => actions.Invoke( monitor, d ), millisecondsTimeout, parallelDomainPostActions );
             }
 
-            Task<TransactionResult> IObservableDomainAccess<T>.ModifyThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T>> actions, int millisecondsTimeout )
+            Task<TransactionResult> IObservableDomainAccess<T>.ModifyThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T>> actions, int millisecondsTimeout, bool parallelDomainPostActions )
             {
                 var d = LoadedDomain;
-                return d.ModifyThrowAsync( monitor, () => actions.Invoke( monitor, d ), millisecondsTimeout );
+                return d.ModifyThrowAsync( monitor, () => actions.Invoke( monitor, d ), millisecondsTimeout, parallelDomainPostActions );
             }
 
-            async Task<(TResult,TransactionResult)> IObservableDomainAccess<T>.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<T>, TResult> actions, int millisecondsTimeout )
+            async Task<(TResult,TransactionResult)> IObservableDomainAccess<T>.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<T>, TResult> actions, int millisecondsTimeout, bool parallelDomainPostActions )
             {
                 var d = LoadedDomain;
                 TResult r = default;
-                var tr = await d.ModifyThrowAsync( monitor, () => r = actions.Invoke( monitor, d ), millisecondsTimeout );
+                var tr = await d.ModifyThrowAsync( monitor, () => r = actions.Invoke( monitor, d ), millisecondsTimeout, parallelDomainPostActions );
                 return (r,tr);
             }
 
-            Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> IObservableDomainAccess<T>.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T>> actions, int millisecondsTimeout )
+            Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> IObservableDomainAccess<T>.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T>> actions, int millisecondsTimeout, bool parallelDomainPostActions )
             {
                 var d = LoadedDomain;
-                return d.ModifyNoThrowAsync( monitor, () => actions.Invoke( monitor, d ), millisecondsTimeout );
+                return d.ModifyNoThrowAsync( monitor, () => actions.Invoke( monitor, d ), millisecondsTimeout, parallelDomainPostActions );
             }
 
             void IObservableDomainAccess<T>.Read( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T>> reader, int millisecondsTimeout )
@@ -630,24 +630,24 @@ namespace CK.Observable.League
 
                 new IObservableDomainShell<T1,T2> Shell => (Shell<T1, T2>)base.Shell;
 
-                Task<TransactionResult> IObservableDomainShell<T1, T2>.ModifyAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2>> actions, int millisecondsTimeout )
+                Task<TransactionResult> IObservableDomainShell<T1, T2>.ModifyAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2>> actions, int millisecondsTimeout, bool parallelDomainPostActions )
                 {
-                    return Shell.ModifyAsync( monitor, actions, millisecondsTimeout );
+                    return Shell.ModifyAsync( monitor, actions, millisecondsTimeout, parallelDomainPostActions );
                 }
 
-                Task IObservableDomainShell<T1, T2>.ModifyThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2>> actions, int millisecondsTimeout )
+                Task IObservableDomainShell<T1, T2>.ModifyThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2>> actions, int millisecondsTimeout, bool parallelDomainPostActions )
                 {
-                    return Shell.ModifyThrowAsync( monitor, actions, millisecondsTimeout );
+                    return Shell.ModifyThrowAsync( monitor, actions, millisecondsTimeout, parallelDomainPostActions );
                 }
 
-                Task<TResult> IObservableDomainShell<T1,T2>.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<T1,T2>, TResult> actions, int millisecondsTimeout )
+                Task<TResult> IObservableDomainShell<T1,T2>.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<T1,T2>, TResult> actions, int millisecondsTimeout, bool parallelDomainPostActions )
                 {
-                    return Shell.ModifyThrowAsync( monitor, actions, millisecondsTimeout );
+                    return Shell.ModifyThrowAsync( monitor, actions, millisecondsTimeout, parallelDomainPostActions );
                 }
 
-                Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> IObservableDomainShell<T1, T2>.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2>> actions, int millisecondsTimeout )
+                Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> IObservableDomainShell<T1, T2>.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2>> actions, int millisecondsTimeout, bool parallelDomainPostActions )
                 {
-                    return Shell.ModifyNoThrowAsync( monitor, actions, millisecondsTimeout );
+                    return Shell.ModifyNoThrowAsync( monitor, actions, millisecondsTimeout, parallelDomainPostActions );
                 }
 
 
@@ -667,30 +667,30 @@ namespace CK.Observable.League
 
             new ObservableDomain<T1, T2> LoadedDomain => (ObservableDomain<T1, T2>)base.LoadedDomain;
 
-            Task<TransactionResult> IObservableDomainShell<T1, T2>.ModifyAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2>> actions, int millisecondsTimeout )
+            Task<TransactionResult> IObservableDomainShell<T1, T2>.ModifyAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2>> actions, int millisecondsTimeout, bool parallelDomainPostActions )
             {
                 var d = LoadedDomain;
-                return d.ModifyAsync( monitor, () => actions.Invoke( monitor, d ), millisecondsTimeout );
+                return d.ModifyAsync( monitor, () => actions.Invoke( monitor, d ), millisecondsTimeout, parallelDomainPostActions );
             }
 
-            Task IObservableDomainShell<T1, T2>.ModifyThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2>> actions, int millisecondsTimeout )
+            Task IObservableDomainShell<T1, T2>.ModifyThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2>> actions, int millisecondsTimeout, bool parallelDomainPostActions )
             {
                 var d = LoadedDomain;
-                return d.ModifyThrowAsync( monitor, () => actions.Invoke( monitor, d ), millisecondsTimeout );
+                return d.ModifyThrowAsync( monitor, () => actions.Invoke( monitor, d ), millisecondsTimeout, parallelDomainPostActions );
             }
 
-            async Task<TResult> IObservableDomainShell<T1, T2>.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<T1, T2>, TResult> actions, int millisecondsTimeout )
+            async Task<TResult> IObservableDomainShell<T1, T2>.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<T1, T2>, TResult> actions, int millisecondsTimeout, bool parallelDomainPostActions )
             {
                 var d = LoadedDomain;
                 TResult r = default;
-                await d.ModifyThrowAsync( monitor, () => r = actions.Invoke( monitor, d ), millisecondsTimeout );
+                await d.ModifyThrowAsync( monitor, () => r = actions.Invoke( monitor, d ), millisecondsTimeout, parallelDomainPostActions );
                 return r;
             }
 
-            Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> IObservableDomainShell<T1, T2>.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2>> actions, int millisecondsTimeout )
+            Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> IObservableDomainShell<T1, T2>.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2>> actions, int millisecondsTimeout, bool parallelDomainPostActions )
             {
                 var d = LoadedDomain;
-                return d.ModifyNoThrowAsync( monitor, () => actions.Invoke( monitor, d ), millisecondsTimeout );
+                return d.ModifyNoThrowAsync( monitor, () => actions.Invoke( monitor, d ), millisecondsTimeout, parallelDomainPostActions );
             }
 
             void IObservableDomainShell<T1, T2>.Read( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2>> reader, int millisecondsTimeout )
@@ -748,23 +748,23 @@ namespace CK.Observable.League
 
                 new IObservableDomainShell<T1, T2, T3> Shell => (Shell<T1, T2, T3>)base.Shell;
 
-                Task<TransactionResult> IObservableDomainShell<T1, T2, T3>.ModifyAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3>> actions, int millisecondsTimeout )
+                Task<TransactionResult> IObservableDomainShell<T1, T2, T3>.ModifyAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3>> actions, int millisecondsTimeout, bool parallelDomainPostActions )
                 {
-                    return Shell.ModifyAsync( monitor, actions, millisecondsTimeout );
+                    return Shell.ModifyAsync( monitor, actions, millisecondsTimeout, parallelDomainPostActions );
                 }
-                Task IObservableDomainShell<T1, T2, T3>.ModifyThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3>> actions, int millisecondsTimeout )
+                Task IObservableDomainShell<T1, T2, T3>.ModifyThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3>> actions, int millisecondsTimeout, bool parallelDomainPostActions )
                 {
-                    return Shell.ModifyThrowAsync( monitor, actions, millisecondsTimeout );
-                }
-
-                Task<TResult> IObservableDomainShell<T1, T2, T3>.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<T1, T2, T3>, TResult> actions, int millisecondsTimeout )
-                {
-                    return Shell.ModifyThrowAsync( monitor, actions, millisecondsTimeout );
+                    return Shell.ModifyThrowAsync( monitor, actions, millisecondsTimeout, parallelDomainPostActions );
                 }
 
-                Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> IObservableDomainShell<T1, T2, T3>.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3>> actions, int millisecondsTimeout )
+                Task<TResult> IObservableDomainShell<T1, T2, T3>.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<T1, T2, T3>, TResult> actions, int millisecondsTimeout, bool parallelDomainPostActions )
                 {
-                    return Shell.ModifyNoThrowAsync( monitor, actions, millisecondsTimeout );
+                    return Shell.ModifyThrowAsync( monitor, actions, millisecondsTimeout, parallelDomainPostActions );
+                }
+
+                Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> IObservableDomainShell<T1, T2, T3>.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3>> actions, int millisecondsTimeout, bool parallelDomainPostActions )
+                {
+                    return Shell.ModifyNoThrowAsync( monitor, actions, millisecondsTimeout, parallelDomainPostActions );
                 }
 
                 void IObservableDomainShell<T1, T2, T3>.Read( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3>> reader, int millisecondsTimeout )
@@ -784,30 +784,30 @@ namespace CK.Observable.League
 
             new ObservableDomain<T1, T2, T3> LoadedDomain => (ObservableDomain<T1, T2, T3>)base.LoadedDomain;
 
-            Task<TransactionResult> IObservableDomainShell<T1, T2, T3>.ModifyAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3>> actions, int millisecondsTimeout )
+            Task<TransactionResult> IObservableDomainShell<T1, T2, T3>.ModifyAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3>> actions, int millisecondsTimeout, bool parallelDomainPostActions )
             {
                 var d = LoadedDomain;
-                return d.ModifyAsync( monitor, () => actions.Invoke( monitor, d ), millisecondsTimeout );
+                return d.ModifyAsync( monitor, () => actions.Invoke( monitor, d ), millisecondsTimeout, parallelDomainPostActions );
             }
 
-            Task IObservableDomainShell<T1, T2, T3>.ModifyThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3>> actions, int millisecondsTimeout )
+            Task IObservableDomainShell<T1, T2, T3>.ModifyThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3>> actions, int millisecondsTimeout, bool parallelDomainPostActions )
             {
                 var d = LoadedDomain;
-                return d.ModifyThrowAsync( monitor, () => actions.Invoke( monitor, d ), millisecondsTimeout );
+                return d.ModifyThrowAsync( monitor, () => actions.Invoke( monitor, d ), millisecondsTimeout, parallelDomainPostActions );
             }
 
-            async Task<TResult> IObservableDomainShell<T1, T2, T3>.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<T1, T2, T3>, TResult> actions, int millisecondsTimeout )
+            async Task<TResult> IObservableDomainShell<T1, T2, T3>.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<T1, T2, T3>, TResult> actions, int millisecondsTimeout, bool parallelDomainPostActions )
             {
                 var d = LoadedDomain;
                 TResult r = default;
-                await d.ModifyThrowAsync( monitor, () => r = actions.Invoke( monitor, d ), millisecondsTimeout );
+                await d.ModifyThrowAsync( monitor, () => r = actions.Invoke( monitor, d ), millisecondsTimeout, parallelDomainPostActions );
                 return r;
             }
 
-            Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> IObservableDomainShell<T1, T2, T3>.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3>> actions, int millisecondsTimeout )
+            Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> IObservableDomainShell<T1, T2, T3>.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3>> actions, int millisecondsTimeout, bool parallelDomainPostActions )
             {
                 var d = LoadedDomain;
-                return d.ModifyNoThrowAsync( monitor, () => actions.Invoke( monitor, d ), millisecondsTimeout );
+                return d.ModifyNoThrowAsync( monitor, () => actions.Invoke( monitor, d ), millisecondsTimeout, parallelDomainPostActions );
             }
 
             void IObservableDomainShell<T1, T2, T3>.Read( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3>> reader, int millisecondsTimeout )
@@ -866,24 +866,24 @@ namespace CK.Observable.League
 
                 new IObservableDomainShell<T1, T2, T3, T4> Shell => (Shell<T1, T2, T3, T4>)base.Shell;
 
-                Task<TransactionResult> IObservableDomainShell<T1, T2, T3, T4>.ModifyAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3, T4>> actions, int millisecondsTimeout )
+                Task<TransactionResult> IObservableDomainShell<T1, T2, T3, T4>.ModifyAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3, T4>> actions, int millisecondsTimeout, bool parallelDomainPostActions )
                 {
-                    return Shell.ModifyAsync( monitor, actions, millisecondsTimeout );
+                    return Shell.ModifyAsync( monitor, actions, millisecondsTimeout, parallelDomainPostActions );
                 }
 
-                Task IObservableDomainShell<T1, T2, T3, T4>.ModifyThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3, T4>> actions, int millisecondsTimeout )
+                Task IObservableDomainShell<T1, T2, T3, T4>.ModifyThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3, T4>> actions, int millisecondsTimeout, bool parallelDomainPostActions )
                 {
-                    return Shell.ModifyThrowAsync( monitor, actions, millisecondsTimeout );
+                    return Shell.ModifyThrowAsync( monitor, actions, millisecondsTimeout, parallelDomainPostActions );
                 }
 
-                Task<TResult> IObservableDomainShell<T1, T2, T3, T4>.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<T1, T2, T3, T4>, TResult> actions, int millisecondsTimeout )
+                Task<TResult> IObservableDomainShell<T1, T2, T3, T4>.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<T1, T2, T3, T4>, TResult> actions, int millisecondsTimeout, bool parallelDomainPostActions )
                 {
-                    return Shell.ModifyThrowAsync( monitor, actions, millisecondsTimeout );
+                    return Shell.ModifyThrowAsync( monitor, actions, millisecondsTimeout, parallelDomainPostActions );
                 }
 
-                Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> IObservableDomainShell<T1, T2, T3, T4>.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3, T4>> actions, int millisecondsTimeout )
+                Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> IObservableDomainShell<T1, T2, T3, T4>.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3, T4>> actions, int millisecondsTimeout, bool parallelDomainPostActions )
                 {
-                    return Shell.ModifyNoThrowAsync( monitor, actions, millisecondsTimeout );
+                    return Shell.ModifyNoThrowAsync( monitor, actions, millisecondsTimeout, parallelDomainPostActions );
                 }
 
                 void IObservableDomainShell<T1, T2, T3, T4>.Read( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3, T4>> reader, int millisecondsTimeout )
@@ -903,30 +903,30 @@ namespace CK.Observable.League
 
             new ObservableDomain<T1, T2, T3, T4> LoadedDomain => (ObservableDomain<T1, T2, T3, T4>)base.LoadedDomain;
 
-            Task<TransactionResult> IObservableDomainShell<T1, T2, T3, T4>.ModifyAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3, T4>> actions, int millisecondsTimeout )
+            Task<TransactionResult> IObservableDomainShell<T1, T2, T3, T4>.ModifyAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3, T4>> actions, int millisecondsTimeout, bool parallelDomainPostActions )
             {
                 var d = LoadedDomain;
-                return d.ModifyAsync( monitor, () => actions.Invoke( monitor, d ), millisecondsTimeout );
+                return d.ModifyAsync( monitor, () => actions.Invoke( monitor, d ), millisecondsTimeout, parallelDomainPostActions );
             }
 
-            Task IObservableDomainShell<T1, T2, T3, T4>.ModifyThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3, T4>> actions, int millisecondsTimeout )
+            Task IObservableDomainShell<T1, T2, T3, T4>.ModifyThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3, T4>> actions, int millisecondsTimeout, bool parallelDomainPostActions )
             {
                 var d = LoadedDomain;
-                return d.ModifyThrowAsync( monitor, () => actions.Invoke( monitor, d ), millisecondsTimeout );
+                return d.ModifyThrowAsync( monitor, () => actions.Invoke( monitor, d ), millisecondsTimeout, parallelDomainPostActions );
             }
 
-            async Task<TResult> IObservableDomainShell<T1, T2, T3, T4>.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<T1, T2, T3, T4>, TResult> actions, int millisecondsTimeout )
+            async Task<TResult> IObservableDomainShell<T1, T2, T3, T4>.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<T1, T2, T3, T4>, TResult> actions, int millisecondsTimeout, bool parallelDomainPostActions )
             {
                 var d = LoadedDomain;
                 TResult r = default;
-                await d.ModifyThrowAsync( monitor, () => r = actions.Invoke( monitor, d ), millisecondsTimeout );
+                await d.ModifyThrowAsync( monitor, () => r = actions.Invoke( monitor, d ), millisecondsTimeout, parallelDomainPostActions );
                 return r;
             }
 
-            Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> IObservableDomainShell<T1, T2, T3, T4>.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3, T4>> actions, int millisecondsTimeout )
+            Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> IObservableDomainShell<T1, T2, T3, T4>.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3, T4>> actions, int millisecondsTimeout, bool parallelDomainPostActions )
             {
                 var d = LoadedDomain;
-                return d.ModifyNoThrowAsync( monitor, () => actions.Invoke( monitor, d ), millisecondsTimeout );
+                return d.ModifyNoThrowAsync( monitor, () => actions.Invoke( monitor, d ), millisecondsTimeout, parallelDomainPostActions );
             }
 
             void IObservableDomainShell<T1, T2, T3, T4>.Read( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3, T4>> reader, int millisecondsTimeout )

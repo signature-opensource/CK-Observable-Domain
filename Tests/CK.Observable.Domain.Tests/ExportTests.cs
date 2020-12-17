@@ -412,5 +412,7 @@ namespace CK.Observable.Domain.Tests
             var events = eventCollector.GetTransactionEvents( 1 ).Single().ExportedEvents;
             events.Should().NotContainAny( "Timer", "Reminder" ).And.Contain( "ThisIsExported" );
         }
+
+
     }
 }

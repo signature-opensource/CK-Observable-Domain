@@ -168,7 +168,7 @@ namespace CK.Observable
             /// and 10 ms timeout: pending timed events are handled if any and if there is no current transaction: <see cref="TransactionResult.Empty"/> is
             /// returned if the write lock failed to be obtained.
             /// </summary>
-            protected virtual Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> OnDueTimeAsync( IActivityMonitor m ) => Domain.DoModifyNoThrowAsync( m, null, 10, true );
+            protected virtual Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> OnDueTimeAsync( IActivityMonitor m ) => Domain.DoModifyNoThrowAsync( m, null, 10, true, true );
 
             /// <summary>
             /// Must do whatever is needed to call back this <see cref="OnDueTimeAsync(IActivityMonitor)"/> at <paramref name="nextDueTimeUtc"/> (or

@@ -46,20 +46,28 @@ namespace CK.Observable.League
         /// The maximum number of milliseconds to wait for a read access before giving up.
         /// Wait indefinitely by default.
         /// </param>
+        /// <param name="parallelDomainPostActions">
+        /// False to wait for the success of the <see cref="SuccessfulTransactionEventArgs.PostActions"/> before
+        /// allowing the <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/> to run: when PostActions fail, all domain post actions are skipped.
+        /// <para>
+        /// By default, post actions are executed and domain post actions can immediately be executed by the <see cref="ObservableDomainPostActionExecutor"/> (as
+        /// soon as all previous transaction's domain post actions have ran of course).
+        /// </para>
+        /// </param>
         /// <returns>
         /// The transaction result from <see cref="ObservableDomain.Modify"/>. <see cref="TransactionResult.Empty"/> when the
         /// lock has not been taken before <paramref name="millisecondsTimeout"/>.
         /// </returns>
-        Task<TransactionResult> ModifyAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> actions, int millisecondsTimeout = -1 );
+        Task<TransactionResult> ModifyAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> actions, int millisecondsTimeout = -1, bool parallelDomainPostActions = true );
 
-        /// <inheritdoc cref="ObservableDomain.ModifyThrowAsync(IActivityMonitor, Action, int)"/>
-        Task<TransactionResult> ModifyThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> actions, int millisecondsTimeout = -1 );
+        /// <inheritdoc cref="ObservableDomain.ModifyThrowAsync(IActivityMonitor, Action, int, bool)"/>
+        Task<TransactionResult> ModifyThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> actions, int millisecondsTimeout = -1, bool parallelDomainPostActions = true );
 
-        /// <inheritdoc cref="IObservableDomainAccess{T}.ModifyThrowAsync(IActivityMonitor, Action{IActivityMonitor, IObservableDomain{T}}, int)"/>
-        Task<(TResult, TransactionResult)> ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain, TResult> actions, int millisecondsTimeout = -1 );
+        /// <inheritdoc cref="IObservableDomainAccess{T}.ModifyThrowAsync(IActivityMonitor, Action{IActivityMonitor, IObservableDomain{T}}, int, bool)"/>
+        Task<(TResult, TransactionResult)> ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain, TResult> actions, int millisecondsTimeout = -1, bool parallelDomainPostActions = true );
 
-        /// <inheritdoc cref="ObservableDomain.ModifyNoThrowAsync(IActivityMonitor, Action, int)(IActivityMonitor, Action, int)"/>
-        Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> actions, int millisecondsTimeout = -1 );
+        /// <inheritdoc cref="ObservableDomain.ModifyNoThrowAsync(IActivityMonitor, Action, int, bool)"/>
+        Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> actions, int millisecondsTimeout = -1, bool parallelDomainPostActions = true );
 
         /// <summary>
         /// Reads the domain by protecting the <paramref name="reader"/> function in a <see cref="ObservableDomain.AcquireReadLock(int)"/>.

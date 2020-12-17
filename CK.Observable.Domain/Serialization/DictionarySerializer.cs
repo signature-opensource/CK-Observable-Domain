@@ -37,8 +37,8 @@ namespace CK.Observable
             BinarySerializer w,
             int count,
             IEnumerable<KeyValuePair<TKey, TValue>> items,
-            ITypeSerializationDriver<TKey> keySerialization = null,
-            ITypeSerializationDriver<TValue> valueSerialization = null )
+            ITypeSerializationDriver<TKey>? keySerialization = null,
+            ITypeSerializationDriver<TValue>? valueSerialization = null )
         {
             if( w == null ) throw new ArgumentNullException( nameof( w ) );
             if( count < 0 ) throw new ArgumentException( "Must be greater or equal to 0.", nameof( count ) );
@@ -64,9 +64,9 @@ namespace CK.Observable
 
                 foreach( var kv in items )
                 {
-                    if( monoTypeKey ) keySerialization.WriteData( w, kv.Key );
+                    if( monoTypeKey ) keySerialization!.WriteData( w, kv.Key );
                     else w.WriteObject( kv.Key );
-                    if( monoTypeVal ) valueSerialization.WriteData( w, kv.Value );
+                    if( monoTypeVal ) valueSerialization!.WriteData( w, kv.Value );
                     else w.WriteObject( kv.Value );
                     if( --count == 0 ) break;
                 }

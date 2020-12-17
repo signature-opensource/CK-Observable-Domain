@@ -172,7 +172,7 @@ namespace CK.Observable
             return $"{Errors.Count} transaction errors, {(IsCriticalError ? "with a" : "no" )} Critical Error, {SuccessfulTransactionErrors.Count} OnSuccessfulTransaction errors, {CommandHandlingErrors.Count} command errors handling.";
         }
 
-        internal async Task ExecutePostActionsAsync( IActivityMonitor m, bool throwException = true )
+        internal async Task ExecutePostActionsAsync( IActivityMonitor m, bool parallelDomainPostActions, bool throwException = true )
         {
             // Do this only once.
             var l = Interlocked.Exchange( ref _postActions, null );
@@ -195,25 +195,34 @@ namespace CK.Observable
             }
             Debug.Assert( _forDomainPostActionsExecutor != null, "This result has been submitted to the Domain executor." );
 
+            // If domain post actions must not wait for post actions, set the domain post actions immediately, regardless of the
+            // number of post actions count.
+            if( parallelDomainPostActions )
+            {
+                _forDomainPostActionsExecutor.SetResult( d );
+            }
             if( l.ActionCount > 0 )
             {
                 var ctx = new PostActionContext( m, l, this );
                 try
                 {
                     _postActionsError = await ctx.ExecuteAsync( throwException, name: $"domain '{_domainName}' (PostActions)" );
-                    if( _postActionsError != null )
+                    if( !parallelDomainPostActions )
                     {
-                        ForgetDomainActions();
-                    }
-                    else
-                    {
-                        _forDomainPostActionsExecutor.SetResult( d );
+                        if( _postActionsError != null )
+                        {
+                            ForgetDomainActions();
+                        }
+                        else
+                        {
+                            _forDomainPostActionsExecutor.SetResult( d );
+                        }
                     }
                 }
                 catch( Exception ex )
                 {
-                    _postActionsError = ex; 
-                    ForgetDomainActions();
+                    _postActionsError = ex;
+                    if( !parallelDomainPostActions ) ForgetDomainActions();
                 }
                 finally
                 {
@@ -222,7 +231,7 @@ namespace CK.Observable
             }
             else
             {
-                _forDomainPostActionsExecutor.SetResult( d );
+                if( !parallelDomainPostActions ) _forDomainPostActionsExecutor.SetResult( d );
             }
             return;
 
