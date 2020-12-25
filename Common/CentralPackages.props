@@ -1,7 +1,7 @@
 <Project>
   <ItemGroup>
     <PackageReference Update="CK.ActivityMonitor.SimpleSender" Version="13.3.0" />
-    <PackageReference Update="CK.StObj.Model" Version="14.0.4--0036-develop" />
+    <PackageReference Update="CK.StObj.Model" Version="14.0.4--0037-develop" />
     <PackageReference Update="Microsoft.Extensions.DependencyInjection" Version="3.1.10" />
     <PackageReference Update="CK.DeviceModel" Version="0.24.1--0002-develop" />
     <PackageReference Update="System.Threading.Channels" Version="4.7.1" />
