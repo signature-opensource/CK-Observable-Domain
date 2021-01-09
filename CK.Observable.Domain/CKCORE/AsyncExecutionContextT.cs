@@ -18,7 +18,7 @@ namespace CK.Core
     {
         readonly ActionRegistrar<TThis> _reg;
         readonly IActivityMonitor _monitor;
-        IDictionary<object, object> _memory;
+        IDictionary<object, object>? _memory;
         readonly bool _callMemoryDisposable;
         bool _executing;
 

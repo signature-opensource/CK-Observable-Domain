@@ -14,6 +14,6 @@ namespace CK.Core
         /// </summary>
         public static readonly IServiceProvider Default = new EmptyServiceProvider();
 
-        object IServiceProvider.GetService( Type serviceType ) => null;
+        object? IServiceProvider.GetService( Type serviceType ) => null;
     }
 }

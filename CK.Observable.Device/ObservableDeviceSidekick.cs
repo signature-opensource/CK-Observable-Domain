@@ -98,9 +98,9 @@ namespace CK.Observable.Device
                     throw new Exception( $"There must be at most one device host object in a ObservableDomain. Object at index {_objectHost.OId.Index} is already registered." );
                 }
                 _objectHost = host;
-                OnObjectHostAppeared( monitor );
                 _objectHost.Disposed += OnObjectHostDisposed;
                 UpdateObjectHost();
+                OnObjectHostAppeared( monitor );
             }
         }
 
@@ -148,22 +148,9 @@ namespace CK.Observable.Device
             Debug.Assert( _objectHost != null );
             // Takes a snapshot: the hosted devices list may change concurrently (when called from RegisterClientObject).
             // This can be optimized: here the intermediate list is concretized for nothing.
-            var configs = Host.GetConfiguredDevices().Select( x => x.Item2 ).ToDictionary( c => c.Name );
-            for( int i = 0; i < _objectHost.InternalDevices.Count; ++i )
-            {
-                var d = _objectHost.Devices[i];
-                if( configs.Remove( d.Name, out var conf ) )
-                {
-                    d.Status = conf.Status;
-                    d.ControllerKey = conf.ControllerKey;
-                }
-                else 
-                {
-                    _objectHost.InternalDevices.RemoveAt( i-- );
-                    d.Dispose();
-                }
-            }
-            _objectHost.InternalDevices.AddRange( configs.Values.Select( c => new AvailableDeviceInfo( c.Name, c.Status, c.ControllerKey ) ) );
+            Dictionary<string, DeviceConfiguration>? configs = Host.GetConfiguredDevices().Select( x => x.Item2 ).ToDictionary( c => c.Name );
+            // This also initializes the _objectHost._sidekick field on the first call.
+            _objectHost.ApplyDevicesChanged( this, configs );
         }
 
         /// <summary>

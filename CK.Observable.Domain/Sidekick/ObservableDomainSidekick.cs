@@ -28,8 +28,20 @@ namespace CK.Observable
     /// parameters that are "contextual" must be defined when a "IAutoType" is defined otherwise those "unknwon" dependencies would be considered
     /// scoped (and they are not).
     /// ...IAutoType is necessarily a Class, not an interface!
-    /// So it can be named "IAutoClass". It must be handled like IAutoService but its NOT a IAutoService.
-    /// Constructor parameters can be marked with a [ExplicitParameter] attribute (ie. not from the DI).
+    /// So it can be named "IAutoClass". It must be handled like IAutoService but it's NOT a IAutoService.
+    /// Constructor parameters can be marked with a [ExplicitParameter] attribute (ie. not from the DI). Or a "record" can capture the
+    /// "contextual parameters"? And a standard factory method takes any "record" that are "IAutoClassParameters"?
+    /// (I like this last one... But it locks the possibility to extend the "contextual parameters": a record, as a class, can be specialized but
+    /// with a single inheritance chain.)
+    ///
+    /// IPoco should be the answer... A IAutoClass is very much like a IAutoService class with an extra "contextual parameter".
+    /// A IAutoClass constructor has any number of services parameters PLUS one IPoco.
+    /// This IPoco can be extended by any number of other assemblies but, in fine, a final, non ambiguous
+    /// IAutoClass type must be resolved (just like a final non ambiguous IAutoService is resolved by the "class unification" algorithm).
+    ///
+    /// The magic here is that the "Class unification" handles the IAutoClass selection and the contextual parameters covariance
+    /// are handled by the IPoco mechanism.
+    /// 
     /// </para>
     /// </summary>
     public abstract class ObservableDomainSidekick

@@ -136,6 +136,17 @@ namespace CK.Observable.Device
                 } );
             }
 
+            /// <summary>
+            /// Called when this bridge must be destroyed.
+            /// There are 2 reasons to destroy this bridge: the domain is disposed (either because it is cleared before a
+            /// reload or because it is disposed), or the <see cref="ObservableDeviceObject"/> is explicitely disposed.
+            /// <para>
+            /// If the ObservableDeviceObject is explicitely disposed, then <see cref="OnObjectDeviceDisposed(IActivityMonitor)"/> is called:
+            /// specialized bridges can impact the Device world if needed.
+            /// </para>
+            /// </summary>
+            /// <param name="monitor">The monitor to use.</param>
+            /// <param name="isObjectDeviceDisposed">Whether the <see cref="ObservableDeviceObject"/> has been disposed.</param>
             internal void OnDestroy( IActivityMonitor monitor, bool isObjectDeviceDisposed )
             {
                 if( Device == null ) _sidekick.RemoveUnbound( this );
@@ -191,8 +202,9 @@ namespace CK.Observable.Device
             protected abstract void OnDeviceDisappearing( IActivityMonitor monitor );
 
             /// <summary>
-            /// Called whenever the <see cref="ObservableDeviceObject{THost}"/> is disposed.
-            /// Note that the <see cref="Device"/> may continue to exist in the host.
+            /// Called whenever the <see cref="ObservableDeviceObject"/> is explicitely disposed.
+            /// Note that the <see cref="Device"/> may continue to exist in the host: this
+            /// method may destroy the device in the Device world.
             /// </summary>
             /// <param name="monitor">The monitor to use.</param>
             protected virtual void OnObjectDeviceDisposed( IActivityMonitor monitor )

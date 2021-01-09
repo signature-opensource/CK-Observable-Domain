@@ -15,12 +15,16 @@ namespace CK.Observable
         public object Command { get; }
 
         /// <summary>
-        /// Gets the optional known <see cref="ObservableDomainSidekick"/> or the type of the <see cref="ObservableDomainSidekick"/>
+        /// Gets the <see cref="Type"/> of target sidekick, <see cref="ISidekickLocator"/> object, or target <see cref="ObservableDomainSidekick"/>
         /// that must handle this command.
+        /// <para>
         /// When set, the sidekick instance associated to the current domain will be the only one that will receive this command.
-        /// When let to null, all existing sidekicks will have the opportunity to handle it. In this "braodcast mode", if
+        /// </para>
+        /// <para>
+        /// When let to null, all existing sidekicks will have the opportunity to handle it. In this "broadcast mode", if
         /// all <see cref="ObservableDomainSidekick.ExecuteCommand(Core.IActivityMonitor, in SidekickCommand)"/> returned false,
         /// the command is considered unhandled: see <see cref="IsOptionalExecution"/>.
+        /// </para>
         /// </summary>
         public object? KnownTarget { get; }
 
@@ -39,7 +43,10 @@ namespace CK.Observable
         /// Initializes a new <see cref="ObservableDomainCommand"/>.
         /// </summary>
         /// <param name="command">The command payload.</param>
-        /// <param name="targetSidekick">The optional target sidekick.</param>
+        /// <param name="targetSidekick">
+        /// The optional target <see cref="ObservableDomainSidekick"/>, <see cref="Type"/> of target sidekick,
+        /// or <see cref="ISidekickLocator"/> object.
+        /// </param>
         /// <param name="isOptionalExecution">See <see cref="IsOptionalExecution"/>.</param>
         public ObservableDomainCommand( object command, object? knownTarget = null, bool isOptionalExecution = false )
         {

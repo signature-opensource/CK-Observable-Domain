@@ -17,7 +17,7 @@ namespace CK.Core
         internal List<Func<T, Exception, Task>> _onError;
         internal List<Func<T, Task>> _onFinally;
         // A registrar can can be owned by zero or one ExecutionContext, and only once.
-        object _owner;
+        object? _owner;
 
         static readonly string _successStep = "Currently handling success.";
         static readonly string _errorStep = "Currently handling error.";
@@ -106,7 +106,7 @@ namespace CK.Core
         /// <param name="handler">The success handler to register.</param>
         public void OnSuccess( Func<T, Task> handler )
         {
-            GuardSucces( handler == null );
+            GuardSuccess( handler == null );
             _onSuccess.Add( handler! );
         }
 
@@ -119,7 +119,7 @@ namespace CK.Core
         /// <param name="handler">The success handler to register.</param>
         public void OnSuccess( Func<T, ValueTask> handler )
         {
-            GuardSucces( handler == null );
+            GuardSuccess( handler == null );
             _onSuccess.Add( c => handler!( c ).AsTask() );
         }
 
@@ -132,7 +132,7 @@ namespace CK.Core
         /// <param name="handler">The success handler to register.</param>
         public void OnSuccess( Action<T> handler )
         {
-            GuardSucces( handler == null );
+            GuardSuccess( handler == null );
             _onSuccess.Add( c => { handler!( c ); return Task.CompletedTask; } );
         }
 
@@ -145,7 +145,7 @@ namespace CK.Core
         public void OnError( Func<T, Exception, Task> errorHandler )
         {
             GuardError( errorHandler == null );
-            _onError.Add( errorHandler );
+            _onError.Add( errorHandler! );
         }
 
         /// <summary>
@@ -181,7 +181,7 @@ namespace CK.Core
         public void Finally( Func<T, Task> finalHandler )
         {
             GuardFinally( finalHandler == null );
-            _onFinally.Add( finalHandler );
+            _onFinally.Add( finalHandler! );
         }
 
         /// <summary>
@@ -222,7 +222,7 @@ namespace CK.Core
             }
         }
 
-        void GuardSucces( bool nullArg )
+        void GuardSuccess( bool nullArg )
         {
             if( nullArg ) throw new ArgumentNullException( "handler" );
             if( ReferenceEquals( _handlingStep, _errorStep ) || ReferenceEquals( _handlingStep, _finallyStep ) )

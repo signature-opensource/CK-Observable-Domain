@@ -50,14 +50,78 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Helper that calls <see cref="SendCommand(in ObservableDomainCommand)"/>.
+        /// Sends a command to a known sidekick. By default, the target sidekick must handle the command: see <paramref name="isOptionalExecution"/>.
+        /// <para>
+        /// This is just a helper that calls <see cref="SendCommand(in ObservableDomainCommand)"/>.
+        /// </para>
         /// </summary>
         /// <param name="command">The command payload.</param>
-        /// <param name="knownTarget">The optional known target.</param>
-        /// <param name="isOptionalExecution">See <see cref="ObservableDomainCommand.IsOptionalExecution"/>.</param>
-        public void SendCommand( object command, object? knownTarget = null, bool isOptionalExecution = false )
+        /// <param name="target">The target sidekick that must handle the command.</param>
+        /// <param name="isOptionalExecution">
+        /// By default, the sidekick must handle the command (<see cref="ObservableDomainSidekick.ExecuteCommand(Core.IActivityMonitor, in SidekickCommand)"/>
+        /// must return true).
+        /// When set to true, a simple warning is emitted if the sidekick failed to handle the command.
+        /// </param>
+        public void SendCommand( object command, ObservableDomainSidekick target, bool isOptionalExecution = false )
         {
-            _d.SendCommand( _o, new ObservableDomainCommand( command, knownTarget, isOptionalExecution ) );
+            _d.SendCommand( _o, new ObservableDomainCommand( command, target, isOptionalExecution ) );
+        }
+
+        /// <summary>
+        /// Sends a command to a sidekick associated to a locator.
+        /// By default, the target sidekick must handle the command: see <paramref name="isOptionalExecution"/>.
+        /// <para>
+        /// This is just a helper that calls <see cref="SendCommand(in ObservableDomainCommand)"/>.
+        /// </para>
+        /// </summary>
+        /// <param name="command">The command payload.</param>
+        /// <param name="targetLocator">A locator object of the target sidekick that must handle the command.</param>
+        /// <param name="isOptionalExecution">
+        /// By default, the sidekick must handle the command (<see cref="ObservableDomainSidekick.ExecuteCommand(Core.IActivityMonitor, in SidekickCommand)"/>
+        /// must return true).
+        /// When set to true, a simple warning is emitted if the sidekick failed to handle the command.
+        /// </param>
+        public void SendCommand( object command, ISidekickLocator targetLocator, bool isOptionalExecution = false )
+        {
+            _d.SendCommand( _o, new ObservableDomainCommand( command, targetLocator, isOptionalExecution ) );
+        }
+
+        /// <summary>
+        /// Sends a command to a known sidekick type. By default, a sidekick instance must exist AND handle the command:
+        /// see <paramref name="isOptionalExecution"/>.
+        /// <para>
+        /// This is just a helper that calls <see cref="SendCommand(in ObservableDomainCommand)"/>.
+        /// </para>
+        /// </summary>
+        /// <param name="command">The command payload.</param>
+        /// <param name="sidekickTargetType">The type of the sidekick that must handle the command.</param>
+        /// <param name="isOptionalExecution">
+        /// By default, the sidekick instance must exist AND handle the command (<see cref="ObservableDomainSidekick.ExecuteCommand(Core.IActivityMonitor, in SidekickCommand)"/>
+        /// must return true).
+        /// When set to true, a simple warning is emitted if the sidekick is not instantiated or failed to handle the command.
+        /// </param>
+        public void SendCommand( object command, Type sidekickTargetType, bool isOptionalExecution = false )
+        {
+            _d.SendCommand( _o, new ObservableDomainCommand( command, sidekickTargetType, isOptionalExecution ) );
+        }
+
+        /// <summary>
+        /// Sends a command in "broadcast mode": all existing sidekicks will have the opportunity to handle it.
+        /// In this "broadcast mode", if all <see cref="ObservableDomainSidekick.ExecuteCommand(Core.IActivityMonitor, in SidekickCommand)"/>
+        /// return false, the command is considered unhandled and by default this is an error: see <paramref name="isOptionalExecution"/>.
+        /// <para>
+        /// This is just a helper that calls <see cref="SendCommand(in ObservableDomainCommand)"/>.
+        /// </para>
+        /// </summary>
+        /// <param name="command">The command payload.</param>
+        /// <param name="isOptionalExecution">
+        /// By default, at least one sidekick must handle the command
+        /// (at least one <see cref="ObservableDomainSidekick.ExecuteCommand(Core.IActivityMonitor, in SidekickCommand)"/> must return true).
+        /// When set to true, a simple warning is emitted if the command failed to be handled.
+        /// </param>
+        public void SendCommand( object command, bool isOptionalExecution = false )
+        {
+            _d.SendCommand( _o, new ObservableDomainCommand( command, null, isOptionalExecution ) );
         }
 
         /// <summary>

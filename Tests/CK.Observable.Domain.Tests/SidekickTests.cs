@@ -71,7 +71,7 @@ namespace CK.Observable.Domain.Tests
             void OnMessageChanged( object before, object after )
             {
                 if( Domain.IsDeserializing ) return;
-                Domain.SendCommand( new CmdSimple() { Text = Message }, null );
+                Domain.SendCommand( new CmdSimple() { Text = Message } );
             }
 
         }

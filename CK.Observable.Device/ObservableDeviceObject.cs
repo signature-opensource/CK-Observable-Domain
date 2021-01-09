@@ -8,11 +8,11 @@ using System.Linq;
 namespace CK.Observable.Device
 {
     /// <summary>
-    /// Non generic abstract base class for device that is not intended to be specialized directly.
-    /// Use the generic <see cref="ObservableDeviceObject{TSidekick}"/> as the object device base.
+    /// Non generic abstract base class for device. It is not intended to be specialized directly: use the
+    /// generic <see cref="ObservableDeviceObject{TSidekick}"/> as the object device base.
     /// </summary>
     [SerializationVersion( 0 )]
-    public abstract class ObservableDeviceObject : ObservableObject
+    public abstract class ObservableDeviceObject : ObservableObject, ISidekickLocator
     {
         DeviceStatus? _status;
         ObservableEventHandler _statusChanged;
@@ -111,6 +111,8 @@ namespace CK.Observable.Device
         /// </summary>
         [NotExportable]
         public bool IsBoundDevice => Status != null;
+
+        ObservableDomainSidekick ISidekickLocator.Sidekick => _bridge.Sidekick;
 
         /// <summary>
         /// Throws an <see cref="InvalidOperationException"/> if this observable object device is not bound

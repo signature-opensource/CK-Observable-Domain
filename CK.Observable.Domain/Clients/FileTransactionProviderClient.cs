@@ -48,7 +48,7 @@ namespace CK.Observable
         /// If 0: Every transaction will write the file.
         /// </param>
         /// <param name="next">The next manager (can be null).</param>
-        public FileTransactionProviderClient( NormalizedPath filePath, int minimumDueTimeMs, IObservableDomainClient next = null )
+        public FileTransactionProviderClient( NormalizedPath filePath, int minimumDueTimeMs, IObservableDomainClient? next = null )
             : base( next )
         {
             if( minimumDueTimeMs < -1 ) throw new ArgumentException( $"{minimumDueTimeMs} is not a valid value. Valid values are -1, 0, or above.", nameof( minimumDueTimeMs ) );

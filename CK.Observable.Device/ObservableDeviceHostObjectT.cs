@@ -1,4 +1,5 @@
 using CK.DeviceModel;
+using System.Collections.Generic;
 
 namespace CK.Observable.Device
 {
@@ -7,7 +8,7 @@ namespace CK.Observable.Device
     /// </summary>
     /// <typeparam name="TSidekick">The type of the sidekick.</typeparam>
     [SerializationVersion( 0 )]
-    public abstract class ObservableDeviceHostObject<TSidekick> : ObservableDeviceHostObject
+    public abstract class ObservableDeviceHostObject<TSidekick> : ObservableDeviceHostObject, ISidekickClientObject<TSidekick>
         where TSidekick : ObservableDomainSidekick
     {
         /// <summary>
@@ -36,6 +37,11 @@ namespace CK.Observable.Device
         void Write( BinarySerializer s )
         {
         }
+
+        /// <summary>
+        /// Gets the sidekick that manages this device host and its devices.
+        /// </summary>
+        protected TSidekick Sidekick => (TSidekick)_sidekick;
 
     }
 }

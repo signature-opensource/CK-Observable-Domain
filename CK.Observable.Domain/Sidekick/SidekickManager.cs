@@ -326,10 +326,33 @@ namespace CK.Observable
             foreach( var c in r.Commands )
             {
                 SidekickCommand cmd = new SidekickCommand( r.StartTimeUtc, r.CommitTimeUtc, c.Command, localPostActions, domainPostActions );
+                bool errorTarget = false;
                 bool foundHandler = false;
                 ObservableDomainSidekick? known = c.KnownTarget as ObservableDomainSidekick;
+                if( known == null )
+                {
+                    if( c.KnownTarget is Type t )
+                    {
+                        if( !_currentIndex.TryGetValue( t, out known ) )
+                        {
+                            if( results == null ) results = new List<(object, CKExceptionData)>();
+                            results.Add( (c, CKExceptionData.Create( $"Sidekick type '{t}' not found. An error may have prevented its instantiation, see previous logs." )) );
+                            errorTarget = true;
+                        }
+                    }
+                    else if( c.KnownTarget is ISidekickLocator locator )
+                    {
+                        if( (known = locator.Sidekick) == null )
+                        {
+                            if( results == null ) results = new List<(object, CKExceptionData)>();
+                            results.Add( (c, CKExceptionData.Create( $"SidekickLocator exposes a null Sidekick." )) );
+                            errorTarget = true;
+                        }
+                    }
+                }
                 if( known != null )
                 {
+                    // Target found.
                     if( known.Domain != _domain )
                     {
                         if( results == null ) results = new List<(object, CKExceptionData)>();
@@ -341,20 +364,20 @@ namespace CK.Observable
                         foundHandler = ExecuteCommand( monitor, known, in cmd, c, ref results );
                     }
                 }
-                else if( c.KnownTarget is Type t )
+                else if( !errorTarget )
                 {
-                    if( !_currentIndex.TryGetValue( t, out known ) )
+                    if( c.KnownTarget != null )
                     {
                         if( results == null ) results = new List<(object, CKExceptionData)>();
-                        results.Add( (c, CKExceptionData.Create( $"Sidekick type '{t}' not found. An error may have prevented its instantiation, see previous logs." )) );
+                        results.Add( (c, CKExceptionData.Create( $"Target sidekick must be a ObservableDomainSidekick, a Type or a ISidekickLocator. Cannot handle instance of type '{c.KnownTarget.GetType().FullName}'." )) );
                     }
-                }
-                else
-                {
-                    // Broadcast.
-                    foreach( var h in _currentIndex.Values )
+                    else
                     {
-                        foundHandler |= ExecuteCommand( monitor, h, in cmd, c, ref results );
+                        // Broadcast.
+                        foreach( var h in _currentIndex.Values )
+                        {
+                            foundHandler |= ExecuteCommand( monitor, h, in cmd, c, ref results );
+                        }
                     }
                 }
                 if( !foundHandler )
@@ -362,7 +385,7 @@ namespace CK.Observable
                     var msg = $"No sidekick found to handle command type '{c.GetType().FullName}'.";
                     if( known != null )
                     {
-                        msg += " The presumably known target rejects it.";
+                        msg += $" The presumably known target '{known}' rejected it.";
                     }
                     if( c.IsOptionalExecution )
                     {
