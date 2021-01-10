@@ -3,7 +3,7 @@
     <PackageReference Update="CK.ActivityMonitor.SimpleSender" Version="13.3.0" />
     <PackageReference Update="CK.StObj.Model" Version="15.0.0" />
     <PackageReference Update="Microsoft.Extensions.DependencyInjection" Version="3.1.10" />
-    <PackageReference Update="CK.DeviceModel" Version="0.24.1" />
+    <PackageReference Update="CK.DeviceModel" Version="0.24.2--0001-develop" />
     <PackageReference Update="System.Threading.Channels" Version="4.7.1" />
     <PackageReference Update="CK.Testing.Monitoring" Version="1.0.0" />
     <PackageReference Update="FluentAssertions" Version="5.10.3" />
