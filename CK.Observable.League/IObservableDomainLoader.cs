@@ -31,14 +31,14 @@ namespace CK.Observable.League
         /// Gets the transaction events if possible from a given transaction number.
         /// This returns null if an export is required (the <paramref name="transactionNumber"/> is too old),
         /// and an empty array if the transactionNumber is greater or equal to the current transaction number
-        /// stored (this should not happen: clients should only have smaller transaction number).
+        /// stored (this could happen: clients may be on par with the current transaction number).
         /// </summary>
         /// <param name="transactionNumber">
         /// The starting transaction number.
-        /// Should be between 1 and the current transaction number (excluded), 0 to trigger a full export.
+        /// Should be between 1 and the current transaction number (included), 0 to trigger a full export.
         /// </param>
-        /// <returns>The set of transaction events to apply or null if an export is required.</returns>
-        IReadOnlyList<JsonEventCollector.TransactionEvent>? GetTransactionEvents( int transactionNumber );
+        /// <returns>The current transaction number and the set of transaction events to apply or null if an export is required.</returns>
+        (int TransactionNumber, IReadOnlyList<JsonEventCollector.TransactionEvent>? Events) GetTransactionEvents( int transactionNumber );
 
         /// <summary>
         /// Raised whenever a transaction has been successfully commited.

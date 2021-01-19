@@ -175,7 +175,7 @@ namespace CK.Observable.League
 
             public bool IsLoaded => _refCount != 0;
 
-            public IReadOnlyList<JsonEventCollector.TransactionEvent>? GetTransactionEvents( int transactionNumber )
+            public (int TransactionNumber, IReadOnlyList<JsonEventCollector.TransactionEvent>? Events) GetTransactionEvents( int transactionNumber )
             {
                 return Client.JsonEventCollector.GetTransactionEvents( transactionNumber );
             }

@@ -106,28 +106,28 @@ namespace CK.Observable
         /// stored (this should not happen: clients should only have smaller transaction number).
         /// </summary>
         /// <param name="transactionNumber">The starting transaction number.</param>
-        /// <returns>The set of transaction events to apply or null if an export is required.</returns>
-        public IReadOnlyList<TransactionEvent>? GetTransactionEvents( int transactionNumber )
+        /// <returns>The current transaction number and the set of transaction events to apply or null if an export is required.</returns>
+        public (int TransactionNumber,IReadOnlyList<TransactionEvent>? Events) GetTransactionEvents( int transactionNumber )
         {
             lock( _events )
             {
                 if( transactionNumber <= 0 )
                 {
-                    return null;
+                    return (_lastTranNum, null);
                 }
                 if( transactionNumber >= _lastTranNum )
                 {
-                    return Array.Empty<TransactionEvent>();
+                    return (_lastTranNum, Array.Empty<TransactionEvent>());
                 }
                 int minTranNum = _lastTranNum - _events.Count;
                 int idxStart = transactionNumber - minTranNum;
                 if( idxStart < 0 )
                 {
-                    return null;
+                    return (_lastTranNum, null);
                 }
                 var a = new TransactionEvent[_events.Count - idxStart];
                 _events.CopyTo( idxStart, a, 0, a.Length );
-                return a;
+                return (_lastTranNum,a);
             }
         }
 

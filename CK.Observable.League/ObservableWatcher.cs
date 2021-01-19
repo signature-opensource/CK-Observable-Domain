@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 namespace CK.Observable
 {
     /// <summary>
-    /// Base abstract class that watches any number of the domains in a <see cref="ObservableLeague"/>.
+    /// Base abstract class that watches any number of domains in a <see cref="ObservableLeague"/>.
     /// This class is thread safe.
     /// </summary>
     public abstract class ObservableWatcher : IDisposable
@@ -126,12 +126,13 @@ namespace CK.Observable
         /// <returns>The awaitable.</returns>
         public async Task StartOrRestartWatchAsync( IActivityMonitor monitor, string domainName, int transactionNumber )
         {
-            var msg = await GetStartOrRestartEventAsync( monitor, domainName, transactionNumber );
+            WatchEvent msg = await GetStartOrRestartEventAsync( monitor, domainName, transactionNumber );
             HandleEvent( monitor, msg );
         }
 
         async Task<WatchEvent> GetStartOrRestartEventAsync( IActivityMonitor monitor, string domainName, int transactionNumber )
         {
+            int currentTransactionNumber;
             IReadOnlyList<JsonEventCollector.TransactionEvent>? events = null;
             await _lock.WaitAsync();
             try
@@ -156,7 +157,8 @@ namespace CK.Observable
                     }
                     return new WatchEvent( domainName, string.Empty );
                 }
-                events = loader.GetTransactionEvents( transactionNumber );
+
+                (currentTransactionNumber, events) = loader.GetTransactionEvents( transactionNumber );
                 if( events == null )
                 {
                     await using( var shell = await loader.LoadAsync( monitor ) )
@@ -180,12 +182,20 @@ namespace CK.Observable
             Debug.Assert( events != null );
             if( events.Count == 0 )
             {
-                return new WatchEvent( domainName, "{\"Error\":\"Invalid transaction number.\"}" );
+                if( currentTransactionNumber > transactionNumber )
+                {
+                    return new WatchEvent( domainName, "{\"Error\":\"Invalid transaction number.\"}" );
+                }
+                else
+                {
+                    return new WatchEvent( domainName, $"{{\"N\":{currentTransactionNumber},\"E\":[]}}" );
+                }
             }
             bool atLeastOne = false;
             StringBuilder b = new StringBuilder();
-            b.Append( "{\"N\":" ).Append( events[events.Count - 1].TransactionNumber )
-                .Append( "{\"E\":[" );
+            b.Append( "{\"N\":" )
+                .Append( events[events.Count - 1].TransactionNumber )
+                .Append( ",\"E\":[" );
             foreach( var t in events )
             {
                 if( atLeastOne ) b.Append( ',' );

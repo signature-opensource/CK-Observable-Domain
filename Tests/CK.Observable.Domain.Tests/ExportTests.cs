@@ -79,10 +79,12 @@ namespace CK.Observable.Domain.Tests
                 LastEvent.ExportedEvents.Should().BeEmpty();
 
                 // Transaction number 1 is not kept: null means "I can't give you the diff, do a full export!".
-                eventCollector.GetTransactionEvents( 0 ).Should().BeNull();
-                eventCollector.GetTransactionEvents( 1 ).Should().BeEmpty();
-                // Transaction number 1 is not kept: empty means "I can't give you the diff: tour transaction number is too big.".
-                eventCollector.GetTransactionEvents( 2 ).Should().BeEmpty();
+                eventCollector.GetTransactionEvents( 0 ).Events.Should().BeNull();
+                eventCollector.GetTransactionEvents( 1 ).Events.Should().BeEmpty();
+                // Transaction number 1 is not kept: empty means "I can't give you the diff: your transaction number is too big.".
+                var r2 = eventCollector.GetTransactionEvents( 2 );
+                r2.TransactionNumber.Should().Be( 0 );
+                r2.Events.Should().BeEmpty();
 
                 d.Modify( TestHelper.Monitor, () =>
                 {
@@ -157,9 +159,15 @@ namespace CK.Observable.Domain.Tests
                 eventCollector.LastEventChanged += TrackLastEvent;
 
                 d.TransactionSerialNumber.Should().Be( 0, "Nothing happened yet." );
-                eventCollector.GetTransactionEvents( 0 ).Should().BeNull( "Asking for 0: a full export must be made." );
-                eventCollector.GetTransactionEvents( 1 ).Should().BeEmpty( "Asking for any number greater or equal to the current transaction number: empty means transaction number is too big." );
-                eventCollector.GetTransactionEvents( 2 ).Should().BeEmpty();
+                var r0 = eventCollector.GetTransactionEvents( 0 );
+                r0.TransactionNumber.Should().Be( 0 );
+                r0.Events.Should().BeNull( "Asking for 0: a full export must be made." );
+                var r1 = eventCollector.GetTransactionEvents( 1 );
+                r1.TransactionNumber.Should().Be( 0 );
+                r1.Events.Should().BeEmpty( "Asking for any number greater or equal to the current transaction number: empty means transaction number is too big." );
+                var r2 = eventCollector.GetTransactionEvents( 2 );
+                r2.TransactionNumber.Should().Be( 0 );
+                r2.Events.Should().BeEmpty();
 
                 ObservableList<int>? oneObject = null;
                 d.Modify( TestHelper.Monitor, () =>
@@ -174,9 +182,12 @@ namespace CK.Observable.Domain.Tests
                 LastEvent.ExportedEvents.Should().BeEmpty( "The event n°1 is special, it is sent empty: a full export must be made." );
                 var event1 = LastEvent;
 
-                eventCollector.GetTransactionEvents( 0 ).Should().BeNull( "Asking for 0: a full export must always be made." );
-                eventCollector.GetTransactionEvents( 1 ).Should().BeEmpty( "Asking for any number greater or equal to the current transaction number: empty means transaction number is too big." );
-                eventCollector.GetTransactionEvents( 2 ).Should().BeEmpty();
+                r0 = eventCollector.GetTransactionEvents( 0 );
+                r0.Events.Should().BeNull( "Asking for 0: a full export must always be made." );
+                r1 = eventCollector.GetTransactionEvents( 1 );
+                r1.Events.Should().BeEmpty( "Asking for any number greater or equal to the current transaction number: empty means transaction number is too big." );
+                r2 = eventCollector.GetTransactionEvents( 2 );
+                r2.Events.Should().BeEmpty();
 
                 d.Modify( TestHelper.Monitor, () =>
                 {
@@ -188,9 +199,13 @@ namespace CK.Observable.Domain.Tests
                 LastEvent.ExportedEvents.Should().Be( "[\"I\",0,0,1]" );
                 var event2 = LastEvent;
 
-                eventCollector.GetTransactionEvents( 0 ).Should().BeNull( "Asking for 0: a full export must always be made." );
-                eventCollector.GetTransactionEvents( 1 ).Should().BeEquivalentTo( new[] { event2 } );
-                eventCollector.GetTransactionEvents( 2 ).Should().BeEmpty();
+                r0 = eventCollector.GetTransactionEvents( 0 );
+                r0.TransactionNumber.Should().Be( 2 );
+                r0.Events.Should().BeNull( "Asking for 0: a full export must always be made." );
+                r1 = eventCollector.GetTransactionEvents( 1 );
+                r1.Events.Should().BeEquivalentTo( new[] { event2 } );
+                r2 = eventCollector.GetTransactionEvents( 2 );
+                r2.Events.Should().BeEmpty();
 
                 d.Modify( TestHelper.Monitor, () =>
                 {
@@ -203,10 +218,12 @@ namespace CK.Observable.Domain.Tests
                 LastEvent.ExportedEvents.Should().Be( "[\"D\",0]" );
                 var event3 = LastEvent;
 
-                eventCollector.GetTransactionEvents( 0 ).Should().BeNull( "Asking for 0: a full export must always be made." );
-                eventCollector.GetTransactionEvents( 1 ).Should().BeEquivalentTo( new[] { event2, event3 } );
-                eventCollector.GetTransactionEvents( 2 ).Should().BeEquivalentTo( new[] { event3 } );
-
+                r0 = eventCollector.GetTransactionEvents( 0 );
+                r0.Events.Should().BeNull( "Asking for 0: a full export must always be made." );
+                r1 = eventCollector.GetTransactionEvents( 1 );
+                r1.Events.Should().BeEquivalentTo( new[] { event2, event3 } );
+                r2 = eventCollector.GetTransactionEvents( 2 );
+                r2.Events.Should().BeEquivalentTo( new[] { event3 } );
             }
         }
 
@@ -409,7 +426,7 @@ namespace CK.Observable.Domain.Tests
                 new TimerAndRemiderProperties();
             } );
             d.ExportToString().Should().NotContainAny( "Timer", "Reminder" ).And.Contain( "ThisIsExported" );
-            var events = eventCollector.GetTransactionEvents( 1 ).Single().ExportedEvents;
+            var events = eventCollector.GetTransactionEvents( 1 ).Events.Single().ExportedEvents;
             events.Should().NotContainAny( "Timer", "Reminder" ).And.Contain( "ThisIsExported" );
         }
 
