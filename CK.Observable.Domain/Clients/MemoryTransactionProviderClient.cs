@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace CK.Observable
@@ -113,7 +114,7 @@ namespace CK.Observable
         public virtual void OnTransactionCommit( in SuccessfulTransactionEventArgs c )
         {
             Next?.OnTransactionCommit( c );
-            CreateSnapshot( c.Monitor, c.Domain, false );
+            CreateSnapshot( c.Monitor, c.Domain, false, c.HasSaveCommand );
         }
 
         /// <summary>
@@ -144,7 +145,7 @@ namespace CK.Observable
         public virtual void OnTransactionStart( IActivityMonitor monitor, ObservableDomain d, DateTime timeUtc )
         {
             Next?.OnTransactionStart( monitor, d, timeUtc );
-            if( _snapshotSerialNumber == -1 ) CreateSnapshot( monitor, d, true );
+            if( _snapshotSerialNumber == -1 ) CreateSnapshot( monitor, d, true, true );
         }
 
         /// <summary>
@@ -317,8 +318,18 @@ namespace CK.Observable
         /// that can be greater than 0 if the domain has been loaded.
         /// </para>
         /// </param>
-        protected virtual void CreateSnapshot( IActivityMonitor monitor, IObservableDomain d, bool initialOne )
+        /// <param name="ignoreSkipTransactionCount">True to create a snapshot regardless of <see cref="SkipTransactionCount"/>.</param>
+        protected virtual void CreateSnapshot( IActivityMonitor monitor, IObservableDomain d, bool initialOne, bool ignoreSkipTransactionCount )
         {
+            if( !ignoreSkipTransactionCount && SkipTransactionCount != 0 && _snapshotSerialNumber > 0 )
+            {
+                int delta = d.TransactionSerialNumber - _snapshotSerialNumber;
+                if( delta <= SkipTransactionCount )
+                {
+                    monitor.Trace( $"Skipped snapshot of '{d.DomainName}' ({delta}/{SkipTransactionCount})." );
+                    return;
+                }
+            }
             using( monitor.OpenTrace( $"Creating snapshot of '{d.DomainName}'." ) )
             {
                 _memory.Position = 0;

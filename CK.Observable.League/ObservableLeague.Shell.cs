@@ -204,6 +204,7 @@ namespace CK.Observable.League
                 get => new ManagedDomainOptions(
                             loadOption: _lifeCycleOption,
                             c: Client.CompressionKind,
+                            skipTransactionCount: Client.SkipTransactionCount,
                             snapshotSaveDelay: TimeSpan.FromMilliseconds( Client.SnapshotSaveDelay ),
                             snapshotKeepDuration: Client.SnapshotKeepDuration,
                             snapshotMaximalTotalKiB: Client.SnapshotMaximalTotalKiB,
@@ -227,6 +228,7 @@ namespace CK.Observable.League
                 {
                     _lifeCycleOption = options.LifeCycleOption;
                     Client.CompressionKind = options.CompressionKind;
+                    Client.SkipTransactionCount = options.SkipTransactionCount;
                     Client.SnapshotSaveDelay = (int)options.SnapshotSaveDelay.TotalMilliseconds;
                     Client.SnapshotKeepDuration = options.SnapshotKeepDuration;
                     Client.SnapshotMaximalTotalKiB = options.SnapshotMaximalTotalKiB;
@@ -255,9 +257,24 @@ namespace CK.Observable.League
 
             protected IServiceProvider ServiceProvider { get; }
 
-            Task<bool> IObservableDomainShellBase.SaveAsync( IActivityMonitor m )
+            async Task<bool> IObservableDomainShellBase.SaveAsync( IActivityMonitor m )
             {
-                return Client.SaveAsync( m );
+                return await ExplicitSaveDomain( m ) &&  await Client.SaveAsync( m );
+            }
+
+            async Task<bool> ExplicitSaveDomain( IActivityMonitor m )
+            {
+                var d = _domain;
+                if( d != null && !d.IsDisposed && Client.SkipTransactionCount > 0 )
+                {
+                    var r = await d.ModifyNoThrowAsync( m, () => d.SendSaveCommand() );
+                    if( r.OnStartTransactionError != null || !r.Transaction.Success )
+                    {
+                        return false;
+                    }
+                    return true;
+                }
+                return false;
             }
 
             ValueTask<bool> IObservableDomainShellBase.DisposeAsync( IActivityMonitor monitor ) => DoShellDisposeAsync( monitor );
@@ -280,6 +297,7 @@ namespace CK.Observable.League
                     {
                         if( _domain != null )
                         {
+                            await ExplicitSaveDomain( monitor );
                             await (IsDestroyed ? Client.ArchiveAsync( monitor ) : Client.SaveAsync( monitor ));
                             if( !IsDestroyed && !ClosingLeague )
                             {

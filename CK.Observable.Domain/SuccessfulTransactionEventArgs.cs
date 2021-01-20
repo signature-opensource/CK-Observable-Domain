@@ -2,6 +2,7 @@ using CK.Core;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace CK.Observable
@@ -134,6 +135,11 @@ namespace CK.Observable
             _commands.Add( new ObservableDomainCommand( command, null, isOptionalExecution ) );
         }
 
+        /// <summary>
+        /// Gets whether a <see cref="ObservableDomain.SaveCommand"/> has been sent and
+        /// should be honored if possible.
+        /// </summary>
+        public bool HasSaveCommand => _commands.Any( x => x.Command == ObservableDomain.SaveCommand );
 
         /// <summary>
         /// Registrar for actions (that can be synchronous as well as asynchronous) that must be executed after

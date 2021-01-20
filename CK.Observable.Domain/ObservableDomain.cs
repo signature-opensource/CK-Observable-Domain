@@ -56,6 +56,12 @@ namespace CK.Observable
         /// </summary>
         public const int DomainSecretKeyLength = 512;
 
+        /// <summary>
+        /// Gets an opaque object that is a command (can be send to <see cref="DomainView.SendCommand(object, bool)"/>) that
+        /// triggers a save of the domain (if a client can honor it).
+        /// </summary>
+        public static readonly object SaveCommand = DBNull.Value;
+
         [ThreadStatic]
         internal static ObservableDomain? CurrentThreadDomain;
 
@@ -1894,6 +1900,16 @@ namespace CK.Observable
         {
             CheckWriteLock( o ).CheckDisposed();
             _changeTracker.OnSendCommand( command );
+        }
+
+        /// <summary>
+        /// Sends a <see cref="SaveCommand"/>.
+        /// This must be called from inside a transaction.
+        /// </summary>
+        public void SendSaveCommand()
+        {
+            CheckWriteLock( null );
+            _changeTracker.OnSendCommand( new ObservableDomainCommand( SaveCommand ) );
         }
 
         internal bool EnsureSidekicks( IDisposableObject o )

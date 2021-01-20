@@ -8,7 +8,7 @@ namespace CK.Observable.League
     /// <summary>
     /// Immutable definition of options for domains managed in a <see cref="ObservableLeague"/>.
     /// </summary>
-    [SerializationVersion( 0 )]
+    [SerializationVersion( 1 )]
     public sealed class ManagedDomainOptions : IEquatable<ManagedDomainOptions>
     {
         /// <summary>
@@ -20,6 +20,12 @@ namespace CK.Observable.League
         /// The Snapshot compression kind.
         /// </summary>
         public readonly CompressionKind CompressionKind;
+
+        /// <summary>
+        /// Number of transactions to skip after every save.
+        /// Defaults to zero.
+        /// </summary>
+        public readonly int SkipTransactionCount;
 
         /// <summary>
         /// Minimum time between each save, checked on every transaction commit.
@@ -72,6 +78,7 @@ namespace CK.Observable.League
             (
                 lifeCycleOption,
                 CompressionKind,
+                SkipTransactionCount,
                 SnapshotSaveDelay,
                 SnapshotKeepDuration,
                 SnapshotMaximalTotalKiB,
@@ -89,6 +96,7 @@ namespace CK.Observable.League
             (
                 LifeCycleOption,
                 k,
+                SkipTransactionCount,
                 SnapshotSaveDelay,
                 SnapshotKeepDuration,
                 SnapshotMaximalTotalKiB,
@@ -104,6 +112,7 @@ namespace CK.Observable.League
         public ManagedDomainOptions(
             DomainLifeCycleOption loadOption,
             CompressionKind c,
+            int skipTransactionCount,
             TimeSpan snapshotSaveDelay,
             TimeSpan snapshotKeepDuration,
             int snapshotMaximalTotalKiB,
@@ -113,6 +122,7 @@ namespace CK.Observable.League
         {
             LifeCycleOption = loadOption;
             CompressionKind = c;
+            SkipTransactionCount = skipTransactionCount;
             SnapshotSaveDelay = snapshotSaveDelay;
             SnapshotKeepDuration = snapshotKeepDuration;
             SnapshotMaximalTotalKiB = snapshotMaximalTotalKiB;
@@ -131,6 +141,10 @@ namespace CK.Observable.League
             ExportedEventKeepDuration = r.ReadTimeSpan();
             ExportedEventKeepLimit = r.ReadInt32();
             SaveDisposedObjectBehavior = r.ReadEnum<SaveDisposedObjectBehavior>();
+            if( info.Version >= 1 )
+            {
+                SkipTransactionCount = r.ReadInt32();
+            }
         }
 
         void Write( BinarySerializer w )
@@ -143,6 +157,8 @@ namespace CK.Observable.League
             w.Write( ExportedEventKeepDuration );
             w.Write( ExportedEventKeepLimit );
             w.WriteEnum( SaveDisposedObjectBehavior );
+            // v1
+            w.Write( SkipTransactionCount );
         }
 
         /// <summary>
@@ -156,7 +172,7 @@ namespace CK.Observable.League
         /// Value semantic hash code.
         /// </summary>
         /// <returns>The hash code.</returns>
-        public override int GetHashCode() => HashCode.Combine( LifeCycleOption, CompressionKind, SnapshotSaveDelay, SnapshotKeepDuration, SnapshotMaximalTotalKiB, ExportedEventKeepDuration, ExportedEventKeepLimit, SaveDisposedObjectBehavior );
+        public override int GetHashCode() => HashCode.Combine( LifeCycleOption, CompressionKind, SnapshotSaveDelay, SnapshotKeepDuration, SnapshotMaximalTotalKiB, ExportedEventKeepDuration, ExportedEventKeepLimit + SkipTransactionCount, SaveDisposedObjectBehavior );
 
         /// <summary>
         /// Value semantic equality.
@@ -166,6 +182,7 @@ namespace CK.Observable.League
         public bool Equals( ManagedDomainOptions other ) => LifeCycleOption == other.LifeCycleOption
                                                             && CompressionKind == other.CompressionKind
                                                             && SnapshotSaveDelay == other.SnapshotSaveDelay
+                                                            && SkipTransactionCount == other.SkipTransactionCount
                                                             && SnapshotKeepDuration == other.SnapshotKeepDuration
                                                             && SnapshotMaximalTotalKiB == other.SnapshotMaximalTotalKiB
                                                             && ExportedEventKeepDuration == other.ExportedEventKeepDuration
