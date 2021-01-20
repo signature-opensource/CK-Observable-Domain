@@ -85,6 +85,12 @@ namespace CK.Observable
         protected IObservableDomainClient? Next { get; }
 
         /// <summary>
+        /// Number of transactions to skip after every save.
+        /// Defaults to zero.
+        /// </summary>
+        public int SkipTransactionCount { get; set; }
+
+        /// <summary>
         /// Called when the domain instance is created.
         /// By default, does nothing.
         /// </summary>
