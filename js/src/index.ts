@@ -85,8 +85,10 @@ export class ObservableDomain {
     public applyWatchEvent(e: WatchEvent) {
         e = deserialize(e, { prefix: "" }); // Resolve objects
         if(ObservableDomain.isTransactionSetEvent(e)) {
+            // e.N is the transactionNumber of the LAST event.
+            const firstTransactionNumber = e.N - e.E.length + 1;
             for(let i = 0; i < e.E.length; i++) {
-                this.applyEvent(e.N + i, e.E[i]);
+                this.applyEvent(firstTransactionNumber + i, e.E[i]);
             }
         } else if(ObservableDomain.isDomainExportEvent(e)) {
             this.applyDomainExport(e);
