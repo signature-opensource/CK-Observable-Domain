@@ -11,6 +11,12 @@ namespace CK.Observable
     public class ObservableRootObject : ObservableObject
     {
         /// <summary>
+        /// Gets ot sets a flag that allows <see cref="Dispose(bool)"/> to be called on root.
+        /// This is to be used as a last resort.
+        /// </summary>
+        public static bool AllowRootObjectDisposing { get; set; } = false;
+
+        /// <summary>
         /// Initializes a new root for the current domain that is retrieved automatically: it
         /// is the last one on the current thread that has started a transaction (see <see cref="ObservableDomain.BeginTransaction"/>).
         /// </summary>
@@ -36,7 +42,15 @@ namespace CK.Observable
         protected internal override void Dispose( bool shouldCleanup )
         {
             if( !shouldCleanup ) base.Dispose( shouldCleanup );
-            else throw new InvalidOperationException( "ObservableRootObject cannot be disposed." );
+            else 
+            {
+                if( !AllowRootObjectDisposing
+                    || ObservableDomain.GetCurrentActiveDomain().AllRoots.IndexOf( x => x == this ) >= 0 )
+                {
+                    throw new InvalidOperationException( "ObservableRootObject cannot be disposed." );
+                }
+                base.Dispose( shouldCleanup );
+            }
         }
     }
 }
