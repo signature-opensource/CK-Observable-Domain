@@ -23,13 +23,24 @@ namespace CK.Observable.League
 
         /// <summary>
         /// Number of transactions to skip after every save.
-        /// Defaults to zero.
+        /// <para>
+        /// Defaults to zero: transaction mode is on, unhandled errors trigger a rollback of the current state.
+        /// </para>
+        /// <para>
+        /// When positive, the transaction mode is on, but in a very dangerous mode: whenever saves are skipped,
+        /// the domain rollbacks to an old version of itself.
+        /// </para>
+        /// <para>
+        /// When set to -1, transaction mode is off. Unhandled errors are logged (as <see cref="LogLevel.Error"/>) and
+        /// silently swallowed by <see cref="MemoryTransactionProviderClient.OnUnhandledError"/> method.
+        /// </para>
         /// </summary>
         public readonly int SkipTransactionCount;
 
         /// <summary>
         /// Minimum time between each save, checked on every transaction commit.
-        /// When negative, the file will not be saved automatically (manual save must be done by <see cref="IObservableDomainShellBase.SaveAsync(IActivityMonitor)"/>).
+        /// When negative, the file will not be saved automatically (manual save must be done by <see cref="IObservableDomainShellBase.SaveAsync(IActivityMonitor)"/>
+        /// or by sending the <see cref="ObservableDomain.SaveCommand"/> from a transaction).
         /// When 0, every transaction will be saved.
         /// </summary>
         public readonly TimeSpan SnapshotSaveDelay;

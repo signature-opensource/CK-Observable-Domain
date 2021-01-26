@@ -58,7 +58,7 @@ namespace CK.Observable
 
         /// <summary>
         /// Gets an opaque object that is a command (can be send to <see cref="DomainView.SendCommand(object, bool)"/>) that
-        /// triggers a save of the domain (if a client can honor it).
+        /// triggers a save of the domain (if a <see cref="IObservableDomainClient"/> can honor it).
         /// </summary>
         public static readonly object SaveCommand = DBNull.Value;
 
@@ -1020,7 +1020,7 @@ namespace CK.Observable
         /// <summary>
         /// Modify the domain once a transaction has been opened and calls the <see cref="IObservableDomainClient"/>
         /// that have been registered: all this occurs in the lock and it is released at the end.
-        /// This never throws since the transaction result contains any errors.
+        /// This never throws since the transaction result contains the errors.
         /// </summary>
         /// <param name="actions">The actions to execute. Can be null.</param>
         /// <param name="t">The observable transaction. Cannot be null.</param>
@@ -1053,8 +1053,30 @@ namespace CK.Observable
             }
             catch( Exception ex )
             {
-                t.Monitor.Error( ex );
-                t.AddError( CKExceptionData.CreateFrom( ex ) );
+                bool swallowError = false;
+                Exception? exOnUnhandled = null;
+                if( DomainClient != null )
+                {
+                    try
+                    {
+                        DomainClient?.OnUnhandledError( t.Monitor, this, ex, ref swallowError );
+                    }
+                    catch( Exception ex2 )
+                    {
+                        swallowError = false;
+                        exOnUnhandled = ex2;
+                    }
+                }
+                if( !swallowError )
+                {
+                    t.Monitor.Error( ex );
+                    t.AddError( CKExceptionData.CreateFrom( ex ) );
+                    if( exOnUnhandled != null )
+                    {
+                        t.Monitor.Error( exOnUnhandled );
+                        t.AddError( CKExceptionData.CreateFrom( exOnUnhandled ) );
+                    }
+                }
             }
             return t.Commit();
         }

@@ -48,6 +48,19 @@ namespace CK.Observable
         void OnTransactionCommit( in SuccessfulTransactionEventArgs context );
 
         /// <summary>
+        /// Called from inside a transaction whenever an unhandled exception is thrown.
+        /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
+        /// <param name="d">The associated domain.</param>
+        /// <param name="ex">The exception that has been raised.</param>
+        /// <param name="swallowError">
+        /// Defaults to false since by default the transaction will fail.
+        /// Setting this to true will silently swallow the exception (this is up to this implentation
+        /// to log it) and generate a call to <see cref="OnTransactionCommit"/> with a <see cref="SuccessfulTransactionEventArgs"/>.
+        /// </param>
+        void OnUnhandledError( IActivityMonitor monitor, ObservableDomain d, Exception ex, ref bool swallowError );
+
+        /// <summary>
         /// Called when an error occurred in a transaction.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>

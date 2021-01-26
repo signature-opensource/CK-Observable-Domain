@@ -15,17 +15,18 @@ namespace CK.Observable
     /// This is a simple, yet useful, participant that implements transaction in memory.
     /// It is open to extensions and can be used as a base class: the <see cref="FileTransactionProviderClient"/> extends this.
     /// The protected <see cref="LoadOrCreateAndInitializeSnapshot"/> and <see cref="WriteSnapshot"/> methods offers access to
-    /// the internal memory.
+    /// the internal memory stream.
     /// <para>
     /// This class is abstract to be able to deserialize typed domains (thanks to <see cref="DeserializeDomain"/> abstract method).
-    /// This is used only when <see cref="LoadOrCreateAndInitializeSnapshot"/> is
-    /// called that happens outside of the <see cref="IObservableDomainClient"/> responsibilities and has been designed mostly to 
+    /// This is used only when <see cref="LoadOrCreateAndInitializeSnapshot"/> is called that happens outside
+    /// of the <see cref="IObservableDomainClient"/> responsibilities and has been designed mostly to 
     /// support domain management by Observable leagues (or other domain managers).
     /// </para>
     /// </summary>
     public abstract class MemoryTransactionProviderClient : IObservableDomainClient
     {
         readonly MemoryStream _memory;
+        int _skipTransactionCount;
         int _snapshotSerialNumber;
         DateTime _snapshotTimeUtc;
         CompressionKind? _currentSnapshotKind;
@@ -87,9 +88,27 @@ namespace CK.Observable
 
         /// <summary>
         /// Number of transactions to skip after every save.
-        /// Defaults to zero.
+        /// <para>
+        /// Defaults to zero: transaction mode is on, unhandled errors trigger a rollback of the current state.
+        /// </para>
+        /// <para>
+        /// When positive, the transaction mode is on, but in a very dangerous mode: whenever saves are skipped,
+        /// the domain rollbacks to an old version of itself.
+        /// </para>
+        /// <para>
+        /// When set to -1, transaction mode is off. Unhandled errors are logged (as <see cref="LogLevel.Error"/>) and
+        /// silently swallowed by <see cref="OnUnhandledError(IActivityMonitor, Exception, ref bool)"/>.
+        /// </para>
         /// </summary>
-        public int SkipTransactionCount { get; set; }
+        public int SkipTransactionCount
+        {
+            get => _skipTransactionCount;
+            set
+            {
+                if( _skipTransactionCount < -1 ) throw new ArgumentOutOfRangeException( nameof(SkipTransactionCount) );
+                _skipTransactionCount = value;
+            }
+        }
 
         /// <summary>
         /// Called when the domain instance is created.
@@ -115,6 +134,23 @@ namespace CK.Observable
         {
             Next?.OnTransactionCommit( c );
             CreateSnapshot( c.Monitor, c.Domain, false, c.HasSaveCommand );
+        }
+
+
+        /// <summary>
+        /// See <see cref="IObservableDomainClient.OnUnhandledError(IActivityMonitor, Exception, ref bool)"/>.
+        /// Empty implementation nothing here: <paramref name="swallowError"/> is not changed.
+        /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
+        /// <param name="ex">The exception that has been raised.</param>
+        /// <param name="swallowError">Unchanged.</param>
+        public virtual void OnUnhandledError( IActivityMonitor monitor, ObservableDomain d, Exception ex, ref bool swallowError )
+        {
+            if( _skipTransactionCount < 0 )
+            {
+                monitor.Error( $"Error while modifying domain '{d.DomainName}' (SkipTransactionCount = -1).", ex );
+                swallowError = true;
+            }
         }
 
         /// <summary>
@@ -321,12 +357,20 @@ namespace CK.Observable
         /// <param name="ignoreSkipTransactionCount">True to create a snapshot regardless of <see cref="SkipTransactionCount"/>.</param>
         protected virtual void CreateSnapshot( IActivityMonitor monitor, IObservableDomain d, bool initialOne, bool ignoreSkipTransactionCount )
         {
-            if( !ignoreSkipTransactionCount && SkipTransactionCount != 0 && _snapshotSerialNumber > 0 )
+            if( !ignoreSkipTransactionCount && _skipTransactionCount != 0 && _snapshotSerialNumber > 0 )
             {
-                int delta = d.TransactionSerialNumber - _snapshotSerialNumber;
-                if( delta <= SkipTransactionCount )
+                if( _skipTransactionCount > 0 )
                 {
-                    monitor.Trace( $"Skipped snapshot of '{d.DomainName}' ({delta}/{SkipTransactionCount})." );
+                    int delta = d.TransactionSerialNumber - _snapshotSerialNumber;
+                    if( delta <= SkipTransactionCount )
+                    {
+                        monitor.Trace( $"Skipped snapshot of '{d.DomainName}' ({delta}/{SkipTransactionCount})." );
+                        return;
+                    }
+                }
+                else
+                {
+                    // SkipTransactionCount is -1: no auto save of transactions.
                     return;
                 }
             }

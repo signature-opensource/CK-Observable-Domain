@@ -11,6 +11,10 @@ namespace CK.Observable.League
     /// The coordinator client is nearly the same as its base <see cref="StreamStoreClient"/> except
     /// that it is definitely bound to the always loaded Coordinator domain, that it must rebind the <see cref="Domain.Shell"/>
     /// to the managed domains on reload and that it handles some changes like the disposal of a Domain.
+    /// <para>
+    /// The other StreamStoreClient implementation is the <see cref="ObservableLeague.DomainClient"/> that drives the behavior
+    /// of the managed domains.
+    /// </para>
     /// </summary>
     internal class CoordinatorClient : StreamStoreClient, IObservableDomainAccess<Coordinator>
     {

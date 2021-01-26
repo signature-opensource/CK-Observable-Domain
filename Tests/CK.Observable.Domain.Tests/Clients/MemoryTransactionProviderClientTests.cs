@@ -30,7 +30,6 @@ namespace CK.Observable.Domain.Tests.Clients
             client.CurrentTimeUtc.Should().BeWithin( TimeSpan.FromSeconds( 2 ) );
         }
 
-
         [Test]
         public void Exception_during_Write_adds_ClientError()
         {
@@ -69,11 +68,10 @@ namespace CK.Observable.Domain.Tests.Clients
             }
         }
 
-
         [Test]
-        public void Exception_during_Modify_rolls_ObservableDomain_back()
+        public void Exception_during_Modify_rolls_ObservableDomain_back_when_SkipTransactionCount_is_0()
         {
-            using var d = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, "TEST", startTimer: true, client: new ConcreteMemoryTransactionProviderClient() );
+            using var d = new ObservableDomain<TestObservableRootObject>( TestHelper.Monitor, "TEST", startTimer: true, client: new ConcreteMemoryTransactionProviderClient() );
             IReadOnlyList<ObservableEvent>? events = null;
             d.OnSuccessfulTransaction += ( d, ev ) => events = ev.Events;
 
@@ -104,6 +102,48 @@ namespace CK.Observable.Domain.Tests.Clients
             {
                 d.Root.Prop1.Should().Be( "Hello" );
                 d.Root.Prop2.Should().Be( "World" );
+                d.AllObjects.Count.Should().Be( 1 );
+                d.AllRoots.Count.Should().Be( 1 );
+                d.Root.Should().Be( (TestObservableRootObject)d.AllObjects.First() );
+                d.Root.Should().Be( (TestObservableRootObject)d.AllRoots.First() );
+            }
+        }
+
+        [Test]
+        public void Exception_during_Modify_does_nothing_when_SkipTransactionCount_is_Minus_1()
+        {
+            var client = new ConcreteMemoryTransactionProviderClient() { SkipTransactionCount = -1 };
+
+            using var d = new ObservableDomain<TestObservableRootObject>( TestHelper.Monitor, "TEST", startTimer: true, client );
+            IReadOnlyList<ObservableEvent>? events = null;
+            d.OnSuccessfulTransaction += ( d, ev ) => events = ev.Events;
+
+            // Initial successful Modify
+            d.Modify( TestHelper.Monitor, () =>
+            {
+                d.Root.Prop1 = "Hello";
+                d.Root.Prop2 = "World";
+            } ).Success.Should().BeTrue();
+
+            Debug.Assert( events != null );
+
+            // Raise exception during Modify()
+            events = null;
+            var transactionResult = d.Modify( TestHelper.Monitor, () =>
+            {
+                d.Root.Prop1 = "This will";
+                d.Root.Prop2 = "be set!";
+                throw new Exception( "Exception during Modify(). This is a test exception." );
+                d.Root.Prop1 = "NOT";
+                d.Root.Prop2 = "NOT";
+            } );
+            transactionResult.Success.Should().BeTrue();
+            transactionResult.TransactionNumber.Should().Be( 2 );
+
+            using( d.AcquireReadLock() )
+            {
+                d.Root.Prop1.Should().Be( "This will" );
+                d.Root.Prop2.Should().Be( "be set!" );
                 d.AllObjects.Count.Should().Be( 1 );
                 d.AllRoots.Count.Should().Be( 1 );
                 d.Root.Should().Be( (TestObservableRootObject)d.AllObjects.First() );
@@ -215,7 +255,6 @@ namespace CK.Observable.Domain.Tests.Clients
                 }
             }
         }
-
 
         [Test]
         public void Rollback_disposes_replaced_ObservableObjects()
