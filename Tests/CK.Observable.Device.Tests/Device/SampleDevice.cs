@@ -25,12 +25,12 @@ namespace CK.Observable.Device.Tests
         int _syncCommandCount;
         int _asyncCommandCount;
 
-        public SampleDevice( IActivityMonitor monitor, SampleDeviceConfiguration c )
+        public SampleDevice( IActivityMonitor monitor, CreateInfo c )
             : base( monitor, c )
         {
             _run = Task.CompletedTask;
-            _period = c.PeriodMilliseconds;
-            _messagePrefix = c.Message;
+            _period = c.Configuration.PeriodMilliseconds;
+            _messagePrefix = c.Configuration.Message;
             _messageChanged = new PerfectEventSender<SampleDevice, string>();
         }
 
