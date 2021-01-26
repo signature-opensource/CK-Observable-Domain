@@ -38,7 +38,7 @@ namespace CK.Observable.Domain.Tests
                 monitor.Info( $"Registered: {o.GetType().Name}." );
             }
 
-            protected override void Dispose( IActivityMonitor monitor )
+            protected override void OnDomainCleared( IActivityMonitor monitor )
             {
             }
 
@@ -236,7 +236,7 @@ namespace CK.Observable.Domain.Tests
                 return false;
             }
 
-            protected override void Dispose( IActivityMonitor monitor )
+            protected override void OnDomainCleared( IActivityMonitor monitor )
             {
             }
 

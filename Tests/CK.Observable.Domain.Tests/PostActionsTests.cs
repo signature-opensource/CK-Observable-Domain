@@ -133,7 +133,7 @@ namespace CK.Observable.Domain.Tests
             {
             }
 
-            protected override void Dispose( IActivityMonitor monitor )
+            protected override void OnDomainCleared( IActivityMonitor monitor )
             {
             }
 

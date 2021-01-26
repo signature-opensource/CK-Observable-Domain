@@ -86,7 +86,7 @@ namespace CK.Observable.Device
                 }
                 // We don't unsubsribe to the Disposed event since a sidekick lives longer (and
                 // ObservableDelegate skips sidekicks while serializing.
-                o.Disposed += OnObjectDeviceDisposed;
+                o.Disposed += OnObjectDestroy;
                 bridge = CreateBridge( monitor, device );
                 _bridges.Add( device.DeviceName, bridge );
                 bridge.Initialize( monitor, this, Host.Find( device.DeviceName ) );
@@ -110,12 +110,12 @@ namespace CK.Observable.Device
             OnObjectHostDisappeared( e.Monitor );
         }
 
-        void OnObjectDeviceDisposed( object sender, ObservableDomainEventArgs e )
+        void OnObjectDestroy( object sender, ObservableDomainEventArgs e )
         {
             var o = (TDeviceObject)sender;
             _bridges.Remove( o.DeviceName, out var bridge );
             Debug.Assert( bridge != null );
-            bridge.OnDestroy( e.Monitor, true );
+            bridge.OnDispose( e.Monitor, isObjectDestroyed: true );
         }
 
         void AddUnbound( DeviceBridge b )
@@ -185,12 +185,12 @@ namespace CK.Observable.Device
         /// This is sealed and calls the protected virtual <see cref="OnDispose(IActivityMonitor)"/> that
         /// can be overridden.
         /// </remarks>
-        protected sealed override void Dispose( IActivityMonitor monitor )
+        protected sealed override void OnDomainCleared( IActivityMonitor monitor )
         {
             Host.DevicesChanged.Async -= OnDevicesChangedAsync;
             foreach( var b in _bridges.Values )
             {
-                b.OnDestroy( monitor, false );
+                b.OnDispose( monitor, isObjectDestroyed: false );
             }
             OnDispose( monitor );
         }
@@ -213,7 +213,11 @@ namespace CK.Observable.Device
         {
         }
 
-        /// <inheritdoc cref="Dispose(IActivityMonitor)"/>.
+        /// <summary>
+        /// Called when the domain is unloaded or destroyed.
+        /// All the brides have been 
+        /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
         protected virtual void OnDispose( IActivityMonitor monitor )
         {
         }

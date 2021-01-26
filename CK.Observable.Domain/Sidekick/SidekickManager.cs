@@ -439,7 +439,7 @@ namespace CK.Observable
                     var h = _sidekicks[--i];
                     try
                     {
-                        h.Dispose( monitor );
+                        h.OnDomainCleared( monitor );
                     }
                     catch( Exception ex )
                     {

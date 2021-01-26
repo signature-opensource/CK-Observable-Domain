@@ -27,7 +27,7 @@ namespace CK.Observable.League.Tests.MicroMachine
             _objects = new Dictionary<string, MicroBridge>();
         }
 
-        protected override void Dispose( IActivityMonitor monitor )
+        protected override void OnDomainCleared( IActivityMonitor monitor )
         {
         }
 

@@ -128,11 +128,11 @@ namespace CK.Observable
         protected internal abstract bool ExecuteCommand( IActivityMonitor monitor, in SidekickCommand command );
 
         /// <summary>
-        /// Called when the <see cref="Domain"/> is being cleared, either because it will be reloaded or because it is disposed.
+        /// Called when the <see cref="Domain"/> is being cleared, either because it will be reloaded or because it is definitely disposed.
         /// In both case, the domain lock is held.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
-        protected internal abstract void Dispose( IActivityMonitor monitor );
+        protected internal abstract void OnDomainCleared( IActivityMonitor monitor );
 
     }
 

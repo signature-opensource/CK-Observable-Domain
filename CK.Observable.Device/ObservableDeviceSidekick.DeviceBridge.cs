@@ -137,17 +137,12 @@ namespace CK.Observable.Device
             }
 
             /// <summary>
-            /// Called when this bridge must be destroyed.
-            /// There are 2 reasons to destroy this bridge: the domain is disposed (either because it is cleared before a
-            /// reload or because it is disposed), or the <see cref="ObservableDeviceObject"/> is explicitely disposed.
-            /// <para>
-            /// If the ObservableDeviceObject is explicitely disposed, then <see cref="OnObjectDeviceDisposed(IActivityMonitor)"/> is called:
-            /// specialized bridges can impact the Device world if needed.
-            /// </para>
+            /// Called when this bridge must be disposed because either the <see cref="Object"/>
+            /// is unloaded or destroyed.
             /// </summary>
             /// <param name="monitor">The monitor to use.</param>
-            /// <param name="isObjectDeviceDisposed">Whether the <see cref="ObservableDeviceObject"/> has been disposed.</param>
-            internal void OnDestroy( IActivityMonitor monitor, bool isObjectDeviceDisposed )
+            /// <param name="isObjectDestroyed">True when the object has been destroyed, false when it is only unloaded.</param>
+            internal void OnDispose( IActivityMonitor monitor, bool isObjectDestroyed )
             {
                 if( Device == null ) _sidekick.RemoveUnbound( this );
                 else
@@ -155,10 +150,7 @@ namespace CK.Observable.Device
                     Device.StatusChanged.Async -= OnDeviceStatusChanged;
                     Device.ControllerKeyChanged.Async -= OnDeviceControllerKeyChanged;
                 }
-                if( isObjectDeviceDisposed )
-                {
-                    OnObjectDeviceDisposed( monitor );
-                }
+                OnObjectDisappeared( monitor, isObjectDestroyed );
             }
 
             /// <inheritdoc cref="ObservableDeviceObject.CreateCommand{T}(Action{T}?)" />
@@ -202,12 +194,14 @@ namespace CK.Observable.Device
             protected abstract void OnDeviceDisappearing( IActivityMonitor monitor );
 
             /// <summary>
-            /// Called whenever the <see cref="ObservableDeviceObject"/> is explicitely disposed.
-            /// Note that the <see cref="Device"/> may continue to exist in the host: this
-            /// method may destroy the device in the Device world.
+            /// Called whenever the <see cref="ObservableDeviceObject"/> is unloaded or destroyed.
+            /// Note that the <see cref="Device"/> may continue to exist in its host: this
+            /// method may destroy the device in the Device world (if <paramref name="isObjectDestroyed"/> is true
+            /// and the observable <see cref="Object"/> must drive the lifecycle of the device).
             /// </summary>
             /// <param name="monitor">The monitor to use.</param>
-            protected virtual void OnObjectDeviceDisposed( IActivityMonitor monitor )
+            /// <param name="isObjectDestroyed">True when the object has been destroyed, false when it is only unloaded.</param>
+            protected virtual void OnObjectDisappeared( IActivityMonitor monitor, bool isObjectDestroyed )
             {
             }
         }
