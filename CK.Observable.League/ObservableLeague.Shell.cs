@@ -265,7 +265,7 @@ namespace CK.Observable.League
             async Task<bool> ExplicitSaveDomain( IActivityMonitor m )
             {
                 var d = _domain;
-                if( d != null && !d.IsDisposed && Client.SkipTransactionCount > 0 )
+                if( d != null && !d.IsDisposed && Client.SkipTransactionCount != 0 )
                 {
                     var r = await d.ModifyNoThrowAsync( m, () => d.SendSaveCommand() );
                     if( r.OnStartTransactionError != null || !r.Transaction.Success )
