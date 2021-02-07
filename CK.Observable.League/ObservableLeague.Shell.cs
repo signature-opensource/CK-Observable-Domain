@@ -259,7 +259,7 @@ namespace CK.Observable.League
 
             async Task<bool> IObservableDomainShellBase.SaveAsync( IActivityMonitor m )
             {
-                return await ExplicitSaveDomain( m ) &&  await Client.SaveAsync( m );
+                return await ExplicitSaveDomain( m ) && await Client.SaveAsync( m );
             }
 
             async Task<bool> ExplicitSaveDomain( IActivityMonitor m )

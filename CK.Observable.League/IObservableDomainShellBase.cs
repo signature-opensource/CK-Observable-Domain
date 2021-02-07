@@ -32,9 +32,12 @@ namespace CK.Observable.League
 
         /// <summary>
         /// Saves this domain (only if it needs to be saved because the effect of last transaction has not been saved yet).
+        /// This sends the <see cref="ObservableDomain.SaveCommand"/> command from inside a ModifyAsync so that an updated
+        /// memory snapshot is made if needed and calls the internal <see cref="IObservableDomainClient"/> to save it into
+        /// the store.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
-        /// <returns>True on success, false on error.</returns>
+        /// <returns>True on success, false if any error prevented the save.</returns>
         Task<bool> SaveAsync( IActivityMonitor monitor );
 
         /// <summary>
@@ -42,7 +45,7 @@ namespace CK.Observable.League
         /// The domain is unloaded if this is the last released shell.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
-        /// <returns>True if the managed domain has actually be unloaded (ie. disposed)..</returns>
+        /// <returns>True if the managed domain has actually been unloaded.</returns>
         ValueTask<bool> DisposeAsync( IActivityMonitor monitor );
     }
 }
