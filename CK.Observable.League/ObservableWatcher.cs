@@ -61,7 +61,7 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Disposing this watcher cancels all the subsctiptions on the league and the currently watched domains.
+        /// Disposing this watcher cancels all the subscriptions on the league and the currently watched domains.
         /// </summary>
         public void Dispose()
         {
@@ -146,7 +146,13 @@ namespace CK.Observable
                 else
                 {
                     loader = _league.Find( domainName );
+                    if( loader == null )
+                    {
+                        monitor.Warn( $"Unable to find domain '{domainName}'." );
+                        return new WatchEvent( domainName, string.Empty );
+                    }
                 }
+                Debug.Assert( loader != null );
                 if( loader.IsDestroyed )
                 {
                     if( idx >= 0 )
@@ -155,7 +161,12 @@ namespace CK.Observable
                         _watched.RemoveAt( idx );
                         monitor.Trace( $"Client '{WatcherId}': lost '{domainName}'." );
                     }
+                    monitor.Warn( $"Domain '{domainName}' has been destroyed." );
                     return new WatchEvent( domainName, string.Empty );
+                }
+                if( idx < 0 )
+                {
+                    _watched.Add( new DomainWatcher( this, loader ) );
                 }
 
                 (currentTransactionNumber, events) = loader.GetTransactionEvents( transactionNumber );
@@ -165,13 +176,10 @@ namespace CK.Observable
                     {
                         if( shell != null )
                         {
-                            if( idx < 0 )
-                            {
-                                _watched.Add( new DomainWatcher( this, loader ) );
-                            }
                             return new WatchEvent( domainName, shell.ExportToString() );
                         }
                     }
+                    monitor.Warn( $"Unable to load the Domain '{domainName}'." );
                     return new WatchEvent( domainName, string.Empty );
                 }
             }
