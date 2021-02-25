@@ -49,7 +49,7 @@ namespace CK.Observable.League.Tests.MicroMachine
             {
                 info = ThingFactory( tempId );
                 _all.Add( info );
-                info.Disposed += OnProductDisposed;
+                info.Destroyed += OnProductDisposed;
                 info.CreateTimeout( Configuration.IdentifyThingTimeout, OnIdentifyThingTimeout );
             }
         }

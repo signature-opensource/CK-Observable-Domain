@@ -42,18 +42,18 @@ namespace CK.Observable.League.Tests.MicroMachine
             return false;
         }
 
-        protected override void RegisterClientObject( IActivityMonitor monitor, IDisposableObject o )
+        protected override void RegisterClientObject( IActivityMonitor monitor, IDestroyableObject o )
         {
             if( o is Machine m )
             {
                 var b = new MicroBridge( m, this );
                 _objects.Add( m.Name, b );
-                m.Disposed += MachineDisposed;
+                m.Destroyed += MachineDestroyed;
                 m.BridgeToTheSidekick = b;
             }
         }
 
-        private void MachineDisposed( object sender, ObservableDomainEventArgs e )
+        private void MachineDestroyed( object sender, ObservableDomainEventArgs e )
         {
             _objects.Remove( ((Machine)sender).Name );
         }

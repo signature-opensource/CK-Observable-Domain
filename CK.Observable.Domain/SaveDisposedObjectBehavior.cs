@@ -3,7 +3,7 @@ using CK.Core;
 namespace CK.Observable
 {
     /// <summary>
-    /// Defines what must me done when a <see cref="IDisposableObject.IsDisposed"/> object is saved.
+    /// Defines what must me done when a <see cref="IDestroyableObject.IsDisposed"/> object is saved.
     /// </summary>
     public enum SaveDisposedObjectBehavior
     {
@@ -24,7 +24,7 @@ namespace CK.Observable
         LogError,
 
         /// <summary>
-        /// Saving a disposed object is forbidden: disposal of any <see cref="IDisposableObject"/> has to be fully handled during the
+        /// Saving a disposed object is forbidden: disposal of any <see cref="IDestroyableObject"/> has to be fully handled during the
         /// transaction (the disposed object must not be referenced anymore by any other domain's objects), 
         /// </summary>
         Throw

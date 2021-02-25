@@ -75,7 +75,7 @@ namespace CK.Observable.League
         public Domain CreateDomain( string domainName, params string[] rootTypes ) => CreateDomain(domainName, (IEnumerable<string>)rootTypes);
 
 
-        internal void OnDisposeDomain( Domain domain )
+        internal void OnDestroyDomain( Domain domain )
         {
             _domains.Remove( domain.DomainName );
         }
@@ -108,7 +108,7 @@ namespace CK.Observable.League
             if( failed.Count > 0 )
             {
                 monitor.Warn( $"Domains '{failed.Select( d => d.DomainName ).Concatenate("', '")}' must be removed." );
-                foreach( var d in failed ) d.Dispose();
+                foreach( var d in failed ) d.Destroy();
             }
         }
 

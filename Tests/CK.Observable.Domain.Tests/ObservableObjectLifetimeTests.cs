@@ -146,7 +146,7 @@ namespace CK.Observable.Domain.Tests
                     d.AllObjects.Should().HaveCount( 1 );
                     using( var cM = c.Monitor() )
                     {
-                        c.Dispose();
+                        c.Destroy();
                         cM.Should().Raise( "Disposed" ).WithSender( c ).WithArgs<EventArgs>( a => a == EventArgs.Empty );
                     }
                     d.AllObjects.Should().BeEmpty();

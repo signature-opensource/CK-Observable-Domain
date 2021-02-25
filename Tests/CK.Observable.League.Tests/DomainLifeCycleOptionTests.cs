@@ -49,7 +49,7 @@ namespace CK.Observable.League.Tests
 
         static bool OnTimerCalled = false;
 
-        // The SafeEventHandler must be a static or a method of a IDisposableObject.
+        // The SafeEventHandler must be a static or a method of a IDestroyableObject.
         static void OnTimer( object sender, ObservableReminderEventArgs arg )
         {
             OnTimerCalled = true;

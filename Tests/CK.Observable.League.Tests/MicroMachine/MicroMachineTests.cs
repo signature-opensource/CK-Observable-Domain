@@ -137,7 +137,7 @@ namespace CK.Observable.League.Tests.MicroMachine
             d.Modify( TestHelper.Monitor, () =>
             {
                 d.Root.Machine.Configuration.IdentifyThingTimeout = TimeSpan.FromMilliseconds( 200 );
-                d.Root.Machine.Configuration.AutoDisposedTimeout = TimeSpan.FromMilliseconds( 200 );
+                d.Root.Machine.Configuration.AutoDestroyedTimeout = TimeSpan.FromMilliseconds( 200 );
                 d.Root.Machine.Clock.IsActive = true;
                 d.Root.Machine.IsRunning.Should().BeTrue();
                 for( int i = 0; i < thingCount; ++i )

@@ -10,7 +10,7 @@ using System.Text;
 namespace CK.Observable
 {
     /// <summary>
-    /// Wraps a delegate to a static method or an instance method of a <see cref="IDisposableObject"/>.
+    /// Wraps a delegate to a static method or an instance method of a <see cref="IDestroyableObject"/>.
     /// This is an internal helper.
     /// </summary>
     struct ObservableDelegate
@@ -155,7 +155,7 @@ namespace CK.Observable
             for( int i = 0; i < dList.Length; ++i )
             {
                 var d = dList[i];
-                if( d.Target is IDisposableObject o && o.IsDisposed )
+                if( d.Target is IDestroyableObject o && o.IsDestroyed )
                 {
                     cleanup[i] = needCleanup = true;
                 }
@@ -177,7 +177,7 @@ namespace CK.Observable
         {
             if( value == null ) throw new ArgumentNullException( eventName );
             if( value.Target != null
-                && !(value.Target is IDisposableObject)
+                && !(value.Target is IDestroyableObject)
                 && !(value.Target is ObservableDomainSidekick))
             {
                 throw new ArgumentException( $"Only static methods or Observable/InternalObject or Sidekick's instance methods can be registered on {eventName} event.", eventName );

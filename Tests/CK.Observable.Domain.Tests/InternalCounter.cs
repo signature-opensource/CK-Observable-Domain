@@ -14,7 +14,7 @@ namespace CK.Observable.Domain.Tests
     public sealed class TestCounter : InternalObject
     {
         /// <summary>
-        /// Gets the count. Can be called even if <see cref="IDisposableObject.IsDisposed"/> is true.
+        /// Gets the count. Can be called even if <see cref="IDestroyableObject.IsDisposed"/> is true.
         /// </summary>
         public int Count { get; private set; }
 

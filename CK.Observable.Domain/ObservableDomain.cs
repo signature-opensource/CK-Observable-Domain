@@ -250,10 +250,10 @@ namespace CK.Observable
                                                           DateTime startTime,
                                                           int tranNum )
             {
-                _changeEvents.RemoveAll( e => e is ICollectionEvent c && c.Object.IsDisposed );
+                _changeEvents.RemoveAll( e => e is ICollectionEvent c && c.Object.IsDestroyed );
                 foreach( var p in _propChanged.Values )
                 {
-                    if( !p.Object.IsDisposed )
+                    if( !p.Object.IsDestroyed )
                     {
                         _changeEvents.Add( new PropertyChangedEvent( p.Object, p.Info.PropertyId, p.Info.PropertyName, p.FinalValue ) );
                         if( _newObjects.TryGetValue( p.Object, out var exportables ) )
@@ -1302,7 +1302,7 @@ namespace CK.Observable
 
             int disposedObjectsCount = 0;
             List<(Type, int)>? disposedList = null;
-            Action<IDisposableObject>? disposedTracker = null;
+            Action<IDestroyableObject>? disposedTracker = null;
             if( saveDisposed != SaveDisposedObjectBehavior.None )
             {
                 disposedList = new List<(Type, int)>();
@@ -1358,7 +1358,7 @@ namespace CK.Observable
                         for( int i = 0; i < _objectsListCount; ++i )
                         {
                             var o = _objects[i];
-                            Debug.Assert( o == null || !o.IsDisposed, "Either it is a free cell (that appears in the free list) or the object is NOT disposed." );
+                            Debug.Assert( o == null || !o.IsDestroyed, "Either it is a free cell (that appears in the free list) or the object is NOT disposed." );
                             w.WriteObject( o );
                         }
 
@@ -1371,7 +1371,7 @@ namespace CK.Observable
                         var f = _firstInternalObject;
                         while( f != null )
                         {
-                            Debug.Assert( !f.IsDisposed, "Disposed internal objects are removed from the list." );
+                            Debug.Assert( !f.IsDestroyed, "Disposed internal objects are removed from the list." );
                             w.WriteObject( f );
                             f = f.Next;
                         }
@@ -1419,12 +1419,11 @@ namespace CK.Observable
                     var o = _objects[i];
                     if( o != null )
                     {
-                        Debug.Assert( !o.IsDisposed );
+                        Debug.Assert( !o.IsDestroyed );
                         // This may still call Dispose() on other objects.
                         // Disposing() an ObservableObject will call InternalUnregister() here,
                         // and may affect the counts and object/free lists during loading.
-                        // At least, with false, the Disposed event is not called.
-                        o.Dispose( shouldCleanup: false );
+                        o.Unload();
                     }
                 }
                 // Empty _objects completely.
@@ -1482,7 +1481,7 @@ namespace CK.Observable
                 var internalObj = _firstInternalObject;
                 while( internalObj != null )
                 {
-                    internalObj.Dispose( false );
+                    internalObj.Unload();
                     internalObj = internalObj.Next;
                 }
                 _firstInternalObject = _lastInternalObject = null;
@@ -1502,7 +1501,7 @@ namespace CK.Observable
                 for( int i = 0; i < count; ++i )
                 {
                     _objects[i] = (ObservableObject)r.ReadObject();
-                    Debug.Assert( _objects[i] == null || !_objects[i].IsDisposed );
+                    Debug.Assert( _objects[i] == null || !_objects[i].IsDestroyed );
                 }
 
                 // Fill roots array.
@@ -1520,7 +1519,7 @@ namespace CK.Observable
                 while( --count >= 0 )
                 {
                     var o = (InternalObject)r.ReadObject();
-                    Debug.Assert( !o.IsDisposed );
+                    Debug.Assert( !o.IsDestroyed );
                     Register( o );
                 }
 
@@ -1737,7 +1736,7 @@ namespace CK.Observable
         /// - ObservableObject: normal constructor calls Register() but deserialization constructors don't, deserialization constructors must call this directly.
         /// </summary>
         /// <param name="o">The new object.</param>
-        internal void SideEffectsRegister( IDisposableObject o )
+        internal void SideEffectsRegister( IDestroyableObject o )
         {
             Debug.Assert( !_trackers.Contains( o ) );
             if( o is IObservableDomainActionTracker tracker ) _trackers.Add( tracker );
@@ -1750,7 +1749,7 @@ namespace CK.Observable
         /// the clear from DoLoad.
         /// </summary>
         /// <param name="o">The disposed object.</param>
-        void SideEffectUnregister( IDisposableObject o )
+        void SideEffectUnregister( IDestroyableObject o )
         {
             if( o is IObservableDomainActionTracker tracker )
             {
@@ -1759,10 +1758,10 @@ namespace CK.Observable
             }
         }
 
-        internal void CheckBeforeDispose( IDisposableObject o )
+        internal void CheckBeforeDestroy( IDestroyableObject o )
         {
-            Debug.Assert( !o.IsDisposed );
-            CheckWriteLock( o ).CheckDisposed();
+            Debug.Assert( !o.IsDestroyed );
+            CheckWriteLock( o );
         }
 
         internal void Unregister( ObservableObject o )
@@ -1888,7 +1887,7 @@ namespace CK.Observable
                 // The first solution seems be to accept 2 (the disposed exception of the lock) and to detect 1 by
                 // checking _disposed after each acquire: if _disposed then we must release the lock and
                 // throw the ObjectDisposedException...
-                // However, the _lock.Dispose() call below MAY occur while a TryEnter has been succesful and before
+                // However, the _lock.Dispose() call below MAY occur while a TryEnter has been successful and before
                 // the _disposed check and the release: this would result in an awful "Incorrect Lock Dispose" exception
                 // since disposing a lock while it is held is an error.
                 // ==> This solution that seems the cleanest and most reasonable one is NOT an option... 
@@ -1904,23 +1903,23 @@ namespace CK.Observable
                 //   - ...and to implement the checks of the first solution.
                 // And we can notice that by doing this:
                 //  - there is no risk to acquire a disposed lock.
-                //  - the domain is 'technically' functionnal, except that:
+                //  - the domain is 'technically' functional, except that:
                 //       - The AutoTimer has been disposed right above, it may throw an ObjectDisposedException and that is fine.
                 //       - The DomainClient has been set to null: no more side effect (like transaction rollback) can occur.
                 // ==> The domain doesn't act as expected anymore. We must throw an ObjectDisposedException to prevent such ambiguity.
                 //
                 // Conclusion:
-                //   - We only protect, inside the lock, the Modify action: readonly operations are free to run and end in this "in between".
+                //   - We only protect, inside the lock, the Modify action: read only operations are free to run and end in this "in between".
                 //     The good place to call CheckDisposed() is in DoBeginTransaction().
-                //   - We comment the folowing line.
+                //   - We comment the following line.
                 //
                 //_lock.Dispose();
             }
         }
 
-        internal void SendCommand( IDisposableObject o, ObservableDomainCommand command )
+        internal void SendCommand( IDestroyableObject o, ObservableDomainCommand command )
         {
-            CheckWriteLock( o ).CheckDisposed();
+            CheckWriteLock( o ).CheckDestroyed();
             _changeTracker.OnSendCommand( command );
         }
 
@@ -1934,9 +1933,9 @@ namespace CK.Observable
             _changeTracker.OnSendCommand( new ObservableDomainCommand( SaveCommand ) );
         }
 
-        internal bool EnsureSidekicks( IDisposableObject o )
+        internal bool EnsureSidekicks( IDestroyableObject o )
         {
-            CheckWriteLock( o ).CheckDisposed();
+            CheckWriteLock( o ).CheckDestroyed();
             Debug.Assert( _currentTran != null );
             return _sidekickManager.CreateWaitingSidekicks( _currentTran.Monitor, ex => _currentTran.AddError( CKExceptionData.CreateFrom( ex ) ), false );
         }
@@ -1947,7 +1946,7 @@ namespace CK.Observable
             {
                 return null;
             }
-            CheckWriteLock( o ).CheckDisposed();
+            CheckWriteLock( o ).CheckDestroyed();
             ObservablePropertyChangedEventArgs p = EnsurePropertyInfo( propertyName );
             if( o._exporter != null && o._exporter.ExportableProperties.Any( prop => prop.Name == propertyName ) )
             {
@@ -1978,53 +1977,53 @@ namespace CK.Observable
         internal ListRemoveAtEvent? OnListRemoveAt( ObservableObject o, int index )
         {
             if( _deserializeOrInitializing ) return null;
-            CheckWriteLock( o ).CheckDisposed();
+            CheckWriteLock( o ).CheckDestroyed();
             return _changeTracker.OnListRemoveAt( o, index );
         }
 
         internal ListSetAtEvent? OnListSetAt( ObservableObject o, int index, object value )
         {
             if( _deserializeOrInitializing ) return null;
-            CheckWriteLock( o ).CheckDisposed();
+            CheckWriteLock( o ).CheckDestroyed();
             return _changeTracker.OnListSetAt( o, index, value );
         }
 
         internal CollectionClearEvent? OnCollectionClear( ObservableObject o )
         {
             if( _deserializeOrInitializing ) return null;
-            CheckWriteLock( o ).CheckDisposed();
+            CheckWriteLock( o ).CheckDestroyed();
             return _changeTracker.OnCollectionClear( o );
         }
 
         internal ListInsertEvent? OnListInsert( ObservableObject o, int index, object item )
         {
             if( _deserializeOrInitializing ) return null;
-            CheckWriteLock( o ).CheckDisposed();
+            CheckWriteLock( o ).CheckDestroyed();
             return _changeTracker.OnListInsert( o, index, item );
         }
 
         internal CollectionMapSetEvent? OnCollectionMapSet( ObservableObject o, object key, object value )
         {
             if( _deserializeOrInitializing ) return null;
-            CheckWriteLock( o ).CheckDisposed();
+            CheckWriteLock( o ).CheckDestroyed();
             return _changeTracker.OnCollectionMapSet( o, key, value );
         }
 
         internal CollectionRemoveKeyEvent? OnCollectionRemoveKey( ObservableObject o, object key )
         {
             if( _deserializeOrInitializing ) return null;
-            CheckWriteLock( o ).CheckDisposed();
+            CheckWriteLock( o ).CheckDestroyed();
             return _changeTracker.OnCollectionRemoveKey( o, key );
         }
 
         internal CollectionAddKeyEvent? OnCollectionAddKey( ObservableObject o, object key )
         {
             if( _deserializeOrInitializing ) return null;
-            CheckWriteLock( o ).CheckDisposed();
+            CheckWriteLock( o ).CheckDestroyed();
             return _changeTracker.OnCollectionAddKey( o, key );
         }
 
-        IDisposableObject CheckWriteLock( [AllowNull]IDisposableObject o )
+        IDestroyableObject CheckWriteLock( [AllowNull]IDestroyableObject o )
         {
             if( !_lock.IsWriteLockHeld )
             {

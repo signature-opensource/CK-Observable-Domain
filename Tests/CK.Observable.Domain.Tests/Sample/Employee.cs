@@ -27,13 +27,10 @@ namespace CK.Observable.Domain.Tests.Sample
 
         public Garage Garage { get; set; }
 
-        protected override void Dispose( bool shouldCleanup )
+        protected override void OnDestroy()
         {
-            if( shouldCleanup )
-            {
-                Garage.Employees.Remove( this );
-            }
-            base.Dispose( shouldCleanup );
+            Garage.Employees.Remove( this );
+            base.OnDestroy();
         }
 
         public override string ToString() => $"'Employee {FirstName} {LastName} - {Garage?.CompanyName ?? "(no company name)"}'";

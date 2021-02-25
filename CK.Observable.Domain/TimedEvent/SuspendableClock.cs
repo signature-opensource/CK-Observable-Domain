@@ -182,24 +182,21 @@ namespace CK.Observable
         {
             add
             {
-                this.CheckDisposed();
+                this.CheckDestroyed();
                 _isActiveChanged.Add( value, nameof( IsActiveChanged ) );
             }
             remove => _isActiveChanged.Remove( value );
         }
 
 
-        protected internal override void Dispose( bool shouldDisposeObjects )
+        protected internal override void OnDestroy()
         {
-            if( shouldDisposeObjects )
+            while( _firstInClock != null )
             {
-                while( _firstInClock != null )
-                {
-                    Debug.Assert( _firstInClock.SuspendableClock == this );
-                    _firstInClock.SuspendableClock = null;
-                }
+                Debug.Assert( _firstInClock.SuspendableClock == this );
+                _firstInClock.SuspendableClock = null;
             }
-            base.Dispose( shouldDisposeObjects );
+            base.OnDestroy();
         }
 
         internal void Unbound( ObservableTimedEventBase o )

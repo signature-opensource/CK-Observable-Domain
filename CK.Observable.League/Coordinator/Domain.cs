@@ -117,18 +117,18 @@ namespace CK.Observable.League
         /// </summary>
         public IReadOnlyList<string> RootTypes { get; }
 
-        /// <inheritdoc />
-        protected override void Dispose( bool shouldCleanup )
+        /// <summary>
+        /// Destroys this domain: it is removed from the <see cref="Coordinator.Domains"/>
+        /// and the real domain is removed from the <see cref="ObservableLeague"/>.
+        /// </summary>
+        protected override void OnDestroy()
         {
-            base.Dispose( shouldCleanup );
-            if( shouldCleanup )
+            if( Shell != null )
             {
-                if( Shell != null )
-                {
-                    Shell.Destroy( Domain.Monitor, Coordinator.League );
-                }
-                Coordinator.OnDisposeDomain( this );
+                Shell.Destroy( Domain.Monitor, Coordinator.League );
             }
+            Coordinator.OnDestroyDomain( this );
+            base.OnDestroy();
         }
 
 

@@ -217,10 +217,10 @@ namespace CK.Observable.Domain.Tests
                 var list = d2.AllObjects.OfType<ObservableList<object>>().Single();
 
                 int i = 0;
-                var timer = (ObservableTimer)list[i++]; timer.Dispose();
-                var reminder = (ObservableReminder)list[i++]; reminder.Dispose();
-                var obsOject = (Person)list[i++]; obsOject.Dispose();
-                var intObject = (SuspendableClock)list[i++]; intObject.Dispose();
+                var timer = (ObservableTimer)list[i++]; timer.Destroy();
+                var reminder = (ObservableReminder)list[i++]; reminder.Destroy();
+                var obsOject = (Person)list[i++]; obsOject.Destroy();
+                var intObject = (SuspendableClock)list[i++]; intObject.Destroy();
             } );
             ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d2 );
 
@@ -228,9 +228,9 @@ namespace CK.Observable.Domain.Tests
             {
                 var list = d2.AllObjects.OfType<ObservableList<object>>().Single();
                 list.Count.Should().Be( 4 );
-                foreach( IDisposableObject o in list )
+                foreach( IDestroyableObject o in list )
                 {
-                    o.IsDisposed.Should().BeTrue();
+                    o.IsDestroyed.Should().BeTrue();
                 }
             } );
 

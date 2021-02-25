@@ -31,10 +31,10 @@ namespace CK.Observable
         /// This list is:
         /// - filled by <see cref="DiscoverSidekicks"/> each time a new object with ISidekickClientObject base interfaces appears.
         /// - emptied by <see cref="CreateWaitingSidekicks"/> (after having ensured that the sidekick instances are available)
-        ///   where <see cref="ObservableDomainSidekick.RegisterClientObject(IActivityMonitor, IDisposableObject)"/> is called
-        ///   with the IDisposableObject Item1.
+        ///   where <see cref="ObservableDomainSidekick.RegisterClientObject(IActivityMonitor, IDestroyableObject)"/> is called
+        ///   with the IDestroyableObject Item1.
         /// </summary>
-        readonly List<(IDisposableObject, object[])> _toAutoregister;
+        readonly List<(IDestroyableObject, object[])> _toAutoregister;
         readonly List<ObservableDomainSidekick> _sidekicks;
         readonly IServiceProvider _serviceProvider;
 
@@ -50,7 +50,7 @@ namespace CK.Observable
             _domain = domain;
             _alreadyHandled = new Dictionary<object, object?>();
             _toInstantiate = new List<(object, bool)>();
-            _toAutoregister = new List<(IDisposableObject, object[])>();
+            _toAutoregister = new List<(IDestroyableObject, object[])>();
             _sidekicks = new List<ObservableDomainSidekick>();
             _currentIndex = new Dictionary<Type, ObservableDomainSidekick>();
             _serviceProvider = sp;
@@ -62,7 +62,7 @@ namespace CK.Observable
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="o">The object that appeared.</param>
-        public void DiscoverSidekicks( IActivityMonitor monitor, IDisposableObject o )
+        public void DiscoverSidekicks( IActivityMonitor monitor, IDestroyableObject o )
         {
             // Consider the ObservableObject's type.
             Type t = o.GetType();
@@ -106,7 +106,7 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Instantiates sidekicks that have been discovered by <see cref="DiscoverSidekicks(IActivityMonitor, IDisposableObject)"/>.
+        /// Instantiates sidekicks that have been discovered by <see cref="DiscoverSidekicks(IActivityMonitor, IDestroyableObject)"/>.
         /// This never throws, but when false is returned, it means that (at least) one required sidekick failed
         /// to be instantiated: the exceptions are added to the <paramref name="errorCollector"/> and these are fatal
         /// errors that cancel the whole transaction.
@@ -149,7 +149,7 @@ namespace CK.Observable
             return success;
         }
 
-        bool AutoRegisterClientObject( IActivityMonitor monitor, (IDisposableObject, object[]) r, Action<Exception> errorCollector )
+        bool AutoRegisterClientObject( IActivityMonitor monitor, (IDestroyableObject, object[]) r, Action<Exception> errorCollector )
         {
             bool success = true;
             for( int i = 0; i < r.Item2.Length; ++i )

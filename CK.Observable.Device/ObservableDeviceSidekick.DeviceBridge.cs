@@ -51,7 +51,7 @@ namespace CK.Observable.Device
             /// <param name="o">The observable object device.</param>
             private protected DeviceBridge( TDeviceObject o )
             {
-                Debug.Assert( !o.IsDisposed );
+                Debug.Assert( !o.IsDestroyed );
                 Object = o;
                 o._bridge = this;
             }

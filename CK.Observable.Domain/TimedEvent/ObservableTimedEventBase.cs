@@ -16,7 +16,7 @@ namespace CK.Observable
     /// </summary>
     [SerializationVersion( 0 )]
     [NotExportable]
-    public abstract class ObservableTimedEventBase : IDisposableObject
+    public abstract class ObservableTimedEventBase : IDestroyableObject
     {
         internal TimeManager? TimeManager;
         /// <summary>
@@ -62,17 +62,17 @@ namespace CK.Observable
                 Tag = r.ReadObject();
                 // Activation is done by TimeManager.Load() that is called at the end of the object load,
                 // before the sidekicks.
-                Debug.Assert( !IsDisposed );
+                Debug.Assert( !IsDestroyed );
             }
             else
             {
-                Debug.Assert( IsDisposed );
+                Debug.Assert( IsDestroyed );
             }
         }
 
         void Write( BinarySerializer w )
         {
-            if( IsDisposed )
+            if( IsDestroyed )
             {
                 w.Write( -1 );
             }
@@ -104,7 +104,7 @@ namespace CK.Observable
             set
             {
                 if( _clock == value ) return;
-                this.CheckDisposed();
+                this.CheckDestroyed();
 
                 bool previousActiveClock = true;
                 bool currentActiveClock = true;
@@ -117,7 +117,7 @@ namespace CK.Observable
                 }
                 if( value != null )
                 {
-                    value.CheckDisposed();
+                    value.CheckDestroyed();
                     currentActiveClock = value.IsActive;
                     value.Bound( this );
                     _clock = value;
@@ -133,18 +133,12 @@ namespace CK.Observable
         /// <summary>
         /// Gets whether this object has been disposed.
         /// </summary>
-        public bool IsDisposed => TimeManager == null;
-
-        /// <summary>
-        /// Gets the domain to which this timed even belongs.
-        /// Null when <see cref="IsDisposed"/> is true.
-        /// </summary>
-        public ObservableDomain? Domain => TimeManager?.Domain;
+        public bool IsDestroyed => TimeManager == null;
 
         /// <summary>
         /// Gets or sets an associated object that can be useful for simple scenario where a state
         /// must be associated to the event source without polluting the object model itself.
-        /// This object must be serializable. This property is set to null after <see cref="Dispose"/> has been called.
+        /// This object must be serializable. This property is set to null after <see cref="Destroy"/> has been called.
         /// </summary>
         /// <remarks>
         /// This is a facility, just an easy way to associate data to a timer or a reminder. This should be used with care
@@ -157,14 +151,14 @@ namespace CK.Observable
         internal abstract void OnAfterRaiseUnchanged( DateTime current, IActivityMonitor m );
 
         /// <summary>
-        /// A timer does nothing on dactivation. Reminders override this: if they are pooled, are
+        /// A timer does nothing on deactivation. Reminders override this: if they are pooled, are
         /// cleared and returned to the reminders' pool. 
         /// </summary>
         internal virtual void OnDeactivate() { }
 
         internal void OnSuspendableClockActivated( TimeSpan lastStopDuration )
         {
-            Debug.Assert( _clock != null && _clock.IsActive );
+            Debug.Assert( TimeManager != null && _clock != null && _clock.IsActive );
             // The clock became active.
             // Whenever ExpectedDueTimeUtc is, we postpone it with the duration of the stop. 
             if( ExpectedDueTimeUtc != Util.UtcMinValue && ExpectedDueTimeUtc != Util.UtcMaxValue )
@@ -184,23 +178,24 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Raised when this object is <see cref="Dispose()"/>d.
+        /// Raised when this object is <see cref="Destroy()"/>d.
         /// Note that when the call to dispose is made by <see cref="ObservableDomain.Load(IActivityMonitor, System.IO.Stream, bool, Encoding, int, bool)"/>,
         /// this event is not triggered.
         /// </summary>
-        public event SafeEventHandler<ObservableDomainEventArgs> Disposed
+        public event SafeEventHandler<ObservableDomainEventArgs> Destroyed
         {
-            add => _disposed.Add( value, nameof( Disposed ) );
+            add => _disposed.Add( value, nameof( Destroyed ) );
             remove => _disposed.Remove( value );
         }
 
         /// <summary>
-        /// Disposes this timed event.
+        /// Destroys this timed event.
         /// </summary>
-        public virtual void Dispose()
+        public virtual void Destroy()
         {
-            if( !IsDisposed )
+            if( !IsDestroyed )
             {
+                Debug.Assert( TimeManager != null );
                 if( _clock != null )
                 {
                     _clock.Unbound( this );
@@ -208,7 +203,7 @@ namespace CK.Observable
                 }
                 TimeManager.OnPreDisposed( this );
                 Debug.Assert( ActiveIndex == 0, "Timed event has been removed from the priority queue." );
-                _disposed.Raise( this, Domain.DefaultEventArgs );
+                _disposed.Raise( this, TimeManager.Domain.DefaultEventArgs );
                 _disposed.RemoveAll();
                 TimeManager.OnDisposed( this );
                 TimeManager = null;

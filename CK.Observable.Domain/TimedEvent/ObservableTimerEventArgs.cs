@@ -14,7 +14,7 @@ namespace CK.Observable
     public class ObservableTimerEventArgs : ObservableTimedEventArgs
     {
         internal ObservableTimerEventArgs( ObservableTimer source )
-            : base( source.Domain )
+            : base( source.TimeManager!.Domain )
         {
             Timer = source;
         }
