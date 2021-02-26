@@ -210,7 +210,7 @@ namespace CK.Observable.Domain.Tests
             ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
 
             // This disposes the domain and returns a brand new one. This doesn't throw.
-            using var d2 = TestHelper.SaveAndLoad( d, saveDisposed: SaveDisposedObjectBehavior.Throw );
+            using var d2 = TestHelper.SaveAndLoad( d, saveDisposed: SaveDestroyedObjectBehavior.Throw );
 
             d2.Modify( TestHelper.Monitor, () =>
             {
@@ -234,7 +234,7 @@ namespace CK.Observable.Domain.Tests
                 }
             } );
 
-            TestHelper.Invoking( x => x.SaveAndLoad( d2, saveDisposed: SaveDisposedObjectBehavior.Throw ) )
+            TestHelper.Invoking( x => x.SaveAndLoad( d2, saveDisposed: SaveDestroyedObjectBehavior.Throw ) )
                 .Should().Throw<CKException>()
                 .WithMessage( "Found 4 disposed objects: 1 instances of 'ObservableTimer', 1 instances of 'ObservableReminder', 1 instances of 'Person', 1 instances of 'SuspendableClock'." );
         }

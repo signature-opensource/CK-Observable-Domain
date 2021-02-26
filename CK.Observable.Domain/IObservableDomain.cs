@@ -35,13 +35,13 @@ namespace CK.Observable
 
         /// <summary>
         /// Gets the current transaction number.
-        /// Incremented each time a transaction successfuly ended, default to 0 until the first transaction commit.
+        /// Incremented each time a transaction successfully ended, default to 0 until the first transaction commit.
         /// </summary>
         int TransactionSerialNumber { get; }
 
         /// <summary>
         /// Gets the last commit time. Defaults to <see cref="DateTime.UtcNow"/> at the very beginning,
-        /// when no transaction has been comitted yet (and <see cref="TransactionSerialNumber"/> is 0).
+        /// when no transaction has been committed yet (and <see cref="TransactionSerialNumber"/> is 0).
         /// </summary>
         DateTime TransactionCommitTimeUtc { get; }
 
@@ -76,7 +76,7 @@ namespace CK.Observable
                    bool leaveOpen = false,
                    bool debugMode = false,
                    Encoding? encoding = null,
-                   SaveDisposedObjectBehavior saveDisposed = SaveDisposedObjectBehavior.None,
+                   SaveDestroyedObjectBehavior saveDisposed = SaveDestroyedObjectBehavior.None,
                    int millisecondsTimeout = -1 );
     }
 }

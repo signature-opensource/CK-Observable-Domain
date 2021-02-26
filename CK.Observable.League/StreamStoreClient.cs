@@ -18,6 +18,7 @@ namespace CK.Observable.League
     /// </summary>
     abstract class StreamStoreClient : MemoryTransactionProviderClient
     {
+        readonly IStreamStore _streamStore;
         readonly string _storeName;
         readonly JsonEventCollector _eventCollector;
         int _savedTransactionNumber;
@@ -30,7 +31,7 @@ namespace CK.Observable.League
             _eventCollector = new JsonEventCollector();
             DomainName = domainName;
             _storeName = domainName.Length == 0 ? "Coordinator" : "D-" + domainName;
-            StreamStore = store;
+            _streamStore = store;
             _savedTransactionNumber = -1;
         }
 
@@ -43,11 +44,6 @@ namespace CK.Observable.League
         /// Gets the domain name.
         /// </summary>
         public string DomainName { get; }
-
-        /// <summary>
-        /// Gets the stream store.
-        /// </summary>
-        public IStreamStore StreamStore { get; }
 
         /// <summary>
         /// See <see cref="ManagedDomainOptions.SnapshotSaveDelay"/>.
@@ -104,7 +100,7 @@ namespace CK.Observable.League
         /// See base <see cref="MemoryTransactionProviderClient.LoadOrCreateAndInitializeSnapshot"/> comments.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
-        /// <param name="stream">The stream fromw wich the domain must be deserialized.</param>
+        /// <param name="stream">The stream from which the domain must be deserialized.</param>
         /// <param name="startTimer">Whether to start the domain's <see cref="TimeManager"/>.</param>
         /// <returns>Never: throws a <see cref="NotSupportedException"/>.</returns>
         protected override sealed ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, bool? startTimer )
@@ -123,31 +119,52 @@ namespace CK.Observable.League
         /// <param name="factory">The domain factory to use if no stream exists in the store.</param>
         /// <param name="startTimer">Whether to start the <see cref="TimeManager"/>.</param>
         /// <returns>The awaitable.</returns>
-        public async Task<ObservableDomain> InitializeAsync( IActivityMonitor monitor, bool? startTimer, Func<IActivityMonitor,bool,ObservableDomain> factory )
+        public async Task<ObservableDomain> InitializeAsync( IActivityMonitor monitor, bool? startTimer, bool createOnLoadError, Func<IActivityMonitor,bool,ObservableDomain> factory )
         {
             ObservableDomain result = null;
-            using( var s = await StreamStore.OpenReadAsync( _storeName ) )
+            using( var s = await _streamStore.OpenReadAsync( _storeName ) )
             {
                 if( s != null )
                 {
-                    LoadOrCreateAndInitializeSnapshot( monitor, ref result, s, startTimer );
-                    _savedTransactionNumber = CurrentSerialNumber;
+                    try
+                    {
+                        LoadOrCreateAndInitializeSnapshot( monitor, ref result, s, startTimer );
+                        _savedTransactionNumber = CurrentSerialNumber;
+                    }
+                    catch( Exception ex )
+                    {
+                        if( createOnLoadError )
+                        {
+                            monitor.Error( $"Error while loading domain. Automatically recreating a new one and initializing it.", ex );
+                            result = await Create( monitor, startTimer, factory );
+                        }
+                        else
+                        {
+                            throw;
+                        }
+                    }
                 }
                 else
                 {
-                    result = factory( monitor, startTimer ?? false );
-                    _eventCollector.CollectEvent( result, clearEvents: true );
-                    // Calling CreateSnapshot so that
-                    // the initial snapshot can be saved to the Store: this initializes
-                    // the Store for this domain. From now on, it will be reloaded.
-                    CreateSnapshot( monitor, result, true, true );
-                    if( !await SaveAsync( monitor ) )
-                    {
-                        throw new Exception( $"Unable to initialize the store for '{_storeName}'." );
-                    }
+                    result = await Create( monitor, startTimer, factory );
                 }
             }
             return result;
+
+            async Task<ObservableDomain> Create( IActivityMonitor monitor, bool? startTimer, Func<IActivityMonitor, bool, ObservableDomain> factory )
+            {
+                ObservableDomain result = factory( monitor, startTimer ?? false );
+                _eventCollector.CollectEvent( result, clearEvents: true );
+                // Calling CreateSnapshot so that
+                // the initial snapshot can be saved to the Store: this initializes
+                // the Store for this domain. From now on, it will be reloaded.
+                CreateSnapshot( monitor, result, true, true );
+                if( !await SaveAsync( monitor ) )
+                {
+                    throw new Exception( $"Unable to initialize the store for '{_storeName}'." );
+                }
+                return result;
+            }
         }
 
         /// <summary>
@@ -172,13 +189,13 @@ namespace CK.Observable.League
                 {
                     if( _savedTransactionNumber != CurrentSerialNumber )
                     {
-                        await StreamStore.UpdateAsync( _storeName, WriteSnapshotAsync, true ).ConfigureAwait( false );
+                        await _streamStore.UpdateAsync( _storeName, WriteSnapshotAsync, true ).ConfigureAwait( false );
                         if( _snapshotSaveDelay >= 0 ) _nextSave = CurrentTimeUtc.AddMilliseconds( _snapshotSaveDelay );
                         _savedTransactionNumber = CurrentSerialNumber;
                     }
                     if( sendToArchive )
                     {
-                        await StreamStore.DeleteAsync( _storeName, true ).ConfigureAwait( false );
+                        await _streamStore.DeleteAsync( _storeName, true ).ConfigureAwait( false );
                         monitor.Info( $"Domain '{_storeName}' saved and sent to archives." );
                     }
                     else monitor.Trace( $"Domain '{_storeName}' saved." );

@@ -76,9 +76,9 @@ namespace CK.Observable
 
         /// <summary>
         /// Gets or sets the behavior regarding disposed objects during <see cref="IObservableDomain.Save"/>.
-        /// Defaults to <see cref="SaveDisposedObjectBehavior.None"/>.
+        /// Defaults to <see cref="SaveDestroyedObjectBehavior.None"/>.
         /// </summary>
-        public SaveDisposedObjectBehavior SaveDisposedObjectBehavior { get; set; }
+        public SaveDestroyedObjectBehavior SaveDisposedObjectBehavior { get; set; }
 
         /// <summary>
         /// Gets the next client if any.
@@ -328,11 +328,11 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Extension point that can only be called from <see cref="LoadOrCreateAndInitializeSnapshot"/>
-        /// with a null domain: instead of reloading the non-existing domain, this method must call the deserialization constructor.
+        /// Extension point that can only be called from <see cref="LoadOrCreateAndInitializeSnapshot"/> with a null domain:
+        /// instead of reloading the non-existing domain, this method must call the deserialization constructor.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
-        /// <param name="stream">The stream fromw wich the domain must be deserialized.</param>
+        /// <param name="stream">The stream from which the domain must be deserialized.</param>
         /// <param name="startTimer">
         /// Ensures that the <see cref="ObservableDomain.TimeManager"/> is running or stopped.
         /// When null, it keeps its previous state (it is initially stopped at domain creation) and then its current state is persisted.

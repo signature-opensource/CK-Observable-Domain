@@ -1287,7 +1287,7 @@ namespace CK.Observable
                           bool leaveOpen = false,
                           bool debugMode = false,
                           Encoding? encoding = null,
-                          SaveDisposedObjectBehavior saveDisposed = SaveDisposedObjectBehavior.None,
+                          SaveDestroyedObjectBehavior saveDisposed = SaveDestroyedObjectBehavior.None,
                           int millisecondsTimeout = -1 )
         {
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
@@ -1303,7 +1303,7 @@ namespace CK.Observable
             int disposedObjectsCount = 0;
             List<(Type, int)>? disposedList = null;
             Action<IDestroyableObject>? disposedTracker = null;
-            if( saveDisposed != SaveDisposedObjectBehavior.None )
+            if( saveDisposed != SaveDestroyedObjectBehavior.None )
             {
                 disposedList = new List<(Type, int)>();
                 disposedTracker = o =>
@@ -1387,8 +1387,8 @@ namespace CK.Observable
                             else
                             {
                                 var message = $"Found {disposedObjectsCount} disposed objects: {disposedList.Select( t => $"{t.Item2} instances of '{t.Item1.Name}'" ).Concatenate()}.";
-                                monitor.Log( saveDisposed == SaveDisposedObjectBehavior.LogWarning ? LogLevel.Warn : LogLevel.Error, message );
-                                if( saveDisposed == SaveDisposedObjectBehavior.Throw )
+                                monitor.Log( saveDisposed == SaveDestroyedObjectBehavior.LogWarning ? LogLevel.Warn : LogLevel.Error, message );
+                                if( saveDisposed == SaveDestroyedObjectBehavior.Throw )
                                 {
                                     throw new CKException( message );
                                 }
