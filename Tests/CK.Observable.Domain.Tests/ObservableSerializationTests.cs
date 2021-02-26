@@ -71,7 +71,7 @@ namespace CK.Observable.Domain.Tests
                 ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
 
                 TestHelper.Monitor.Info( "Test 2" );
-                d.Modify( TestHelper.Monitor, () => d.AllObjects.Single().Dispose() );
+                d.Modify( TestHelper.Monitor, () => d.AllObjects.Single().Destroy() );
                 ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
 
                 TestHelper.Monitor.Info( "Test 3" );
@@ -114,7 +114,7 @@ namespace CK.Observable.Domain.Tests
                 // Add some events for good measure
                 var events = od.Modify( TestHelper.Monitor, () =>
                 {
-                    // Create Observable and Immutables
+                    // Create Observable and immutables
                     var myImmutable = new CustomImmutable( "ABC000", "My object" );
                     var myCustomObservable = new CustomObservable();
 
@@ -125,10 +125,10 @@ namespace CK.Observable.Domain.Tests
                     od.Root.CustomObservableList.Add( myCustomObservable );
 
                     // Destroy Dictionary of Observable
-                    myCustomObservable.ImmutablesById.Dispose();
+                    myCustomObservable.ImmutablesById.Destroy();
 
                     // Destroy Observable
-                    myCustomObservable.Dispose();
+                    myCustomObservable.Destroy();
 
                     // Remove Observable from List of Root
                     bool removed = od.Root.CustomObservableList.Remove( myCustomObservable );
@@ -151,8 +151,8 @@ namespace CK.Observable.Domain.Tests
                 ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
 
                 oldObject.Should().NotBeNull();
-                oldObject.IsDisposed.Should().BeTrue( "The reference of the object was disposed when the domain was reloaded" );
-                oldObject.ChildObject.IsDisposed.Should().BeTrue( "The reference of the object's ObservableObject child was disposed when the domain was reloaded" );
+                oldObject.IsDestroyed.Should().BeTrue( "The reference of the object was disposed when the domain was reloaded" );
+                oldObject.ChildObject.IsDestroyed.Should().BeTrue( "The reference of the object's ObservableObject child was disposed when the domain was reloaded" );
             }
         }
 
@@ -259,14 +259,18 @@ namespace CK.Observable.Domain.Tests
                 w.WriteObject( ChildObject );
             }
 
-            protected override void Dispose( bool shouldCleanup )
+            protected override void OnDestroy()
             {
-                if( shouldCleanup || AlwaysDisposeChild )
+                ChildObject.Destroy();
+                base.OnDestroy();
+            }
+
+            protected override void OnUnload()
+            {
+                if( AlwaysDisposeChild )
                 {
-                    ChildObject.Clear();
-                    ChildObject.Dispose();
+                    ChildObject.Destroy();
                 }
-                base.Dispose( shouldCleanup );
             }
         }
 

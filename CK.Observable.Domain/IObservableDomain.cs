@@ -76,7 +76,7 @@ namespace CK.Observable
                    bool leaveOpen = false,
                    bool debugMode = false,
                    Encoding? encoding = null,
-                   SaveDisposedObjectBehavior saveDestroyed = SaveDisposedObjectBehavior.None,
+                   SaveDestroyedObjectBehavior saveDestroyed = SaveDestroyedObjectBehavior.None,
                    int millisecondsTimeout = -1 );
     }
 }

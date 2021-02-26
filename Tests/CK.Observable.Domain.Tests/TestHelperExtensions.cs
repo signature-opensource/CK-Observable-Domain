@@ -83,7 +83,7 @@ namespace CK.Core
                                              bool? startTimer,
                                              int pauseMilliseconds,
                                              bool skipDomainDispose,
-                                             SaveDisposedObjectBehavior saveDisposed )
+                                             SaveDestroyedObjectBehavior saveDisposed )
         {
             using( var s = new MemoryStream() )
             {
@@ -105,7 +105,7 @@ namespace CK.Core
                                                     bool? startTimer = null,
                                                     int pauseMilliseconds = 0,
                                                     bool skipDomainDispose = false,
-                                                    SaveDisposedObjectBehavior saveDisposed = SaveDisposedObjectBehavior.None )
+                                                    SaveDestroyedObjectBehavior saveDisposed = SaveDestroyedObjectBehavior.None )
         {
             return SaveAndLoad( @this.Monitor, domain, renamed, serviceProvider, debugMode, startTimer, pauseMilliseconds, skipDomainDispose, saveDisposed );
         }

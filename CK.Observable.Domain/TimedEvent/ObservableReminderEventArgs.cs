@@ -14,7 +14,7 @@ namespace CK.Observable
     public class ObservableReminderEventArgs : ObservableTimedEventArgs
     {
         internal ObservableReminderEventArgs( ObservableReminder source )
-            : base( source.Domain )
+            : base( source.TimeManager!.Domain )
         {
             Reminder = source;
         }

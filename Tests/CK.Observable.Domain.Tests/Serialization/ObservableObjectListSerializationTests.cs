@@ -123,7 +123,7 @@ namespace CK.Observable.Domain.Tests.Serialization
                 {
                     var c = new C();
                     var o = new C();
-                    o.Disposed += c.OnObjectDisposed;
+                    o.Destroyed += c.OnObjectDisposed;
                 } );
                 ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
             }

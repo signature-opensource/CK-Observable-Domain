@@ -82,7 +82,7 @@ namespace CK.Observable.Device
                 else
                 {
                     InternalDevices.RemoveAt( i-- );
-                    d.Dispose();
+                    d.Destroy();
                 }
             }
             InternalDevices.AddRange( snapshot.Values.Select( c => new AvailableDeviceInfo( c.Name, c.Status, c.ControllerKey ) ) );

@@ -129,7 +129,7 @@ namespace CK.Observable.Domain.Tests
                 return false;
             }
 
-            protected override void RegisterClientObject( IActivityMonitor monitor, IDisposableObject o )
+            protected override void RegisterClientObject( IActivityMonitor monitor, IDestroyableObject o )
             {
             }
 
@@ -191,7 +191,7 @@ namespace CK.Observable.Domain.Tests
                 var tag = (ValueTuple<HandlerTarget,int>)e.Timer.Tag;
                 if( tag.Item2-- == 0 )
                 {
-                    e.Timer.Dispose();
+                    e.Timer.Destroy();
                 }
                 else
                 {

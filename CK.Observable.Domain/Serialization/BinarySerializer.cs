@@ -51,7 +51,7 @@ namespace CK.Observable
             ISerializerResolver? drivers = null,
             bool leaveOpen = false,
             Encoding? encoding = null,
-            Action<IDisposableObject>? disposedTracker = null )
+            Action<IDestroyableObject>? disposedTracker = null )
             : base( output, encoding ?? Encoding.UTF8, leaveOpen )
         {
             _types = new Dictionary<Type, TypeInfo>();
@@ -310,16 +310,16 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Called by <see cref="AutoTypeRegistry"/> serialization drivers when a disposed <see cref="IDisposableObject"/> has been
+        /// Called by <see cref="AutoTypeRegistry"/> serialization drivers when a disposed <see cref="IDestroyableObject"/> has been
         /// written.
         /// <para>
         /// This should clearly be on "ImplementationServices" or any other of this writer extensions. But currently, the
         /// serialization is embedded inside the Observable library, so we don't care.
-        /// Note that if a IDisposableObject { bool IsDiposed { get; } } basic interface (without Disposed event) in the "generic" serialization library
-        /// (or deeper? "System.ComponentModel.IDisposableObject, CK.Core"?), then this could remain this way. 
+        /// Note that if a IDestroyableObject { bool IsDiposed { get; } } basic interface (without Disposed event) in the "generic" serialization library
+        /// (or deeper? "System.ComponentModel.IDestroyableObject, CK.Core"?), then this could remain this way. 
         /// </para>
         /// </summary>
-        public Action<IDisposableObject>? DisposedTracker { get; }
+        public Action<IDestroyableObject>? DisposedTracker { get; }
 
 
         internal class CheckedWriteStream : Stream

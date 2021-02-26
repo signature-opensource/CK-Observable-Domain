@@ -35,7 +35,7 @@ namespace CK.Observable.Domain.Tests
 
                 d.Modify( TestHelper.Monitor, () =>
                 {
-                    car.Dispose();
+                    car.Destroy();
                 } );
 
                 d.Modify( TestHelper.Monitor, () =>
@@ -96,7 +96,7 @@ namespace CK.Observable.Domain.Tests
 
                 d.Modify( TestHelper.Monitor, () =>
                 {
-                    d.AllObjects.Single().Dispose();
+                    d.AllObjects.Single().Destroy();
                 } ).Should().NotBeNull();
 
                 string t3 = LastEvent.ExportedEvents;
@@ -129,7 +129,7 @@ namespace CK.Observable.Domain.Tests
 
                 d.Modify( TestHelper.Monitor, () =>
                 {
-                    d.AllObjects.OfType<MultiPropertyType>().Single().Dispose();
+                    d.AllObjects.OfType<MultiPropertyType>().Single().Destroy();
                     var l = new ObservableList<string>();
                     l.Add( "One" );
                     l.Add( "Two" );
@@ -209,7 +209,7 @@ namespace CK.Observable.Domain.Tests
 
                 d.Modify( TestHelper.Monitor, () =>
                 {
-                    oneObject.Dispose();
+                    oneObject.Destroy();
 
                 } ).Success.Should().BeTrue();
 
@@ -262,7 +262,7 @@ namespace CK.Observable.Domain.Tests
                 d.Modify( TestHelper.Monitor, () =>
                 {
                     var spi = d.AllObjects.OfType<Mechanic>().Single( m => m.LastName == "Spinelli" );
-                    spi.Dispose();
+                    spi.Destroy();
                 } );
                 LastEvent.TransactionNumber.Should().Be( 4 );
                 string t3 = LastEvent.ExportedEvents;
@@ -376,7 +376,7 @@ namespace CK.Observable.Domain.Tests
 
             d.Modify( TestHelper.Monitor, () =>
             {
-                d.AllObjects.Single().Dispose();
+                d.AllObjects.Single().Destroy();
                 new TryingToExportNotExportableProperties2();
 
             } ).Success.Should().BeTrue();
@@ -387,7 +387,7 @@ namespace CK.Observable.Domain.Tests
 
             d.Modify( TestHelper.Monitor, () =>
             {
-                d.AllObjects.Single().Dispose();
+                d.AllObjects.Single().Destroy();
                 new TryingToExportNotExportableProperties3();
             } ).Success.Should().BeTrue();
 

@@ -489,7 +489,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             void DisplayMessageAndStartCounting( object sender, ObservableReminderEventArgs e )
             {
                 e.Reminder.IsPooled.Should().BeTrue();
-                e.Reminder.Invoking( x => x.Dispose() ).Should().Throw<InvalidOperationException>( "Pooled reminders cannot be disposed." );
+                e.Reminder.Invoking( x => x.Destroy() ).Should().Throw<InvalidOperationException>( "Pooled reminders cannot be disposed." );
 
                 var (msg, count) = ((string,int))e.Reminder.Tag;
 
@@ -537,7 +537,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 {
                     d.Domain.TimeManager.Reminders.Should().HaveCount( 2, "2 pooled reminders have been created." );
                     d.Domain.AllInternalObjects.OfType<TestCounter>().Single().Count.Should().BeGreaterOrEqualTo( 4, "Counter has been incremented at least four times." );
-                    d.Domain.TimeManager.Reminders.All( r => r.IsPooled && !r.IsActive && !r.IsDisposed ).Should().BeTrue( "Reminders are free to be reused." );
+                    d.Domain.TimeManager.Reminders.All( r => r.IsPooled && !r.IsActive && !r.IsDestroyed ).Should().BeTrue( "Reminders are free to be reused." );
                 }
                 ReloadIfNeeded();
                 using( TestHelper.Monitor.CollectEntries( entries => logs = entries, LogLevelFilter.Info ) )
@@ -554,7 +554,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 using( d.Domain.AcquireReadLock() )
                 {
                     d.Domain.TimeManager.Reminders.Should().HaveCount( 2, "Still 2 pooled reminders." );
-                    d.Domain.TimeManager.Reminders.All( r => r.IsPooled && !r.IsActive && !r.IsDisposed ).Should().BeTrue( "Reminders are free to be reused." );
+                    d.Domain.TimeManager.Reminders.All( r => r.IsPooled && !r.IsActive && !r.IsDestroyed ).Should().BeTrue( "Reminders are free to be reused." );
                 }
                 ReloadIfNeeded();
                 d.Domain.Modify( TestHelper.Monitor, () =>
@@ -674,7 +674,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 {
                     while( d.TimeManager.Reminders.Count > 0 )
                     {
-                        d.TimeManager.Reminders.ElementAt( random.Next( d.TimeManager.Reminders.Count ) ).Dispose();
+                        d.TimeManager.Reminders.ElementAt( random.Next( d.TimeManager.Reminders.Count ) ).Destroy();
                     }
                 } ).Success.Should().BeTrue();
             }

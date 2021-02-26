@@ -25,21 +25,21 @@ namespace CK.Observable.League.Tests.MicroMachine
         MachineConfiguration( IBinaryDeserializer r, TypeReadInfo? info )
                 : base( RevertSerialization.Default )
         {
-            Debug.Assert( !IsDisposed );
+            Debug.Assert( !IsDestroyed );
             IdentifyThingTimeout = r.ReadTimeSpan();
-            AutoDisposedTimeout = r.ReadTimeSpan();
+            AutoDestroyedTimeout = r.ReadTimeSpan();
         }
 
         void Write( BinarySerializer w )
         {
-            Debug.Assert( !IsDisposed );
+            Debug.Assert( !IsDestroyed );
             w.Write( IdentifyThingTimeout );
-            w.Write( AutoDisposedTimeout );
+            w.Write( AutoDestroyedTimeout );
         }
 
         public TimeSpan IdentifyThingTimeout { get; set; } = TimeSpan.FromMilliseconds( 200 );
 
-        public TimeSpan AutoDisposedTimeout { get; set; } = TimeSpan.FromMilliseconds( 400 );
+        public TimeSpan AutoDestroyedTimeout { get; set; } = TimeSpan.FromMilliseconds( 400 );
 
     }
 }

@@ -47,7 +47,7 @@ namespace CK.Observable
         ObservableReminder( IBinaryDeserializer r, TypeReadInfo? info )
             : base( RevertSerialization.Default )
         {
-            Debug.Assert( !IsDisposed );
+            Debug.Assert( !IsDestroyed );
             IsPooled = r.ReadBoolean();
             ReusableArgs = new ObservableReminderEventArgs( this );
             if( IsPooled && ActiveIndex == 0 ) TimeManager.ReleaseToPool( this );
@@ -55,7 +55,7 @@ namespace CK.Observable
 
         void Write( BinarySerializer w )
         {
-            Debug.Assert( !IsDisposed );
+            Debug.Assert( !IsDestroyed );
             w.Write( IsPooled );
         }
 
@@ -68,7 +68,7 @@ namespace CK.Observable
 
         internal override void OnDeactivate()
         {
-            Debug.Assert( !IsDisposed );
+            Debug.Assert( !IsDestroyed );
             if( IsPooled )
             {
                 ClearHandlesAndTag();
@@ -77,13 +77,13 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Disposes this reminder.
+        /// Destroys this reminder.
         /// If <see cref="IsPooled"/> is true, calling this method throws an <see cref="InvalidOperationException"/>.
         /// </summary>
-        public override void Dispose()
+        public override void Destroy()
         {
             if( IsPooled ) throw new InvalidOperationException( "A pooled ObservableReminder cannot be disposed." );
-            base.Dispose();
+            base.Destroy();
         }
 
         private protected override ObservableReminderEventArgs ReusableArgs { get; }
@@ -101,7 +101,7 @@ namespace CK.Observable
                 if( ExpectedDueTimeUtc != value )
                 {
                     if( value.Kind != DateTimeKind.Utc ) throw new ArgumentException( nameof( DueTimeUtc ), "Must be a Utc DateTime." );
-                    this.CheckDisposed();
+                    this.CheckDestroyed();
                     ExpectedDueTimeUtc = value;
                     TimeManager.OnChanged( this );
                 }
@@ -118,7 +118,7 @@ namespace CK.Observable
         /// Overridden to return info on this reminder.
         /// </summary>
         /// <returns>A readable string.</returns>
-        public override string ToString() => $"{(IsDisposed ? "[Disposed]" : "")}ObservableReminder {(IsActive ? ExpectedDueTimeUtc.ToString( "o" ) : "(inactive)" )}.";
+        public override string ToString() => $"{(IsDestroyed ? "[Disposed]" : "")}ObservableReminder {(IsActive ? ExpectedDueTimeUtc.ToString( "o" ) : "(inactive)" )}.";
 
     }
 

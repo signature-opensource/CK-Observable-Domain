@@ -217,7 +217,7 @@ namespace CK.Observable
 
         internal void OnPreDisposed( ObservableTimedEventBase t )
         {
-            Domain.CheckBeforeDispose( t );
+            Domain.CheckBeforeDestroy( t );
             if( t.ActiveIndex != 0 ) Deactivate( t );
         }
 
@@ -249,7 +249,7 @@ namespace CK.Observable
             var f = _first;
             while( f != null )
             {
-                Debug.Assert( !f.IsDisposed, "Disposed Timed event objects are removed from the list." );
+                Debug.Assert( !f.IsDestroyed, "Disposed Timed event objects are removed from the list." );
                 w.WriteObject( f );
                 f = f.Next;
             }
@@ -263,7 +263,7 @@ namespace CK.Observable
             while( --count >= 0 )
             {
                 var t = (ObservableTimedEventBase)r.ReadObject()!;
-                Debug.Assert( !t.IsDisposed );
+                Debug.Assert( !t.IsDestroyed );
                 OnCreated( t );
                 if( t.ActiveIndex > 0 )
                 {
@@ -411,7 +411,7 @@ namespace CK.Observable
                                 {
                                     first.OnAfterRaiseUnchanged( current, m );
                                 }
-                                if( !first.IsDisposed )
+                                if( !first.IsDestroyed )
                                 {
                                     if( !first.IsActive )
                                     {

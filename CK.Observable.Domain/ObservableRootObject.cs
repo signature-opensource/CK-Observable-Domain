@@ -11,10 +11,13 @@ namespace CK.Observable
     public class ObservableRootObject : ObservableObject
     {
         /// <summary>
-        /// Gets ot sets a flag that allows <see cref="Dispose(bool)"/> to be called on root.
-        /// This is to be used as a last resort.
+        /// Gets or sets a flag that allows <see cref="ObservableObject.Destroy()"/> to be called on
+        /// root objects that are not real roots (they don't belong to <see cref="ObservableDomain.AllRoots"/>).
+        /// <para>
+        /// Defaults to false: this should not be needed (but this can be useful to cleanup a domain).
+        /// </para>
         /// </summary>
-        public static bool AllowRootObjectDisposing { get; set; } = false;
+        public static bool AllowRootObjectDestroying { get; set; } = false;
 
         /// <summary>
         /// Initializes a new root for the current domain that is retrieved automatically: it
@@ -33,24 +36,6 @@ namespace CK.Observable
 
         void Write( BinarySerializer w )
         {
-        }
-
-        /// <summary>
-        /// Overridden to throw <see cref="InvalidOperationException"/>.
-        /// </summary>
-        /// <param name="shouldCleanup">Always false: this method is never called for root objects except when reloading.</param>
-        protected internal override void Dispose( bool shouldCleanup )
-        {
-            if( !shouldCleanup ) base.Dispose( shouldCleanup );
-            else 
-            {
-                if( !AllowRootObjectDisposing
-                    || ObservableDomain.GetCurrentActiveDomain().AllRoots.IndexOf( x => x == this ) >= 0 )
-                {
-                    throw new InvalidOperationException( "ObservableRootObject cannot be disposed." );
-                }
-                base.Dispose( shouldCleanup );
-            }
         }
     }
 }

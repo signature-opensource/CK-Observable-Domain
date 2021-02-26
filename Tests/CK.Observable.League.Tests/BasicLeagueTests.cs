@@ -62,7 +62,7 @@ namespace CK.Observable.League.Tests
                 // We dispose the Domain in the Coordinator domain: it is now marked as Destroyed.
                 await league2.Coordinator.ModifyAsync( TestHelper.Monitor, ( m, d ) =>
                 {
-                    d.Root.Domains["FirstDomain"].Dispose();
+                    d.Root.Domains["FirstDomain"].Destroy();
                 } );
                 shell2.IsDestroyed.Should().BeTrue( "The loader and shells expose the IsDestroyed marker." );
                 loader2.IsDestroyed.Should().BeTrue();

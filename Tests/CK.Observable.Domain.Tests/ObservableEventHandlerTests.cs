@@ -233,7 +233,7 @@ namespace CK.Observable.Domain.Tests
                     counter.Count.Should().Be( 0 );
                     c.TestSpeed = 89;
                     counter.Count.Should().Be( 1 );
-                    counter.Dispose();
+                    counter.Destroy();
                     c.TestSpeed = 1;
                     counter.Count.Should().Be( 1 );
 
@@ -247,11 +247,11 @@ namespace CK.Observable.Domain.Tests
                     c.TestSpeed = 89;
                     counter.Count.Should().Be( 1 );
                     counter2.Count.Should().Be( 1 );
-                    counter.Dispose();
+                    counter.Destroy();
                     c.TestSpeed = 1;
                     counter.Count.Should().Be( 1 );
                     counter2.Count.Should().Be( 2 );
-                    counter2.Dispose();
+                    counter2.Destroy();
                     c.TestSpeed = 2;
                     counter.Count.Should().Be( 1 );
                     counter2.Count.Should().Be( 2 );
@@ -271,19 +271,19 @@ namespace CK.Observable.Domain.Tests
                     counter2.Count.Should().Be( 1 );
                     counter3.Count.Should().Be( 1 );
 
-                    counter2.Dispose();
+                    counter2.Destroy();
                     c.TestSpeed = 1;
                     counter.Count.Should().Be( 2 );
                     counter2.Count.Should().Be( 1 );
                     counter3.Count.Should().Be( 2 );
 
-                    counter3.Dispose();
+                    counter3.Destroy();
                     c.TestSpeed = 2;
                     counter.Count.Should().Be( 3 );
                     counter2.Count.Should().Be( 1 );
                     counter3.Count.Should().Be( 2 );
 
-                    counter.Dispose();
+                    counter.Destroy();
                     c.TestSpeed = 3;
                     counter.Count.Should().Be( 3 );
                     counter2.Count.Should().Be( 1 );

@@ -276,7 +276,7 @@ namespace CK.Observable.Domain.Tests.Clients
             {
                 d.Root.Prop1 = "This will";
                 d.Root.Prop2 = "never be set";
-                d.Root.Invoking( x => x.Dispose() )
+                d.Root.Invoking( x => x.Destroy() )
                     .Should().Throw<InvalidOperationException>( "Roots still can't be disposed during regular operation" );
                 throw new Exception( "Exception during Modify(). This is a test exception." );
             } );
@@ -289,8 +289,8 @@ namespace CK.Observable.Domain.Tests.Clients
             }
 
             restoredObservableObject.Should().NotBe( initialObservableObject );
-            initialObservableObject.IsDisposed.Should().BeTrue( "Root was disposed following a reload" );
-            restoredObservableObject.IsDisposed.Should().BeFalse();
+            initialObservableObject.IsDestroyed.Should().BeTrue( "Root was disposed following a reload" );
+            restoredObservableObject.IsDestroyed.Should().BeFalse();
         }
 
     }
