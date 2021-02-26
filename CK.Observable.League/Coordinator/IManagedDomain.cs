@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace CK.Observable.League
 {
     /// <summary>
-    /// Internal interface: this is what a <see cref="Domain"/> (in the <see cref="Coordinator"/> domain) sees.
+    /// Internal interface: this is what a managed <see cref="Domain"/> (in the <see cref="Coordinator"/> domain) sees.
     /// </summary>
     interface IManagedDomain
     {
@@ -40,7 +40,7 @@ namespace CK.Observable.League
         /// can safely defer the execution via <see cref="SuccessfulTransactionEventArgs.PostActions"/>.
         /// </summary>
         /// <remarks>
-        /// The only case where <paramref name="options"/> and <paramref name="hasActiveTimedEvents"/> are both non null
+        /// The only case where <paramref name="options"/> and <paramref name="nextActiveTime"/> are both non null
         /// is during the initial call by <see cref="ObservableLeague.LoadAsync"/>.
         /// </remarks>
         /// <param name="monitor">The monitor to use.</param>
@@ -56,7 +56,7 @@ namespace CK.Observable.League
         Task SynchronizeOptionsAsync( IActivityMonitor monitor, ManagedDomainOptions? options, DateTime? nextActiveTime );
 
         /// <summary>
-        /// Destroys the managed domain: the <see cref="Domain"/> has been disposed.
+        /// Destroys the managed domain: the managed <see cref="Domain"/> has been destroyed.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="league">The containing league.</param>

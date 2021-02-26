@@ -43,7 +43,7 @@ namespace CK.Observable
         /// Initializes a new <see cref="ObservableDomainCommand"/>.
         /// </summary>
         /// <param name="command">The command payload.</param>
-        /// <param name="targetSidekick">
+        /// <param name="knownTarget">
         /// The optional target <see cref="ObservableDomainSidekick"/>, <see cref="Type"/> of target sidekick,
         /// or <see cref="ISidekickLocator"/> object.
         /// </param>

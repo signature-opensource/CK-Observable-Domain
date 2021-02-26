@@ -97,7 +97,7 @@ namespace CK.Observable
         /// </para>
         /// <para>
         /// When set to -1, transaction mode is off. Unhandled errors are logged (as <see cref="LogLevel.Error"/>) and
-        /// silently swallowed by <see cref="OnUnhandledError(IActivityMonitor, Exception, ref bool)"/>.
+        /// silently swallowed by <see cref="OnUnhandledError(IActivityMonitor, ObservableDomain, Exception, ref bool)"/>.
         /// </para>
         /// </summary>
         public int SkipTransactionCount
@@ -138,7 +138,7 @@ namespace CK.Observable
 
 
         /// <summary>
-        /// See <see cref="IObservableDomainClient.OnUnhandledError(IActivityMonitor, Exception, ref bool)"/>.
+        /// See <see cref="IObservableDomainClient.OnUnhandledError(IActivityMonitor, ObservableDomain, Exception, ref bool)"/>.
         /// Empty implementation nothing here: <paramref name="swallowError"/> is not changed.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
@@ -383,13 +383,13 @@ namespace CK.Observable
                 {
                     using( var gz = new GZipStream( _memory, CompressionLevel.Optimal, leaveOpen: true ) )
                     {
-                        d.Save( monitor, gz, leaveOpen: true, saveDisposed: SaveDisposedObjectBehavior );
+                        d.Save( monitor, gz, leaveOpen: true, saveDestroyed: SaveDisposedObjectBehavior );
                     }
                 }
                 else
                 {
                     Debug.Assert( CompressionKind == CompressionKind.None );
-                    d.Save( monitor, _memory, leaveOpen: true, saveDisposed: SaveDisposedObjectBehavior );
+                    d.Save( monitor, _memory, leaveOpen: true, saveDestroyed: SaveDisposedObjectBehavior );
                 }
                 _currentSnapshotKind = CompressionKind;
                 _snapshotSerialNumber = d.TransactionSerialNumber;

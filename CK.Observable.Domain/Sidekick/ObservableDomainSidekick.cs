@@ -76,7 +76,7 @@ namespace CK.Observable
         /// The semantics of this registration, what a "client" actually means, is specific to each sidekick.
         /// <para>
         /// When this method is called (from <see cref="DomainView.EnsureSidekicks"/> or at the end of a <see cref="ObservableDomain.Modify"/> call
-        /// or after the deserialization of the graph by <see cref="ObservableDomain.Load(IActivityMonitor, System.IO.Stream, bool, System.Text.Encoding?, int, bool)"/>),
+        /// or after the deserialization of the graph by <see cref="ObservableDomain.Load(IActivityMonitor, System.IO.Stream, bool, System.Text.Encoding?, int, bool?)"/>),
         /// the domain lock is held, any interaction can take place.
         /// After that registering phase, interactions must be protected in <see cref="ObservableDomain.AcquireReadLock(int)"/> or one of the Modify method.
         /// </para>
@@ -96,7 +96,7 @@ namespace CK.Observable
         /// When this is called, the <see cref="Domain"/>'s lock is held in read mode: objects can be read (but no write/modifications
         /// should occur). A typical implementation is to capture any required domain object's state and use
         /// <see cref="SuccessfulTransactionEventArgs.PostActions"/> or <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/>
-        /// to post asynchronous actions (or to send commands thanks to <see cref="SuccessfulTransactionEventArgs.SendCommand(ObservableDomainCommand)"/>
+        /// to post asynchronous actions (or to send commands thanks to <see cref="SuccessfulTransactionEventArgs.SendCommand(in ObservableDomainCommand)"/>
         /// that will be processed by this or other sidekicks).
         /// </para>
         /// <para>

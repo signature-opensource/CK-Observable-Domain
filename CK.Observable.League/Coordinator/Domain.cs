@@ -106,7 +106,7 @@ namespace CK.Observable.League
         /// Internal information that is managed by the Shell.
         /// This supports the <see cref="ManagedDomainOptions.LifeCycleOption"/> when <see cref="DomainLifeCycleOption.Default"/>.
         /// This is serialized so that when reloading a League, we know that the actual ObservableDomain
-        /// must be pre loaded. When the ObservableDomain is loaded, this is updated by
+        /// must be preloaded. When the ObservableDomain is loaded, this is updated by
         /// <see cref="ObservableLeague.DomainClient.OnTransactionCommit(in SuccessfulTransactionEventArgs)"/>.
         /// </summary>
         internal DateTime NextActiveTime;

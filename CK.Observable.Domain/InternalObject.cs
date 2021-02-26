@@ -121,7 +121,7 @@ namespace CK.Observable
         /// Implementation at this level raises the <see cref="Disposed"/> event: it must be called by overrides.
         /// <para>
         /// Note that the Disposed event is raised only for explicit object disposing:
-        /// a <see cref="ObservableDomain.Load(IActivityMonitor, System.IO.Stream, bool, System.Text.Encoding, int, bool)"/> doesn't trigger the event.
+        /// a <see cref="ObservableDomain.Load(IActivityMonitor, System.IO.Stream, bool, System.Text.Encoding?, int, bool?)"/> doesn't trigger the event.
         /// </para>
         /// </summary>
         /// <param name="shouldDisposeObjects">

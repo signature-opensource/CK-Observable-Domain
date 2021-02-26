@@ -22,7 +22,7 @@ namespace CK.Observable.Device
         /// Gets the bridge that has been associated to the <paramref name="deviceObject"/>.
         /// </summary>
         /// <param name="deviceObject">The device object.</param>
-        /// <returns>The bridge (that should certainly be downcasted).</returns>
+        /// <returns>The bridge (that should certainly be down casted).</returns>
         protected DeviceBridge FindBridge( TDeviceObject deviceObject ) => _bridges[deviceObject.DeviceName];
 
         /// <summary>
@@ -170,14 +170,14 @@ namespace CK.Observable.Device
             /// <inheritdoc cref="ObservableDomain.Modify(IActivityMonitor, Action, int)" />
             protected Task<TransactionResult> ModifyAsync( IActivityMonitor monitor, Action actions, int millisecondsTimeout = -1 ) => _sidekick.Domain.ModifyAsync( monitor, actions, millisecondsTimeout );
 
-            /// <inheritdoc cref="ObservableDomain.ModifyNoThrowAsync(IActivityMonitor, Action, int)"/>.
+            /// <inheritdoc cref="ObservableDomain.ModifyNoThrowAsync(IActivityMonitor, Action, int, bool)"/>.
             protected Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> ModifyNoThrowAsync( IActivityMonitor monitor, Action actions, int millisecondsTimeout = -1 ) => _sidekick.Domain.ModifyNoThrowAsync( monitor, actions, millisecondsTimeout );
 
-            /// <inheritdoc cref="ObservableDomain.ModifyThrowAsync(IActivityMonitor, Action, int)"/>.
+            /// <inheritdoc cref="ObservableDomain.ModifyThrowAsync(IActivityMonitor, Action, int, bool)"/>.
             protected Task<TransactionResult> ModifyThrowAsync( IActivityMonitor monitor, Action actions, int millisecondsTimeout = -1 ) => _sidekick.Domain.ModifyThrowAsync( monitor, actions, millisecondsTimeout );
 
             /// <summary>
-            /// Called whenever the <see cref="Device"/> becames not null.
+            /// Called whenever the <see cref="Device"/> became not null.
             /// The <see cref="Object"/> (and any other objects of the domain) can be safely modified
             /// since the domain's write lock is held.
             /// </summary>
@@ -197,7 +197,7 @@ namespace CK.Observable.Device
             /// Called whenever the <see cref="ObservableDeviceObject"/> is unloaded or destroyed.
             /// Note that the <see cref="Device"/> may continue to exist in its host: this
             /// method may destroy the device in the Device world (if <paramref name="isObjectDestroyed"/> is true
-            /// and the observable <see cref="Object"/> must drive the lifecycle of the device).
+            /// and the observable <see cref="Object"/> must drive the life cycle of the device).
             /// </summary>
             /// <param name="monitor">The monitor to use.</param>
             /// <param name="isObjectDestroyed">True when the object has been destroyed, false when it is only unloaded.</param>

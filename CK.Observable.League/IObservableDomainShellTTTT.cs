@@ -14,7 +14,7 @@ namespace CK.Observable.League
     /// </para>
     /// <para>
     /// Note that this <see cref="IAsyncDisposable.DisposeAsync"/> implementation will use the activity monitor that has been
-    /// used to <see cref="IObservableDomainLoader.LoadAsync(IActivityMonitor)"/> this shell.
+    /// used to <see cref="IObservableDomainLoader.LoadAsync(IActivityMonitor, bool?)"/> this shell.
     /// </para>
     /// </summary>
     /// <typeparam name="T1">The type of the first observable root.</typeparam>

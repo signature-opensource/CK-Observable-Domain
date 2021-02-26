@@ -7,7 +7,7 @@ namespace CK.Observable
 {
     /// <summary>
     /// Primary interface to implement actual behavior behind an observable domain.
-    /// This is is intented to be implemented as a a chain of responsibility: Start,
+    /// This is intended to be implemented as a a chain of responsibility: Start,
     /// Commit and Failure should be synchronously propagated through a linked list
     /// (or tree structure) of such clients.
     /// See <see cref="MemoryTransactionProviderClient"/> for concrete implementations of transaction manager.
@@ -40,7 +40,7 @@ namespace CK.Observable
         /// <para>
         /// Implementations may capture any required domain object's state and use
         /// <see cref="SuccessfulTransactionEventArgs.PostActions"/> or <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/>
-        /// to post asynchronous actions (or to send commands thanks to <see cref="SuccessfulTransactionEventArgs.SendCommand(ObservableDomainCommand)"/>
+        /// to post asynchronous actions (or to send commands thanks to <see cref="SuccessfulTransactionEventArgs.SendCommand(in ObservableDomainCommand)"/>
         /// that will be processed by the sidekicks).
         /// </para>
         /// </summary>
@@ -55,7 +55,7 @@ namespace CK.Observable
         /// <param name="ex">The exception that has been raised.</param>
         /// <param name="swallowError">
         /// Defaults to false since by default the transaction will fail.
-        /// Setting this to true will silently swallow the exception (this is up to this implentation
+        /// Setting this to true will silently swallow the exception (this is up to this implementation
         /// to log it) and generate a call to <see cref="OnTransactionCommit"/> with a <see cref="SuccessfulTransactionEventArgs"/>.
         /// </param>
         void OnUnhandledError( IActivityMonitor monitor, ObservableDomain d, Exception ex, ref bool swallowError );

@@ -14,7 +14,7 @@ namespace CK.Observable.League
     /// </para>
     /// <para>
     /// Note that this <see cref="IAsyncDisposable.DisposeAsync"/> implementation will use the activity monitor that has been
-    /// used to <see cref="IObservableDomainLoader.LoadAsync(IActivityMonitor)"/> this shell.
+    /// used to <see cref="IObservableDomainLoader.LoadAsync"/> this shell.
     /// </para>
     /// </summary>
     public interface IObservableDomainShell : IObservableDomainShellBase

@@ -29,9 +29,9 @@ namespace CK.Observable.League
         }
 
         /// <summary>
-        /// Gets the coordinator domain: this set by the the <see cref="ObservableLeague.LoadAsync"/> right after
-        /// having new'ed this client: this can't be done from the constructor since the domain restoration is
-        /// an async operation.
+        /// Gets the coordinator domain: this set by the <see cref="ObservableLeague.LoadAsync"/> right after
+        /// having newed this client: this can't be done from the constructor since the domain restoration is
+        /// an asynchronous operation.
         /// </summary>
         public ObservableDomain<Coordinator> Domain { get; internal set; }
 
@@ -64,7 +64,7 @@ namespace CK.Observable.League
 
         /// <summary>
         /// Gets the league. This is available (not null) once the initialization step
-        /// is done: a first (async) load from the store has been done, the <see cref="Coordinator.Domains"/>
+        /// is done: a first (asynchronous) load from the store has been done, the <see cref="Coordinator.Domains"/>
         /// have been associated to their shells and, eventually, the ObservableLeague itself is created.
         /// </summary>
         internal IManagedLeague League => _league!;

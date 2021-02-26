@@ -17,11 +17,11 @@ namespace CK.Observable
     /// </summary>
     /// <remarks>
     /// This client is not the best way to handle persistence since, when <see cref="OnDomainCreated"/>
-    /// is called, it loads the already instantiated domain from the file: the contstuctor(s) of the root(s) have already been called and
+    /// is called, it loads the already instantiated domain from the file: the constructor(s) of the root(s) have already been called and
     /// this reloads the domain instead of directly deserializing a brand new instance from the file stream.
     /// <para>
-    /// This works but is not optimal: the ObservableLeague works differently by controlling the deserialization "from the ouside" instead
-    /// of "behind teh client".
+    /// This works but is not optimal: the ObservableLeague works differently by controlling the deserialization "from the outside" instead
+    /// of "behind the client".
     /// </para>
     /// </remarks>
     public class FileTransactionProviderClient : MemoryTransactionProviderClient
@@ -128,7 +128,7 @@ namespace CK.Observable
         /// <param name="monitor">The monitor to use.</param>
         /// <returns>
         /// True when the file was written, or when nothing has to be written.
-        /// False when an error occured while writing. This error was logged to the <paramref name="monitor"/>.
+        /// False when an error occurred while writing. This error was logged to the <paramref name="monitor"/>.
         /// </returns>
         public bool Flush( IActivityMonitor monitor )
         {
@@ -149,10 +149,10 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Overidden to call <see cref="Flush(IActivityMonitor)"/>.
+        /// Overridden to call <see cref="Flush(IActivityMonitor)"/>.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
-        /// <param name="d">The dispsed domain.</param>
+        /// <param name="d">The disposed domain.</param>
         public override void OnDomainDisposed( IActivityMonitor monitor, ObservableDomain d ) => Flush( monitor );
 
         private void RescheduleDueTime( DateTime relativeTimeUtc )

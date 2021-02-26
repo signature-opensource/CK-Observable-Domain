@@ -35,13 +35,13 @@ namespace CK.Observable
 
         /// <summary>
         /// Gets the current transaction number.
-        /// Incremented each time a transaction successfuly ended, default to 0 until the first transaction commit.
+        /// Incremented each time a transaction successfully ended, default to 0 until the first transaction commit.
         /// </summary>
         int TransactionSerialNumber { get; }
 
         /// <summary>
         /// Gets the last commit time. Defaults to <see cref="DateTime.UtcNow"/> at the very beginning,
-        /// when no transaction has been comitted yet (and <see cref="TransactionSerialNumber"/> is 0).
+        /// when no transaction has been committed yet (and <see cref="TransactionSerialNumber"/> is 0).
         /// </summary>
         DateTime TransactionCommitTimeUtc { get; }
 
@@ -65,7 +65,7 @@ namespace CK.Observable
         /// <param name="leaveOpen">True to leave the stream opened.</param>
         /// <param name="debugMode">True to activate <see cref="BinarySerializer.IsDebugMode"/>.</param>
         /// <param name="encoding">Optional encoding for characters. Defaults to UTF-8.</param>
-        /// <param name="saveDisposed">Whether dipsosed objects are allowed or not.</param>
+        /// <param name="saveDestroyed">Whether destroyed objects are allowed or not.</param>
         /// <param name="millisecondsTimeout">
         /// The maximum number of milliseconds to wait for a read access before giving up.
         /// Wait indefinitely by default.
@@ -76,7 +76,7 @@ namespace CK.Observable
                    bool leaveOpen = false,
                    bool debugMode = false,
                    Encoding? encoding = null,
-                   SaveDisposedObjectBehavior saveDisposed = SaveDisposedObjectBehavior.None,
+                   SaveDisposedObjectBehavior saveDestroyed = SaveDisposedObjectBehavior.None,
                    int millisecondsTimeout = -1 );
     }
 }

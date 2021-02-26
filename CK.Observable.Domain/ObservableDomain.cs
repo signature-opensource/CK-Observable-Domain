@@ -208,7 +208,7 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// The change tracker handles the transfomation of actual changes into events that are
+        /// The change tracker handles the transformation of actual changes into events that are
         /// optimized and serialized by the <see cref="Commit(ObservableDomain, Func{string, ObservablePropertyChangedEventArgs}, DateTime)"/> method.
         /// </summary>
         class ChangeTracker
@@ -497,7 +497,7 @@ namespace CK.Observable
                 using( Monitor.OpenDebug( "Leaving WriteLock. Raising SuccessfulTransaction event." ) )
                 {
                     _domain._lock.ExitWriteLock();
-                    // Back to Readeable lock: publishes SuccessfulTransaction.
+                    // Back to Readable lock: publishes SuccessfulTransaction.
                     if( _result.Success )
                     {
                         Debug.Assert( ctx != null );
@@ -506,7 +506,7 @@ namespace CK.Observable
                         if( errors != null ) _result.SetSuccessfulTransactionErrors( errors );
                     }
                 }
-                // Before leaving the read lock (noboby can start a new transaction), let's enqueue
+                // Before leaving the read lock (nobody can start a new transaction), let's enqueue
                 // the transaction result.
                 // This is why we must know here if we are called by ModifyAsync (handling is guaranteed) or by
                 // a direct Modify in which case, the domain post actions are lost.
@@ -1118,7 +1118,7 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Same as <see cref="ModifyAsync(IActivityMonitor, Action, int)"/> but calls <see cref="TransactionResult.ThrowOnFailure()"/>:
+        /// Same as <see cref="ModifyAsync(IActivityMonitor, Action, int, bool)"/> but calls <see cref="TransactionResult.ThrowOnFailure()"/>:
         /// this methods always throw on any error (except the error of the <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/>
         /// since it may happen later).
         /// </summary>
@@ -1130,6 +1130,14 @@ namespace CK.Observable
         /// <param name="millisecondsTimeout">
         /// The maximum number of milliseconds to wait for a write access before giving up.
         /// Wait indefinitely by default.
+        /// </param>
+        /// <param name="parallelDomainPostActions">
+        /// False to wait for the success of the <see cref="SuccessfulTransactionEventArgs.PostActions"/> before
+        /// allowing the <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/> to run: when PostActions fail, all domain post actions are skipped.
+        /// <para>
+        /// By default, post actions are executed and domain post actions can immediately be executed by the <see cref="ObservableDomainPostActionExecutor"/> (as
+        /// soon as all previous transaction's domain post actions have ran of course).
+        /// </para>
         /// </param>
         /// <returns>
         /// The transaction result from <see cref="ObservableDomain.Modify"/>. <see cref="TransactionResult.Empty"/> when the
@@ -1145,7 +1153,7 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Safe version of <see cref="ModifyAsync(IActivityMonitor, Action, int)"/> that will never throw: any exception raised
+        /// Safe version of <see cref="ModifyAsync(IActivityMonitor, Action, int, bool)"/> that will never throw: any exception raised
         /// by <see cref="IObservableDomainClient.OnTransactionStart(IActivityMonitor, ObservableDomain, DateTime)"/>
         /// or by post actions execution is logged and returned in the <see cref="TransactionResult"/>.
         /// <para>

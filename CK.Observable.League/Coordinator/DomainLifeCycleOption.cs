@@ -20,7 +20,7 @@ namespace CK.Observable.League
 
         /// <summary>
         /// The domain is unloaded unless explicitly loaded with one of
-        /// the <see cref="IObservableDomainLoader.LoadAsync(Core.IActivityMonitor)"/> method,
+        /// the <see cref="IObservableDomainLoader.LoadAsync"/> method,
         /// regardless of any active <see cref="ObservableTimedEventBase"/>.
         /// </summary>
         Never,
