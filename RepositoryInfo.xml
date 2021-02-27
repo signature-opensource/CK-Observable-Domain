@@ -9,6 +9,7 @@
     </IgnoreModifiedFiles>
     <Branches>
       <Branch Name="develop" CIVersionMode="LastReleaseBased" VersionName="develop" />
+      <Branch Name="garbage-collector" CIVersionMode="ZeroTimedBased" VersionName="gc" />
     </Branches>
   </SimpleGitVersion>
 </RepositoryInfo>

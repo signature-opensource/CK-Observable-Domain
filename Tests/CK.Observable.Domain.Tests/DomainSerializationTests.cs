@@ -188,7 +188,7 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
-        public void persisting_disposed_objects_and_SaveDisposedObjectBehavior()
+        public void persisting_disposed_objects_reference_tracking()
         {
             // Will be disposed by SaveAndLoad.
             var d = new ObservableDomain( TestHelper.Monitor, nameof( loadHooks_can_skip_the_TimedEvents_update ), startTimer: true );
@@ -232,11 +232,9 @@ namespace CK.Observable.Domain.Tests
                 {
                     o.IsDisposed.Should().BeTrue();
                 }
-            } );
+            } ).Success.Should().BeTrue();
 
-            TestHelper.Invoking( x => x.SaveAndLoad( d2, saveDisposed: SaveDisposedObjectBehavior.Throw ) )
-                .Should().Throw<CKException>()
-                .WithMessage( "Found 4 disposed objects: 1 instances of 'ObservableTimer', 1 instances of 'ObservableReminder', 1 instances of 'Person', 1 instances of 'SuspendableClock'." );
+            d2.CurrentObjectTracking.ReferencedDestroyed.Should().HaveCount( 4 );
         }
 
 

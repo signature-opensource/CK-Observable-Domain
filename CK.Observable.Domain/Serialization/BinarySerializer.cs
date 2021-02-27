@@ -69,86 +69,90 @@ namespace CK.Observable
         /// Writes an object that can be null and of any type.
         /// </summary>
         /// <param name="o">The object to write.</param>
-        public void WriteObject( object? o )
+        /// <returns>
+        /// True if write, false if the object has already been
+        /// written and only a reference has been written.
+        /// </returns>
+        public bool WriteObject( object? o )
         {
             switch( o )
             {
                 case null:
                     {
                         Write( (byte)SerializationMarker.Null );
-                        return;
+                        return true;
                     }
                 case string s:
                     {
                         Write( (byte)SerializationMarker.String );
                         Write( s );
-                        return;
+                        return true;
                     }
                 case int i:
                     {
                         Write( (byte)SerializationMarker.Int32 );
                         Write( i );
-                        return;
+                        return true;
                     }
                 case double d:
                     {
                         Write( (byte)SerializationMarker.Double );
                         Write( d );
-                        return;
+                        return true;
                     }
                 case char c:
                     {
                         Write( (byte)SerializationMarker.Char );
                         Write( c );
-                        return;
+                        return true;
                     }
                 case bool b:
                     {
                         Write( (byte)SerializationMarker.Boolean );
                         Write( b );
-                        return;
+                        return true;
                     }
                 case uint ui:
                     {
                         Write( (byte)SerializationMarker.UInt32 );
                         Write( ui );
-                        return;
+                        return true;
                     }
                 case float f:
                     {
                         Write( (byte)SerializationMarker.Float );
                         Write( f );
-                        return;
+                        return true;
                     }
                 case DateTime d:
                     {
                         Write( (byte)SerializationMarker.DateTime );
                         Write( d );
-                        return;
+                        return true;
                     }
                 case Guid g:
                     {
                         Write( (byte)SerializationMarker.Guid );
                         Write( g );
-                        return;
+                        return true;
                     }
                 case TimeSpan ts:
                     {
                         Write( (byte)SerializationMarker.TimeSpan );
                         Write( ts );
-                        return;
+                        return true;
                     }
                 case DateTimeOffset ds:
                     {
                         Write( (byte)SerializationMarker.DateTimeOffset );
                         Write( ds );
-                        return;
+                        return true;
                     }
                 case Type type:
                     {
                         Write( (byte)SerializationMarker.Type );
                         Write( type );
-                        return;
+                        return true;
                     }
             }
             SerializationMarker marker;
@@ -159,13 +163,13 @@ namespace CK.Observable
                 {
                     Write( (byte)SerializationMarker.Reference );
                     Write( num );
-                    return;
+                    return false;
                 }
                 _seen.Add( o, _seen.Count );
                 if( t == typeof( object ) )
                 {
                     Write( (byte)SerializationMarker.EmptyObject );
-                    return;
+                    return true;
                 }
                 marker = SerializationMarker.Object;
             }
@@ -208,6 +212,7 @@ namespace CK.Observable
                     }
                 }
             }
+            return true;
         }
 
         /// <summary>
