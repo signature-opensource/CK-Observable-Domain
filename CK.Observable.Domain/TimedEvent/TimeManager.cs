@@ -240,19 +240,26 @@ namespace CK.Observable
         /// <param name="t">The timed event to add.</param>
         internal void OnChanged( ObservableTimedEventBase t ) => _changed.Add( t );
 
-        internal void Save( IActivityMonitor m, BinarySerializer w )
+        internal List<ObservableTimedEventBase>? Save( IActivityMonitor m, BinarySerializer w, bool trackLostObjects )
         {
             CheckMinHeapInvariant();
+            List<ObservableTimedEventBase>? lostObjects = null;
             w.WriteNonNegativeSmallInt32( 1 );
             w.Write( IsRunning );
             w.WriteNonNegativeSmallInt32( _count );
-            var f = _first;
+            ObservableTimedEventBase? f = _first;
             while( f != null )
             {
                 Debug.Assert( !f.IsDestroyed, "Disposed Timed event objects are removed from the list." );
-                w.WriteObject( f );
+                if( w.WriteObject( f ) && trackLostObjects )
+                {
+                    if( f is ObservableReminder r && r.IsPooled ) continue;
+                    if( lostObjects == null ) lostObjects = new List<ObservableTimedEventBase>();
+                    lostObjects.Add( f );
+                }
                 f = f.Next;
             }
+            return lostObjects;
         }
 
         internal bool Load( IActivityMonitor m, BinaryDeserializer r )
