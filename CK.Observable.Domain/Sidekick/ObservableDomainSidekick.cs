@@ -21,15 +21,15 @@ namespace CK.Observable
     /// <para>
     /// Note to myself:
     /// This is a "ISingletonAutoType" (that doesn't exist yet): a singleton auto type is like a ISingletonAutoService except that it cannot
-    /// be instantiated automatically. An explicit contructor should be used with explicit parameters.
+    /// be instantiated automatically. An explicit constructor should be used with explicit parameters.
     /// A ISingletonAutoType cannot be a dependency.
     /// The concept of "IAutoType" captures only the "most specialized type" resolution mechanism (it's currently missing in the landscape).
     /// The "ISingletonAutoType"/"IScopedAutoType" introduces a constraint on its dependencies that are IAutoService objects: the constructor
-    /// parameters that are "contextual" must be defined when a "IAutoType" is defined otherwise those "unknwon" dependencies would be considered
+    /// parameters that are "contextual" must be defined when a "IAutoType" is defined otherwise those "unknown" dependencies would be considered
     /// scoped (and they are not).
     /// ...IAutoType is necessarily a Class, not an interface!
     /// So it can be named "IAutoClass". It must be handled like IAutoService but it's NOT a IAutoService.
-    /// Constructor parameters can be marked with a [ExplicitParameter] attribute (ie. not from the DI). Or a "record" can capture the
+    /// Constructor parameters can be marked with a [ExplicitParameter] attribute (saying "I'm not from the DI"). Or a "record" can capture the
     /// "contextual parameters"? And a standard factory method takes any "record" that are "IAutoClassParameters"?
     /// (I like this last one... But it locks the possibility to extend the "contextual parameters": a record, as a class, can be specialized but
     /// with a single inheritance chain.)
@@ -51,7 +51,7 @@ namespace CK.Observable
         /// <para>
         /// This is called after an external modification of the domain where an object with a [UseSidekick( ... )] attribute or a <see cref="ISidekickClientObject{TSidekick}"/>
         /// interface marker has been instantiated.
-        /// If the sidekick type has not any instance yet, this is called just before sollicitating the <see cref="ObservableDomain.DomainClient"/>.
+        /// If the sidekick type has not any instance yet, this is called just before soliciting the <see cref="ObservableDomain.DomainClient"/>.
         /// The domain has the write lock held and this constructor can interact with the domain objects (its interaction is part of the transaction).
         /// </para>
         /// <para>
@@ -81,8 +81,8 @@ namespace CK.Observable
         /// After that registering phase, interactions must be protected in <see cref="ObservableDomain.AcquireReadLock(int)"/> or one of the Modify method.
         /// </para>
         /// <para>
-        /// When a sidekick keeps a reference on a client object, it should either check <see cref="IDestroyableObject.IsDisposed"/> (in the context of
-        /// a read or modify lock) or registers to <see cref="IDestroyableObject.Disposed"/> event.
+        /// When a sidekick keeps a reference on a client object, it should either check <see cref="IDestroyableObject.IsDestroyed"/> (in the context of
+        /// a read or modify lock) or registers to <see cref="IDestroyableObject.Destroyed"/> event.
         /// </para>
         /// </summary>
         /// <param name="monitor"></param>
