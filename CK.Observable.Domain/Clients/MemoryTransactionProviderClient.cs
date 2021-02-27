@@ -6,6 +6,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace CK.Observable
@@ -30,14 +31,18 @@ namespace CK.Observable
         int _snapshotSerialNumber;
         DateTime _snapshotTimeUtc;
         CompressionKind? _currentSnapshotKind;
+        int _currentSnapshotHeaderLength;
+
+        static readonly byte[] _headerNone = Encoding.ASCII.GetBytes( "OD-None" );
+        static readonly byte[] _headerGZip = Encoding.ASCII.GetBytes( "OD-GZip" );
 
         /// <summary>
         /// Current serialization version of the snapshot: this is the first byte of the
         /// stream, before any compression.
         /// </summary>
-        public const byte CurrentSerializationVersion = 0;
+        public const byte CurrentSerializationVersion = 1;
 
-        const int SnapshotHeaderLength = 2;
+        const int SnapshotHeaderLength = 8;
 
         /// <summary>
         /// Initializes a new <see cref="MemoryTransactionProviderClient"/>.
@@ -82,7 +87,7 @@ namespace CK.Observable
 
         /// <summary>
         /// Gets the next client if any.
-        /// This is usesful if the default behavior of the virtual methods must be changed.
+        /// This is useful if the default behavior of the virtual methods must be changed.
         /// </summary>
         protected IObservableDomainClient? Next { get; }
 
@@ -156,7 +161,7 @@ namespace CK.Observable
         /// <summary>
         /// Default behavior is FIRST to relay the failure to the next client if any, and
         /// THEN to call <see cref="RestoreSnapshot"/> (and throws an <see cref="Exception"/>
-        /// if no snapshot was available or if an error occured).
+        /// if no snapshot was available or if an error occurred).
         /// By default, <see cref="ObservableDomain.TimeManager"/> is started if it was previously started.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
@@ -200,14 +205,60 @@ namespace CK.Observable
         {
             _memory.Position = 0;
             s.CopyTo( _memory );
-            if( _memory.Position < 3 ) throw new InvalidDataException( "Invalid Snapshot restoration." );
+            // We check 16 bytes. Even an empty domain require more bytes than that (secret, name, object count...).
+            if( _memory.Position < 16 ) throw new InvalidDataException( $"Invalid Snapshot restoration (stream length is {_memory.Position})." );
             var rawBytes = _memory.GetBuffer();
-            if( rawBytes[0] != 0 ) throw new InvalidDataException( "Invalid Snapshot version. Only 0 is currently supported." );
-            _currentSnapshotKind = (CompressionKind)rawBytes[1];
-            if( _currentSnapshotKind != CompressionKind.None && _currentSnapshotKind != CompressionKind.GZiped ) throw new InvalidDataException( "Invalid CompressionKind marker." );
+            if( rawBytes[0] == 0 )
+            {
+                _currentSnapshotKind = (CompressionKind)rawBytes[1];
+                if( _currentSnapshotKind != CompressionKind.None && _currentSnapshotKind != CompressionKind.GZiped )
+                {
+                    throw new InvalidDataException( "Invalid CompressionKind marker." );
+                }
+                _currentSnapshotHeaderLength = 2; 
+            }
+            else if( rawBytes[0] == 1 )
+            {
+                _currentSnapshotKind = ReadHeader( rawBytes.AsSpan().Slice( 1, SnapshotHeaderLength - 1 ) );
+                _currentSnapshotHeaderLength = SnapshotHeaderLength;
+            }
             DoLoadOrCreateFromSnapshot( monitor, ref d, false, startTimer );
             _snapshotSerialNumber = d.TransactionSerialNumber;
             _snapshotTimeUtc = d.TransactionCommitTimeUtc;
+        }
+
+        /// <summary>
+        /// Reads the start of the stream and tries to find the snapshot version and header.
+        /// On success, the kind of compression to use the stream is returned, otherwise
+        /// an <see cref="InvalidDataException"/> is thrown.
+        /// <para>
+        /// The <see cref="Stream.Position"/> is always forwarded by this method. On success,
+        /// the returned tuple specifies the number of bytes that have been read.
+        /// </para>
+        /// </summary>
+        /// <param name="s">The stream to read.</param>
+        /// <returns>The compression kind to use and the number of bytes consumed.</returns>
+        public static (CompressionKind Kind, int HeaderLength) ReadSnapshotHeader( Stream s )
+        {
+            var v = s.ReadByte();
+            if( v == 1 )
+            {
+                Span<byte> bytes = stackalloc byte[SnapshotHeaderLength - 1];
+                return (ReadHeader( bytes ), SnapshotHeaderLength); 
+            }
+            if( v == 0 )
+            {
+                var k = (CompressionKind)s.ReadByte();
+                if( k == CompressionKind.None || k == CompressionKind.GZiped ) return (k, 2);
+            }
+            throw new InvalidDataException( "Invalid Snapshot header." );
+        }
+
+        static CompressionKind ReadHeader( ReadOnlySpan<byte> bytes )
+        {
+            if( bytes.SequenceEqual( _headerNone.AsSpan() ) ) return CompressionKind.None;
+            else if( bytes.SequenceEqual( _headerGZip.AsSpan() ) ) return CompressionKind.GZiped;
+            throw new InvalidDataException( "Invalid Snapshot header." );
         }
 
         /// <summary>
@@ -231,7 +282,7 @@ namespace CK.Observable
 
         /// <summary>
         /// Writes the current snapshot to the provided stream.
-        /// The stream respects the <see cref="CurrentSnapshotKind"/>.
+        /// The stream respects the <see cref="CurrentSnapshotKind"/> since it is a direct copy of the memory stream.
         /// </summary>
         /// <param name="s">The target stream.</param>
         /// <param name="skipSnapshotHeader">True to skip the version and compression kind header.</param>
@@ -312,7 +363,7 @@ namespace CK.Observable
                     domain = DeserializeDomain( monitor, stream, startTimer );
                 }
             }
-            _memory.Position = SnapshotHeaderLength;
+            _memory.Position = _currentSnapshotHeaderLength;
             if( _currentSnapshotKind == CompressionKind.GZiped )
             {
                 using( var gz = new GZipStream( _memory, CompressionMode.Decompress, leaveOpen: true ) )
@@ -326,6 +377,7 @@ namespace CK.Observable
                 Ensure( monitor, ref domain, _memory, startTimer );
             }
         }
+
 
         /// <summary>
         /// Extension point that can only be called from <see cref="LoadOrCreateAndInitializeSnapshot"/> with a null domain:
@@ -378,7 +430,8 @@ namespace CK.Observable
             {
                 _memory.Position = 0;
                 _memory.WriteByte( CurrentSerializationVersion );
-                _memory.WriteByte( (byte)CompressionKind );
+                _memory.Write( CompressionKind == CompressionKind.None ? _headerNone : _headerGZip );
+                Debug.Assert( _memory.Position == SnapshotHeaderLength );
                 if( CompressionKind == CompressionKind.GZiped )
                 {
                     using( var gz = new GZipStream( _memory, CompressionLevel.Optimal, leaveOpen: true ) )
@@ -391,6 +444,7 @@ namespace CK.Observable
                     Debug.Assert( CompressionKind == CompressionKind.None );
                     d.Save( monitor, _memory, leaveOpen: true, saveDestroyed: SaveDisposedObjectBehavior );
                 }
+                _currentSnapshotHeaderLength = SnapshotHeaderLength;
                 _currentSnapshotKind = CompressionKind;
                 _snapshotSerialNumber = d.TransactionSerialNumber;
                 _snapshotTimeUtc = d.TransactionCommitTimeUtc;

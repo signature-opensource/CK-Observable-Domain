@@ -618,7 +618,7 @@ namespace CK.Observable
                 }
                 finally
                 {
-                    _currentTran.Dispose();
+                    _currentTran?.Dispose();
                 }
 
 
@@ -1339,8 +1339,6 @@ namespace CK.Observable
                 {
                     using( isWrite ? monitor.OpenInfo( $"Transacted saving domain ({_actualObjectCount} objects, {_internalObjectCount} internals, {_timeManager.AllObservableTimedEvents.Count} timed events)." ) : null )
                     {
-                        // Version 2: supports DebugMode, TimeManager & Internal objects.
-                        // Version 3: supports TransactionCommitTimeUtc.
                         w.WriteSmallInt32( CurrentSerializationVersion ); 
                         w.DebugWriteMode( debugMode ? (bool?)debugMode : null );
                         w.Write( _currentObjectUniquifier );
@@ -1563,7 +1561,8 @@ namespace CK.Observable
 
         /// <summary>
         /// Loads previously <see cref="Save"/>d objects from a named domain into this domain: the <paramref name="expectedLoadedName"/> can be
-        /// this <see cref="DomainName"/> or another name.
+        /// this <see cref="DomainName"/> or another name but it must match the name in the stream otherwise an <see cref="InvalidDataException"/>
+        /// is thrown.
         /// </summary>
         /// <param name="monitor">The monitor to use. Cannot be null.</param>
         /// <param name="stream">The input stream.</param>
