@@ -1550,7 +1550,7 @@ namespace CK.Observable
         /// Disposes this domain.
         /// This method calls <see cref="ObtainDomainMonitor(int, bool)"/>. If possible, use <see cref="Dispose(IActivityMonitor)"/> with
         /// an available monitor.
-        /// As usual with Dispose methods, this can be called mulple times.
+        /// As usual with Dispose methods, this can be called multiple times.
         /// </summary>
         public void Dispose()
         {
@@ -1572,7 +1572,7 @@ namespace CK.Observable
         /// Disposes this domain.
         /// If the <see cref="Dispose()"/> without parameters is called, the <see cref="ObtainDomainMonitor(int, bool)"/> is used:
         /// if a monitor is available, it is better to use this overload.
-        /// As usual with Dispose methods, this can be called mulple times.
+        /// As usual with Dispose methods, this can be called multiple times.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         public void Dispose( IActivityMonitor monitor )

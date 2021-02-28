@@ -65,7 +65,6 @@ namespace CK.Observable
         /// <param name="leaveOpen">True to leave the stream opened.</param>
         /// <param name="debugMode">True to activate <see cref="BinarySerializer.IsDebugMode"/>.</param>
         /// <param name="encoding">Optional encoding for characters. Defaults to UTF-8.</param>
-        /// <param name="saveDestroyed">Whether destroyed objects are allowed or not.</param>
         /// <param name="millisecondsTimeout">
         /// The maximum number of milliseconds to wait for a read access before giving up.
         /// Wait indefinitely by default.
@@ -76,7 +75,6 @@ namespace CK.Observable
                    bool leaveOpen = false,
                    bool debugMode = false,
                    Encoding? encoding = null,
-                   SaveDestroyedObjectBehavior saveDestroyed = SaveDestroyedObjectBehavior.None,
                    int millisecondsTimeout = -1 );
     }
 }

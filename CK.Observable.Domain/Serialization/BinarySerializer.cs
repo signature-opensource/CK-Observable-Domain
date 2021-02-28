@@ -320,7 +320,7 @@ namespace CK.Observable
         /// <para>
         /// This should clearly be on "ImplementationServices" or any other of this writer extensions. But currently, the
         /// serialization is embedded inside the Observable library, so we don't care.
-        /// Note that if a IDestroyableObject { bool IsDiposed { get; } } basic interface (without Disposed event) in the "generic" serialization library
+        /// Note that if a IDestroyableObject { bool IsDestroyed { get; } } basic interface (without Destroyed event) in the "generic" serialization library
         /// (or deeper? "System.ComponentModel.IDestroyableObject, CK.Core"?), then this could remain this way. 
         /// </para>
         /// </summary>

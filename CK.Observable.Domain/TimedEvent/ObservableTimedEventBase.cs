@@ -14,7 +14,7 @@ namespace CK.Observable
     /// Concrete specializations are <see cref="ObservableTimer"/> and <see cref="ObservableReminder"/>.
     /// Note that <see cref="IsActive"/> can be false.
     /// </summary>
-    [SerializationVersion( 0 )]
+    [SerializationVersion( 1 )]
     [NotExportable]
     public abstract class ObservableTimedEventBase : IDestroyableObject
     {
@@ -41,12 +41,12 @@ namespace CK.Observable
         internal ObservableTimedEventBase()
         {
             TimeManager = ObservableDomain.GetCurrentActiveDomain().TimeManager;
-            TimeManager.OnCreated( this );
+            TimeManager.OnCreated( this, true );
         }
 
         protected ObservableTimedEventBase( RevertSerialization _ ) { }
 
-        ObservableTimedEventBase( IBinaryDeserializer r, TypeReadInfo? info )
+        ObservableTimedEventBase( IBinaryDeserializer r, TypeReadInfo info )
         {
             int index = r.ReadInt32();
             if( index >= 0 )
@@ -55,13 +55,17 @@ namespace CK.Observable
                 Debug.Assert( TimeManager != null );
                 ActiveIndex = index;
                 ExpectedDueTimeUtc = r.ReadDateTime();
-                _clock = (SuspendableClock?)r.ReadObject();
-                NextInClock = (ObservableTimedEventBase?)r.ReadObject();
-                PrevInClock = (ObservableTimedEventBase?)r.ReadObject();
+                if( info.Version == 0 )
+                {
+                    _clock = (SuspendableClock?)r.ReadObject();
+                    NextInClock = (ObservableTimedEventBase?)r.ReadObject();
+                    PrevInClock = (ObservableTimedEventBase?)r.ReadObject();
+                }
                 _disposed = new ObservableEventHandler<ObservableDomainEventArgs>( r );
                 Tag = r.ReadObject();
-                // Activation is done by TimeManager.Load() that is called at the end of the object load,
-                // before the sidekicks.
+                // Call to TimeManager.OnCreated is done by TimeManager.Load() that is called at the end of the object load,
+                // before the sidekicks so that the order in the linked list of ObservableTimedEventBase is preserved.
+                // Activation is also done by TimeManager.Load().
                 Debug.Assert( !IsDestroyed );
             }
             else
@@ -80,13 +84,15 @@ namespace CK.Observable
             {
                 w.Write( ActiveIndex );
                 w.Write( ExpectedDueTimeUtc );
-                w.WriteObject( _clock );
-                w.WriteObject( NextInClock );
-                w.WriteObject( PrevInClock );
                 _disposed.Write( w );
                 w.WriteObject( Tag );
             }
         }
+
+        /// <summary>
+        /// This is used by the <see cref="TimeManager.Save"/> to track lost objects.
+        /// </summary>
+        internal abstract bool HasHandlers { get; }
 
         /// <summary>
         /// Gets whether this timed event is active.
@@ -156,6 +162,12 @@ namespace CK.Observable
         /// </summary>
         internal virtual void OnDeactivate() { }
 
+        internal void SetDeserializedClock( SuspendableClock clock )
+        {
+            Debug.Assert( _clock == null && TimeManager != null && TimeManager.Domain.IsDeserializing );
+            _clock = clock;
+        }
+
         internal void OnSuspendableClockActivated( TimeSpan lastStopDuration )
         {
             Debug.Assert( TimeManager != null && _clock != null && _clock.IsActive );
@@ -205,7 +217,7 @@ namespace CK.Observable
                 Debug.Assert( ActiveIndex == 0, "Timed event has been removed from the priority queue." );
                 _disposed.Raise( this, TimeManager.Domain.DefaultEventArgs );
                 _disposed.RemoveAll();
-                TimeManager.OnDisposed( this );
+                TimeManager.OnDestroyed( this );
                 TimeManager = null;
                 Tag = null;
             }

@@ -82,12 +82,11 @@ namespace CK.Core
                                              bool debugMode,
                                              bool? startTimer,
                                              int pauseMilliseconds,
-                                             bool skipDomainDispose,
-                                             SaveDestroyedObjectBehavior saveDisposed )
+                                             bool skipDomainDispose )
         {
             using( var s = new MemoryStream() )
             {
-                domain.Save( m, s, leaveOpen: true, debugMode: debugMode, saveDisposed: saveDisposed );
+                domain.Save( m, s, leaveOpen: true, debugMode: debugMode );
                 if( !skipDomainDispose ) domain.Dispose();
                 System.Threading.Thread.Sleep( pauseMilliseconds );
                 var d = new ObservableDomain( m, renamed ?? domain.DomainName, false, serviceProvider );
@@ -104,10 +103,9 @@ namespace CK.Core
                                                     bool debugMode = true,
                                                     bool? startTimer = null,
                                                     int pauseMilliseconds = 0,
-                                                    bool skipDomainDispose = false,
-                                                    SaveDestroyedObjectBehavior saveDisposed = SaveDestroyedObjectBehavior.None )
+                                                    bool skipDomainDispose = false )
         {
-            return SaveAndLoad( @this.Monitor, domain, renamed, serviceProvider, debugMode, startTimer, pauseMilliseconds, skipDomainDispose, saveDisposed );
+            return SaveAndLoad( @this.Monitor, domain, renamed, serviceProvider, debugMode, startTimer, pauseMilliseconds, skipDomainDispose );
         }
 
 

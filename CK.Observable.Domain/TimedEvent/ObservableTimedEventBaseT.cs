@@ -37,6 +37,8 @@ namespace CK.Observable
             _handlers.Write( w );
         }
 
+        internal override bool HasHandlers => _handlers.HasHandlers;
+
         /// <summary>
         /// Gets whether this timed event is active.
         /// There must be at least one <see cref="Elapsed"/> registered callback for this to be true. and if a

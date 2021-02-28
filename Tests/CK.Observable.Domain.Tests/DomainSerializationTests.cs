@@ -210,7 +210,7 @@ namespace CK.Observable.Domain.Tests
             ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
 
             // This disposes the domain and returns a brand new one. This doesn't throw.
-            using var d2 = TestHelper.SaveAndLoad( d, saveDisposed: SaveDestroyedObjectBehavior.Throw );
+            using var d2 = TestHelper.SaveAndLoad( d );
 
             d2.Modify( TestHelper.Monitor, () =>
             {
@@ -234,7 +234,7 @@ namespace CK.Observable.Domain.Tests
                 }
             } ).Success.Should().BeTrue();
 
-            d2.CurrentObjectTracking.ReferencedDestroyed.Should().HaveCount( 4 );
+            d2.CurrentLostObjectTracker.ReferencedDestroyed.Should().HaveCount( 4 );
         }
 
 
