@@ -17,9 +17,11 @@ namespace CK.Observable
 
         /// <summary>
         /// Deserializes the <see cref="ObservableEventHandler{TEventArgs}"/>.
+        /// If the method has been suppressed, use the static helper <see cref="ObservableEventHandler.Skip(IBinaryDeserializer)"/>.
         /// </summary>
         /// <param name="r">The deserializer.</param>
-        public ObservableEventHandler( IBinaryDeserializer r ) => _handler = new ObservableDelegate( r );
+        /// <param name="methodName">Explicit method name to bind to. Use it whenever the method has been renamed.</param>
+        public ObservableEventHandler( IBinaryDeserializer r, string? methodName = null ) => _handler = new ObservableDelegate( r, methodName );
 
         /// <summary>
         /// Serializes this <see cref="ObservableEventHandler{TEventArgs}"/>.

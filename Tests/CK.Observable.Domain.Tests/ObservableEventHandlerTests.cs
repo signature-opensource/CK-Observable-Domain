@@ -62,7 +62,7 @@ namespace CK.Observable.Domain.Tests
 
         class MoreSpecializedEventArgs : EventMonitoredArgs
         {
-            public MoreSpecializedEventArgs( IActivityMonitor m ) : base( m ) {}
+            public MoreSpecializedEventArgs( IActivityMonitor m ) : base( m ) { }
         }
 
         static MoreSpecializedEventArgs OArgs = new MoreSpecializedEventArgs( TestHelper.Monitor );
@@ -222,7 +222,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void testing_auto_cleanup()
         {
-            using( var domain = new ObservableDomain(TestHelper.Monitor, nameof(testing_auto_cleanup), startTimer: true ) )
+            using( var domain = new ObservableDomain( TestHelper.Monitor, nameof( testing_auto_cleanup ), startTimer: true ) )
             {
                 domain.Modify( TestHelper.Monitor, () =>
                 {
@@ -366,7 +366,7 @@ namespace CK.Observable.Domain.Tests
         [TestCase( "UseBase" )]
         public void private_event_handler_serialization( string type )
         {
-            using var domain = new ObservableDomain(TestHelper.Monitor, nameof(private_event_handler_serialization), startTimer: true );
+            using var domain = new ObservableDomain( TestHelper.Monitor, nameof( private_event_handler_serialization ), startTimer: true );
 
             PrivateHandlerObject? o = null;
             domain.Modify( TestHelper.Monitor, () =>
@@ -377,5 +377,49 @@ namespace CK.Observable.Domain.Tests
             ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, domain );
         }
 
+
+
+        static void AnotherStaticOnEvent( object sender, EventArgs e )
+        {
+            throw new Exception( "AnotherStaticOnEvent" );
+        }
+
+        [Test]
+        public void ObservableEventHandler_serialization_renamed()
+        {
+            var h = new ObservableEventHandler<EventArgs>();
+            h.Add( StaticOnEvent, nameof( StaticOnEvent ) );
+            h.Invoking( _ => _.Raise( this, EArgs ) )
+                                    .Should().Throw<Exception>().WithMessage( "Such an ugly test...(EventArgs)" );
+
+            var hRenamed = TestHelper.SaveAndLoadObject( h, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<EventArgs>( r, nameof( AnotherStaticOnEvent ) ) );
+            hRenamed.Invoking( _ => _.Raise( this, EArgs ) )
+                                    .Should().Throw<Exception>().WithMessage( "AnotherStaticOnEvent" );
+
+        }
+
+        [Test]
+        public void ObservableEventHandler_Skip_enables_event_serialization_deletion()
+        {
+            var h = new ObservableEventHandler<EventArgs>();
+            h.Add( StaticOnEvent, nameof( StaticOnEvent ) );
+            h.Add( StaticOnEvent, nameof( StaticOnEvent ) );
+            h.Add( StaticOnEvent, nameof( StaticOnEvent ) );
+
+            using( var s = new MemoryStream() )
+            using( var writer = new BinarySerializer( s, drivers: null, true ) )
+            {
+                writer.DebugWriteSentinel();
+                h.Write( writer );
+                writer.DebugWriteSentinel();
+                s.Position = 0;
+                using( var reader = new BinaryDeserializer( s, null, drivers: null ) )
+                {
+                    reader.DebugCheckSentinel();
+                    ObservableEventHandler.Skip( reader );
+                    reader.DebugCheckSentinel();
+                }
+            }
+        }
     }
 }

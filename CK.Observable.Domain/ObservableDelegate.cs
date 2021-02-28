@@ -18,14 +18,52 @@ namespace CK.Observable
         /// <summary>
         /// Wrapped delegate.
         /// </summary>
-        Delegate _d;
+        Delegate? _d;
+
+        public static void Skip( IBinaryDeserializer r )
+        {
+            int count = r.ReadNonNegativeSmallInt32();
+            if( count > 0 )
+            { 
+                r.ReadType();
+                object? o = r.ReadObject();
+                if( o != null )
+                {
+                    do
+                    {
+                        r.ReadSharedString();
+                        SkipArray( r );
+                    }
+                    while( --count > 0 );
+                }
+            }
+
+            static void SkipArray( IBinaryDeserializer r )
+            {
+                int len = r.ReadNonNegativeSmallInt32();
+                while( --len >= 0 ) r.ReadType();
+            }
+
+        }
 
         /// <summary>
         /// Deserializes the delegate.
         /// </summary>
-        /// <param name="r">The context.</param>
-        public ObservableDelegate( IBinaryDeserializer r )
+        /// <param name="r">The deserializer.</param>
+        /// <param name="methodName">Explicit method name to bind to. Use it whenever the method has been renamed.</param>
+        public ObservableDelegate( IBinaryDeserializer r, string? methodName = null )
         {
+            static void ThrowError( string typeName, Type[] paramTypes, string methodName, string savedMethodName, bool isStatic )
+            {
+                var msg = $"Unable to find {(isStatic ? "static" : "")} method {methodName} on type {typeName} with parameters {paramTypes.Select( t => t.Name ).Concatenate()}.";
+                if( methodName == savedMethodName )
+                {
+                    msg += Environment.NewLine + "If the method has been renamed, please provide the new name to the deserialization constructor methodName parameter: ObservableEventHandler( r, methodName: nameof(NewName) ).";
+                    msg += Environment.NewLine + "If the method has been suppressed, please use the static helper: ObservableEventHandler.Skip( IBinaryDeserializer r ).";
+                }
+                throw new Exception( msg );
+            }
+
             _d = null;
             int count = r.ReadNonNegativeSmallInt32();
             if( count > 0 )
@@ -34,17 +72,21 @@ namespace CK.Observable
                 Type tD = r.ReadType();
                 do
                 {
-                    object o = r.ReadObject();
+                    object? o = r.ReadObject();
                     if( o != null )
                     {
-                        string methodName = r.ReadSharedString();
+                        string savedMethodName = r.ReadSharedString();
+                        if( methodName == null ) methodName = savedMethodName;
                         // Use local DoReadArray since ArrayDeserializer<Type>.ReadArray track the array (and ArraySerializer<Type>.WriteObjects don't):
                         // sharing this array makes no sense.
                         Type[] paramTypes = DoReadArray( r );
                         if( o is Type t )
                         {
                             var m = t.GetMethod( methodName, BindingFlags.Static | BindingFlags.FlattenHierarchy | BindingFlags.Public | BindingFlags.NonPublic, null, paramTypes, null );
-                            if( m == null ) throw new Exception( $"Unable to find static method {methodName} on type {t.FullName} with parameters {paramTypes.Select( t => t.Name ).Concatenate()}." );
+                            if( m == null )
+                            {
+                                ThrowError( t.FullName, paramTypes, methodName, savedMethodName, true );
+                            }
                             final = Delegate.Combine( final, Delegate.CreateDelegate( tD, m, true ) );
                         }
                         else
@@ -57,7 +99,7 @@ namespace CK.Observable
                             }
                             if( m == null )
                             {
-                                throw new Exception( $"Unable to find method {methodName} on type {o.GetType().FullName} with parameters {paramTypes.Select( t => t.Name ).Concatenate()}." );
+                                ThrowError( o.GetType().FullName, paramTypes, methodName, savedMethodName, false );
                             }
                             final = Delegate.Combine( final, Delegate.CreateDelegate( tD, o, m ) );
                         }
