@@ -377,27 +377,6 @@ namespace CK.Observable.Domain.Tests
             ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, domain );
         }
 
-
-
-        static void AnotherStaticOnEvent( object sender, EventArgs e )
-        {
-            throw new Exception( "AnotherStaticOnEvent" );
-        }
-
-        [Test]
-        public void ObservableEventHandler_serialization_renamed()
-        {
-            var h = new ObservableEventHandler<EventArgs>();
-            h.Add( StaticOnEvent, nameof( StaticOnEvent ) );
-            h.Invoking( _ => _.Raise( this, EArgs ) )
-                                    .Should().Throw<Exception>().WithMessage( "Such an ugly test...(EventArgs)" );
-
-            var hRenamed = TestHelper.SaveAndLoadObject( h, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<EventArgs>( r, nameof( AnotherStaticOnEvent ) ) );
-            hRenamed.Invoking( _ => _.Raise( this, EArgs ) )
-                                    .Should().Throw<Exception>().WithMessage( "AnotherStaticOnEvent" );
-
-        }
-
         [Test]
         public void ObservableEventHandler_Skip_enables_event_serialization_deletion()
         {

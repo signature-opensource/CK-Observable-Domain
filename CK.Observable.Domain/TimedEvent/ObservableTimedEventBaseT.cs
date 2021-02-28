@@ -26,7 +26,7 @@ namespace CK.Observable
 
         protected ObservableTimedEventBase( RevertSerialization _ ) : base( _ ) { }
 
-        ObservableTimedEventBase( IBinaryDeserializer r, TypeReadInfo? info )
+        ObservableTimedEventBase( IBinaryDeserializer r, TypeReadInfo info )
             : base( RevertSerialization.Default )
         {
             _handlers = new ObservableEventHandler<TEventArgs>( r );
