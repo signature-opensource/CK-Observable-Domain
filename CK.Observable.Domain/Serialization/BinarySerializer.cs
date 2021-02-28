@@ -51,7 +51,7 @@ namespace CK.Observable
             ISerializerResolver? drivers = null,
             bool leaveOpen = false,
             Encoding? encoding = null,
-            Action<IDestroyableObject>? disposedTracker = null )
+            Action<IDestroyable>? disposedTracker = null )
             : base( output, encoding ?? Encoding.UTF8, leaveOpen )
         {
             _types = new Dictionary<Type, TypeInfo>();
@@ -315,7 +315,7 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Called by <see cref="AutoTypeRegistry"/> serialization drivers when a disposed <see cref="IDestroyableObject"/> has been
+        /// Called by <see cref="AutoTypeRegistry"/> serialization drivers when a disposed <see cref="IDestroyable"/> has been
         /// written.
         /// <para>
         /// This should clearly be on "ImplementationServices" or any other of this writer extensions. But currently, the
@@ -324,7 +324,7 @@ namespace CK.Observable
         /// (or deeper? "System.ComponentModel.IDestroyableObject, CK.Core"?), then this could remain this way. 
         /// </para>
         /// </summary>
-        public Action<IDestroyableObject>? DisposedTracker { get; }
+        public Action<IDestroyable>? DisposedTracker { get; }
 
 
         internal class CheckedWriteStream : Stream

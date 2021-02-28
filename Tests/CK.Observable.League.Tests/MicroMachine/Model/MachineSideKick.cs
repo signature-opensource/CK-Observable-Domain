@@ -42,7 +42,7 @@ namespace CK.Observable.League.Tests.MicroMachine
             return false;
         }
 
-        protected override void RegisterClientObject( IActivityMonitor monitor, IDestroyableObject o )
+        protected override void RegisterClientObject( IActivityMonitor monitor, IDestroyable o )
         {
             if( o is Machine m )
             {

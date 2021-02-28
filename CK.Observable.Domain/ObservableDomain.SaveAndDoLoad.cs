@@ -27,7 +27,7 @@ namespace CK.Observable
                                         IReadOnlyList<ObservableObject>? observables,
                                         IReadOnlyList<InternalObject>? internals,
                                         IReadOnlyList<ObservableTimedEventBase>? timed,
-                                        IReadOnlyList<IDestroyableObject>? refDestroyed,
+                                        IReadOnlyList<IDestroyable>? refDestroyed,
                                         int unusedPooledReminders )
             {
                 _d = d;
@@ -35,7 +35,7 @@ namespace CK.Observable
                 UnreacheableObservables = observables ?? Array.Empty<ObservableObject>();
                 UnreacheableInternals = internals ?? Array.Empty<InternalObject>();
                 UnreacheableTimedObjects = timed ?? Array.Empty<ObservableTimedEventBase>();
-                ReferencedDestroyed = refDestroyed ?? Array.Empty<IDestroyableObject>();
+                ReferencedDestroyed = refDestroyed ?? Array.Empty<IDestroyable>();
                 UnusedPooledReminderCount = unusedPooledReminders;
             }
 
@@ -45,10 +45,10 @@ namespace CK.Observable
             public int TransactionNumber { get; }
 
             /// <summary>
-            /// Gets a list of <see cref="IDestroyableObject"/> that are destroyed but are
+            /// Gets a list of <see cref="IDestroyable"/> that are destroyed but are
             /// still referenced from non destroyed objects.
             /// </summary>
-            public IReadOnlyList<IDestroyableObject> ReferencedDestroyed { get; }
+            public IReadOnlyList<IDestroyable> ReferencedDestroyed { get; }
 
             /// <summary>
             /// Gets a list of non destroyed <see cref="ObservableObject"/> that are no more reachable
@@ -268,11 +268,11 @@ namespace CK.Observable
             // Since this is clearly an edge case, we use a lock with the same timeout and we don't care of a potential 2x wait time.
             if( !Monitor.TryEnter( _saveLock, millisecondsTimeout ) ) return false;
 
-            List<IDestroyableObject>? destroyedRefList = null;
+            List<IDestroyable>? destroyedRefList = null;
 
-            void Track( IDestroyableObject o )
+            void Track( IDestroyable o )
             {
-                if( destroyedRefList == null ) destroyedRefList = new List<IDestroyableObject>();
+                if( destroyedRefList == null ) destroyedRefList = new List<IDestroyable>();
                 Debug.Assert( !destroyedRefList.Contains( o ) );
                 destroyedRefList.Add( o );
             }

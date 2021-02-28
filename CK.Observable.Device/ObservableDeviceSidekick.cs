@@ -76,7 +76,7 @@ namespace CK.Observable.Device
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="o">The object that just appeared.</param>
-        protected override void RegisterClientObject( IActivityMonitor monitor, IDestroyableObject o )
+        protected override void RegisterClientObject( IActivityMonitor monitor, IDestroyable o )
         {
             if( o is TDeviceObject device )
             {

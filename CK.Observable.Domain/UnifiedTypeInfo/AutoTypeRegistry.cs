@@ -118,7 +118,7 @@ namespace CK.Observable
                     }
                     var error = _baseType.InvokeCtor( o, callParams, readInfo.BaseType );
                     if( error != null ) return error;
-                    if( o is IDestroyableObject d && d.IsDestroyed ) return null;
+                    if( o is IDestroyable d && d.IsDestroyed ) return null;
                 }
                 else if( readInfo.TypePath.Count > 1 )
                 {
@@ -186,7 +186,7 @@ namespace CK.Observable
             protected void DoWriteData( BinarySerializer w, object o )
             {
                 var parameters = new object[] { w };
-                if( o is IDestroyableObject d && d.IsDestroyed )
+                if( o is IDestroyable d && d.IsDestroyed )
                 {
                     _typePath[0]._writer?.Invoke( o, w );
                     w.DisposedTracker?.Invoke( d );

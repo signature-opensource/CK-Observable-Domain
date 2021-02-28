@@ -81,13 +81,13 @@ namespace CK.Observable
         /// After that registering phase, interactions must be protected in <see cref="ObservableDomain.AcquireReadLock(int)"/> or one of the Modify method.
         /// </para>
         /// <para>
-        /// When a sidekick keeps a reference on a client object, it should either check <see cref="IDestroyableObject.IsDestroyed"/> (in the context of
-        /// a read or modify lock) or registers to <see cref="IDestroyableObject.Destroyed"/> event.
+        /// When a sidekick keeps a reference on a client object, it should either check <see cref="IDestroyable.IsDestroyed"/> (in the context of
+        /// a read or modify lock) or registers to <see cref="IDestroyable.Destroyed"/> event.
         /// </para>
         /// </summary>
         /// <param name="monitor"></param>
         /// <param name="o"></param>
-        protected internal abstract void RegisterClientObject( IActivityMonitor monitor, IDestroyableObject o );
+        protected internal abstract void RegisterClientObject( IActivityMonitor monitor, IDestroyable o );
 
         /// <summary>
         /// Called when a successful transaction has been successfully handled by the <see cref="ObservableDomain.DomainClient"/>.

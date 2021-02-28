@@ -30,7 +30,7 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Special no-op constructor fo specializations.
+        /// Special no-op constructor for specializations.
         /// </summary>
         /// <param name="_">unused parameter.</param>
         protected ObservableChannel( RevertSerialization _ ) : base( _ ) { }

@@ -368,14 +368,14 @@ namespace CK.Observable
                 return e;
             }
 
-            internal ListInsertEvent OnListInsert( ObservableObject o, int index, object item )
+            internal ListInsertEvent OnListInsert( ObservableObject o, int index, object? item )
             {
                 var e = new ListInsertEvent( o, index, item );
                 _changeEvents.Add( e );
                 return e;
             }
 
-            internal CollectionMapSetEvent OnCollectionMapSet( ObservableObject o, object key, object value )
+            internal CollectionMapSetEvent OnCollectionMapSet( ObservableObject o, object key, object? value )
             {
                 var e = new CollectionMapSetEvent( o, key, value );
                 _changeEvents.Add( e );
@@ -1472,7 +1472,7 @@ namespace CK.Observable
         /// - ObservableObject: normal constructor calls Register() but deserialization constructors don't, deserialization constructors must call this directly.
         /// </summary>
         /// <param name="o">The new object.</param>
-        internal void SideEffectsRegister( IDestroyableObject o )
+        internal void SideEffectsRegister( IDestroyable o )
         {
             Debug.Assert( !_trackers.Contains( o ) );
             if( o is IObservableDomainActionTracker tracker ) _trackers.Add( tracker );
@@ -1485,7 +1485,7 @@ namespace CK.Observable
         /// the clear from DoLoad.
         /// </summary>
         /// <param name="o">The disposed object.</param>
-        void SideEffectUnregister( IDestroyableObject o )
+        void SideEffectUnregister( IDestroyable o )
         {
             if( o is IObservableDomainActionTracker tracker )
             {
@@ -1494,7 +1494,7 @@ namespace CK.Observable
             }
         }
 
-        internal void CheckBeforeDestroy( IDestroyableObject o )
+        internal void CheckBeforeDestroy( IDestroyable o )
         {
             Debug.Assert( !o.IsDestroyed );
             CheckWriteLock( o );
@@ -1653,7 +1653,7 @@ namespace CK.Observable
             }
         }
 
-        internal void SendCommand( IDestroyableObject o, ObservableDomainCommand command )
+        internal void SendCommand( IDestroyable o, ObservableDomainCommand command )
         {
             CheckWriteLock( o ).CheckDestroyed();
             _changeTracker.OnSendCommand( command );
@@ -1669,7 +1669,7 @@ namespace CK.Observable
             _changeTracker.OnSendCommand( new ObservableDomainCommand( SaveCommand ) );
         }
 
-        internal bool EnsureSidekicks( IDestroyableObject o )
+        internal bool EnsureSidekicks( IDestroyable o )
         {
             CheckWriteLock( o ).CheckDestroyed();
             Debug.Assert( _currentTran != null );
@@ -1731,14 +1731,14 @@ namespace CK.Observable
             return _changeTracker.OnCollectionClear( o );
         }
 
-        internal ListInsertEvent? OnListInsert( ObservableObject o, int index, object item )
+        internal ListInsertEvent? OnListInsert( ObservableObject o, int index, object? item )
         {
             if( _deserializeOrInitializing ) return null;
             CheckWriteLock( o ).CheckDestroyed();
             return _changeTracker.OnListInsert( o, index, item );
         }
 
-        internal CollectionMapSetEvent? OnCollectionMapSet( ObservableObject o, object key, object value )
+        internal CollectionMapSetEvent? OnCollectionMapSet( ObservableObject o, object key, object? value )
         {
             if( _deserializeOrInitializing ) return null;
             CheckWriteLock( o ).CheckDestroyed();
@@ -1759,7 +1759,7 @@ namespace CK.Observable
             return _changeTracker.OnCollectionAddKey( o, key );
         }
 
-        IDestroyableObject CheckWriteLock( [AllowNull]IDestroyableObject o )
+        IDestroyable CheckWriteLock( [AllowNull]IDestroyable o )
         {
             if( !_lock.IsWriteLockHeld )
             {

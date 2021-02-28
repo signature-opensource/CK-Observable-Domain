@@ -9,7 +9,7 @@ namespace CK.Observable
     /// <summary>
     /// Base class for all internal object.
     /// Internal objects are like <see cref="ObservableObject"/> but are not exportable (only serializable) and,
-    /// as <see cref="IDestroyableObject"/>, can implement events and event handler (<see cref="SafeEventHandler"/>
+    /// as <see cref="IDestroyable"/>, can implement events and event handler (<see cref="SafeEventHandler"/>
     /// and <see cref="SafeEventHandler{TEventArgs}"/>).
     /// </summary>
     [NotExportable]
@@ -99,7 +99,11 @@ namespace CK.Observable
 
         /// <summary>
         /// Destroys this object (can be called multiple times).
+        /// Further attempts to interact with this object will throw <see cref="ObjectDestroyedException"/>.
         /// </summary>
+        /// <remarks>
+        /// When this object is not already destroyed, first <see cref="OnUnload"/> is called and then <see cref="OnDestroy"/>.
+        /// </remarks>
         public void Destroy()
         {
             if( ActualDomain != null )

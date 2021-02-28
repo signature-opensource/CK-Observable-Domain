@@ -49,7 +49,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
 
         /// <summary>
         /// This event is automatically raised each time Count changed.
-        /// This is an unsafe event (it is not serialized and no cleanup of disposed <see cref="IDestroyableObject"/> is done).
+        /// This is an unsafe event (it is not serialized and no cleanup of disposed <see cref="IDestroyable"/> is done).
         /// Even if it is supported, safe event should always be preferred.
         /// </summary>
         public event SafeEventHandler CountChanged

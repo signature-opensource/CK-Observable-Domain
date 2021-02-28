@@ -129,7 +129,7 @@ namespace CK.Observable.Domain.Tests
                 return false;
             }
 
-            protected override void RegisterClientObject( IActivityMonitor monitor, IDestroyableObject o )
+            protected override void RegisterClientObject( IActivityMonitor monitor, IDestroyable o )
             {
             }
 

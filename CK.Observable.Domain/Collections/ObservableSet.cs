@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace CK.Observable
 {
@@ -14,7 +15,7 @@ namespace CK.Observable
     /// </remarks>
     /// <typeparam name="T">Item type.</typeparam>
     [SerializationVersion( 0 )]
-    public class ObservableSet<T> : ObservableObject, IObservableReadOnlySet<T>
+    public class ObservableSet<T> : ObservableObject, IObservableReadOnlySet<T> where T : notnull
     {
         readonly HashSet<T> _set;
         ObservableEventHandler<CollectionAddKeyEvent> _itemAdded;
@@ -56,12 +57,21 @@ namespace CK.Observable
             _set = new HashSet<T>();
         }
 
+        /// <summary>
+        /// Specialized deserialization constructor for specialized classes.
+        /// </summary>
+        /// <param name="_">Unused parameter.</param>
         protected ObservableSet( RevertSerialization _ ) : base( _ ) { }
 
-        ObservableSet( IBinaryDeserializer r, TypeReadInfo? info )
+        /// <summary>
+        /// Deserialization constructor.
+        /// </summary>
+        /// <param name="r">The deserializer.</param>
+        /// <param name="info">The type info.</param>
+        ObservableSet( IBinaryDeserializer r, TypeReadInfo info )
                 : base( RevertSerialization.Default )
         {
-            _set = (HashSet<T>)r.ReadObject();
+            _set = (HashSet<T>)r.ReadObject()!;
             _itemAdded = new ObservableEventHandler<CollectionAddKeyEvent>( r );
             _itemRemoved = new ObservableEventHandler<CollectionRemoveKeyEvent>( r );
             _collectionCleared = new ObservableEventHandler<CollectionClearEvent>( r );
@@ -92,7 +102,7 @@ namespace CK.Observable
         /// Adds a new item.
         /// </summary>
         /// <param name="item">Item to add.</param>
-        /// <returns>True if the item has actually been added, false it ot was already in this set.</returns>
+        /// <returns>True if the item has actually been added, false if it was already in this set.</returns>
         public bool Add( T item )
         {
             if( _set.Add( item ) )
@@ -114,15 +124,34 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Clears this list of all its items.
+        /// Clears this set of all its items.
         /// </summary>
-        public void Clear()
+        public void Clear() => Clear( false );
+
+        /// <summary>
+        /// Clears this set of all its items, optionally destroying all items that are <see cref="IDestroyableObject"/>.
+        /// </summary>
+        /// <param name="destroyItems">True to call <see cref="IDestroyableObject.Destroy()"/> on destroyable items.</param>
+        public void Clear( bool destroyItems )
         {
             if( _set.Count > 0 )
             {
-                var e = ActualDomain.OnCollectionClear( this );
+                if( destroyItems )
+                {
+                    DestroyItems();
+                }
                 _set.Clear();
+                var e = ActualDomain.OnCollectionClear( this );
                 if( e != null && _collectionCleared.HasHandlers ) _collectionCleared.Raise( this, e );
+            }
+        }
+
+        protected void DestroyItems()
+        {
+            // Take a snapshot so that OnDestroyed reflexes can safely alter the _set.
+            foreach( var d in _set.OfType<IDestroyableObject>().ToArray() )
+            {
+                d.Destroy();
             }
         }
 

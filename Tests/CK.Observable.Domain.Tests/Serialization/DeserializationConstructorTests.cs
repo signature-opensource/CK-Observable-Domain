@@ -14,7 +14,7 @@ namespace CK.Observable.Domain.Tests.Serialization
     public class DeserializationConstructorTests
     {
 
-        public class Base : IDestroyableObject
+        public class Base : IDestroyable
         {
             ObservableEventHandler<ObservableDomainEventArgs> _destroyed;
 
@@ -163,7 +163,7 @@ namespace CK.Observable.Domain.Tests.Serialization
 
                 o = System.Runtime.Serialization.FormatterServices.GetUninitializedObject( typeof( Spec2 ) );
                 ctor0.Invoke( o, callParams );
-                if( !(o is IDestroyableObject d) || !d.IsDestroyed )
+                if( !(o is IDestroyable d) || !d.IsDestroyed )
                 {
                     ctor1.Invoke( o, callParams );
                     ctor2.Invoke( o, callParams );

@@ -6,40 +6,13 @@ using System.Text;
 namespace CK.Observable
 {
     /// <summary>
-    /// Exposes <see cref="IsDestroyed"/> property and <see cref="Destroyed"/> event but not Destroy method.
-    /// This interface is used to monitor destroying, not to trigger it.
-    /// <para>
-    /// The <see cref="IDisposable"/> is not welcome here since there is absolutely no sense to use the using statement/dispose pattern
-    /// on <see cref="ObservableObject"/> or any other objects managed by a domain.
-    /// </para>
+    /// Extends <see cref="IDestroyable"/> to expose the <see cref="IDestroyableObject.Destroy()"/> method.
     /// </summary>
-    public interface IDestroyableObject
+    public interface IDestroyableObject : IDestroyable
     {
         /// <summary>
-        /// Raised when this object is disposed and will not be part of its <see cref="ObservableDomain"/> anymore.
+        /// Destroys this object.
         /// </summary>
-        event SafeEventHandler<ObservableDomainEventArgs> Destroyed;
-
-        /// <summary>
-        /// Gets whether this object has been disposed.
-        /// </summary>
-        bool IsDestroyed { get; }
+        void Destroy();
     }
-
-    /// <summary>
-    /// Provides <see cref="CheckDestroyed"/> extension method.
-    /// </summary>
-    public static class DestroyableObjectExtensions
-    {
-        /// <summary>
-        /// Throws an <see cref="ObjectDestroyedException"/> if this <see cref="IDestroyableObject.IsDestroyed"/> is true.
-        /// </summary>
-        /// <param name="this">This object.</param>
-        public static void CheckDestroyed( this IDestroyableObject @this )
-        {
-            if( @this.IsDestroyed ) throw new ObjectDestroyedException( @this.ToString() );
-        }
-
-    }
-
 }

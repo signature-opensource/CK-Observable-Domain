@@ -228,7 +228,7 @@ namespace CK.Observable.Domain.Tests
             {
                 var list = d2.AllObjects.OfType<ObservableList<object>>().Single();
                 list.Count.Should().Be( 4 );
-                foreach( IDestroyableObject o in list )
+                foreach( IDestroyable o in list )
                 {
                     o.IsDestroyed.Should().BeTrue();
                 }

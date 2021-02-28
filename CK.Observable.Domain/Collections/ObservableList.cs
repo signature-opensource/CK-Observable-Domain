@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace CK.Observable
 {
@@ -61,16 +62,21 @@ namespace CK.Observable
             _list = new List<T>();
         }
 
+        /// <summary>
+        /// Specialized deserialization constructor for specialized classes.
+        /// </summary>
+        /// <param name="_">Unused parameter.</param>
         protected ObservableList( RevertSerialization _ ) : base( _ ) { }
 
         /// <summary>
         /// Deserialization constructor.
         /// </summary>
-        /// <param name="d">The deserialization context.</param>
-        ObservableList( IBinaryDeserializer r, TypeReadInfo? info )
+        /// <param name="r">The deserializer.</param>
+        /// <param name="info">The type info.</param>
+        ObservableList( IBinaryDeserializer r, TypeReadInfo info )
                 : base( RevertSerialization.Default )
         {
-            _list = (List<T>)r.ReadObject();
+            _list = (List<T>)r.ReadObject()!;
             _itemSet = new ObservableEventHandler<ListSetAtEvent>( r );
             _itemInserted = new ObservableEventHandler<ListInsertEvent>( r );
             _itemRemovedAt = new ObservableEventHandler<ListRemoveAtEvent>( r );
@@ -149,13 +155,33 @@ namespace CK.Observable
         /// <summary>
         /// Clears this list of all its items.
         /// </summary>
-        public void Clear()
+        public void Clear() => Clear( false );
+
+        /// <summary>
+        /// Clears this list of all its items, optionally destroying all items that are <see cref="IDestroyableObject"/>.
+        /// </summary>
+        /// <param name="destroyItems">True to call <see cref="IDestroyableObject.Destroy()"/> on destroyable items.</param>
+        public void Clear( bool destroyItems )
         {
             if( _list.Count > 0 )
             {
-                var e = ActualDomain.OnCollectionClear( this );
+                if( destroyItems )
+                {
+                    DestroyItems();
+                }
                 _list.Clear();
+                var e = ActualDomain.OnCollectionClear( this );
                 if( e != null && _collectionCleared.HasHandlers ) _collectionCleared.Raise( this, e );
+            }
+        }
+
+        protected void DestroyItems()
+        {
+            // Take a snapshot so that OnDestroyed reflexes can
+            // safely alter the _list.
+            foreach( var d in _list.OfType<IDestroyableObject>().ToArray() )
+            {
+                d.Destroy();
             }
         }
 
