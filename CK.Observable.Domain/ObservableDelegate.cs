@@ -63,7 +63,7 @@ namespace CK.Observable
             int count = r.ReadNonNegativeSmallInt32();
             if( count > 0 )
             {
-                Delegate final = null;
+                Delegate? final = null;
                 Type tD = r.ReadType();
                 do
                 {
