@@ -37,6 +37,8 @@ namespace CK.Observable
             _handlers.Write( w );
         }
 
+        internal override bool HasHandlers => _handlers.HasHandlers;
+
         /// <summary>
         /// Gets whether this timed event is active.
         /// There must be at least one <see cref="Elapsed"/> registered callback for this to be true. and if a
@@ -66,20 +68,20 @@ namespace CK.Observable
         {
             add
             {
-                this.CheckDisposed();
+                this.CheckDestroyed();
                 _handlers.Add( value, nameof( Elapsed ) );
                 TimeManager.OnChanged( this );
             }
             remove
             {
-                this.CheckDisposed();
+                this.CheckDestroyed();
                 if( _handlers.Remove( value ) ) TimeManager.OnChanged( this );
             }
         }
 
         internal override void DoRaise( IActivityMonitor monitor, DateTime current, bool throwException )
         {
-            Debug.Assert( !IsDisposed );
+            Debug.Assert( !IsDestroyed );
             if( _handlers.HasHandlers )
             {
                 var ev = ReusableArgs;
@@ -116,16 +118,16 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Disposes this timed event.
+        /// Destroys this timed event.
         /// </summary>
-        public override void Dispose()
+        public override void Destroy()
         {
             // Clearing the handlers first makes this timed event logically inactive
             // if it was active.
-            if( !IsDisposed )
+            if( !IsDestroyed )
             {
                 _handlers.RemoveAll();
-                base.Dispose();
+                base.Destroy();
             }
         }
     }

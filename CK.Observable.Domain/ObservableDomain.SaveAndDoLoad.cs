@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace CK.Observable
 {
@@ -14,28 +15,40 @@ namespace CK.Observable
     public partial class ObservableDomain
     {
         /// <summary>
-        /// Captures object graph issues.
+        /// Immutable capture of object graph issues.
         /// This is (efficiently) computed by the <see cref="Save"/> method. Note that because of concurrent executions,
         /// unreachable objects appearing in these lists may already be destroyed when this object is exposed.
         /// </summary>
-        public class ObjectTrackingData
+        public class LostObjectTracker
         {
-            internal ObjectTrackingData( IReadOnlyList<ObservableObject>? observables,
-                                         IReadOnlyList<InternalObject>? internals,
-                                         IReadOnlyList<ObservableTimedEventBase>? timed,
-                                         IReadOnlyList<IDisposableObject>? refDestroyed )
+            readonly ObservableDomain _d;
+
+            internal LostObjectTracker( ObservableDomain d,
+                                        IReadOnlyList<ObservableObject>? observables,
+                                        IReadOnlyList<InternalObject>? internals,
+                                        IReadOnlyList<ObservableTimedEventBase>? timed,
+                                        IReadOnlyList<IDestroyableObject>? refDestroyed,
+                                        int unusedPooledReminders )
             {
+                _d = d;
+                TransactionNumber = d.TransactionSerialNumber;
                 UnreacheableObservables = observables ?? Array.Empty<ObservableObject>();
                 UnreacheableInternals = internals ?? Array.Empty<InternalObject>();
                 UnreacheableTimedObjects = timed ?? Array.Empty<ObservableTimedEventBase>();
-                ReferencedDestroyed = refDestroyed ?? Array.Empty<IDisposableObject>();
+                ReferencedDestroyed = refDestroyed ?? Array.Empty<IDestroyableObject>();
+                UnusedPooledReminderCount = unusedPooledReminders;
             }
 
             /// <summary>
-            /// Gets a list of <see cref="IDisposableObject"/> that are destroyed but are
+            /// Gets the transaction number of the domain that has been captured.
+            /// </summary>
+            public int TransactionNumber { get; }
+
+            /// <summary>
+            /// Gets a list of <see cref="IDestroyableObject"/> that are destroyed but are
             /// still referenced from non destroyed objects.
             /// </summary>
-            public IReadOnlyList<IDisposableObject> ReferencedDestroyed { get; }
+            public IReadOnlyList<IDestroyableObject> ReferencedDestroyed { get; }
 
             /// <summary>
             /// Gets a list of non destroyed <see cref="ObservableObject"/> that are no more reachable
@@ -68,11 +81,17 @@ namespace CK.Observable
             public IReadOnlyList<ObservableTimedEventBase> UnreacheableTimedObjects { get; }
 
             /// <summary>
+            /// Gets the number of unused pooled reminders.
+            /// </summary>
+            public int UnusedPooledReminderCount { get; }
+
+            /// <summary>
             /// Dumps the messages to the monitor. Only the <see cref="ReferencedDestroyed"/> are errors.
             /// Others are expressed as warnings.
             /// </summary>
             /// <param name="monitor">The target monitor.</param>
-            public void DumpLog( IActivityMonitor monitor )
+            /// <param name="dumpReferencedDestroyed">False to skip <see cref="ReferencedDestroyed"/> errors.</param>
+            public void DumpLog( IActivityMonitor monitor, bool dumpReferencedDestroyed = true )
             {
                 if( ReferencedDestroyed.Count > 0 )
                 {
@@ -128,9 +147,108 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Gets the <see cref="ObjectTrackingData"/> that has been computed by the last <see cref="Save"/> call.
+        /// Gets the <see cref="LostObjectTracker"/> that has been computed by the last <see cref="Save"/> call.
         /// </summary>
-        public ObjectTrackingData? CurrentObjectTracking { get; private set; }
+        public LostObjectTracker? CurrentLostObjectTracker { get; private set; }
+
+
+        class NullStream : Stream
+        {
+            long _p;
+
+            public override bool CanRead => false;
+
+            public override bool CanSeek => false;
+
+            public override bool CanWrite => true;
+
+            public override long Length => throw new NotSupportedException();
+
+            public override long Position { get => _p; set => throw new NotSupportedException(); }
+
+            public override void Flush() { }
+
+            public override int Read( byte[] buffer, int offset, int count )
+            {
+                throw new NotSupportedException();
+            }
+
+            public override long Seek( long offset, SeekOrigin origin )
+            {
+                throw new NotSupportedException();
+            }
+
+            public override void SetLength( long value )
+            {
+                throw new NotSupportedException();
+            }
+
+            public override void Write( byte[] buffer, int offset, int count )
+            {
+                _p += count;
+            }
+        }
+
+        /// <summary>
+        /// Triggers a garbage collection on this domain.
+        /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
+        /// <param name="millisecondsTimeout">
+        /// The maximum number of milliseconds to wait for a read access before giving up.
+        /// Wait indefinitely by default.
+        /// </param>
+        /// <returns>True on success, false if timeout or an error occurred.</returns>
+        public async Task<bool> GarbageCollectAsync( IActivityMonitor monitor, int millisecondsTimeout = -1 )
+        {
+            CheckDisposed();
+            using( monitor.OpenInfo( $"Garbage collecting." ) )
+            {
+                var current = CurrentLostObjectTracker;
+                if( current == null || current.TransactionNumber != TransactionSerialNumber )
+                {
+                    using var s = new NullStream();
+                    monitor.Trace( "Saving objects in a null stream to track lost objects." );
+                    if( !Save( monitor, s, millisecondsTimeout: millisecondsTimeout ) )
+                    {
+                        return false;
+                    }
+                }
+
+                var (ex, result) = await ModifyNoThrowAsync( monitor, () =>
+                {
+                    var c = CurrentLostObjectTracker;
+                    Debug.Assert( c != null );
+                    c.DumpLog( monitor, false );
+                    foreach( var o in c.UnreacheableObservables )
+                    {
+                        if( !o.IsDestroyed )
+                        {
+                            o.Unload();
+                        }
+                    }
+                    foreach( var o in c.UnreacheableInternals )
+                    {
+                        if( !o.IsDestroyed )
+                        {
+                            o.Unload();
+                        }
+                    }
+                    foreach( var o in c.UnreacheableTimedObjects )
+                    {
+                        if( !o.IsDestroyed )
+                        {
+                            o.Destroy();
+                        }
+                    }
+                }, millisecondsTimeout );
+                if( ex != null )
+                {
+                    monitor.Error( ex );
+                    return false;
+                }
+                return result.Success;
+            }
+        }
 
         /// <inheritdoc/>
         public bool Save( IActivityMonitor monitor,
@@ -138,7 +256,6 @@ namespace CK.Observable
                           bool leaveOpen = false,
                           bool debugMode = false,
                           Encoding? encoding = null,
-                          SaveDisposedObjectBehavior saveDisposed = SaveDisposedObjectBehavior.None,
                           int millisecondsTimeout = -1 )
         {
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
@@ -151,11 +268,11 @@ namespace CK.Observable
             // Since this is clearly an edge case, we use a lock with the same timeout and we don't care of a potential 2x wait time.
             if( !Monitor.TryEnter( _saveLock, millisecondsTimeout ) ) return false;
 
-            List<IDisposableObject>? destroyedRefList = null;
+            List<IDestroyableObject>? destroyedRefList = null;
 
-            void Track( IDisposableObject o )
+            void Track( IDestroyableObject o )
             {
-                if( destroyedRefList == null ) destroyedRefList = new List<IDisposableObject>();
+                if( destroyedRefList == null ) destroyedRefList = new List<IDestroyableObject>();
                 Debug.Assert( !destroyedRefList.Contains( o ) );
                 destroyedRefList.Add( o );
             }
@@ -211,13 +328,12 @@ namespace CK.Observable
                         bool trackLostObjects = _roots.Count > 0;
                         List<ObservableObject>? lostObservableObjects = null;
                         List<InternalObject>? lostInternalObjects = null;
-                        List<ObservableTimedEventBase>? lostTimedObjects;
                         // Then writes all the Observable objects: track the non reachable
                         // objects if we have at least one root.
                         for( int i = 0; i < _objectsListCount; ++i )
                         {
                             var o = _objects[i];
-                            Debug.Assert( o == null || !o.IsDisposed, "Either it is a free cell (that appears in the free list) or the object is NOT disposed." );
+                            Debug.Assert( o == null || !o.IsDestroyed, "Either it is a free cell (that appears in the free list) or the object is NOT disposed." );
                             if( w.WriteObject( o ) && o != null && trackLostObjects )
                             {
                                 if( lostObservableObjects == null ) lostObservableObjects = new List<ObservableObject>();
@@ -229,7 +345,7 @@ namespace CK.Observable
                         var f = _firstInternalObject;
                         while( f != null )
                         {
-                            Debug.Assert( !f.IsDisposed, "Disposed internal objects are removed from the list." );
+                            Debug.Assert( !f.IsDestroyed, "Disposed internal objects are removed from the list." );
                             if( w.WriteObject( f ) && trackLostObjects )
                             {
                                 if( lostInternalObjects == null ) lostInternalObjects = new List<InternalObject>();
@@ -238,13 +354,13 @@ namespace CK.Observable
                             f = f.Next;
                         }
                         w.DebugWriteSentinel();
-                        lostTimedObjects = _timeManager.Save( monitor, w, trackLostObjects );
+                        var (lostTimedObjects, unusedPooledReminders) = _timeManager.Save( monitor, w, trackLostObjects );
                         w.DebugWriteSentinel();
                         _sidekickManager.Save( w );
                         w.DebugWriteSentinel();
-                        var data = new ObjectTrackingData( lostObservableObjects, lostInternalObjects, lostTimedObjects, destroyedRefList );
+                        var data = new LostObjectTracker( this, lostObservableObjects, lostInternalObjects, lostTimedObjects, destroyedRefList, unusedPooledReminders );
                         data.DumpLog( monitor );
-                        CurrentObjectTracking = data;
+                        CurrentLostObjectTracker = data;
                         return true;
                     }
                 }
@@ -270,12 +386,12 @@ namespace CK.Observable
                     var o = _objects[i];
                     if( o != null )
                     {
-                        Debug.Assert( !o.IsDisposed );
+                        Debug.Assert( !o.IsDestroyed );
                         // This may still call Dispose() on other objects.
                         // Disposing() an ObservableObject will call InternalUnregister() here,
                         // and may affect the counts and object/free lists during loading.
                         // At least, with false, the Disposed event is not called.
-                        o.Dispose( shouldCleanup: false );
+                        o.Unload();
                     }
                 }
                 // Empty _objects completely.
@@ -333,7 +449,7 @@ namespace CK.Observable
                 var internalObj = _firstInternalObject;
                 while( internalObj != null )
                 {
-                    internalObj.Dispose( false );
+                    internalObj.Unload();
                     internalObj = internalObj.Next;
                 }
                 _firstInternalObject = _lastInternalObject = null;
@@ -355,7 +471,7 @@ namespace CK.Observable
                     for( int i = 0; i < count; ++i )
                     {
                         _objects[i] = (ObservableObject)r.ReadObject();
-                        Debug.Assert( _objects[i] == null || !_objects[i].IsDisposed );
+                        Debug.Assert( _objects[i] == null || !_objects[i].IsDestroyed );
                     }
 
                     // Fill roots array.
@@ -380,7 +496,7 @@ namespace CK.Observable
                     for( int i = 0; i < count; ++i )
                     {
                         _objects[i] = (ObservableObject)r.ReadObject();
-                        Debug.Assert( _objects[i] == null || !_objects[i].IsDisposed );
+                        Debug.Assert( _objects[i] == null || !_objects[i].IsDestroyed );
                     }
                 }
 
@@ -390,7 +506,7 @@ namespace CK.Observable
                 while( --count >= 0 )
                 {
                     var o = (InternalObject)r.ReadObject();
-                    Debug.Assert( !o.IsDisposed );
+                    Debug.Assert( !o.IsDestroyed );
                     Register( o );
                 }
 

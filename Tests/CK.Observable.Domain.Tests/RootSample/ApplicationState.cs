@@ -16,9 +16,9 @@ namespace CK.Observable.Domain.Tests.RootSample
             var p1 = new Product( new ProductInfo("unused", 0 ) );
             var p2 = new Product( new ProductInfo( "unused", 0 ) );
             var p3 = new Product( new ProductInfo( "unused", 0 ) );
-            p1.Dispose();
-            p2.Dispose();
-            p3.Dispose();
+            p1.Destroy();
+            p2.Destroy();
+            p3.Destroy();
         }
 
         ApplicationState( IBinaryDeserializer r, TypeReadInfo? info )

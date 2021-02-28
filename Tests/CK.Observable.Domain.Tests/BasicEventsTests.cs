@@ -44,8 +44,8 @@ namespace CK.Observable.Domain.Tests
                                "PropertyChanged 0.Power = 0.",
                                "NewProperty CurrentMechanic -> 4.",
                                "PropertyChanged 0.CurrentMechanic = null.",
-                               "NewProperty IsDisposed -> 5.",
-                               "PropertyChanged 0.IsDisposed = False.",
+                               "NewProperty IsDestroyed -> 5.",
+                               "PropertyChanged 0.IsDestroyed = False.",
                                "NewProperty OId -> 6.",
                                "PropertyChanged 0.OId = 0.",
                                "PropertyChanged 1.Name = Second Car.",
@@ -53,7 +53,7 @@ namespace CK.Observable.Domain.Tests
                                "PropertyChanged 1.Position = (0,0).",
                                "PropertyChanged 1.Power = 0.",
                                "PropertyChanged 1.CurrentMechanic = null.",
-                               "PropertyChanged 1.IsDisposed = False.",
+                               "PropertyChanged 1.IsDestroyed = False.",
                                "PropertyChanged 1.OId = 1." );
 
                 domain.Modify( TestHelper.Monitor, () =>
@@ -165,21 +165,21 @@ namespace CK.Observable.Domain.Tests
 
                     counter.Count.Should().Be( 3 );
 
-                    c2.Dispose();
-                    c2.Invoking( c => c.TestSpeed = 78 ).Should().Throw<ObjectDisposedException>();
-                    c2.Invoking( c => c.Position = new Position( 10.0, 10.0 ) ).Should().Throw<ObjectDisposedException>();
+                    c2.Destroy();
+                    c2.Invoking( c => c.TestSpeed = 78 ).Should().Throw<ObjectDestroyedException>();
+                    c2.Invoking( c => c.Position = new Position( 10.0, 10.0 ) ).Should().Throw<ObjectDestroyedException>();
 
                     c1.TestSpeed = 42;
                     c3.Position = new Position( 187.0, 1.0 );
 
                     counter.Count.Should().Be( 5 );
 
-                    c1.Dispose();
+                    c1.Destroy();
                     c3.TestSpeed = 64678;
 
                     counter.Count.Should().Be( 6 );
 
-                    c3.Dispose();
+                    c3.Destroy();
 
                     counter.Count.Should().Be( 6 );
 

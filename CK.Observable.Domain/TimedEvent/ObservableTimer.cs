@@ -50,7 +50,7 @@ namespace CK.Observable
         ObservableTimer( IBinaryDeserializer r, TypeReadInfo? info )
             : base( RevertSerialization.Default )
         {
-            Debug.Assert( !IsDisposed );
+            Debug.Assert( !IsDestroyed );
             _milliSeconds = r.ReadInt32();
             if( _milliSeconds < 0 )
             {
@@ -63,7 +63,7 @@ namespace CK.Observable
 
         void Write( BinarySerializer w )
         {
-            Debug.Assert( !IsDisposed );
+            Debug.Assert( !IsDestroyed );
             w.Write( _isActive ? -_milliSeconds : _milliSeconds );
             w.WriteNullableString( Name );
         }
@@ -83,7 +83,7 @@ namespace CK.Observable
             {
                 if( _isActive != value )
                 {
-                    this.CheckDisposed();
+                    this.CheckDestroyed();
                     if( _isActive = value )
                     {
                         ExpectedDueTimeUtc = DateTime.UtcNow;
@@ -124,7 +124,7 @@ namespace CK.Observable
             {
                 if( _milliSeconds != value )
                 {
-                    this.CheckDisposed();
+                    this.CheckDestroyed();
                     if( ExpectedDueTimeUtc == Util.UtcMinValue || ExpectedDueTimeUtc == Util.UtcMaxValue )
                     {
                         if( value <= 0 ) throw new ArgumentOutOfRangeException( nameof( IntervalMilliSeconds ) );
@@ -142,7 +142,7 @@ namespace CK.Observable
         /// <param name="intervalMilliSeconds">The interval in millisecond (defaults to 1 second).</param>
         public void Reconfigure( DateTime firstDueTimeUtc, int intervalMilliSeconds )
         {
-            this.CheckDisposed();
+            this.CheckDestroyed();
             CheckArguments( firstDueTimeUtc, intervalMilliSeconds );
             ExpectedDueTimeUtc = firstDueTimeUtc;
             _milliSeconds = intervalMilliSeconds;
@@ -256,7 +256,7 @@ namespace CK.Observable
         /// Overridden to return the <see cref="Name"/> of this timer.
         /// </summary>
         /// <returns>A readable string.</returns>
-        public override string ToString() => $"{(IsDisposed ? "[Disposed]" : "")}ObservableTimer '{Name ?? "<no name>"}' ({IntervalMilliSeconds} ms)";
+        public override string ToString() => $"{(IsDestroyed ? "[Destroyed]" : "")}ObservableTimer '{Name ?? "<no name>"}' ({IntervalMilliSeconds} ms)";
 
     }
 

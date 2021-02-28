@@ -210,17 +210,17 @@ namespace CK.Observable.Domain.Tests
             ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
 
             // This disposes the domain and returns a brand new one. This doesn't throw.
-            using var d2 = TestHelper.SaveAndLoad( d, saveDisposed: SaveDisposedObjectBehavior.Throw );
+            using var d2 = TestHelper.SaveAndLoad( d );
 
             d2.Modify( TestHelper.Monitor, () =>
             {
                 var list = d2.AllObjects.OfType<ObservableList<object>>().Single();
 
                 int i = 0;
-                var timer = (ObservableTimer)list[i++]; timer.Dispose();
-                var reminder = (ObservableReminder)list[i++]; reminder.Dispose();
-                var obsOject = (Person)list[i++]; obsOject.Dispose();
-                var intObject = (SuspendableClock)list[i++]; intObject.Dispose();
+                var timer = (ObservableTimer)list[i++]; timer.Destroy();
+                var reminder = (ObservableReminder)list[i++]; reminder.Destroy();
+                var obsOject = (Person)list[i++]; obsOject.Destroy();
+                var intObject = (SuspendableClock)list[i++]; intObject.Destroy();
             } );
             ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d2 );
 
@@ -228,13 +228,13 @@ namespace CK.Observable.Domain.Tests
             {
                 var list = d2.AllObjects.OfType<ObservableList<object>>().Single();
                 list.Count.Should().Be( 4 );
-                foreach( IDisposableObject o in list )
+                foreach( IDestroyableObject o in list )
                 {
-                    o.IsDisposed.Should().BeTrue();
+                    o.IsDestroyed.Should().BeTrue();
                 }
             } ).Success.Should().BeTrue();
 
-            d2.CurrentObjectTracking.ReferencedDestroyed.Should().HaveCount( 4 );
+            d2.CurrentLostObjectTracker.ReferencedDestroyed.Should().HaveCount( 4 );
         }
 
 

@@ -9,32 +9,29 @@ namespace CK.Observable
     /// <summary>
     /// Base class for all internal object.
     /// Internal objects are like <see cref="ObservableObject"/> but are not exportable (only serializable) and,
-    /// as <see cref="IDisposableObject"/>, can implement events and event handler (<see cref="SafeEventHandler"/>
+    /// as <see cref="IDestroyableObject"/>, can implement events and event handler (<see cref="SafeEventHandler"/>
     /// and <see cref="SafeEventHandler{TEventArgs}"/>).
     /// </summary>
     [NotExportable]
     [SerializationVersion( 0 )]
-    public abstract class InternalObject : IDisposableObject
+    public abstract class InternalObject : IDestroyableObject
     {
         internal ObservableDomain ActualDomain;
         internal InternalObject Next;
         internal InternalObject Prev;
-        ObservableEventHandler<ObservableDomainEventArgs> _disposed;
+        ObservableEventHandler<ObservableDomainEventArgs> _destroyed;
 
         /// <summary>
-        /// Raised when this object is <see cref="Dispose()"/>d by <see cref="Dispose(bool)"/>.
-        /// Note that when the call to dispose is made by <see cref="ObservableDomain.DoLoad(IActivityMonitor, BinaryDeserializer, string, bool)"/>,
-        /// this event is not triggered to avoid a useless (and potentially dangerous) snowball effect: eventually ALL <see cref="InternalObject.Dispose(bool)"/>
-        /// (with a false parameter) will be called during a reload.
+        /// Raised when this object is <see cref="Destroy()">destroyed</see>.
         /// </summary>
-        public event SafeEventHandler<ObservableDomainEventArgs> Disposed
+        public event SafeEventHandler<ObservableDomainEventArgs> Destroyed
         {
             add
             {
-                this.CheckDisposed();
-                _disposed.Add( value, nameof( Disposed ) );
+                this.CheckDestroyed();
+                _destroyed.Add( value, nameof( Destroyed ) );
             }
-            remove => _disposed.Remove( value );
+            remove => _destroyed.Remove( value );
         }
 
         /// <summary>
@@ -62,27 +59,27 @@ namespace CK.Observable
 
         InternalObject( IBinaryDeserializer r, TypeReadInfo? info )
         {
-            Debug.Assert( info.Version == 0 );
+            Debug.Assert( info != null && info.Version == 0 );
             if( r.ReadBoolean() )
             {
                 // This enables the Internal object to be serializable/deserializable outside a Domain
                 // (for instance to use BinarySerializer.IdempotenceCheck): the domain registers it.
                 ActualDomain = r.Services.GetService<ObservableDomain>( throwOnNull: true );
-                _disposed = new ObservableEventHandler<ObservableDomainEventArgs>( r );
+                _destroyed = new ObservableEventHandler<ObservableDomainEventArgs>( r );
             }
             else
             {
-                Debug.Assert( IsDisposed );
+                Debug.Assert( IsDestroyed );
             }
         }
 
         void Write( BinarySerializer w )
         {
-            if( IsDisposed ) w.Write( false );
+            if( IsDestroyed ) w.Write( false );
             else
             {
                 w.Write( true );
-                _disposed.Write( w );
+                _destroyed.Write( w );
             }
         }
 
@@ -93,54 +90,62 @@ namespace CK.Observable
         /// Useful properties and methods (like the <see cref="DomainView.Monitor"/> or <see cref="DomainView.SendCommand"/> )
         /// are exposed by this accessor so that the interface of the observable object is not polluted by infrastructure concerns.
         /// </remarks>
-        protected DomainView Domain => new DomainView( this, ActualDomain ?? throw new ObjectDisposedException( GetType().Name ) );
+        protected DomainView Domain => new DomainView( this, ActualDomain ?? throw new ObjectDestroyedException( GetType().Name ) );
 
         /// <summary>
         /// Gets whether this object has been disposed.
         /// </summary>
-        public bool IsDisposed => ActualDomain == null;
+        public bool IsDestroyed => ActualDomain == null;
 
         /// <summary>
-        /// Disposes this object (can be called multiple times).
+        /// Destroys this object (can be called multiple times).
         /// </summary>
-        public void Dispose()
+        public void Destroy()
         {
             if( ActualDomain != null )
             {
-                ActualDomain.CheckBeforeDispose( this );
-                Dispose( true );
+                ActualDomain.CheckBeforeDestroy( this );
+                OnUnload();
+                OnDestroy();
                 ActualDomain.Unregister( this );
                 ActualDomain = null;
             }
         }
 
         /// <summary>
-        /// Called before this object is disposed.
-        /// Override it to dispose other objects managed by this <see cref="ObservableObject"/> or to unregister whatever should be unregistered, but
-        /// always be sure to call the base class.
-        /// Implementation at this level raises the <see cref="Disposed"/> event: it must be called by overrides.
+        /// Called before this object is destroyed.
+        /// Override it to destroy other objects managed by this <see cref="InternalObject"/> or to remove this
+        /// object from any known containers.
         /// <para>
-        /// Note that the Disposed event is raised only for explicit object disposing:
-        /// a <see cref="ObservableDomain.Load(IActivityMonitor, System.IO.Stream, bool, System.Text.Encoding?, int, bool?)"/> doesn't trigger the event.
+        /// Please make sure to call this base implementation since, at this level, it raises the <see cref="Destroyed"/> event
+        /// (the base method should typically be called after having impacted other objects).
         /// </para>
         /// </summary>
-        /// <param name="shouldDisposeObjects">
-        /// True when other <see cref="ObservableObject"/> instances managed by this object should be disposed, which is most of the time.
-        /// False when managed <see cref="ObservableObject"/> instances will be disposed automatically (eg. during a reload).
-        /// When False, the <see cref="Disposed"/> event is not raised.
-        /// </param>
-        protected internal virtual void Dispose( bool shouldDisposeObjects )
+        protected internal virtual void OnDestroy()
         {
-            // Since this method id protected and can be called by external code,
-            // we (safely) check that we are not already disposed.
-            if( shouldDisposeObjects && ActualDomain != null )
+            _destroyed.Raise( this, ActualDomain.DefaultEventArgs );
+        }
+
+        internal void Unload()
+        {
+            if( ActualDomain != null )
             {
-                _disposed.Raise( this, ActualDomain.DefaultEventArgs );
-            }
-            else
-            {
+                OnUnload();
                 ActualDomain = null;
             }
+        }
+
+        /// <summary>
+        /// Called when this object is unloaded: either because the <see cref="ObservableDomain"/> is disposed
+        /// or <see cref="ObservableDomain.Load(IActivityMonitor, System.IO.Stream, bool, System.Text.Encoding?, int, bool?)"/>
+        /// has been called or <see cref="Destroy"/> is being called (this is called prior to call <see cref="OnDestroy"/>).
+        /// <para>
+        /// This base is an empty implementation (we have nothing to do at this level). This must be overridden whenever
+        /// external resources are used, such as opened files for instance.
+        /// </para>
+        /// </summary>
+        protected internal virtual void OnUnload()
+        {
         }
 
     }

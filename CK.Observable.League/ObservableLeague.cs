@@ -19,16 +19,19 @@ namespace CK.Observable.League
     {
         readonly ConcurrentDictionary<string, Shell> _domains;
         readonly IStreamStore _streamStore;
+        readonly IObservableDomainInitializer? _initializer;
         readonly CoordinatorClient _coordinator;
         readonly IServiceProvider _serviceProvider;
 
         ObservableLeague( IStreamStore streamStore,
+                          IObservableDomainInitializer? initializer,
                           IServiceProvider serviceProvider,
                           CoordinatorClient coordinator,
                           ConcurrentDictionary<string, Shell> domains )
         {
             _domains = domains;
             _streamStore = streamStore;
+            _initializer = initializer;
             _coordinator = coordinator;
             _serviceProvider = serviceProvider;
             // Associates the league to the coordinator. This finalizes the initialization of the league. 
@@ -40,6 +43,7 @@ namespace CK.Observable.League
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="store">The store to use.</param>
+        /// <param name="initializer">Optional initializer that will be called on new domains.</param>
         /// <param name="serviceProvider">
         /// The service provider used to instantiate <see cref="ObservableDomainSidekick"/> objects.
         /// When null, a dummy service provider (<see cref="EmptyServiceProvider.Default"/>) is provided to the domains.
@@ -47,6 +51,7 @@ namespace CK.Observable.League
         /// <returns>A new league or null on error.</returns>
         public static async Task<ObservableLeague?> LoadAsync( IActivityMonitor monitor,
                                                                IStreamStore store,
+                                                               IObservableDomainInitializer? initializer = null,
                                                                IServiceProvider? serviceProvider = null )
         {
             if( serviceProvider == null ) serviceProvider = EmptyServiceProvider.Default;
@@ -56,18 +61,18 @@ namespace CK.Observable.League
                 var client = new CoordinatorClient( monitor, store, serviceProvider );
                 // Async initialization here, just like other managed domains.
                 // Contrary to other domains, it is created with an active timer (that may be stopped later if needed).
-                client.Domain = (ObservableDomain<Coordinator>)await client.InitializeAsync( monitor, startTimer: true, (m,startTimer) => new ObservableDomain<Coordinator>(m, String.Empty, startTimer, client, serviceProvider));
+                client.Domain = (ObservableDomain<Coordinator>)await client.InitializeAsync( monitor, startTimer: true, createOnLoadError: false, (m,startTimer) => new ObservableDomain<Coordinator>(m, String.Empty, startTimer, client, serviceProvider));
                 // No need to acquire a read lock here.
                 var domains = new ConcurrentDictionary<string, Shell>( StringComparer.OrdinalIgnoreCase );
                 IEnumerable<Domain> observableDomains = client.Domain.Root.Domains.Values;
                 foreach( var d in observableDomains )
                 {
-                    var shell = Shell.Create( monitor, client, d.DomainName, store, serviceProvider, d.RootTypes );
+                    var shell = Shell.Create( monitor, client, d.DomainName, store, initializer, serviceProvider, d.RootTypes );
                     d.Initialize( shell );
                     domains.TryAdd( d.DomainName, shell );
                 }
                 // Shells have been created: we can create the whole structure.
-                var o = new ObservableLeague( store, serviceProvider, client, domains );
+                var o = new ObservableLeague( store, initializer, serviceProvider, client, domains );
                 // And immediately loads the domains that need to be.
                 foreach( Domain d in observableDomains )
                 {
@@ -127,14 +132,14 @@ namespace CK.Observable.League
         {
             Debug.Assert( !_coordinator.Domain.IsDisposed );
             return _domains.AddOrUpdate( name,
-                                         Shell.Create( monitor, _coordinator, name, _streamStore, _serviceProvider, rootTypes ),
+                                         Shell.Create( monitor, _coordinator, name, _streamStore, _initializer, _serviceProvider, rootTypes ),
                                          ( n, s ) => throw new Exception( $"Internal error: domain name '{n}' already exists." ) );
         }
 
         IManagedDomain IManagedLeague.RebindDomain( IActivityMonitor monitor, string name, IReadOnlyList<string> rootTypes )
         {
             return _domains.AddOrUpdate( name,
-                                         n => Shell.Create( monitor, _coordinator, name, _streamStore, _serviceProvider, rootTypes ),
+                                         n => Shell.Create( monitor, _coordinator, name, _streamStore, _initializer, _serviceProvider, rootTypes ),
                                          ( n, s ) =>
                                          {
                                              if( !s.RootTypes.SequenceEqual( rootTypes ) )

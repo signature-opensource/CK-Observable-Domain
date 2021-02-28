@@ -14,7 +14,7 @@ namespace CK.Observable.Domain.Tests.Sample
         Person( IBinaryDeserializer r, TypeReadInfo? info )
             : base( RevertSerialization.Default )
         {
-            Debug.Assert( !IsDisposed );
+            Debug.Assert( !IsDestroyed );
             Friend = (Person)r.ReadObject();
             FirstName = r.ReadNullableString();
             LastName = r.ReadNullableString();
@@ -26,7 +26,7 @@ namespace CK.Observable.Domain.Tests.Sample
 
         void Write( BinarySerializer s )
         {
-            Debug.Assert( !IsDisposed );
+            Debug.Assert( !IsDestroyed );
             s.WriteObject( Friend );
             s.WriteNullableString( FirstName );
             s.WriteNullableString( LastName );
