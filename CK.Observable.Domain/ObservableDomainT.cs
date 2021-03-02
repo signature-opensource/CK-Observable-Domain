@@ -24,7 +24,7 @@ namespace CK.Observable
         /// <param name="startTimer">Whether to initially start the <see cref="TimeManager"/>.</param>
         /// <param name="serviceProvider">The service providers that will be used to resolve the <see cref="ObservableDomainSidekick"/> objects.</param>
         public ObservableDomain( IActivityMonitor monitor, string domainName, bool startTimer, IServiceProvider? serviceProvider = null )
-            : this(monitor, domainName, startTimer, null, serviceProvider)
+            : this( monitor, domainName, startTimer, null, serviceProvider )
         {
         }
 
@@ -43,7 +43,7 @@ namespace CK.Observable
                                  bool startTimer,
                                  IObservableDomainClient? client,
                                  IServiceProvider? serviceProvider = null )
-            : base(monitor, domainName, startTimer, client, serviceProvider )
+            : base( monitor, domainName, startTimer, client, serviceProvider )
         {
             if( AllRoots.Count != 0 ) BindRoots();
             else using( var initialization = new InitializationTransaction( monitor, this ) )
@@ -72,7 +72,7 @@ namespace CK.Observable
             IObservableDomainClient client,
             Stream stream,
             bool leaveOpen = false,
-            Encoding encoding = null,
+            Encoding? encoding = null,
             IServiceProvider? serviceProvider = null,
             bool? startTimer = null )
             : base( monitor, domainName, client, stream, leaveOpen, encoding, serviceProvider, startTimer )

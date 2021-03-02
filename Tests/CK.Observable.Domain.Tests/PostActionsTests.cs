@@ -141,10 +141,24 @@ namespace CK.Observable.Domain.Tests
         }
 
         [UseSidekick(typeof(SimpleSidekick))]
+        [SerializationVersion(0)]
         public class SimpleRoot : ObservableRootObject
         {
             int _domainNumber;
             int _localNumber;
+
+            public SimpleRoot()
+            {
+            }
+
+            SimpleRoot( IBinaryDeserializer r, TypeReadInfo info )
+                : base( RevertSerialization.Default )
+            {
+            }
+
+            void Write( BinarySerializer w )
+            {
+            }
 
             public ObservableChannel<string> ErrorOnSuccefulTransactionError { get; } = new ObservableChannel<string>();
 
@@ -237,6 +251,7 @@ namespace CK.Observable.Domain.Tests
 
         [TestCase( 20, false )]
         [TestCase( 20, true )]
+        [Timeout(20*1000)]
         public async Task parrallel_operations_respect_the_Domain_PostActions_ordering_guaranty( int nb, bool useAsync )
         {
             ResetContext();

@@ -83,10 +83,20 @@ namespace CK.Observable
             _oid = ActualDomain.Register( this );
         }
 
-        protected ObservableObject( RevertSerialization _ ) { }
+        /// <summary>
+        /// Specialized deserialization constructor for specialized classes: it must be called
+        /// by deserialization constructors otherwise an <see cref="InvalidOperationException"/>
+        /// is thrown when loading a domain.
+        /// </summary>
+        /// <param name="_">Unused parameter.</param>
+        protected ObservableObject( RevertSerialization _ )
+        {
+            RevertSerialization.OnRootDeserialized( this );
+        }
 
         ObservableObject( IBinaryDeserializer r, TypeReadInfo? info )
         {
+            RevertSerialization.OnRootDeserialized( this );
             _oid = new ObservableObjectId( r );
             if( !IsDestroyed )
             {
@@ -103,7 +113,6 @@ namespace CK.Observable
                 _propertyChanged = new ObservableEventHandler<PropertyChangedEventArgs>( r );
             }
         }
-
 
         void Write( BinarySerializer w )
         {
@@ -177,9 +186,16 @@ namespace CK.Observable
             _destroyed.Raise( this, ActualDomain.DefaultEventArgs );
         }
 
-        internal void Unload()
+        /// <summary>
+        /// This is called by the <see cref="ObservableDomain.Load(IActivityMonitor, System.IO.Stream, bool, System.Text.Encoding?, int, bool?)"/>
+        /// or <see cref="ObservableDomain.DoDispose(IActivityMonitor)"/> and by <see cref="ObservableDomain.GarbageCollectAsync"/>.
+        /// </summary>
+        /// <param name="gc">True when called by the garbage collector: this object in unregistered.</param>
+        internal void Unload( bool gc )
         {
+            Debug.Assert( !IsDestroyed );
             OnUnload();
+            if( gc ) ActualDomain.Unregister( this );
             _oid = ObservableObjectId.Destroyed;
         }
 

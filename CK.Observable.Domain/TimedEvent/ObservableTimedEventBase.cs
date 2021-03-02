@@ -38,16 +38,20 @@ namespace CK.Observable
 
         ObservableEventHandler<ObservableDomainEventArgs> _disposed;
 
-        internal ObservableTimedEventBase()
+        protected ObservableTimedEventBase()
         {
             TimeManager = ObservableDomain.GetCurrentActiveDomain().TimeManager;
             TimeManager.OnCreated( this, true );
         }
 
-        protected ObservableTimedEventBase( RevertSerialization _ ) { }
+        protected ObservableTimedEventBase( RevertSerialization _ )
+        {
+            RevertSerialization.OnRootDeserialized( this );
+        }
 
         ObservableTimedEventBase( IBinaryDeserializer r, TypeReadInfo info )
         {
+            RevertSerialization.OnRootDeserialized( this );
             int index = r.ReadInt32();
             if( index >= 0 )
             {

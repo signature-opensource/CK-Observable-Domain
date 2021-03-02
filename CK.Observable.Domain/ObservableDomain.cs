@@ -216,11 +216,11 @@ namespace CK.Observable
             {
                 public readonly ObservableObject Object;
                 public readonly ObservablePropertyChangedEventArgs Info;
-                public object FinalValue;
+                public object? FinalValue;
 
                 public long Key => Info.GetObjectPropertyId( Object );
 
-                public PropChanged( ObservableObject o, ObservablePropertyChangedEventArgs p, object final )
+                public PropChanged( ObservableObject o, ObservablePropertyChangedEventArgs p, object? final )
                 {
                     Object = o;
                     Info = p;
@@ -333,7 +333,7 @@ namespace CK.Observable
                 _changeEvents.Add( new NewPropertyEvent( info.PropertyId, info.PropertyName ) );
             }
 
-            internal void OnPropertyChanged( ObservableObject o, ObservablePropertyChangedEventArgs p, object after )
+            internal void OnPropertyChanged( ObservableObject o, ObservablePropertyChangedEventArgs p, object? after )
             {
                 PropChanged c;
                 if( _propChanged.TryGetValue( p.GetObjectPropertyId( o ), out c ) )
@@ -1380,7 +1380,7 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Called after a <see cref="G:Load"/>.
+        /// Called after a <see cref="Load(IActivityMonitor, Stream, string, bool, Encoding?, int, bool?)"/>.
         /// Does nothing at this level.
         /// </summary>
         protected internal virtual void OnLoaded()
@@ -1599,8 +1599,11 @@ namespace CK.Observable
                 DomainClient?.OnDomainDisposed( monitor, this );
                 DomainClient = null;
                 _disposed = true;
+
+                //UnloadDomain( monitor );
                 _timeManager.Timer.Dispose();
                 _sidekickManager.Clear( monitor );
+
                 if( monitor != _domainMonitor && _domainMonitorLock.Wait( 0 ) )
                 {
                     if( _domainMonitor != null ) _domainMonitor.MonitorEnd( "Domain disposed." );
@@ -1676,7 +1679,7 @@ namespace CK.Observable
             return _sidekickManager.CreateWaitingSidekicks( _currentTran.Monitor, ex => _currentTran.AddError( CKExceptionData.CreateFrom( ex ) ), false );
         }
 
-        internal ObservablePropertyChangedEventArgs? OnPropertyChanged( ObservableObject o, string propertyName, object after )
+        internal ObservablePropertyChangedEventArgs? OnPropertyChanged( ObservableObject o, string propertyName, object? after )
         {
             if( _deserializeOrInitializing )
             {

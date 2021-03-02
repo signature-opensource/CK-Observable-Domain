@@ -28,7 +28,8 @@ namespace CK.Observable
                                         IReadOnlyList<InternalObject>? internals,
                                         IReadOnlyList<ObservableTimedEventBase>? timed,
                                         IReadOnlyList<IDestroyable>? refDestroyed,
-                                        int unusedPooledReminders )
+                                        int unusedPooledReminders,
+                                        int pooledReminderCount )
             {
                 _d = d;
                 TransactionNumber = d.TransactionSerialNumber;
@@ -37,6 +38,7 @@ namespace CK.Observable
                 UnreacheableTimedObjects = timed ?? Array.Empty<ObservableTimedEventBase>();
                 ReferencedDestroyed = refDestroyed ?? Array.Empty<IDestroyable>();
                 UnusedPooledReminderCount = unusedPooledReminders;
+                PooledReminderCount = pooledReminderCount;
             }
 
             /// <summary>
@@ -86,23 +88,47 @@ namespace CK.Observable
             public int UnusedPooledReminderCount { get; }
 
             /// <summary>
+            /// Gets the total number of pooled reminders.
+            /// </summary>
+            public int PooledReminderCount { get; }
+
+            /// <summary>
+            /// When <see cref="UnusedPooledReminderCount"/> is greater than 16 and greater than half of the <see cref="PooledReminderCount"/>,
+            /// the <see cref="ObservableDomain.GarbageCollectAsync"/> will trim the number of pooled reminders.
+            /// </summary>
+            public bool ShouldTrimPooledReminders => UnusedPooledReminderCount > 16 && (2 * UnusedPooledReminderCount) > PooledReminderCount;
+
+            /// <summary>
+            /// Gets whether one or more issues have been detected.
+            /// When false, then there is nothing to do (it is useless to call <see cref="ObservableDomain.GarbageCollectAsync(IActivityMonitor, int)"/>).
+            /// </summary>
+            public bool HasIssues => ReferencedDestroyed.Count > 0
+                                     || UnreacheableObservables.Count > 0
+                                     || UnreacheableInternals.Count > 0
+                                     || UnreacheableTimedObjects.Count > 0
+                                     || ShouldTrimPooledReminders;
+
+            /// <summary>
             /// Dumps the messages to the monitor. Only the <see cref="ReferencedDestroyed"/> are errors.
-            /// Others are expressed as warnings.
+            /// Other issues are expressed as warnings.
             /// </summary>
             /// <param name="monitor">The target monitor.</param>
             /// <param name="dumpReferencedDestroyed">False to skip <see cref="ReferencedDestroyed"/> errors.</param>
             public void DumpLog( IActivityMonitor monitor, bool dumpReferencedDestroyed = true )
             {
-                if( ReferencedDestroyed.Count > 0 )
+                if( dumpReferencedDestroyed )
                 {
-                    using( monitor.OpenError( $"{ReferencedDestroyed.Count} destroyed objects are referenced by one or more non destroyed objects." ) )
+                    if( ReferencedDestroyed.Count > 0 )
                     {
-                        monitor.Error( ReferencedDestroyed.GroupBy( r => r.GetType() ).Select( g => $"{g.Count()} of type '{g.Key.Name}'" ).Concatenate() );
+                        using( monitor.OpenError( $"{ReferencedDestroyed.Count} destroyed objects are referenced by one or more non destroyed objects." ) )
+                        {
+                            monitor.Error( ReferencedDestroyed.GroupBy( r => r.GetType() ).Select( g => $"{g.Count()} of type '{g.Key.Name}'" ).Concatenate() );
+                        }
                     }
-                }
-                else
-                {
-                    monitor.Trace( "No reference to destroyed objects." );
+                    else
+                    {
+                        monitor.Trace( "No reference to destroyed objects." );
+                    }
                 }
                 if( UnreacheableObservables.Count > 0 )
                 {
@@ -137,6 +163,10 @@ namespace CK.Observable
                 {
                     monitor.Trace( "No unreachable Timer or Reminder objects found." );
                 }
+                if( ShouldTrimPooledReminders )
+                {
+                    monitor.Warn( $"There are {UnusedPooledReminderCount} unused pooled reminders out of {PooledReminderCount}. The set of pooled reminders should be trimmed." );
+                }
             }
 
             /// <summary>
@@ -148,6 +178,7 @@ namespace CK.Observable
 
         /// <summary>
         /// Gets the <see cref="LostObjectTracker"/> that has been computed by the last <see cref="Save"/> call.
+        /// Use <see cref="EnsureLostObjectTracker(IActivityMonitor, int)"/> to refresh it.
         /// </summary>
         public LostObjectTracker? CurrentLostObjectTracker { get; private set; }
 
@@ -191,11 +222,14 @@ namespace CK.Observable
 
         /// <summary>
         /// Triggers a garbage collection on this domain.
+        /// First, <see cref="EnsureLostObjectTracker(IActivityMonitor, int)"/> is called to update the <see cref="CurrentLostObjectTracker"/>
+        /// and then, the detected lost objects are unloaded in a <see cref="ModifyAsync"/>.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="millisecondsTimeout">
-        /// The maximum number of milliseconds to wait for a read access before giving up.
-        /// Wait indefinitely by default.
+        /// The maximum number of milliseconds to wait for the write access before giving up (this is also used for
+        /// the read access if <see cref="EnsureLostObjectTracker(IActivityMonitor, int)"/> must update the <see cref="CurrentLostObjectTracker"/>).
+        /// Waits indefinitely by default.
         /// </param>
         /// <returns>True on success, false if timeout or an error occurred.</returns>
         public async Task<bool> GarbageCollectAsync( IActivityMonitor monitor, int millisecondsTimeout = -1 )
@@ -203,34 +237,33 @@ namespace CK.Observable
             CheckDisposed();
             using( monitor.OpenInfo( $"Garbage collecting." ) )
             {
-                var current = CurrentLostObjectTracker;
-                if( current == null || current.TransactionNumber != TransactionSerialNumber )
+                var c = EnsureLostObjectTracker( monitor, millisecondsTimeout );
+                if( c == null ) return false;
+                if( !c.HasIssues )
                 {
-                    using var s = new NullStream();
-                    monitor.Trace( "Saving objects in a null stream to track lost objects." );
-                    if( !Save( monitor, s, millisecondsTimeout: millisecondsTimeout ) )
-                    {
-                        return false;
-                    }
+                    monitor.CloseGroup( "There is nothing to do." );
+                    return true;
                 }
-
+                c.DumpLog( monitor, false );
                 var (ex, result) = await ModifyNoThrowAsync( monitor, () =>
                 {
-                    var c = CurrentLostObjectTracker;
                     Debug.Assert( c != null );
-                    c.DumpLog( monitor, false );
+
+                    // Destroyed objects can only transition from alive to destroyed: using
+                    // the lost objects captured here is fine since the only risk is to forget
+                    // some objects.
                     foreach( var o in c.UnreacheableObservables )
                     {
                         if( !o.IsDestroyed )
                         {
-                            o.Unload();
+                            o.Unload( true );
                         }
                     }
                     foreach( var o in c.UnreacheableInternals )
                     {
                         if( !o.IsDestroyed )
                         {
-                            o.Unload();
+                            o.Unload( true );
                         }
                     }
                     foreach( var o in c.UnreacheableTimedObjects )
@@ -240,6 +273,14 @@ namespace CK.Observable
                             o.Destroy();
                         }
                     }
+                    //// Pool reminders may have been added/removed to the pool by transactions
+                    //// before we enter this ModifyAsync.
+                    //// We should theoretically reanalyze the data but since we ask to
+                    //// remove only half of the unused (at most), we do it directly.
+                    if( c.ShouldTrimPooledReminders )
+                    {
+                        TimeManager.TrimPooledReminders( monitor, c.UnusedPooledReminderCount / 2 );
+                    }
                 }, millisecondsTimeout );
                 if( ex != null )
                 {
@@ -248,6 +289,36 @@ namespace CK.Observable
                 }
                 return result.Success;
             }
+        }
+
+        /// <summary>
+        /// Updates <see cref="CurrentLostObjectTracker"/> if its <see cref="LostObjectTracker.TransactionNumber"/> is
+        /// not the current <see cref="TransactionSerialNumber"/>.
+        /// On error (or if a read access failed to be obtained), returns null.
+        /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
+        /// <param name="millisecondsTimeout">
+        /// The maximum number of milliseconds to wait for a read access before giving up.
+        /// Wait indefinitely by default.
+        /// </param>
+        /// <returns>True on success, false if timeout occurred.</returns>
+        /// <returns></returns>
+        public LostObjectTracker? EnsureLostObjectTracker( IActivityMonitor monitor, int millisecondsTimeout = -1 )
+        {
+            // We don't need synchronization code here: the "CurrentLostObjectTracker" may have been
+            // updated by another save and we absolutely don't care since the LostObjectTracker creation is
+            // not parametrized: it's the same for everyone.
+            var current = CurrentLostObjectTracker;
+            if( current == null || current.TransactionNumber != TransactionSerialNumber )
+            {
+                using var s = new NullStream();
+                monitor.Trace( "Saving objects in a null stream to track lost objects." );
+                if( !Save( monitor, s, millisecondsTimeout: millisecondsTimeout ) )
+                {
+                    return null;
+                }
+            }
+            return CurrentLostObjectTracker;
         }
 
         /// <inheritdoc/>
@@ -354,12 +425,18 @@ namespace CK.Observable
                             f = f.Next;
                         }
                         w.DebugWriteSentinel();
-                        var (lostTimedObjects, unusedPooledReminders) = _timeManager.Save( monitor, w, trackLostObjects );
+                        var (lostTimedObjects, unusedPooledReminders, pooledReminderCount) = _timeManager.Save( monitor, w, trackLostObjects );
                         w.DebugWriteSentinel();
                         _sidekickManager.Save( w );
                         w.DebugWriteSentinel();
-                        var data = new LostObjectTracker( this, lostObservableObjects, lostInternalObjects, lostTimedObjects, destroyedRefList, unusedPooledReminders );
-                        data.DumpLog( monitor );
+                        var data = new LostObjectTracker( this,
+                                                          lostObservableObjects,
+                                                          lostInternalObjects,
+                                                          lostTimedObjects,
+                                                          destroyedRefList,
+                                                          unusedPooledReminders,
+                                                          pooledReminderCount );
+                        if( data.HasIssues ) data.DumpLog( monitor );
                         CurrentLostObjectTracker = data;
                         return true;
                     }
@@ -379,36 +456,13 @@ namespace CK.Observable
             _deserializeOrInitializing = true;
             try
             {
-                #region Unload/Dispose existing objects.
-                // Call Dispose(false) on all objects.
-                for( int i = 0; i < _objectsListCount; ++i )
-                {
-                    var o = _objects[i];
-                    if( o != null )
-                    {
-                        Debug.Assert( !o.IsDestroyed );
-                        // This may still call Dispose() on other objects.
-                        // Disposing() an ObservableObject will call InternalUnregister() here,
-                        // and may affect the counts and object/free lists during loading.
-                        // At least, with false, the Disposed event is not called.
-                        o.Unload();
-                    }
-                }
-                // Empty _objects completely.
-                Array.Clear( _objects, 0, _objectsListCount );
-                #endregion
-
-                // Free sidekicks and IObservableDomainActionTracker.
-                _trackers.Clear();
-                _sidekickManager.Clear( monitor );
-
+                UnloadDomain( monitor );
                 int version = r.ReadSmallInt32();
                 if( version < 5 || version > CurrentSerializationVersion )
                 {
                     throw new InvalidDataException( $"Version must be between 5 and {CurrentSerializationVersion}. Version read: {version}." );
                 }
                 r.SerializationVersion = version;
-                _currentObjectUniquifier = 0;
                 r.DebugReadMode();
                 _currentObjectUniquifier = r.ReadInt32();
                 _domainSecret = r.ReadBytes( DomainSecretKeyLength );
@@ -431,9 +485,7 @@ namespace CK.Observable
 
                 r.DebugCheckSentinel();
 
-                // Clears and read the properties index.
-                _properties.Clear();
-                _propertiesByIndex.Clear();
+                // Read the properties index.
                 count = r.ReadNonNegativeSmallInt32();
                 for( int iProp = 0; iProp < count; iProp++ )
                 {
@@ -444,19 +496,6 @@ namespace CK.Observable
                 }
 
                 r.DebugCheckSentinel();
-
-                // Clears any internal objects.
-                var internalObj = _firstInternalObject;
-                while( internalObj != null )
-                {
-                    internalObj.Unload();
-                    internalObj = internalObj.Next;
-                }
-                _firstInternalObject = _lastInternalObject = null;
-                _internalObjectCount = 0;
-
-                // Clears any time event objects.
-                _timeManager.ClearAndStop( monitor );
 
                 // Resize _objects array.
                 _objectsListCount = count = _actualObjectCount + _freeList.Count;
@@ -476,7 +515,6 @@ namespace CK.Observable
 
                     // Fill roots array.
                     r.DebugCheckSentinel();
-                    _roots.Clear();
                     count = r.ReadNonNegativeSmallInt32();
                     while( --count >= 0 )
                     {
@@ -485,7 +523,6 @@ namespace CK.Observable
                 }
                 else
                 {
-                    _roots.Clear();
                     // Reading roots first (including Internal and Timed objects).
                     int rootCount = r.ReadNonNegativeSmallInt32();
                     for( int i = 0; i < rootCount; ++i )
@@ -540,6 +577,54 @@ namespace CK.Observable
             }
         }
 
+        /// <summary>
+        /// Unloads this domain by clearing all internal state: it is ready to be reloaded
+        /// or to be forgotten.
+        /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
+        void UnloadDomain( IActivityMonitor monitor )
+        {
+            Debug.Assert( _lock.IsWriteLockHeld );
+            // Call Unload( false ) on all objects.
+            for( int i = 0; i < _objectsListCount; ++i )
+            {
+                var o = _objects[i];
+                if( o != null )
+                {
+                    Debug.Assert( !o.IsDestroyed );
+                    o.Unload( false );
+                }
+            }
+            // Empty _objects completely.
+            Array.Clear( _objects, 0, _objectsListCount );
+            _objectsListCount = 0;
+            _actualObjectCount = 0;
 
+            // Clears root list.
+            _roots.Clear();
+
+            // Free sidekicks and IObservableDomainActionTracker.
+            _trackers.Clear();
+            _sidekickManager.Clear( monitor );
+
+            // Clears any internal objects.
+            var internalObj = _firstInternalObject;
+            while( internalObj != null )
+            {
+                internalObj.Unload( false );
+                internalObj = internalObj.Next;
+            }
+            _firstInternalObject = _lastInternalObject = null;
+            _internalObjectCount = 0;
+
+            // Clears any time event objects.
+            _timeManager.ClearAndStop( monitor );
+
+            // Clears and read the properties index.
+            _properties.Clear();
+            _propertiesByIndex.Clear();
+
+            _currentObjectUniquifier = 0;
+        }
     }
 }

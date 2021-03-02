@@ -10,7 +10,7 @@ namespace CK.Observable
     /// <summary>
     /// Defines the <see cref="ObservableObject.OId"/> identifier.
     /// Note that only the <see cref="UniqueId"/> is exported via <see cref="IObjectExporterTarget.EmitInt64(long)"/>
-    /// and that this unique identifier is guaranteed to roundtrip via <see cref="double"/> (only 53 bits are used).
+    /// and that this unique identifier is guaranteed to round trip via <see cref="double"/> (only 53 bits are used).
     /// </summary>
     public readonly struct ObservableObjectId
     {

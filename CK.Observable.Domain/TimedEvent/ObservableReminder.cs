@@ -86,6 +86,12 @@ namespace CK.Observable
             base.Destroy();
         }
 
+        internal void ForcePooledDestroy()
+        {
+            Debug.Assert( !IsDestroyed && IsPooled && !IsActive );
+            base.Destroy();
+        }
+
         private protected override ObservableReminderEventArgs ReusableArgs { get; }
         
         /// <summary>

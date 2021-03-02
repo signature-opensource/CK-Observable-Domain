@@ -74,7 +74,7 @@ namespace CK.Observable
                                  IObservableDomainClient client,
                                  Stream stream,
                                  bool leaveOpen = false,
-                                 Encoding encoding = null,
+                                 Encoding? encoding = null,
                                  IServiceProvider? serviceProvider = null,
                                  bool? startTimer = null )
             : base( monitor, domainName, client, stream, leaveOpen, encoding, serviceProvider, startTimer )

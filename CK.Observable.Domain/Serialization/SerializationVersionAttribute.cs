@@ -4,7 +4,7 @@ namespace CK.Observable
 {
     /// <summary>
     /// Associates a version to a class or struct that handles its own serialization through a private Write( <see cref="BinarySerializer"/> )
-    /// method and a deserialization constructor that accepts a <see cref="IBinaryDeserializerContext"/> parameter.
+    /// method and a deserialization constructor that accepts a <see cref="IBinaryDeserializer"/> and a <see cref="TypeReadInfo"/> parameters.
     /// This attribute is required.
     /// </summary>
     [AttributeUsage(AttributeTargets.Class|AttributeTargets.Struct, AllowMultiple = false, Inherited = false)]

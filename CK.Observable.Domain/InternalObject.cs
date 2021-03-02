@@ -55,10 +55,14 @@ namespace CK.Observable
             ActualDomain.Register( this );
         }
 
-        protected InternalObject( RevertSerialization _ ) { }
+        protected InternalObject( RevertSerialization _ )
+        {
+            RevertSerialization.OnRootDeserialized( this );
+        }
 
         InternalObject( IBinaryDeserializer r, TypeReadInfo? info )
         {
+            RevertSerialization.OnRootDeserialized( this );
             Debug.Assert( info != null && info.Version == 0 );
             if( r.ReadBoolean() )
             {
@@ -130,11 +134,12 @@ namespace CK.Observable
             _destroyed.Raise( this, ActualDomain.DefaultEventArgs );
         }
 
-        internal void Unload()
+        internal void Unload( bool gc )
         {
             if( ActualDomain != null )
             {
                 OnUnload();
+                if( gc ) ActualDomain.Unregister( this );
                 ActualDomain = null;
             }
         }

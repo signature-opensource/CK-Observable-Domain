@@ -336,23 +336,64 @@ namespace CK.Observable.Domain.Tests
         }
 
 
-
+        [SerializationVersion(0)]
         public class TryingToExportNotExportableProperties1 : ObservableObject
         {
+            public TryingToExportNotExportableProperties1()
+            {
+            }
+
+            TryingToExportNotExportableProperties1( IBinaryDeserializer r, TypeReadInfo info )
+                : base( RevertSerialization.Default )
+            {
+            }
+
+            void Write( BinarySerializer w )
+            {
+            }
+
             // ObservableObjects and InternalObjects MUST NOT interact with any domain directly.
             public ObservableDomain ThisIsVeryBad { get; }
         }
 
+        [SerializationVersion(0)]
         public class TryingToExportNotExportableProperties2 : ObservableObject
         {
+            public TryingToExportNotExportableProperties2()
+            {
+            }
+
+            TryingToExportNotExportableProperties2( IBinaryDeserializer r, TypeReadInfo info )
+               : base( RevertSerialization.Default )
+            {
+            }
+
+            void Write( BinarySerializer w )
+            {
+            }
+
             // This is also bad: the DomainView is a small struct that isolates the domain
             // and is tied to this object reference.
             // Each ObservableObjects and InternalObjects have their own and must interact only with it.
             public DomainView ThisIsBad => Domain;
         }
 
+        [SerializationVersion(0)]
         public class TryingToExportNotExportableProperties3 : ObservableObject
         {
+            public TryingToExportNotExportableProperties3()
+            {
+            }
+
+            TryingToExportNotExportableProperties3( IBinaryDeserializer r, TypeReadInfo info )
+               : base( RevertSerialization.Default )
+            {
+            }
+
+            void Write( BinarySerializer w )
+            {
+            }
+
             // Error on property can be set, but this obviously prevents the whole type to be exported.
             [NotExportable(Error = "Missed..." )]
             public int NoWay { get; }
@@ -396,13 +437,25 @@ namespace CK.Observable.Domain.Tests
                 .WithMessage( "Exporting 'TryingToExportNotExportableProperties3.NoWay' is forbidden: Missed..." );
         }
 
-
+        [SerializationVersion(0)]
         public class TimerAndRemiderProperties : ObservableObject
         {
             public TimerAndRemiderProperties()
             {
                 Timer = new ObservableTimer( DateTime.UtcNow.AddDays( 5 ), 1000 );
                 Reminder = new ObservableReminder( Timer.DueTimeUtc );
+            }
+
+            TimerAndRemiderProperties( IBinaryDeserializer r, TypeReadInfo info )
+            {
+                Timer = (ObservableTimer)r.ReadObject();
+                Reminder = (ObservableReminder)r.ReadObject();
+            }
+
+            void Write( BinarySerializer w )
+            {
+                w.WriteObject( Timer );
+                w.WriteObject( Reminder );
             }
 
             public ObservableTimer Timer { get; }
