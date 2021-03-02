@@ -327,7 +327,7 @@ namespace CK.Observable.Domain.Tests
                     }
                     else
                     {
-                        od.Root.RemindFromPool( DateTime.UtcNow.AddMilliseconds( 200 ), R_Elapsed );
+                        od.Root.RemindFromPool( DateTime.UtcNow.AddMilliseconds( 50-i ), R_Elapsed );
                     }
                 }
             } );
