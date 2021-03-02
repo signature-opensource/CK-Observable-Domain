@@ -245,6 +245,7 @@ namespace CK.Observable
                     return true;
                 }
                 c.DumpLog( monitor, false );
+                int count = 0;
                 var (ex, result) = await ModifyNoThrowAsync( monitor, () =>
                 {
                     Debug.Assert( c != null );
@@ -257,6 +258,7 @@ namespace CK.Observable
                         if( !o.IsDestroyed )
                         {
                             o.Unload( true );
+                            ++count;
                         }
                     }
                     foreach( var o in c.UnreacheableInternals )
@@ -264,6 +266,7 @@ namespace CK.Observable
                         if( !o.IsDestroyed )
                         {
                             o.Unload( true );
+                            ++count;
                         }
                     }
                     foreach( var o in c.UnreacheableTimedObjects )
@@ -271,6 +274,7 @@ namespace CK.Observable
                         if( !o.IsDestroyed )
                         {
                             o.Destroy();
+                            ++count;
                         }
                     }
                     //// Pool reminders may have been added/removed to the pool by transactions
@@ -287,6 +291,7 @@ namespace CK.Observable
                     monitor.Error( ex );
                     return false;
                 }
+                monitor.CloseGroup( $"Removed {count} objects." );
                 return result.Success;
             }
         }

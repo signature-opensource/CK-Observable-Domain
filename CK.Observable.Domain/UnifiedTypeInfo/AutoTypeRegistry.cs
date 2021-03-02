@@ -423,7 +423,7 @@ namespace CK.Observable
                 Debug.Assert( v.Value >= 0 );
                 version = v.Value;
 
-                if( ctor == null ) throw new InvalidOperationException( $"Missing private deserialization constructor '{t.Name}( IBinaryDeserializer r, TypeReadInfo info )'." );
+                if( ctor == null ) throw new InvalidOperationException( $"Missing private deserialization constructor '{t.Name}( IBinaryDeserializer r, TypeReadInfo info ) : base( RevertSerialization.Default ) {{ ... }}'." );
 
                 if( writeMethod == null ) throw new InvalidOperationException( $"Missing private 'void {t.Name}.Write( {nameof( BinarySerializer )} )'." );
                 if( !writeMethod.IsPrivate )
