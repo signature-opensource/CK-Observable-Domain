@@ -384,8 +384,9 @@ namespace CK.Observable
 
         /// <summary>
         /// Updates the heap based on all timed event that has changed.
+        /// The _changed set is processed and cleared.
         /// </summary>
-        void UpdateMinHeap()
+        internal void UpdateMinHeap()
         {
             foreach( var ev in _changed )
             {

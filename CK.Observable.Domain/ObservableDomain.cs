@@ -1046,7 +1046,17 @@ namespace CK.Observable
                     {
                         var now = DateTime.UtcNow;
                         foreach( var tracker in _trackers ) tracker.AfterModify( t.Monitor, t.StartTime, now - t.StartTime );
-                        if( _timeManager.IsRunning ) _timeManager.RaiseElapsedEvent( t.Monitor, now, fromTimer );
+                        if( _timeManager.IsRunning )
+                        {
+                            _timeManager.RaiseElapsedEvent( t.Monitor, now, fromTimer );
+                        }
+                        else
+                        {
+                            // If the time manager is not running, we must
+                            // handle the changed timed events so that the
+                            // active timed event min heap is up to date.
+                            _timeManager.UpdateMinHeap();
+                        }
                     }
                 }
             }
