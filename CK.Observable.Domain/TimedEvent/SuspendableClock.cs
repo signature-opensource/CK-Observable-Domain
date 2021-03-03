@@ -89,7 +89,14 @@ namespace CK.Observable
                 int count = r.ReadNonNegativeSmallInt32();
                 while( --count >= 0 )
                 {
+                    r.DebugCheckSentinel();
+                    var aa = r.ReadString();
+
                     var t = (ObservableTimedEventBase)r.ReadObject()!;
+
+                    var bb = r.ReadString();
+                    r.DebugCheckSentinel();
+
                     t.SetDeserializedClock( this );
                     Bound( t );
                 }
@@ -117,7 +124,14 @@ namespace CK.Observable
             ObservableTimedEventBase? t = _firstInClock;
             while( t != null )
             {
+                w.DebugWriteSentinel();
+                w.Write( "AAAAAAAAAAAAA" );
+
                 w.WriteObject( t );
+
+                w.Write( "BBBBBBBBBBBBB" );
+                w.DebugWriteSentinel();
+
                 t = t.NextInClock;
             }
             _isActiveChanged.Write( w );

@@ -29,12 +29,16 @@ namespace CK.Observable
         ObservableTimedEventBase( IBinaryDeserializer r, TypeReadInfo info )
             : base( RevertSerialization.Default )
         {
+            r.DebugCheckSentinel();
             _handlers = new ObservableEventHandler<TEventArgs>( r );
+            r.DebugCheckSentinel();
         }
 
         void Write( BinarySerializer w )
         {
+            w.DebugWriteSentinel();
             _handlers.Write( w );
+            w.DebugWriteSentinel();
         }
 
         internal override bool HasHandlers => _handlers.HasHandlers;

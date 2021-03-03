@@ -65,8 +65,14 @@ namespace CK.Observable
                     NextInClock = (ObservableTimedEventBase?)r.ReadObject();
                     PrevInClock = (ObservableTimedEventBase?)r.ReadObject();
                 }
+                r.DebugCheckSentinel();
                 _disposed = new ObservableEventHandler<ObservableDomainEventArgs>( r );
+                r.DebugCheckSentinel();
+
+                r.DebugCheckSentinel();
                 Tag = r.ReadObject();
+                r.DebugCheckSentinel();
+
                 // Call to TimeManager.OnCreated is done by TimeManager.Load() that is called at the end of the object load,
                 // before the sidekicks so that the order in the linked list of ObservableTimedEventBase is preserved.
                 // Activation is also done by TimeManager.Load().
@@ -88,8 +94,14 @@ namespace CK.Observable
             {
                 w.Write( ActiveIndex );
                 w.Write( ExpectedDueTimeUtc );
+
+                w.DebugWriteSentinel();
                 _disposed.Write( w );
+                w.DebugWriteSentinel();
+
+                w.DebugWriteSentinel();
                 w.WriteObject( Tag );
+                w.DebugWriteSentinel();
             }
         }
 

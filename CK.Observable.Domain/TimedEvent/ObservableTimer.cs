@@ -50,6 +50,7 @@ namespace CK.Observable
         ObservableTimer( IBinaryDeserializer r, TypeReadInfo? info )
             : base( RevertSerialization.Default )
         {
+            r.DebugCheckSentinel();
             Debug.Assert( !IsDestroyed );
             _milliSeconds = r.ReadInt32();
             if( _milliSeconds < 0 )
@@ -59,13 +60,16 @@ namespace CK.Observable
             }
             Name = r.ReadNullableString();
             ReusableArgs = new ObservableTimerEventArgs( this );
+            r.DebugCheckSentinel();
         }
 
         void Write( BinarySerializer w )
         {
+            w.DebugWriteSentinel();
             Debug.Assert( !IsDestroyed );
             w.Write( _isActive ? -_milliSeconds : _milliSeconds );
             w.WriteNullableString( Name );
+            w.DebugWriteSentinel();
         }
 
         private protected override bool GetIsActiveFlag() => _isActive;

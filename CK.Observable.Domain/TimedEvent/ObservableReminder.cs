@@ -47,16 +47,20 @@ namespace CK.Observable
         ObservableReminder( IBinaryDeserializer r, TypeReadInfo? info )
             : base( RevertSerialization.Default )
         {
+            r.DebugCheckSentinel();
             Debug.Assert( !IsDestroyed );
             IsPooled = r.ReadBoolean();
             ReusableArgs = new ObservableReminderEventArgs( this );
             if( IsPooled && ActiveIndex == 0 ) TimeManager.ReleaseToPool( this );
+            r.DebugCheckSentinel();
         }
 
         void Write( BinarySerializer w )
         {
             Debug.Assert( !IsDestroyed );
+            w.DebugWriteSentinel();
             w.Write( IsPooled );
+            w.DebugWriteSentinel();
         }
 
         /// <summary>
