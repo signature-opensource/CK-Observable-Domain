@@ -1039,6 +1039,7 @@ namespace CK.Observable
                         break;
                     }
                 }
+                bool updatedMinHeapDone = false;
                 if( !skipped && actions != null )
                 {
                     actions();
@@ -1048,16 +1049,17 @@ namespace CK.Observable
                         foreach( var tracker in _trackers ) tracker.AfterModify( t.Monitor, t.StartTime, now - t.StartTime );
                         if( _timeManager.IsRunning )
                         {
+                            updatedMinHeapDone = true;
                             _timeManager.RaiseElapsedEvent( t.Monitor, now, fromTimer );
                         }
-                        else
-                        {
-                            // If the time manager is not running, we must
-                            // handle the changed timed events so that the
-                            // active timed event min heap is up to date.
-                            _timeManager.UpdateMinHeap();
-                        }
                     }
+                }
+                if( !updatedMinHeapDone )
+                {
+                    // If the time manager is not running, we must
+                    // handle the changed timed events so that the
+                    // active timed event min heap is up to date.
+                    _timeManager.UpdateMinHeap();
                 }
             }
             catch( Exception ex )
