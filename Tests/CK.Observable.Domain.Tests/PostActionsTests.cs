@@ -18,6 +18,13 @@ namespace CK.Observable.Domain.Tests
     [TestFixture]
     public class PostActionsTests
     {
+        [SetUp]
+        public void BeforeEach()
+        {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+        }
+
         public enum HandlerTarget { Local, Domain }
 
         public class SimpleCommand

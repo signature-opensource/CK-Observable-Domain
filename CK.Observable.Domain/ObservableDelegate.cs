@@ -37,7 +37,6 @@ namespace CK.Observable
                     {
                         r.DebugCheckSentinel();
                         r.ReadSharedString();
-                        r.DebugCheckSentinel();
                         SkipArray( r );
                     }
                     while( --count > 0 );
@@ -113,8 +112,8 @@ namespace CK.Observable
                 }
                 while( --count > 0 );
                 _d = final;
-                r.DebugCheckSentinel();
             }
+            r.DebugCheckSentinel();
 
             static Type[] DoReadArray( IBinaryDeserializer r )
             {

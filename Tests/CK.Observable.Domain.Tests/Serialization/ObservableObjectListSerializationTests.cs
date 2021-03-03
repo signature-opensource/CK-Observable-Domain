@@ -117,6 +117,16 @@ namespace CK.Observable.Domain.Tests.Serialization
         [Test]
         public void Self_registering_ObservableObject_can_be_serialized()
         {
+            using( var d = new ObservableDomain( TestHelper.Monitor, "TEST", startTimer: true ) )
+            {
+                d.Modify( TestHelper.Monitor, () =>
+                {
+                    var o = new C();
+                    o.Destroyed += o.OnObjectDisposed;
+                } );
+                ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
+            }
+
             using( var d = new ObservableDomain(TestHelper.Monitor, "TEST", startTimer: true ) )
             {
                 d.Modify( TestHelper.Monitor, () =>

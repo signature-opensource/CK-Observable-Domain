@@ -43,7 +43,7 @@ namespace CK.Observable
         /// </summary>
         /// <param name="output">The stream to write to.</param>
         /// <param name="drivers">Optional driver resolver to use. Uses <see cref="SerializerRegistry.Default"/> by default.</param>
-        /// <param name="leaveOpen">True to leave the stram opened when disposing. False to close it.</param>
+        /// <param name="leaveOpen">True to leave the stream opened when disposing. False to close it.</param>
         /// <param name="encoding">Optional encoding for texts. Defaults to UTF-8.</param>
         /// <param name="disposedTracker">Optional collector of disposed instance. See <see cref="DisposedTracker"/>.</param>
         public BinarySerializer(
