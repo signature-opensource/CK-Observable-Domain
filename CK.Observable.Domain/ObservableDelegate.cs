@@ -22,20 +22,27 @@ namespace CK.Observable
 
         public static void Skip( IBinaryDeserializer r )
         {
+            r.DebugCheckSentinel();
             int count = r.ReadNonNegativeSmallInt32();
             if( count > 0 )
-            { 
+            {
+                r.DebugCheckSentinel();
                 r.ReadType();
+                r.DebugCheckSentinel();
                 object? o = r.ReadObject();
+                r.DebugCheckSentinel();
                 if( o != null )
                 {
                     do
                     {
+                        r.DebugCheckSentinel();
                         r.ReadSharedString();
+                        r.DebugCheckSentinel();
                         SkipArray( r );
                     }
                     while( --count > 0 );
                 }
+                r.DebugCheckSentinel();
             }
 
             static void SkipArray( IBinaryDeserializer r )
@@ -60,19 +67,24 @@ namespace CK.Observable
             }
 
             _d = null;
+            r.DebugCheckSentinel();
             int count = r.ReadNonNegativeSmallInt32();
             if( count > 0 )
             {
                 Delegate? final = null;
+                r.DebugCheckSentinel();
                 Type tD = r.ReadType();
                 do
                 {
+                    r.DebugCheckSentinel();
                     object? o = r.ReadObject();
                     if( o != null )
                     {
+                        r.DebugCheckSentinel();
                         string methodName = r.ReadSharedString();
                         // Use local DoReadArray since ArrayDeserializer<Type>.ReadArray track the array (and ArraySerializer<Type>.WriteObjects don't):
                         // sharing this array makes no sense.
+                        r.DebugCheckSentinel();
                         Type[] paramTypes = DoReadArray( r );
                         if( o is Type t )
                         {
@@ -101,6 +113,7 @@ namespace CK.Observable
                 }
                 while( --count > 0 );
                 _d = final;
+                r.DebugCheckSentinel();
             }
 
             static Type[] DoReadArray( IBinaryDeserializer r )
@@ -120,27 +133,34 @@ namespace CK.Observable
         public void Write( BinarySerializer w )
         {
             var list = Cleanup();
+            w.DebugWriteSentinel();
             w.WriteNonNegativeSmallInt32( list.Length );
             if( list.Length > 0 )
             {
+                w.DebugWriteSentinel();
                 w.Write( list[0].GetType() );
                 foreach( var d in list )
                 {
                     // Don't serialize sidekick handlers.
                     if( d.Target is ObservableDomainSidekick )
                     {
+                        w.DebugWriteSentinel();
                         w.WriteObject( null );
                     }
                     else
                     {
+                        w.DebugWriteSentinel();
                         w.WriteObject( d.Target ?? d.Method.DeclaringType );
+                        w.DebugWriteSentinel();
                         w.WriteSharedString( d.Method.Name );
                         var paramInfos = d.Method.GetParameters();
+                        w.DebugWriteSentinel();
                         w.WriteNonNegativeSmallInt32( paramInfos.Length );
                         foreach( var p in paramInfos ) w.Write( p.ParameterType );
                     }
                 }
             }
+            w.DebugWriteSentinel();
         }
 
         /// <summary>
