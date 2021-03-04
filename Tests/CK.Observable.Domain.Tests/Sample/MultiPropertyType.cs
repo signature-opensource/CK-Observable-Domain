@@ -138,27 +138,28 @@ namespace CK.Observable.Domain.Tests.Sample
 
         public override int GetHashCode()
         {
-            return (int)Util.Hash.Combine( Util.Hash.StartValue,
+            return HashCode.Combine(
                     String,
                     Int32,
                     UInt32,
                     Int64,
                     UInt64,
-                    Int16,
-                    UInt16,
-                    Byte,
-                    SByte,
-                    DateTime,
-                    TimeSpan,
-                    DateTimeOffset,
-                    Guid,
-                    Double,
-                    Single,
-                    Char,
-                    Boolean,
-                    Position.Latitude,
-                    Position.Longitude,
-                    Enum );
+                    HashCode.Combine( SByte,
+                        Int16,
+                        UInt16,
+                        Byte,
+                        DateTime,
+                        TimeSpan,
+                        DateTimeOffset,
+                        Guid ),
+                    HashCode.Combine(
+                        Double,
+                        Single,
+                        Char,
+                        Boolean,
+                        Position.Latitude,
+                        Position.Longitude,
+                        Enum ) );
         }
 
         public bool Equals( MultiPropertyType other )

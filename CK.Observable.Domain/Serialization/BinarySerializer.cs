@@ -287,7 +287,7 @@ namespace CK.Observable
 
         /// <summary>
         /// Writes the type, returning true if the type has been written for the first time
-        /// or false if it has been previsously written.
+        /// or false if it has been previously written.
         /// </summary>
         /// <param name="t">Type to serialize. Can be null.</param>
         /// <returns>True if the type has been written, false if it was already serialized.</returns>

@@ -433,7 +433,6 @@ namespace CK.Observable
                         var (lostTimedObjects, unusedPooledReminders, pooledReminderCount) = _timeManager.Save( monitor, w, trackLostObjects );
                         w.DebugWriteSentinel();
                         _sidekickManager.Save( w );
-                        w.DebugWriteSentinel();
                         var data = new LostObjectTracker( this,
                                                           lostObservableObjects,
                                                           lostInternalObjects,
@@ -557,7 +556,6 @@ namespace CK.Observable
                 bool timerRunning = _timeManager.Load( monitor, r );
                 r.DebugCheckSentinel();
                 _sidekickManager.Load( r );
-                r.DebugCheckSentinel();
                 // This is where specialized typed ObservableDomain bind their roots.
                 OnLoaded();
                 // Calling PostDeserializationActions finalizes the object's graph.

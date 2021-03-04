@@ -21,28 +21,10 @@ namespace CK.Observable
         readonly List<object> _objects;
 
         readonly List<Action> _postDeserializationActions;
-        readonly Stack<ConstructorContext?> _ctorContextStack;
         BinaryFormatter? _binaryFormatter;
 
         Stack<(IDeserializationDeferredDriver, object, TypeReadInfo)>? _deferred;
         int _recurseCount;
-
-        int _debugModeCounter;
-        int _debugSentinel;
-        string? _lastWriteSentinel;
-        string? _lastReadSentinel;
-
-        class ConstructorContext
-        {
-            public readonly TypeReadInfo ReadInfo;
-            public int CurrentIndex;
-
-            public ConstructorContext( TypeReadInfo readInfo )
-            {
-                CurrentIndex = -1;
-                ReadInfo = readInfo;
-            }
-        }
 
         /// <summary>
         /// Initializes a new <see cref="BinarySerializer"/> on a stream.
@@ -65,7 +47,6 @@ namespace CK.Observable
             _typeInfos = new Dictionary<string, TypeReadInfo>();
             _objects = new List<object>();
             _postDeserializationActions = new List<Action>();
-            _ctorContextStack = new Stack<ConstructorContext?>();
             _drivers = drivers ?? DeserializerRegistry.Default;
             _objectReadTypeInfo = new TypeReadInfo( _drivers );
         }
@@ -136,57 +117,6 @@ namespace CK.Observable
         public int SerializationVersion { get; set; }
 
         /// <summary>
-        /// Gets whether this deserializer is currently in debug mode.
-        /// </summary>
-        public bool IsDebugMode => _debugModeCounter > 0;
-
-        /// <summary>
-        /// Updates the current debug mode that must have been written by <see cref="BinarySerializer.DebugWriteMode(bool?)"/>.
-        /// </summary>
-        /// <returns>Whether the debug mode is currently active or not.</returns>
-        public bool DebugReadMode()
-        {
-            switch( ReadByte() )
-            {
-                case 182: ++_debugModeCounter; break;
-                case 181: --_debugModeCounter; break;
-                case 180: break;
-                default: throw new InvalidDataException( $"Expected DebugMode byte marker." );
-            }
-            return IsDebugMode;
-        }
-
-        /// <summary>
-        /// Checks the existence of a sentinel written by <see cref="BinarySerializer.DebugWriteSentinel"/>.
-        /// An <see cref="InvalidDataException"/> is thrown if <see cref="IsDebugMode"/> is true and the sentinel cannot be read.
-        /// </summary>
-        /// <param name="fileName">Current file name used to build the <see cref="InvalidDataException"/> message if sentinel cannot be read back.</param>
-        /// <param name="line">Current line number used to build the <see cref="InvalidDataException"/> message if sentinel cannot be read back.</param>
-        public void DebugCheckSentinel( [CallerFilePath]string? fileName = null, [CallerLineNumber] int line = 0 )
-        {
-            if( !IsDebugMode ) return;
-            bool success = false;
-            Exception? e = null;
-            try
-            {
-                success = ReadInt32() == 987654321
-                          && ReadInt32() == _debugSentinel
-                          && (_lastWriteSentinel = ReadString()) != null;
-            }
-            catch( Exception ex )
-            {
-                e = ex;
-            }
-            if( !success )
-            {
-                var msg = $"Sentinel check failure: expected reading sentinel n°{_debugSentinel} at {fileName}({line}). Last successful sentinel was written at {_lastWriteSentinel} and read at {_lastReadSentinel}.";
-                throw new InvalidDataException( msg, e );
-            }
-            ++_debugSentinel;
-            _lastReadSentinel = fileName + '(' + line.ToString() + ')';
-        }
-
-        /// <summary>
         /// Reads an expected string and throws an <see cref="InvalidDataException"/> if it cannot be read.
         /// This is typically used if (and when) <see cref="IsDebugMode"/> is true but can be used independently.
         /// </summary>
@@ -207,7 +137,7 @@ namespace CK.Observable
             if( read != expected )
             {
                 var msg = $"Read string failure: expected string '{expected}' but got '{(e!=null?"<see the inner exception>" : read)}'.";
-                throw new InvalidDataException( msg, e );
+                ThrowInvalidDataException( msg, e );
             }
         }
 
@@ -217,80 +147,108 @@ namespace CK.Observable
         /// <returns>The object read, possibly in an intermediate state.</returns>
         public object ReadObject()
         {
-            var b = (SerializationMarker)ReadByte();
-            switch( b )
+            try
             {
-                case SerializationMarker.Null: return null;
-                case SerializationMarker.String: return ReadString();
-                case SerializationMarker.Int32: return ReadInt32();
-                case SerializationMarker.Double: return ReadDouble();
-                case SerializationMarker.Char: return ReadChar();
-                case SerializationMarker.Boolean: return ReadBoolean();
-                case SerializationMarker.UInt32: return ReadUInt32();
-                case SerializationMarker.Float: return ReadSingle();
-                case SerializationMarker.DateTime: return ReadDateTime();
-                case SerializationMarker.Guid: return ReadGuid();
-                case SerializationMarker.TimeSpan: return ReadTimeSpan();
-                case SerializationMarker.DateTimeOffset: return ReadDateTimeOffset();
-                case SerializationMarker.Reference: return ReadReference();
-                case SerializationMarker.Type: return ReadType();
-            }
-            Debug.Assert( b == SerializationMarker.EmptyObject
-                          || b == SerializationMarker.ObjectBinaryFormatter
-                          || b == SerializationMarker.StructBinaryFormatter
-                          || b == SerializationMarker.Object
-                          || b == SerializationMarker.DeferredObject
-                          || b == SerializationMarker.Struct );
-            object result;
-            if( b == SerializationMarker.EmptyObject )
-            {
-                _objects.Add( result = new object() );
-            }
-            else if( b == SerializationMarker.ObjectBinaryFormatter || b == SerializationMarker.StructBinaryFormatter )
-            {
-                if( _binaryFormatter == null ) _binaryFormatter = new BinaryFormatter();
-                result = _binaryFormatter.Deserialize( BaseStream );
-                if( b == SerializationMarker.ObjectBinaryFormatter )
+                var b = (SerializationMarker)ReadByte();
+                switch( b )
                 {
-                    _objects.Add( result );
+                    case SerializationMarker.Null: return null;
+                    case SerializationMarker.String: return ReadString();
+                    case SerializationMarker.Int32: return ReadInt32();
+                    case SerializationMarker.Double: return ReadDouble();
+                    case SerializationMarker.Char: return ReadChar();
+                    case SerializationMarker.Boolean: return ReadBoolean();
+                    case SerializationMarker.UInt32: return ReadUInt32();
+                    case SerializationMarker.Float: return ReadSingle();
+                    case SerializationMarker.DateTime: return ReadDateTime();
+                    case SerializationMarker.Guid: return ReadGuid();
+                    case SerializationMarker.TimeSpan: return ReadTimeSpan();
+                    case SerializationMarker.DateTimeOffset: return ReadDateTimeOffset();
+                    case SerializationMarker.Reference: return ReadReference();
+                    case SerializationMarker.Type: return ReadType();
                 }
-            }
-            else 
-            {
-                var info = ReadTypeReadInfo( b == SerializationMarker.Object || b == SerializationMarker.DeferredObject );
-                var d = info.GetDeserializationDriver( _drivers );
-                if( d == null )
+                Debug.Assert( b == SerializationMarker.EmptyObject
+                              || b == SerializationMarker.ObjectBinaryFormatter
+                              || b == SerializationMarker.StructBinaryFormatter
+                              || b == SerializationMarker.Object
+                              || b == SerializationMarker.DeferredObject
+                              || b == SerializationMarker.Struct );
+                object result;
+                if( b == SerializationMarker.EmptyObject )
                 {
-                    throw new InvalidOperationException( $"Unable to find a deserialization driver for Assembly Qualified Name '{info.TypeName}'." );
+                    _objects.Add( result = new object() );
                 }
-                if( b == SerializationMarker.DeferredObject )
+                else if( b == SerializationMarker.ObjectBinaryFormatter || b == SerializationMarker.StructBinaryFormatter )
                 {
-                    if( !(d is IDeserializationDeferredDriver defer) )
+                    var dbg = IsDebugMode;
+                    if( dbg ) OpenDebugPushContext( b.ToString() );
+                    if( _binaryFormatter == null ) _binaryFormatter = new BinaryFormatter();
+                    result = _binaryFormatter.Deserialize( BaseStream );
+                    if( b == SerializationMarker.ObjectBinaryFormatter )
                     {
-                        throw new InvalidOperationException( $"Type '{info.TypeName}' has been serialized as a deferred object but its deserializer ({d.GetType().FullName}) is not a {nameof(IDeserializationDeferredDriver)}." );
+                        _objects.Add( result );
                     }
-                    if( _deferred == null ) _deferred = new Stack<(IDeserializationDeferredDriver, object, TypeReadInfo)>( 100 );
-                    result = defer.Allocate( this, info );
-                    _deferred.Push( (defer, result, info) );
+                    if( dbg ) CloseDebugPushContext( $"'{result.GetType().Name}' read." );
                 }
                 else
                 {
-                    ++_recurseCount;
-                    result = d.ReadInstance( this, info );
-                    --_recurseCount;
-                }
-                if( _recurseCount == 0 && _deferred != null )
-                {
-                    while( _deferred.TryPop( out var s ) )
+                    var info = ReadTypeReadInfo( b == SerializationMarker.Object || b == SerializationMarker.DeferredObject );
+                    var d = info.GetDeserializationDriver( _drivers );
+                    if( d == null )
                     {
+                        ThrowInvalidDataException( $"Unable to find a deserialization driver for Assembly Qualified Name '{info.TypeName}'." );
+                    }
+                    if( b == SerializationMarker.DeferredObject )
+                    {
+                        if( !(d is IDeserializationDeferredDriver defer) )
+                        {
+                            ThrowInvalidDataException( $"Type '{info.TypeName}' has been serialized as a deferred object but its deserializer ({d.GetType().FullName}) is not a {nameof( IDeserializationDeferredDriver )}." );
+                            return null!; // never
+                        }
+                        if( _deferred == null ) _deferred = new Stack<(IDeserializationDeferredDriver, object, TypeReadInfo)>( 100 );
+
+                        if( IsDebugMode ) LineDebugContext( info.SimpleTypeName );
+                        result = defer.Allocate( this, info );
+                        _deferred.Push( (defer, result, info) );
+                    }
+                    else
+                    {
+                        var dbg = IsDebugMode;
+                        if( dbg ) OpenDebugPushContext( $"Reading '{info.SimpleTypeName}' instance" );
+
                         ++_recurseCount;
-                        s.Item1.ReadInstance( this, s.Item3, s.Item2 );
+                        result = d.ReadInstance( this, info );
                         --_recurseCount;
+
+                        if( dbg ) CloseDebugPushContext( $"Read '{info.SimpleTypeName}'." );
+                    }
+                    if( _recurseCount == 0 && _deferred != null )
+                    {
+                        var dbg = IsDebugMode;
+                        while( _deferred.TryPop( out var s ) )
+                        {
+                            if( dbg ) OpenDebugPushContext( $"Reading deferred '{info.SimpleTypeName}' instance" );
+
+                            ++_recurseCount;
+                            s.Item1.ReadInstance( this, s.Item3, s.Item2 );
+                            --_recurseCount;
+
+                            if( dbg ) CloseDebugPushContext( $"Read deferred '{info.SimpleTypeName}'." );
+                        }
                     }
                 }
+                Debug.Assert( result.GetType().IsClass == !(result is ValueType) );
+                return result;
             }
-            Debug.Assert( result.GetType().IsClass == !(result is ValueType) );
-            return result;
+            catch( Exception ex )
+            {
+                if( ex is InvalidDataException invalid && invalid.Message.StartsWith( "[WithContext]" ) )
+                {
+                    throw;
+                }
+                ThrowInvalidDataException( "Unexpected error.", ex );
+                return null!; // never
+            }
         }
 
         object ReadReference()
@@ -298,11 +256,11 @@ namespace CK.Observable
             int idx = ReadInt32();
             if( idx >= _objects.Count )
             {
-                throw new InvalidDataException( $"Unable to resolve reference {idx}. Current is {_objects.Count}." );
+                ThrowInvalidDataException( $"Unable to resolve reference {idx}. Current is {_objects.Count}." );
             }
             if( _objects[idx] == null )
             {
-                throw new InvalidDataException( $"Unable to resolve reference {idx}. Object has not been created or has not been registered." );
+                ThrowInvalidDataException( $"Unable to resolve reference {idx}. Object has not been created or has not been registered." );
             }
             return _objects[idx];
         }
@@ -377,7 +335,9 @@ namespace CK.Observable
                         return t;
                     }
                 case 3: return _typesIdx[ReadNonNegativeSmallInt32()];
-                default: throw new InvalidDataException();
+                default:
+                    ThrowInvalidDataException( "Invalid OneTypeName marker." );
+                    return null!; // null
             }
         }
 
