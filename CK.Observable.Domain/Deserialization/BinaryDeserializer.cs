@@ -207,7 +207,6 @@ namespace CK.Observable
                         }
                         if( _deferred == null ) _deferred = new Stack<(IDeserializationDeferredDriver, object, TypeReadInfo)>( 100 );
 
-                        if( IsDebugMode ) LineDebugContext( info.SimpleTypeName );
                         result = defer.Allocate( this, info );
                         _deferred.Push( (defer, result, info) );
                     }
@@ -242,7 +241,7 @@ namespace CK.Observable
             }
             catch( Exception ex )
             {
-                if( ex is InvalidDataException invalid && invalid.Message.StartsWith( "[See DebugDumpContext]" ) )
+                if( ex is InvalidDataException invalid && invalid.Message.StartsWith( ExceptionPrefixContext ) )
                 {
                     throw;
                 }

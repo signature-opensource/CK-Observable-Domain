@@ -9,18 +9,13 @@ namespace CK.Observable
 {
     public partial class BinaryDeserializer
     {
-        readonly List<(int, string)> _debugContext = new List<(int, string)>();
+        readonly Stack<string> _debugContext = new Stack<string>();
         int _debugModeCounter;
         int _debugSentinel;
         string? _lastWriteSentinel;
         string? _lastReadSentinel;
-        int _debugContextDepth;
 
-        /// <summary>
-        /// Gets a string that contains the detailed logs of the read
-        /// when <see cref="IsDebugMode"/> is true and an error occurred.
-        /// </summary>
-        public string? DebugDumpContext { get; private set; }
+        public const string ExceptionPrefixContext = "[WithContext]";
 
         /// <summary>
         /// Gets whether this deserializer is currently in debug mode.
@@ -76,29 +71,25 @@ namespace CK.Observable
         void OpenDebugPushContext( string ctx )
         {
             Debug.Assert( IsDebugMode );
-            _debugContext.Add( (++_debugContextDepth, ctx) );
+            _debugContext.Push( ctx );
         }
 
         void CloseDebugPushContext( string ctx )
         {
-            _debugContext.Add( (--_debugContextDepth, ctx) );
-        }
-
-        void LineDebugContext( string line )
-        {
-            _debugContext.Add( (_debugContextDepth, line) );
+            _debugContext.Pop();
         }
 
         void ThrowInvalidDataException( string message, Exception? inner = null )
         {
             StringBuilder b = new StringBuilder();
-            b.Append( message );
-            foreach( var (depth,m) in _debugContext )
+            b.Append( ExceptionPrefixContext ).Append( message )
+             .Append( " => Objects read: " )
+             .Append( _objects.Count );
+            foreach( var m in _debugContext )
             {
-                b.AppendLine().Append( ' ', depth*2 ).Append( m );
+                b.Append( " > " ).Append( m );
             }
-            DebugDumpContext = b.ToString();
-            throw new InvalidDataException( "[See DebugDumpContext] " + message, inner );
+            throw new InvalidDataException( b.ToString(), inner );
         }
     }
 }

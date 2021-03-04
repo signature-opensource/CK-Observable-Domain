@@ -574,17 +574,6 @@ namespace CK.Observable
                 }
                 return timerRunning;
             }
-            catch( Exception ex )
-            {
-                if( ex is InvalidDataException invalid && invalid.Message.StartsWith( "[See DebugDumpContext]" ) )
-                {
-                    using( monitor.OpenError( ex ) )
-                    {
-                        monitor.Trace( r.DebugDumpContext );
-                    }
-                }
-                throw;
-            }
             finally
             {
                 _deserializeOrInitializing = false;
