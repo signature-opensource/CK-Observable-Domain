@@ -109,7 +109,7 @@ namespace CK.Observable.Device.Tests
             for( ; ; )
             {
                 await Task.Delay( _period ).ConfigureAwait( false );
-                // Check and break the forever loop make the stop more reactive than the clasical while( !_stopToken.IsCancellationRequested ) { ... }.
+                // Check and break the forever loop make the stop more reactive than the classical while( !_stopToken.IsCancellationRequested ) { ... }.
                 if( _stopToken.IsCancellationRequested )
                 {
                     monitor.Debug( "StopToken signaled." );
@@ -124,7 +124,7 @@ namespace CK.Observable.Device.Tests
                 // Raising the event: note that as long as the properties like
                 // DangerousCurrentMessage/Count are read DURING the handling of
                 // such events, everything is safe!
-                // However, we should never trust the developper to NOT access such properties
+                // However, we should never trust the developer to NOT access such properties
                 // outside of an event context: such dangerous state exposure should be forbidden.
                 await _messageChanged.SafeRaiseAsync( monitor, this, message ).ConfigureAwait( false );
             }
@@ -182,7 +182,7 @@ namespace CK.Observable.Device.Tests
         }
 
         /// <summary>
-        /// This must clenap the device's resources.
+        /// This must cleanup the device's resources.
         /// Typically events should be cleared (thanks to <c>RemoveAll()</c>).
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
