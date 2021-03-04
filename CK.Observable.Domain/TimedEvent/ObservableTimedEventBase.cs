@@ -64,6 +64,26 @@ namespace CK.Observable
                     _clock = (SuspendableClock?)r.ReadObject();
                     NextInClock = (ObservableTimedEventBase?)r.ReadObject();
                     PrevInClock = (ObservableTimedEventBase?)r.ReadObject();
+
+                    r.ImplementationServices.OnPostDeserialization( () =>
+                    {
+                        if( _clock != null )
+                        {
+                            if( _clock.V0Bug == null || !_clock.V0Bug.Contains( this ) )
+                            {
+                                _clock = null;
+                                if( NextInClock != null ) NextInClock = null;
+                                if( PrevInClock != null ) PrevInClock = null;
+                            }
+                        }
+                        else
+                        {
+                            // Oups?
+                            if( NextInClock != null ) NextInClock = null;
+                            if( PrevInClock != null ) PrevInClock = null;
+                        }
+
+                    } );
                 }
                 _disposed = new ObservableEventHandler<ObservableDomainEventArgs>( r );
                 Tag = r.ReadObject();

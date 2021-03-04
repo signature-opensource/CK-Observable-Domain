@@ -53,6 +53,26 @@ namespace CK.Observable
             }
         }
 
+        List<ObservableTimedEventBase>? _0Bug;
+        bool _0BugDone;
+        internal IReadOnlyList<ObservableTimedEventBase>? V0Bug
+        {
+            get
+            {
+                if( !_0BugDone && _0Bug != null )
+                {
+                    _0BugDone = true;
+                    for( int i = 0; i < _0Bug.Count; ++i )
+                    {
+                        var o = _0Bug[i];
+                        o.PrevInClock = i == 0 ? null : _0Bug[i - 1];
+                        o.NextInClock = i == _0Bug.Count - 1 ? null : _0Bug[i + 1];
+                    }
+                }
+                return _0Bug;
+            }
+        }
+
         SuspendableClock( IBinaryDeserializer r, TypeReadInfo info )
             : base( RevertSerialization.Default )
         {
@@ -80,9 +100,11 @@ namespace CK.Observable
                 var t = _firstInClock;
                 while( t != null )
                 {
-                    ++_count;
+                    if( _0Bug == null ) _0Bug = new List<ObservableTimedEventBase>();
+                    _0Bug.Add( t );
                     t = t.NextInClock;
                 }
+                _count = _0Bug?.Count ?? 0;
             }
             else
             {
