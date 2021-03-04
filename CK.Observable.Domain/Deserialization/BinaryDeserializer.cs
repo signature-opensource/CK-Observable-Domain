@@ -242,7 +242,7 @@ namespace CK.Observable
             }
             catch( Exception ex )
             {
-                if( ex is InvalidDataException invalid && invalid.Message.StartsWith( "[WithContext]" ) )
+                if( ex is InvalidDataException invalid && invalid.Message.StartsWith( "[See DebugDumpContext]" ) )
                 {
                     throw;
                 }

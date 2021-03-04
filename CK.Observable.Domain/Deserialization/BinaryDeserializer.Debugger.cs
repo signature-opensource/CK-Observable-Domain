@@ -17,6 +17,12 @@ namespace CK.Observable
         int _debugContextDepth;
 
         /// <summary>
+        /// Gets a string that contains the detailed logs of the read
+        /// when <see cref="IsDebugMode"/> is true and an error occurred.
+        /// </summary>
+        public string? DebugDumpContext { get; private set; }
+
+        /// <summary>
         /// Gets whether this deserializer is currently in debug mode.
         /// </summary>
         public bool IsDebugMode => _debugModeCounter > 0;
@@ -85,13 +91,14 @@ namespace CK.Observable
 
         void ThrowInvalidDataException( string message, Exception? inner = null )
         {
-            StringBuilder b = new StringBuilder( "[WithContext] " );
+            StringBuilder b = new StringBuilder();
             b.Append( message );
             foreach( var (depth,m) in _debugContext )
             {
-                b.AppendLine().Append( ' ', depth ).Append( m );
+                b.AppendLine().Append( ' ', depth*2 ).Append( m );
             }
-            throw new InvalidDataException( b.ToString(), inner );
+            DebugDumpContext = b.ToString();
+            throw new InvalidDataException( "[See DebugDumpContext] " + message, inner );
         }
     }
 }
