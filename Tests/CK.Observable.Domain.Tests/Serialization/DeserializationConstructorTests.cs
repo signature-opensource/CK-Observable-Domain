@@ -14,31 +14,31 @@ namespace CK.Observable.Domain.Tests.Serialization
     public class DeserializationConstructorTests
     {
 
-        public class Base : IDisposableObject
+        public class Base : IDestroyable
         {
-            ObservableEventHandler<ObservableDomainEventArgs> _disposed;
+            ObservableEventHandler<ObservableDomainEventArgs> _destroyed;
 
-            public bool IsDisposed { get; private set; }
+            public bool IsDestroyed { get; private set; }
 
-            public event SafeEventHandler<ObservableDomainEventArgs> Disposed
+            public event SafeEventHandler<ObservableDomainEventArgs> Destroyed
             {
-                add => _disposed.Add( value, nameof( Disposed ) );
-                remove => _disposed.Remove( value );
+                add => _destroyed.Add( value, nameof( Destroyed ) );
+                remove => _destroyed.Remove( value );
             }
 
             public Base()
             {
-                _disposed = new ObservableEventHandler<ObservableDomainEventArgs>();
+                _destroyed = new ObservableEventHandler<ObservableDomainEventArgs>();
             }
 
             protected Base( RevertSerialization _ ) { }
 
-            public void Dispose()
+            public void Destroy()
             {
-                if( !IsDisposed )
+                if( !IsDestroyed )
                 {
-                    IsDisposed = true;
-                    _disposed.Raise( this, null! );
+                    IsDestroyed = true;
+                    _destroyed.Raise( this, null! );
                 }
             }
 
@@ -46,21 +46,21 @@ namespace CK.Observable.Domain.Tests.Serialization
             {
                 if( r.ReadBoolean() )
                 {
-                    _disposed = new ObservableEventHandler<ObservableDomainEventArgs>( r );
+                    _destroyed = new ObservableEventHandler<ObservableDomainEventArgs>( r );
                 }
-                else IsDisposed = true;
+                else IsDestroyed = true;
             }
 
             void Write( BinarySerializer w )
             {
-                if( IsDisposed )
+                if( IsDestroyed )
                 {
                     w.Write( false );
                 }
                 else
                 {
                     w.Write( true );
-                    _disposed.Write( w );
+                    _destroyed.Write( w );
                 }
             }
         }
@@ -77,13 +77,13 @@ namespace CK.Observable.Domain.Tests.Serialization
             Spec( IBinaryDeserializer r, TypeReadInfo? info )
                 : base( RevertSerialization.Default )
             {
-                Debug.Assert( !IsDisposed );
+                Debug.Assert( !IsDestroyed );
                 Name = r.ReadString();
             }
 
             void Write( BinarySerializer w )
             {
-                Debug.Assert( !IsDisposed );
+                Debug.Assert( !IsDestroyed );
                 w.Write( Name );
             }
 
@@ -101,13 +101,13 @@ namespace CK.Observable.Domain.Tests.Serialization
             Spec2( IBinaryDeserializer r, TypeReadInfo? info )
                 : base( RevertSerialization.Default )
             {
-                Debug.Assert( !IsDisposed );
+                Debug.Assert( !IsDestroyed );
                 Power = r.ReadInt32();
             }
 
             void Write( BinarySerializer w )
             {
-                Debug.Assert( !IsDisposed );
+                Debug.Assert( !IsDestroyed );
                 w.Write( Power );
             }
 
@@ -122,15 +122,15 @@ namespace CK.Observable.Domain.Tests.Serialization
 
             Spec2 obj2 = SerializeAndDeserialize( obj );
             obj2.Should().NotBeNull();
-            obj2.IsDisposed.Should().BeFalse();
+            obj2.IsDestroyed.Should().BeFalse();
             obj2.Power.Should().Be( 3712 );
             obj2.Name.Should().Be( "Reversed" );
 
-            obj.Dispose();
+            obj.Destroy();
 
             Spec2 objD = SerializeAndDeserialize( obj );
             objD.Should().NotBeNull();
-            objD.IsDisposed.Should().BeTrue();
+            objD.IsDestroyed.Should().BeTrue();
             objD.Power.Should().Be( 0 );
             objD.Name.Should().BeNull();
         }
@@ -145,7 +145,7 @@ namespace CK.Observable.Domain.Tests.Serialization
                 var writer2 = typeof( Spec2 ).GetMethod( "Write", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.DeclaredOnly );
                 var callParams = new object[] { w };
                 writer0.Invoke( obj, callParams );
-                if( !obj.IsDisposed )
+                if( !obj.IsDestroyed )
                 {
                     writer1.Invoke( obj, callParams );
                     writer2.Invoke( obj, callParams );
@@ -163,7 +163,7 @@ namespace CK.Observable.Domain.Tests.Serialization
 
                 o = System.Runtime.Serialization.FormatterServices.GetUninitializedObject( typeof( Spec2 ) );
                 ctor0.Invoke( o, callParams );
-                if( !(o is IDisposableObject d) || !d.IsDisposed )
+                if( !(o is IDestroyable d) || !d.IsDestroyed )
                 {
                     ctor1.Invoke( o, callParams );
                     ctor2.Invoke( o, callParams );

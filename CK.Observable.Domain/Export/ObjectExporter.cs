@@ -102,7 +102,7 @@ namespace CK.Observable
         }
 
 
-        public void ExportObject( object o )
+        public void ExportObject( object? o )
         {
             switch( o )
             {

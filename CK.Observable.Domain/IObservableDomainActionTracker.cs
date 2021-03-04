@@ -9,7 +9,7 @@ namespace CK.Observable
     /// This optional interface for <see cref="ObservableObject"/> or <see cref="InternalObject"/> enables
     /// domain objects to react to main actions on the domain.
     /// </summary>
-    public interface IObservableDomainActionTracker : IDisposableObject
+    public interface IObservableDomainActionTracker : IDestroyable
     {
         /// <summary>
         /// Called before the <see cref="ObservableDomain.Modify(IActivityMonitor, Action, int)"/> action execution

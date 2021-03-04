@@ -26,7 +26,7 @@ namespace CK.Observable
         /// <summary>
         /// Gets the associated value that has been set.
         /// </summary>
-        public object Value { get; }
+        public object? Value { get; }
 
         /// <summary>
         /// Initializes a new <see cref="CollectionMapSetEvent"/>.
@@ -34,7 +34,7 @@ namespace CK.Observable
         /// <param name="o">The map object.</param>
         /// <param name="key">The key set.</param>
         /// <param name="value">The value set.</param>
-        public CollectionMapSetEvent( ObservableObject o, object key, object value )
+        public CollectionMapSetEvent( ObservableObject o, object key, object? value )
             : base( ObservableEventType.CollectionMapSet )
         {
             ObjectId = o.OId;

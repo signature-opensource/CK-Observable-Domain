@@ -17,10 +17,10 @@ namespace CK.Observable
     [NotExportable( Error = "DomainView must not be exposed. Only the protected Domain should be used." )]
     public readonly struct DomainView
     {
-        readonly IDisposableObject _o;
+        readonly IDestroyable _o;
         readonly ObservableDomain _d;
 
-        internal DomainView( IDisposableObject o, ObservableDomain d )
+        internal DomainView( IDestroyable o, ObservableDomain d )
         {
             _o = o;
             _d = d;
@@ -165,7 +165,7 @@ namespace CK.Observable
         public bool IsDeserializing => _d.IsDeserializing;
 
         /// <summary>
-        /// Ensures that required sidekicks are instantiated and that any required <see cref="ObservableDomainSidekick.RegisterClientObject(IActivityMonitor, IDisposableObject)"/>
+        /// Ensures that required sidekicks are instantiated and that any required <see cref="ObservableDomainSidekick.RegisterClientObject(IActivityMonitor, IDestroyable)"/>
         /// have been called.
         /// When this method returns false, it means that an error occurred and that the current transaction cannot be commited.
         /// <para>

@@ -21,7 +21,7 @@ namespace CK.Observable.Device
 
         /// <summary>
         /// Contains the list of devices.
-        /// This list is mutable by specialiation but this should be used this care: the actual devices
+        /// This list is mutable by specialization but this should be used this care: the actual devices
         /// are handled by the <see cref="IDeviceHost"/>.
         /// See <see cref="OnDevicesChanged"/> that merges the devices from the external device host (and can be overridden if needed).
         /// </summary>
@@ -46,7 +46,7 @@ namespace CK.Observable.Device
         }
 #pragma warning restore CS8618 // Non-nullable field is uninitialized. Consider declaring as nullable.
 
-        void Write( BinarySerializer s )
+        void Write( BinarySerializer w )
         {
         }
 
@@ -82,7 +82,7 @@ namespace CK.Observable.Device
                 else
                 {
                     InternalDevices.RemoveAt( i-- );
-                    d.Dispose();
+                    d.Destroy();
                 }
             }
             InternalDevices.AddRange( snapshot.Values.Select( c => new AvailableDeviceInfo( c.Name, c.Status, c.ControllerKey ) ) );

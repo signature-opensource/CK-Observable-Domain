@@ -240,6 +240,18 @@ namespace CK.Observable.Domain.Tests.TimedEvents
 
             ReminderHasElapsed.Should().BeTrue();
             ClockIsActiveChanged.Should().BeFalse();
+
+            handler.Domain.Modify( TestHelper.Monitor, () =>
+            {
+                handler.Domain.TimeManager.IsRunning.Should().BeTrue();
+                handler.Domain.TimeManager.Stop();
+                handler.Domain.TimeManager.IsRunning.Should().BeFalse();
+                clock = handler.Domain.AllInternalObjects.OfType<SuspendableClock>().Single();
+                clock.IsActive = false;
+
+            } ).Success.Should().BeTrue();
+
+            handler.Reload( TestHelper.Monitor, idempotenceCheck: true );
         }
 
         static bool ClockIsActiveChanged = false;

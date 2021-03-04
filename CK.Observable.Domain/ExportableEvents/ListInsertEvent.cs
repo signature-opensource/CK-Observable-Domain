@@ -26,7 +26,7 @@ namespace CK.Observable
         /// <summary>
         /// Gets the inserted value.
         /// </summary>
-        public object Item { get; }
+        public object? Item { get; }
 
         /// <summary>
         /// Initializes a new <see cref="ListInsertEvent"/>.
@@ -34,7 +34,7 @@ namespace CK.Observable
         /// <param name="o">The list object.</param>
         /// <param name="index">The inserted index.</param>
         /// <param name="item">The inserted value.</param>
-        public ListInsertEvent( ObservableObject o, int index, object item )
+        public ListInsertEvent( ObservableObject o, int index, object? item )
             : base( ObservableEventType.ListInsert )
         {
             ObjectId = o.OId;

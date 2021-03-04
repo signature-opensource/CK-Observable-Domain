@@ -62,7 +62,7 @@ namespace CK.Observable.Domain.Tests
 
         class MoreSpecializedEventArgs : EventMonitoredArgs
         {
-            public MoreSpecializedEventArgs( IActivityMonitor m ) : base( m ) {}
+            public MoreSpecializedEventArgs( IActivityMonitor m ) : base( m ) { }
         }
 
         static MoreSpecializedEventArgs OArgs = new MoreSpecializedEventArgs( TestHelper.Monitor );
@@ -222,7 +222,7 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void testing_auto_cleanup()
         {
-            using( var domain = new ObservableDomain(TestHelper.Monitor, nameof(testing_auto_cleanup), startTimer: true ) )
+            using( var domain = new ObservableDomain( TestHelper.Monitor, nameof( testing_auto_cleanup ), startTimer: true ) )
             {
                 domain.Modify( TestHelper.Monitor, () =>
                 {
@@ -233,7 +233,7 @@ namespace CK.Observable.Domain.Tests
                     counter.Count.Should().Be( 0 );
                     c.TestSpeed = 89;
                     counter.Count.Should().Be( 1 );
-                    counter.Dispose();
+                    counter.Destroy();
                     c.TestSpeed = 1;
                     counter.Count.Should().Be( 1 );
 
@@ -247,11 +247,11 @@ namespace CK.Observable.Domain.Tests
                     c.TestSpeed = 89;
                     counter.Count.Should().Be( 1 );
                     counter2.Count.Should().Be( 1 );
-                    counter.Dispose();
+                    counter.Destroy();
                     c.TestSpeed = 1;
                     counter.Count.Should().Be( 1 );
                     counter2.Count.Should().Be( 2 );
-                    counter2.Dispose();
+                    counter2.Destroy();
                     c.TestSpeed = 2;
                     counter.Count.Should().Be( 1 );
                     counter2.Count.Should().Be( 2 );
@@ -271,19 +271,19 @@ namespace CK.Observable.Domain.Tests
                     counter2.Count.Should().Be( 1 );
                     counter3.Count.Should().Be( 1 );
 
-                    counter2.Dispose();
+                    counter2.Destroy();
                     c.TestSpeed = 1;
                     counter.Count.Should().Be( 2 );
                     counter2.Count.Should().Be( 1 );
                     counter3.Count.Should().Be( 2 );
 
-                    counter3.Dispose();
+                    counter3.Destroy();
                     c.TestSpeed = 2;
                     counter.Count.Should().Be( 3 );
                     counter2.Count.Should().Be( 1 );
                     counter3.Count.Should().Be( 2 );
 
-                    counter.Dispose();
+                    counter.Destroy();
                     c.TestSpeed = 3;
                     counter.Count.Should().Be( 3 );
                     counter2.Count.Should().Be( 1 );
@@ -366,7 +366,7 @@ namespace CK.Observable.Domain.Tests
         [TestCase( "UseBase" )]
         public void private_event_handler_serialization( string type )
         {
-            using var domain = new ObservableDomain(TestHelper.Monitor, nameof(private_event_handler_serialization), startTimer: true );
+            using var domain = new ObservableDomain( TestHelper.Monitor, nameof( private_event_handler_serialization ), startTimer: true );
 
             PrivateHandlerObject? o = null;
             domain.Modify( TestHelper.Monitor, () =>
@@ -377,5 +377,28 @@ namespace CK.Observable.Domain.Tests
             ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, domain );
         }
 
+        [Test]
+        public void ObservableEventHandler_Skip_enables_event_serialization_deletion()
+        {
+            var h = new ObservableEventHandler<EventArgs>();
+            h.Add( StaticOnEvent, nameof( StaticOnEvent ) );
+            h.Add( StaticOnEvent, nameof( StaticOnEvent ) );
+            h.Add( StaticOnEvent, nameof( StaticOnEvent ) );
+
+            using( var s = new MemoryStream() )
+            using( var writer = new BinarySerializer( s, drivers: null, true ) )
+            {
+                writer.DebugWriteSentinel();
+                h.Write( writer );
+                writer.DebugWriteSentinel();
+                s.Position = 0;
+                using( var reader = new BinaryDeserializer( s, null, drivers: null ) )
+                {
+                    reader.DebugCheckSentinel();
+                    ObservableEventHandler.Skip( reader );
+                    reader.DebugCheckSentinel();
+                }
+            }
+        }
     }
 }

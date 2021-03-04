@@ -25,7 +25,7 @@ namespace CK.Observable.League.Tests.MicroMachine
         MachineThing( IBinaryDeserializer r, TypeReadInfo? info )
                 : base( RevertSerialization.Default )
         {
-            Debug.Assert( !IsDisposed );
+            Debug.Assert( !IsDestroyed );
             Machine = (Machine)r.ReadObject()!;
             TemporaryId = r.ReadSmallInt32( 1 );
             _startRead = r.ReadDateTime();
@@ -36,7 +36,7 @@ namespace CK.Observable.League.Tests.MicroMachine
 
         void Write( BinarySerializer w )
         {
-            if( !IsDisposed )
+            if( !IsDestroyed )
             {
                 w.WriteObject( Machine );
                 w.WriteSmallInt32( TemporaryId, 1 );
@@ -90,13 +90,13 @@ namespace CK.Observable.League.Tests.MicroMachine
             Domain.Monitor.Info( $"Clearing {_reminders?.Count ?? 0} reminders." );
             if( _reminders != null && _reminders.Count > 0 )
             {
-                foreach( var r in _reminders ) r.Dispose();
+                foreach( var r in _reminders ) r.Destroy();
                 _reminders.Clear();
             }
         }
 
         /// <summary>
-        /// By default, this simply calls <see cref="ClearTimeouts()"/> and sets a new timeout of <see cref="MachineConfiguration.AutoDisposedTimeout"/>
+        /// By default, this simply calls <see cref="ClearTimeouts()"/> and sets a new timeout of <see cref="MachineConfiguration.AutoDestroyedTimeout"/>
         /// that will call <see cref="Dispose()"/>.
         /// </summary>
         internal protected virtual void OnDestinationConfirmed()
@@ -104,23 +104,20 @@ namespace CK.Observable.League.Tests.MicroMachine
             using( Domain.Monitor.OpenInfo( "OnDestinationConfirmed" ) )
             {
                 ClearTimeouts();
-                CreateTimeout( Machine.Configuration.AutoDisposedTimeout, OnAutoDisposedTimeout );
+                CreateTimeout( Machine.Configuration.AutoDestroyedTimeout, OnAutoDestroyedTimeout );
             }
         }
 
-        protected override void Dispose( bool shouldCleanup )
+        protected override void OnDestroy()
         {
-            if( shouldCleanup )
-            {
-                ClearTimeouts();
-            }
-            base.Dispose( shouldCleanup );
+            ClearTimeouts();
+            base.OnDestroy();
         }
 
-        void OnAutoDisposedTimeout( object sender, ObservableReminderEventArgs e )
+        void OnAutoDestroyedTimeout( object sender, ObservableReminderEventArgs e )
         {
             Domain.Monitor.Info( "OnAutoDisposedTimeout" );
-            Dispose();
+            Destroy();
         }
 
     }

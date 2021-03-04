@@ -43,7 +43,7 @@ namespace CK.Observable
         /// </summary>
         /// <param name="output">The stream to write to.</param>
         /// <param name="drivers">Optional driver resolver to use. Uses <see cref="SerializerRegistry.Default"/> by default.</param>
-        /// <param name="leaveOpen">True to leave the stram opened when disposing. False to close it.</param>
+        /// <param name="leaveOpen">True to leave the stream opened when disposing. False to close it.</param>
         /// <param name="encoding">Optional encoding for texts. Defaults to UTF-8.</param>
         /// <param name="disposedTracker">Optional collector of disposed instance. See <see cref="DisposedTracker"/>.</param>
         public BinarySerializer(
@@ -51,7 +51,7 @@ namespace CK.Observable
             ISerializerResolver? drivers = null,
             bool leaveOpen = false,
             Encoding? encoding = null,
-            Action<IDisposableObject>? disposedTracker = null )
+            Action<IDestroyable>? disposedTracker = null )
             : base( output, encoding ?? Encoding.UTF8, leaveOpen )
         {
             _types = new Dictionary<Type, TypeInfo>();
@@ -69,86 +69,90 @@ namespace CK.Observable
         /// Writes an object that can be null and of any type.
         /// </summary>
         /// <param name="o">The object to write.</param>
-        public void WriteObject( object? o )
+        /// <returns>
+        /// True if write, false if the object has already been
+        /// written and only a reference has been written.
+        /// </returns>
+        public bool WriteObject( object? o )
         {
             switch( o )
             {
                 case null:
                     {
                         Write( (byte)SerializationMarker.Null );
-                        return;
+                        return true;
                     }
                 case string s:
                     {
                         Write( (byte)SerializationMarker.String );
                         Write( s );
-                        return;
+                        return true;
                     }
                 case int i:
                     {
                         Write( (byte)SerializationMarker.Int32 );
                         Write( i );
-                        return;
+                        return true;
                     }
                 case double d:
                     {
                         Write( (byte)SerializationMarker.Double );
                         Write( d );
-                        return;
+                        return true;
                     }
                 case char c:
                     {
                         Write( (byte)SerializationMarker.Char );
                         Write( c );
-                        return;
+                        return true;
                     }
                 case bool b:
                     {
                         Write( (byte)SerializationMarker.Boolean );
                         Write( b );
-                        return;
+                        return true;
                     }
                 case uint ui:
                     {
                         Write( (byte)SerializationMarker.UInt32 );
                         Write( ui );
-                        return;
+                        return true;
                     }
                 case float f:
                     {
                         Write( (byte)SerializationMarker.Float );
                         Write( f );
-                        return;
+                        return true;
                     }
                 case DateTime d:
                     {
                         Write( (byte)SerializationMarker.DateTime );
                         Write( d );
-                        return;
+                        return true;
                     }
                 case Guid g:
                     {
                         Write( (byte)SerializationMarker.Guid );
                         Write( g );
-                        return;
+                        return true;
                     }
                 case TimeSpan ts:
                     {
                         Write( (byte)SerializationMarker.TimeSpan );
                         Write( ts );
-                        return;
+                        return true;
                     }
                 case DateTimeOffset ds:
                     {
                         Write( (byte)SerializationMarker.DateTimeOffset );
                         Write( ds );
-                        return;
+                        return true;
                     }
                 case Type type:
                     {
                         Write( (byte)SerializationMarker.Type );
                         Write( type );
-                        return;
+                        return true;
                     }
             }
             SerializationMarker marker;
@@ -159,13 +163,13 @@ namespace CK.Observable
                 {
                     Write( (byte)SerializationMarker.Reference );
                     Write( num );
-                    return;
+                    return false;
                 }
                 _seen.Add( o, _seen.Count );
                 if( t == typeof( object ) )
                 {
                     Write( (byte)SerializationMarker.EmptyObject );
-                    return;
+                    return true;
                 }
                 marker = SerializationMarker.Object;
             }
@@ -208,6 +212,7 @@ namespace CK.Observable
                     }
                 }
             }
+            return true;
         }
 
         /// <summary>
@@ -282,7 +287,7 @@ namespace CK.Observable
 
         /// <summary>
         /// Writes the type, returning true if the type has been written for the first time
-        /// or false if it has been previsously written.
+        /// or false if it has been previously written.
         /// </summary>
         /// <param name="t">Type to serialize. Can be null.</param>
         /// <returns>True if the type has been written, false if it was already serialized.</returns>
@@ -310,16 +315,16 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Called by <see cref="AutoTypeRegistry"/> serialization drivers when a disposed <see cref="IDisposableObject"/> has been
+        /// Called by <see cref="AutoTypeRegistry"/> serialization drivers when a disposed <see cref="IDestroyable"/> has been
         /// written.
         /// <para>
         /// This should clearly be on "ImplementationServices" or any other of this writer extensions. But currently, the
         /// serialization is embedded inside the Observable library, so we don't care.
-        /// Note that if a IDisposableObject { bool IsDiposed { get; } } basic interface (without Disposed event) in the "generic" serialization library
-        /// (or deeper? "System.ComponentModel.IDisposableObject, CK.Core"?), then this could remain this way. 
+        /// Note that if a IDestroyableObject { bool IsDestroyed { get; } } basic interface (without Destroyed event) in the "generic" serialization library
+        /// (or deeper? "System.ComponentModel.IDestroyableObject, CK.Core"?), then this could remain this way. 
         /// </para>
         /// </summary>
-        public Action<IDisposableObject>? DisposedTracker { get; }
+        public Action<IDestroyable>? DisposedTracker { get; }
 
 
         internal class CheckedWriteStream : Stream

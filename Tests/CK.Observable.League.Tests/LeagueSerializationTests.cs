@@ -67,7 +67,7 @@ namespace CK.Observable.League.Tests
                 ++ContructorCount;
             }
 
-            InstantiationTracker( IBinaryDeserializer r, TypeReadInfo? info )
+            InstantiationTracker( IBinaryDeserializer r, TypeReadInfo info )
                 : base( RevertSerialization.Default )
             {
                 ++DeserializationCount;

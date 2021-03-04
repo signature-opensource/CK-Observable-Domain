@@ -11,31 +11,28 @@ namespace CK.Observable
     /// <summary>
     /// Base class for all observable object.
     /// Observable objects are reference types that belong to a <see cref="ObservableDomain"/> and for
-    /// which properties changes and <see cref="Dispose()"/> are tracked.
+    /// which properties changes and <see cref="Destroy()"/> are tracked.
     /// </summary>
     [SerializationVersion( 1 )]
-    public abstract partial class ObservableObject : INotifyPropertyChanged, IDisposableObject, IKnowMyExportDriver
+    public abstract partial class ObservableObject : INotifyPropertyChanged, IDestroyableObject, IKnowMyExportDriver
     {
         ObservableObjectId _oid;
         internal readonly ObservableDomain ActualDomain;
         internal readonly IObjectExportTypeDriver _exporter;
-        ObservableEventHandler<ObservableDomainEventArgs> _disposed;
+        ObservableEventHandler<ObservableDomainEventArgs> _destroyed;
         ObservableEventHandler<PropertyChangedEventArgs> _propertyChanged;
 
         /// <summary>
-        /// Raised when this object is <see cref="Dispose()"/>d by the <see cref="Dispose(bool)"/> overload.
-        /// Note that when the call to dispose is made by <see cref="ObservableDomain.Load(IActivityMonitor, System.IO.Stream, bool, System.Text.Encoding, int, bool)"/>, this event is not
-        /// triggered to avoid a useless (and potentially dangerous) snowball effect: eventually ALL <see cref="ObservableObject.Dispose(bool)"/>
-        /// will be called during a reload.
+        /// Raised when this object is <see cref="Destroy">destroyed</see>.
         /// </summary>
-        public event SafeEventHandler<ObservableDomainEventArgs> Disposed
+        public event SafeEventHandler<ObservableDomainEventArgs> Destroyed
         {
             add
             {
-                if( IsDisposed ) throw new ObjectDisposedException( ToString() );
-                _disposed.Add( value, nameof( Disposed ) );
+                this.CheckDestroyed();
+                _destroyed.Add( value, nameof( Destroyed ) );
             }
-            remove => _disposed.Remove( value );
+            remove => _destroyed.Remove( value );
         }
 
         /// <summary>
@@ -46,7 +43,7 @@ namespace CK.Observable
         {
             add
             {
-                if( IsDisposed ) throw new ObjectDisposedException( ToString() );
+                this.CheckDestroyed();
                 _propertyChanged.Add( value, nameof( PropertyChanged ) );
             }
             remove => _propertyChanged.Remove( value );
@@ -86,12 +83,22 @@ namespace CK.Observable
             _oid = ActualDomain.Register( this );
         }
 
-        protected ObservableObject( RevertSerialization _ ) { }
+        /// <summary>
+        /// Specialized deserialization constructor for specialized classes: it must be called
+        /// by deserialization constructors otherwise an <see cref="InvalidOperationException"/>
+        /// is thrown when loading a domain.
+        /// </summary>
+        /// <param name="_">Unused parameter.</param>
+        protected ObservableObject( RevertSerialization _ )
+        {
+            RevertSerialization.OnRootDeserialized( this );
+        }
 
         ObservableObject( IBinaryDeserializer r, TypeReadInfo? info )
         {
+            RevertSerialization.OnRootDeserialized( this );
             _oid = new ObservableObjectId( r );
-            if( !IsDisposed )
+            if( !IsDestroyed )
             {
                 // This enables the Observable object to be serializable/deserializable outside a Domain
                 // (for instance to use BinarySerializer.IdempotenceCheck): we really register the deserialized object
@@ -102,18 +109,17 @@ namespace CK.Observable
                     domain.SideEffectsRegister( this );
                 }
                 _exporter = domain._exporters.FindDriver( GetType() );
-                _disposed = new ObservableEventHandler<ObservableDomainEventArgs>( r );
+                _destroyed = new ObservableEventHandler<ObservableDomainEventArgs>( r );
                 _propertyChanged = new ObservableEventHandler<PropertyChangedEventArgs>( r );
             }
         }
 
-
         void Write( BinarySerializer w )
         {
             _oid.Write( w );
-            if( !IsDisposed )
+            if( !IsDestroyed )
             {
-                _disposed.Write( w );
+                _destroyed.Write( w );
                 _propertyChanged.Write( w );
             }
         }
@@ -121,7 +127,7 @@ namespace CK.Observable
         /// <summary>
         /// Gets whether this object has been disposed.
         /// </summary>
-        public bool IsDisposed => _oid == ObservableObjectId.Disposed;
+        public bool IsDestroyed => _oid == ObservableObjectId.Destroyed;
 
         /// <summary>
         /// Gets the unique identifier of this observable object.
@@ -143,48 +149,67 @@ namespace CK.Observable
         IObjectExportTypeDriver IKnowMyExportDriver.ExportDriver => _exporter;
 
         /// <summary>
-        /// Disposes this object (can be called multiple times).
+        /// Destroys this object (can be called multiple times).
+        /// Further attempts to interact with this object will throw <see cref="ObjectDestroyedException"/>.
         /// </summary>
-        public void Dispose()
+        /// <remarks>
+        /// When this object is not already destroyed, first <see cref="OnUnload"/> is called and then <see cref="OnDestroy"/>.
+        /// </remarks>
+        public void Destroy()
         {
             if( _oid.IsValid )
             {
-                ActualDomain.CheckBeforeDispose( this );
-                Dispose( true );
+                if( this is ObservableRootObject
+                    && (!ObservableRootObject.AllowRootObjectDestroying || ActualDomain.AllRoots.IndexOf( x => x == this ) >= 0) )
+                {
+                    throw new InvalidOperationException( "ObservableRootObject cannot be disposed." );
+                }
+                ActualDomain.CheckBeforeDestroy( this );
+                OnUnload();
+                OnDestroy();
                 ActualDomain.Unregister( this );
-                _oid = ObservableObjectId.Disposed;
+                _oid = ObservableObjectId.Destroyed;
             }
         }
 
         /// <summary>
-        /// Called before this object is disposed.
-        /// Override it to dispose other objects managed by this <see cref="ObservableObject"/> or to remove this object from any
-        /// knwon containers for instance.
+        /// Called before this object is destroyed.
+        /// Override it to destroy other objects managed by this <see cref="ObservableObject"/> or to remove this
+        /// object from any known containers.
         /// <para>
-        /// Please make sure to call base implementation since, at this level, it raises
-        /// the <see cref="Disposed"/> event.
-        /// </para>
-        /// <para>
-        /// Note that the Disposed event is raised only for explicit object disposing, ie. when <paramref name="shouldCleanup"/> is true:
-        /// a <see cref="ObservableDomain.Load(IActivityMonitor, System.IO.Stream, bool, System.Text.Encoding, int, bool)"/> doesn't trigger
-        /// the event (shouldCleanup is false).
+        /// Please make sure to call this base implementation since, at this level, it raises the <see cref="Destroyed"/> event
+        /// (the base method should typically be called after having impacted other objects).
         /// </para>
         /// </summary>
-        /// <param name="shouldCleanup">
-        /// True when other <see cref="ObservableObject"/> instances managed by this object should be disposed, which is most of the time.
-        /// False when managed <see cref="ObservableObject"/> instances will be disposed automatically (eg. during a reload).
-        /// When False, the <see cref="Disposed"/> event is not raised.
-        /// </param>
-        protected internal virtual void Dispose( bool shouldCleanup )
+        protected internal virtual void OnDestroy()
         {
-            if( shouldCleanup )
-            {
-                _disposed.Raise( this, ActualDomain.DefaultEventArgs );
-            }
-            else
-            {
-                _oid = ObservableObjectId.Disposed;
-            }
+            _destroyed.Raise( this, ActualDomain.DefaultEventArgs );
+        }
+
+        /// <summary>
+        /// This is called by the <see cref="ObservableDomain.Load(IActivityMonitor, System.IO.Stream, bool, System.Text.Encoding?, int, bool?)"/>
+        /// or <see cref="ObservableDomain.DoDispose(IActivityMonitor)"/> and by <see cref="ObservableDomain.GarbageCollectAsync"/>.
+        /// </summary>
+        /// <param name="gc">True when called by the garbage collector: this object in unregistered.</param>
+        internal void Unload( bool gc )
+        {
+            Debug.Assert( !IsDestroyed );
+            OnUnload();
+            if( gc ) ActualDomain.Unregister( this );
+            _oid = ObservableObjectId.Destroyed;
+        }
+
+        /// <summary>
+        /// Called when this object is unloaded: either because the <see cref="ObservableDomain"/> is disposed
+        /// or <see cref="ObservableDomain.Load(IActivityMonitor, System.IO.Stream, bool, System.Text.Encoding, int, bool)"/>
+        /// has been called or <see cref="Destroy"/> is being called (this is called prior to call <see cref="OnDestroy"/>).
+        /// <para>
+        /// This base is an empty implementation (we have nothing to do at this level). This must be overridden whenever
+        /// external resources are used, such as opened files for instance.
+        /// </para>
+        /// </summary>
+        protected internal virtual void OnUnload()
+        {
         }
 
         /// <summary>
@@ -204,7 +229,7 @@ namespace CK.Observable
         /// <param name="value">The new property value.</param>
         protected virtual void OnPropertyChanged( string propertyName, object? value )
         {
-            this.CheckDisposed();
+            this.CheckDestroyed();
             var ev = ActualDomain.OnPropertyChanged( this, propertyName, value );
             if( ev != null )
             {

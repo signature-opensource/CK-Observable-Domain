@@ -8,7 +8,7 @@ namespace CK.Observable.League
     /// <summary>
     /// Immutable definition of options for domains managed in a <see cref="ObservableLeague"/>.
     /// </summary>
-    [SerializationVersion( 1 )]
+    [SerializationVersion( 2 )]
     public sealed class ManagedDomainOptions : IEquatable<ManagedDomainOptions>
     {
         /// <summary>
@@ -75,12 +75,6 @@ namespace CK.Observable.League
         public readonly int ExportedEventKeepLimit;
 
         /// <summary>
-        /// Gets the <see cref="SaveDisposedObjectBehavior"/> that will be used when domain is snapshotted.
-        /// Defaults to <see cref="SaveDisposedObjectBehavior.None"/>.
-        /// </summary>
-        public readonly SaveDisposedObjectBehavior SaveDisposedObjectBehavior;
-
-        /// <summary>
         /// Returns a new immutable option with an updated <see cref="LifeCycleOption"/>.
         /// </summary>
         /// <param name="lifeCycleOption">The life cycle option.</param>
@@ -94,8 +88,7 @@ namespace CK.Observable.League
                 SnapshotKeepDuration,
                 SnapshotMaximalTotalKiB,
                 ExportedEventKeepDuration,
-                ExportedEventKeepLimit,
-                SaveDisposedObjectBehavior
+                ExportedEventKeepLimit
             );
 
         /// <summary>
@@ -112,8 +105,7 @@ namespace CK.Observable.League
                 SnapshotKeepDuration,
                 SnapshotMaximalTotalKiB,
                 ExportedEventKeepDuration,
-                ExportedEventKeepLimit,
-                SaveDisposedObjectBehavior
+                ExportedEventKeepLimit
             );
 
 
@@ -128,8 +120,7 @@ namespace CK.Observable.League
             TimeSpan snapshotKeepDuration,
             int snapshotMaximalTotalKiB,
             TimeSpan eventKeepDuration,
-            int eventKeepLimit,
-            SaveDisposedObjectBehavior saveBehavior )
+            int eventKeepLimit )
         {
             LifeCycleOption = loadOption;
             CompressionKind = c;
@@ -139,7 +130,6 @@ namespace CK.Observable.League
             SnapshotMaximalTotalKiB = snapshotMaximalTotalKiB;
             ExportedEventKeepDuration = eventKeepDuration;
             ExportedEventKeepLimit = eventKeepLimit;
-            SaveDisposedObjectBehavior = saveBehavior;
         }
 
         ManagedDomainOptions( IBinaryDeserializer r, TypeReadInfo? info )
@@ -151,7 +141,11 @@ namespace CK.Observable.League
             SnapshotMaximalTotalKiB = r.ReadInt32();
             ExportedEventKeepDuration = r.ReadTimeSpan();
             ExportedEventKeepLimit = r.ReadInt32();
-            SaveDisposedObjectBehavior = r.ReadEnum<SaveDisposedObjectBehavior>();
+            if( info.Version < 2 )
+            {
+                // SaveDestroyedObjectBehavior enumeration (int).
+                r.ReadInt32();
+            }
             if( info.Version >= 1 )
             {
                 SkipTransactionCount = r.ReadInt32();
@@ -167,7 +161,10 @@ namespace CK.Observable.League
             w.Write( SnapshotMaximalTotalKiB );
             w.Write( ExportedEventKeepDuration );
             w.Write( ExportedEventKeepLimit );
-            w.WriteEnum( SaveDisposedObjectBehavior );
+
+            // v2: no more SaveDestroyedObjectBehavior.
+            // w.WriteEnum( SaveDestroyedObjectBehavior );
+
             // v1
             w.Write( SkipTransactionCount );
         }
@@ -183,7 +180,7 @@ namespace CK.Observable.League
         /// Value semantic hash code.
         /// </summary>
         /// <returns>The hash code.</returns>
-        public override int GetHashCode() => HashCode.Combine( LifeCycleOption, CompressionKind, SnapshotSaveDelay, SnapshotKeepDuration, SnapshotMaximalTotalKiB, ExportedEventKeepDuration, ExportedEventKeepLimit + SkipTransactionCount, SaveDisposedObjectBehavior );
+        public override int GetHashCode() => HashCode.Combine( LifeCycleOption, CompressionKind, SnapshotSaveDelay, SnapshotKeepDuration, SnapshotMaximalTotalKiB, ExportedEventKeepDuration, ExportedEventKeepLimit + SkipTransactionCount );
 
         /// <summary>
         /// Value semantic equality.
@@ -197,7 +194,6 @@ namespace CK.Observable.League
                                                             && SnapshotKeepDuration == other.SnapshotKeepDuration
                                                             && SnapshotMaximalTotalKiB == other.SnapshotMaximalTotalKiB
                                                             && ExportedEventKeepDuration == other.ExportedEventKeepDuration
-                                                            && ExportedEventKeepLimit == other.ExportedEventKeepLimit
-                                                            && SaveDisposedObjectBehavior == other.SaveDisposedObjectBehavior;
+                                                            && ExportedEventKeepLimit == other.ExportedEventKeepLimit;
     }
 }

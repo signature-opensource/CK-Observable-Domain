@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace CK.Observable
 {
@@ -10,7 +11,7 @@ namespace CK.Observable
     /// <typeparam name="TKey">The type of the keys in the dictionary.</typeparam>
     /// <typeparam name="TValue">The type of the values in the dictionary.</typeparam>
     [SerializationVersion( 0 )]
-    public class ObservableDictionary<TKey, TValue> : ObservableObject, IDictionary<TKey, TValue>, IObservableReadOnlyDictionary<TKey, TValue>
+    public class ObservableDictionary<TKey, TValue> : ObservableObject, IDictionary<TKey, TValue>, IObservableReadOnlyDictionary<TKey, TValue> where TKey : notnull
     {
         readonly Dictionary<TKey, TValue> _map;
         ObservableEventHandler<CollectionMapSetEvent> _itemSet;
@@ -71,7 +72,7 @@ namespace CK.Observable
         ObservableDictionary( IBinaryDeserializer r, TypeReadInfo? info )
                 : base( RevertSerialization.Default )
         {
-            _map = (Dictionary<TKey, TValue>)r.ReadObject();
+            _map = (Dictionary<TKey, TValue>)r.ReadObject()!;
             _itemSet = new ObservableEventHandler<CollectionMapSetEvent>( r );
             _itemAdded = new ObservableEventHandler<CollectionMapSetEvent>( r );
             _collectionCleared = new ObservableEventHandler<CollectionClearEvent>( r );
@@ -108,7 +109,7 @@ namespace CK.Observable
                     if( !EqualityComparer<TValue>.Default.Equals( value, exists ) )
                     {
                         _map[key] = value;
-                        CollectionMapSetEvent e = ActualDomain.OnCollectionMapSet( this, key, value );
+                        CollectionMapSetEvent? e = ActualDomain.OnCollectionMapSet( this, key, value );
                         if( e != null && _itemSet.HasHandlers ) _itemSet.Raise( this, e );
                     }
                 }
@@ -149,22 +150,45 @@ namespace CK.Observable
         public void Add( TKey key, TValue value )
         {
             _map.Add( key, value );
-            CollectionMapSetEvent e = ActualDomain.OnCollectionMapSet( this, key, value );
+            CollectionMapSetEvent? e = ActualDomain.OnCollectionMapSet( this, key, value );
             if( e != null && _itemAdded.HasHandlers ) _itemAdded.Raise( this, e );
         }
 
         void ICollection<KeyValuePair<TKey, TValue>>.Add( KeyValuePair<TKey, TValue> item ) => Add( item.Key, item.Value );
 
         /// <summary>
-        /// Removes all keys and values from the dictionary.
+        /// Removes all keys and values from this dictionary.
         /// </summary>
-        public void Clear()
+        public void Clear() => Clear( false );
+
+        /// <summary>
+        /// Clears this dictionary of all its entries, optionally destroying all values that are <see cref="IDestroyableObject"/>.
+        /// <para>
+        /// Note that keys, if they are <see cref="IDestroyableObject"/> are not destroyed, only <see cref="Values"/> can automatically
+        /// be destroyed.
+        /// </para>
+        /// </summary>
+        /// <param name="destroyValues">True to call <see cref="IDestroyableObject.Destroy()"/> on destroyable values.</param>
+        public void Clear( bool destroyValues )
         {
             if( _map.Count > 0 )
             {
+                if( destroyValues )
+                {
+                    DestroyValues();
+                }
                 _map.Clear();
-                CollectionClearEvent e = ActualDomain.OnCollectionClear( this );
+                CollectionClearEvent? e = ActualDomain.OnCollectionClear( this );
                 if( e != null && _collectionCleared.HasHandlers ) _collectionCleared.Raise( this, e );
+            }
+        }
+
+        protected void DestroyValues()
+        {
+            // Take a snapshot so that OnDestroyed reflexes can safely alter the _map.
+            foreach( var d in _map.Values.OfType<IDestroyableObject>().ToArray() )
+            {
+                d.Destroy();
             }
         }
 

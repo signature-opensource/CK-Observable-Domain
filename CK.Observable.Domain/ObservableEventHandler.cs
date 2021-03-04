@@ -6,7 +6,7 @@ using System.Text;
 namespace CK.Observable
 {
     /// <summary>
-    /// Serializable and safe event handler: only non null and static method or method on a <see cref="IDisposableObject"/> (that must
+    /// Serializable and safe event handler: only non null and static method or method on a <see cref="IDestroyable"/> (that must
     /// be serializable) can be added. 
     /// This is a helper class that implements <see cref="SafeEventHandler"/> events.
     /// </summary>
@@ -16,9 +16,16 @@ namespace CK.Observable
 
         /// <summary>
         /// Deserializes the <see cref="ObservableEventHandler"/>.
+        /// If the method has been suppressed, use the static helper <see cref="Skip(IBinaryDeserializer)"/>.
         /// </summary>
-        /// <param name="r">The context.</param>
+        /// <param name="r">The deserializer.</param>
         public ObservableEventHandler( IBinaryDeserializer r ) => _handler = new ObservableDelegate( r );
+
+        /// <summary>
+        /// Helper that skips a serialized event to be used when an event is removed.
+        /// </summary>
+        /// <param name="r">The deserializer.</param>
+        public static void Skip( IBinaryDeserializer r ) => ObservableDelegate.Skip( r );
 
         /// <summary>
         /// Serializes this <see cref="ObservableEventHandler"/>.

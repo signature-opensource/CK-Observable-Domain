@@ -10,7 +10,7 @@ namespace CK.Observable
     /// <summary>
     /// Defines the <see cref="ObservableObject.OId"/> identifier.
     /// Note that only the <see cref="UniqueId"/> is exported via <see cref="IObjectExporterTarget.EmitInt64(long)"/>
-    /// and that this unique identifier is guaranteed to roundtrip via <see cref="double"/> (only 53 bits are used).
+    /// and that this unique identifier is guaranteed to round trip via <see cref="double"/> (only 53 bits are used).
     /// </summary>
     public readonly struct ObservableObjectId
     {
@@ -19,7 +19,7 @@ namespace CK.Observable
         /// <summary>
         /// A disposed marker value.
         /// </summary>
-        static public readonly ObservableObjectId Disposed = new ObservableObjectId( false );
+        static public readonly ObservableObjectId Destroyed = new ObservableObjectId( false );
 
         /// <summary>
         /// An invalid marker value.
@@ -27,7 +27,7 @@ namespace CK.Observable
         static public readonly ObservableObjectId Invalid = new ObservableObjectId( true );
 
         /// <summary>
-        /// The maximal identifier value is used for the identifier of <see cref="Disposed"/> special value.
+        /// The maximal identifier value is used for the identifier of <see cref="Destroyed"/> special value.
         /// This is guaranteed to roundtrip via <see cref="double"/>.
         /// </summary>
         public const long MaxValue = 1L << 53;
@@ -76,7 +76,7 @@ namespace CK.Observable
             UniqueId = (long)(((ulong)uniquifier) << IndexBitCount) | (uint)idx;
             Debug.Assert( UniqueId < MaxValue, "UniqueId < MaxValue" );
             Debug.Assert( IsValid, $"IsValid ({idx},{uniquifier}) => {UniqueId}" );
-            Debug.Assert( !Disposed.IsValid, "!Disposed.IsValid" );
+            Debug.Assert( !Destroyed.IsValid, "!Disposed.IsValid" );
             Debug.Assert( !Invalid.IsValid, "!Invalid.IsValid" );
             Debug.Assert( (((long)MaxUniquifierValue << IndexBitCount) | MaxIndexValue)+1 == MaxValue, "(((long)MaxUniquifierValue << IndexBitCount) | MaxIndexValue)+1 == MaxValue" );
             Debug.Assert( (long)Math.Floor( ((double)MaxValue) ) == MaxValue, "(long)Math.Floor( ((double)MaxValue) ) == MaxValue" );
@@ -109,7 +109,7 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Gets whether this identifier is valid: it is not <see cref="Disposed"/> nor <see cref="Invalid"/>.
+        /// Gets whether this identifier is valid: it is not <see cref="Destroyed"/> nor <see cref="Invalid"/>.
         /// </summary>
         public bool IsValid => UniqueId >= 0 && UniqueId < MaxValue;
 

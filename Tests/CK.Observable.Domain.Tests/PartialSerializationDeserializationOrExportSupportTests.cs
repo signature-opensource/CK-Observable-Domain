@@ -11,26 +11,6 @@ namespace CK.Observable.Domain.Tests
     [TestFixture]
     public class PartialSerializationDeserializationOrExportSupportTests
     {
-        public class ExportableOnly : ObservableObject
-        {
-            public string Name { get; set; }
-        }
-
-        [Test]
-        public void exportable_but_not_serializable()
-        {
-            using( var d = new ObservableDomain(TestHelper.Monitor, nameof(exportable_but_not_serializable), startTimer: true ) )
-            {
-                d.Modify( TestHelper.Monitor, () =>
-                {
-                    new ExportableOnly() { Name = "Albert" };
-                } );
-                var export = d.ExportToString();
-                export.Should().Be( @"{""N"":1,""C"":1,""P"":[""Name"",""IsDisposed"",""OId""],""O"":[{""þ"":[0,""A""]},{""°"":1,""Name"":""Albert"",""IsDisposed"":false,""OId"":33554432}],""R"":[]}" );
-                d.Invoking( sut => sut.Save( TestHelper.Monitor, new MemoryStream() ) )
-                    .Should().Throw<InvalidOperationException>().WithMessage( "*is not serializable*" );
-            }
-        }
 
         [NotExportable]
         [SerializationVersion( 0 )]

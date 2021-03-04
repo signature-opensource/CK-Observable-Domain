@@ -10,7 +10,7 @@ using System.Text;
 namespace CK.Observable
 {
     /// <summary>
-    /// Wraps a delegate to a static method or an instance method of a <see cref="IDisposableObject"/>.
+    /// Wraps a delegate to a static method or an instance method of a <see cref="IDestroyable"/>.
     /// This is an internal helper.
     /// </summary>
     struct ObservableDelegate
@@ -18,23 +18,59 @@ namespace CK.Observable
         /// <summary>
         /// Wrapped delegate.
         /// </summary>
-        Delegate _d;
+        Delegate? _d;
+
+        public static void Skip( IBinaryDeserializer r )
+        {
+            r.DebugCheckSentinel();
+            int count = r.ReadNonNegativeSmallInt32();
+            if( count > 0 )
+            {
+                r.ReadType();
+                object? o = r.ReadObject();
+                if( o != null )
+                {
+                    do
+                    {
+                        r.ReadSharedString();
+                        SkipArray( r );
+                    }
+                    while( --count > 0 );
+                }
+                r.DebugCheckSentinel();
+            }
+
+            static void SkipArray( IBinaryDeserializer r )
+            {
+                int len = r.ReadNonNegativeSmallInt32();
+                while( --len >= 0 ) r.ReadType();
+            }
+
+        }
 
         /// <summary>
         /// Deserializes the delegate.
         /// </summary>
-        /// <param name="r">The context.</param>
+        /// <param name="r">The deserializer.</param>
         public ObservableDelegate( IBinaryDeserializer r )
         {
+            static void ThrowError( string typeName, Type[] paramTypes, string methodName, bool isStatic )
+            {
+                var msg = $"Unable to find {(isStatic ? "static" : "")} method {methodName} on type {typeName} with parameters {paramTypes.Select( t => t.Name ).Concatenate()}.";
+                msg += Environment.NewLine + "If the event has been suppressed, please use the static helper: ObservableEventHandler.Skip( IBinaryDeserializer r ).";
+                throw new Exception( msg );
+            }
+
+            r.DebugCheckSentinel();
             _d = null;
             int count = r.ReadNonNegativeSmallInt32();
             if( count > 0 )
             {
-                Delegate final = null;
+                Delegate? final = null;
                 Type tD = r.ReadType();
                 do
                 {
-                    object o = r.ReadObject();
+                    object? o = r.ReadObject();
                     if( o != null )
                     {
                         string methodName = r.ReadSharedString();
@@ -44,7 +80,10 @@ namespace CK.Observable
                         if( o is Type t )
                         {
                             var m = t.GetMethod( methodName, BindingFlags.Static | BindingFlags.FlattenHierarchy | BindingFlags.Public | BindingFlags.NonPublic, null, paramTypes, null );
-                            if( m == null ) throw new Exception( $"Unable to find static method {methodName} on type {t.FullName} with parameters {paramTypes.Select( t => t.Name ).Concatenate()}." );
+                            if( m == null )
+                            {
+                                ThrowError( t.FullName, paramTypes, methodName, true );
+                            }
                             final = Delegate.Combine( final, Delegate.CreateDelegate( tD, m, true ) );
                         }
                         else
@@ -57,7 +96,7 @@ namespace CK.Observable
                             }
                             if( m == null )
                             {
-                                throw new Exception( $"Unable to find method {methodName} on type {o.GetType().FullName} with parameters {paramTypes.Select( t => t.Name ).Concatenate()}." );
+                                ThrowError( o.GetType().FullName, paramTypes, methodName, false );
                             }
                             final = Delegate.Combine( final, Delegate.CreateDelegate( tD, o, m ) );
                         }
@@ -65,6 +104,7 @@ namespace CK.Observable
                 }
                 while( --count > 0 );
                 _d = final;
+                r.DebugCheckSentinel();
             }
 
             static Type[] DoReadArray( IBinaryDeserializer r )
@@ -84,6 +124,7 @@ namespace CK.Observable
         public void Write( BinarySerializer w )
         {
             var list = Cleanup();
+            w.DebugWriteSentinel();
             w.WriteNonNegativeSmallInt32( list.Length );
             if( list.Length > 0 )
             {
@@ -104,6 +145,7 @@ namespace CK.Observable
                         foreach( var p in paramInfos ) w.Write( p.ParameterType );
                     }
                 }
+                w.DebugWriteSentinel();
             }
         }
 
@@ -155,7 +197,7 @@ namespace CK.Observable
             for( int i = 0; i < dList.Length; ++i )
             {
                 var d = dList[i];
-                if( d.Target is IDisposableObject o && o.IsDisposed )
+                if( d.Target is IDestroyable o && o.IsDestroyed )
                 {
                     cleanup[i] = needCleanup = true;
                 }
@@ -177,7 +219,7 @@ namespace CK.Observable
         {
             if( value == null ) throw new ArgumentNullException( eventName );
             if( value.Target != null
-                && !(value.Target is IDisposableObject)
+                && !(value.Target is IDestroyable)
                 && !(value.Target is ObservableDomainSidekick))
             {
                 throw new ArgumentException( $"Only static methods or Observable/InternalObject or Sidekick's instance methods can be registered on {eventName} event.", eventName );

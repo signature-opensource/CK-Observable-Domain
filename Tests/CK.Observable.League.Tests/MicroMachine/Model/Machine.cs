@@ -21,7 +21,7 @@ namespace CK.Observable.League.Tests.MicroMachine
         Machine( IBinaryDeserializer r, TypeReadInfo? info )
                 : base( RevertSerialization.Default )
         {
-            Debug.Assert( !IsDisposed );
+            Debug.Assert( !IsDestroyed );
             Configuration = (MachineConfiguration)r.ReadObject()!;
             _clock = (SuspendableClock)r.ReadObject()!;
             Name = r.ReadString();
@@ -30,7 +30,7 @@ namespace CK.Observable.League.Tests.MicroMachine
 
         void Write( BinarySerializer w )
         {
-            Debug.Assert( !IsDisposed );
+            Debug.Assert( !IsDestroyed );
             w.WriteObject( Configuration );
             w.WriteObject( _clock );
             w.Write( Name );

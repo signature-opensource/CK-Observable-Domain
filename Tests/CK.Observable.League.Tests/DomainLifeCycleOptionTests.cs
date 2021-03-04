@@ -49,7 +49,7 @@ namespace CK.Observable.League.Tests
 
         static bool OnTimerCalled = false;
 
-        // The SafeEventHandler must be a static or a method of a IDisposableObject.
+        // The SafeEventHandler must be a static or a method of a IDestroyableObject.
         static void OnTimer( object sender, ObservableReminderEventArgs arg )
         {
             OnTimerCalled = true;
@@ -139,7 +139,7 @@ namespace CK.Observable.League.Tests
             OnTimerCalled.Should().BeFalse( "The reminder has not fired yet. (2)" );
             loader.IsLoaded.Should().BeTrue( "An active timed event keep the domain in memory. (2)" );
 
-            await Task.Delay( 150 );
+            await Task.Delay( 250 );
             OnTimerCalled.Should().BeTrue( "The reminder has eventually fired." );
             loader.IsLoaded.Should().BeFalse( "The reminder fired: there is no more need to keep the domain in memory." );
         }

@@ -15,7 +15,7 @@ namespace CK.Observable
     /// </summary>
     public sealed partial class TimeManager : ITimeManager
     {
-        // The min heap is strored in an array.
+        // The min heap is stored in an array.
         // The ObservableTimedEventBase.ActiveIndex is the index in this heap: 0 index is not used.
         int _activeCount;
         ObservableTimedEventBase[] _activeEvents;
@@ -202,7 +202,26 @@ namespace CK.Observable
             r.SuspendableClock = null;
         }
 
-        internal void OnCreated( ObservableTimedEventBase t )
+        internal void TrimPooledReminders( IActivityMonitor monitor, int removePooledReminderCount )
+        {
+            CheckMinHeapInvariant();
+
+            int count = 0;
+            var f = _firstFreeReminder;
+            while( f != null && --removePooledReminderCount >= 0 )
+            {
+                ++count;
+                f.ForcePooledDestroy();
+                _firstFreeReminder = f = f.NextFreeReminder;
+            }
+
+            CheckMinHeapInvariant();
+
+            monitor.Info( $"Removed {count} unused pool reminder." );
+        }
+
+
+        internal void OnCreated( ObservableTimedEventBase t, bool addOnChange )
         {
             Debug.Assert( t is ObservableTimer || t is ObservableReminder );
             Debug.Assert( t.Prev == null && t.Next == null );
@@ -210,18 +229,18 @@ namespace CK.Observable
             if( (t.Prev = _last) == null ) _first = t;
             else _last.Next = t;
             _last = t;
-            _changed.Add( t );
+            if( addOnChange ) _changed.Add( t );
             ++_count;
             if( t is ObservableTimer ) ++_timerCount;
         }
 
         internal void OnPreDisposed( ObservableTimedEventBase t )
         {
-            Domain.CheckBeforeDispose( t );
+            Domain.CheckBeforeDestroy( t );
             if( t.ActiveIndex != 0 ) Deactivate( t );
         }
 
-        internal void OnDisposed( ObservableTimedEventBase t )
+        internal void OnDestroyed( ObservableTimedEventBase t )
         {
             if( _first == t ) _first = t.Next;
             else t.Prev.Next = t.Next;
@@ -240,19 +259,44 @@ namespace CK.Observable
         /// <param name="t">The timed event to add.</param>
         internal void OnChanged( ObservableTimedEventBase t ) => _changed.Add( t );
 
-        internal void Save( IActivityMonitor m, BinarySerializer w )
+        internal (List<ObservableTimedEventBase>? Lost, int UnusedPoolCount, int PooledReminderCount) Save( IActivityMonitor m, BinarySerializer w, bool trackLostObjects )
         {
             CheckMinHeapInvariant();
+            List<ObservableTimedEventBase>? lostObjects = null;
             w.WriteNonNegativeSmallInt32( 1 );
             w.Write( IsRunning );
             w.WriteNonNegativeSmallInt32( _count );
-            var f = _first;
+            ObservableTimedEventBase? f = _first;
+            int pooledCount = 0;
+            int unusedPoolCount = 0;
             while( f != null )
             {
-                Debug.Assert( !f.IsDisposed, "Disposed Timed event objects are removed from the list." );
-                w.WriteObject( f );
+                Debug.Assert( !f.IsDestroyed, "Disposed Timed event objects are removed from the list." );
+                if( w.WriteObject( f ) && trackLostObjects )
+                {
+                    bool isPooled = f is ObservableReminder r && r.IsPooled;
+                    if( isPooled ) ++pooledCount;
+                    // If there is at least one handler (destroyed targets have been cleanup) for the timed event,
+                    // then it should not lost.
+                    if( !f.HasHandlers )
+                    {
+                        if( isPooled )
+                        {
+                            // Pooled reminders are not lost, but unused ones are counted
+                            // so that when too much unused pooled objects exist, the set
+                            // can be trimmed.
+                            ++unusedPoolCount;
+                        }
+                        else
+                        {
+                            if( lostObjects == null ) lostObjects = new List<ObservableTimedEventBase>();
+                            lostObjects.Add( f );
+                        }
+                    }
+                }
                 f = f.Next;
             }
+            return (lostObjects, unusedPoolCount, pooledCount);
         }
 
         internal bool Load( IActivityMonitor m, BinaryDeserializer r )
@@ -263,8 +307,8 @@ namespace CK.Observable
             while( --count >= 0 )
             {
                 var t = (ObservableTimedEventBase)r.ReadObject()!;
-                Debug.Assert( !t.IsDisposed );
-                OnCreated( t );
+                Debug.Assert( !t.IsDestroyed );
+                OnCreated( t, false );
                 if( t.ActiveIndex > 0 )
                 {
                     EnsureActiveLength( t.ActiveIndex );
@@ -272,7 +316,6 @@ namespace CK.Observable
                     ++_activeCount;
                 }
             }
-            CheckMinHeapInvariant();
 #if DEBUG
             int expectedCount = _count;
             ObservableTimedEventBase? last = null;
@@ -287,6 +330,7 @@ namespace CK.Observable
             Debug.Assert( expectedCount == 0 );
             Debug.Assert( _last == last );
 #endif
+            CheckMinHeapInvariant();
             return running;
         }
 
@@ -322,6 +366,7 @@ namespace CK.Observable
         [Conditional("DEBUG")]
         void CheckMinHeapInvariant()
         {
+            Debug.Assert( AllObservableTimedEvents.Distinct().SequenceEqual( AllObservableTimedEvents ) );
             Debug.Assert( _activeEvents[0] == null );
             int i = 1;
             while( i <= _activeCount )
@@ -339,8 +384,9 @@ namespace CK.Observable
 
         /// <summary>
         /// Updates the heap based on all timed event that has changed.
+        /// The _changed set is processed and cleared.
         /// </summary>
-        void UpdateMinHeap()
+        internal void UpdateMinHeap()
         {
             foreach( var ev in _changed )
             {
@@ -411,7 +457,7 @@ namespace CK.Observable
                                 {
                                     first.OnAfterRaiseUnchanged( current, m );
                                 }
-                                if( !first.IsDisposed )
+                                if( !first.IsDestroyed )
                                 {
                                     if( !first.IsActive )
                                     {

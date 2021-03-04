@@ -1,5 +1,4 @@
 using CK.Core;
-using CK.Text;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections;
@@ -31,7 +30,7 @@ namespace CK.Observable
     /// protected property <see cref="ObservableObject.Domain"/>.
     /// </remarks>
     [NotExportable( Error = "No interaction with the ObservableDomain must be made from the observable objects." )]
-    public class ObservableDomain : IObservableDomain, IDisposable
+    public partial class ObservableDomain : IObservableDomain, IDisposable
     {
         /// <summary>
         /// An artificial <see cref="CKExceptionData"/> that is added to
@@ -49,7 +48,7 @@ namespace CK.Observable
         /// <summary>
         /// Current serialization version.
         /// </summary>
-        public const int CurrentSerializationVersion = 5;
+        public const int CurrentSerializationVersion = 6;
 
         /// <summary>
         /// The length in bytes of the <see cref="SecretKey"/>.
@@ -217,11 +216,11 @@ namespace CK.Observable
             {
                 public readonly ObservableObject Object;
                 public readonly ObservablePropertyChangedEventArgs Info;
-                public object FinalValue;
+                public object? FinalValue;
 
                 public long Key => Info.GetObjectPropertyId( Object );
 
-                public PropChanged( ObservableObject o, ObservablePropertyChangedEventArgs p, object final )
+                public PropChanged( ObservableObject o, ObservablePropertyChangedEventArgs p, object? final )
                 {
                     Object = o;
                     Info = p;
@@ -250,10 +249,10 @@ namespace CK.Observable
                                                           DateTime startTime,
                                                           int tranNum )
             {
-                _changeEvents.RemoveAll( e => e is ICollectionEvent c && c.Object.IsDisposed );
+                _changeEvents.RemoveAll( e => e is ICollectionEvent c && c.Object.IsDestroyed );
                 foreach( var p in _propChanged.Values )
                 {
-                    if( !p.Object.IsDisposed )
+                    if( !p.Object.IsDestroyed )
                     {
                         _changeEvents.Add( new PropertyChangedEvent( p.Object, p.Info.PropertyId, p.Info.PropertyName, p.FinalValue ) );
                         if( _newObjects.TryGetValue( p.Object, out var exportables ) )
@@ -334,7 +333,7 @@ namespace CK.Observable
                 _changeEvents.Add( new NewPropertyEvent( info.PropertyId, info.PropertyName ) );
             }
 
-            internal void OnPropertyChanged( ObservableObject o, ObservablePropertyChangedEventArgs p, object after )
+            internal void OnPropertyChanged( ObservableObject o, ObservablePropertyChangedEventArgs p, object? after )
             {
                 PropChanged c;
                 if( _propChanged.TryGetValue( p.GetObjectPropertyId( o ), out c ) )
@@ -369,14 +368,14 @@ namespace CK.Observable
                 return e;
             }
 
-            internal ListInsertEvent OnListInsert( ObservableObject o, int index, object item )
+            internal ListInsertEvent OnListInsert( ObservableObject o, int index, object? item )
             {
                 var e = new ListInsertEvent( o, index, item );
                 _changeEvents.Add( e );
                 return e;
             }
 
-            internal CollectionMapSetEvent OnCollectionMapSet( ObservableObject o, object key, object value )
+            internal CollectionMapSetEvent OnCollectionMapSet( ObservableObject o, object key, object? value )
             {
                 var e = new CollectionMapSetEvent( o, key, value );
                 _changeEvents.Add( e );
@@ -618,7 +617,7 @@ namespace CK.Observable
                 }
                 finally
                 {
-                    _currentTran.Dispose();
+                    _currentTran?.Dispose();
                 }
 
 
@@ -1040,6 +1039,7 @@ namespace CK.Observable
                         break;
                     }
                 }
+                bool updatedMinHeapDone = false;
                 if( !skipped && actions != null )
                 {
                     actions();
@@ -1047,8 +1047,19 @@ namespace CK.Observable
                     {
                         var now = DateTime.UtcNow;
                         foreach( var tracker in _trackers ) tracker.AfterModify( t.Monitor, t.StartTime, now - t.StartTime );
-                        if( _timeManager.IsRunning ) _timeManager.RaiseElapsedEvent( t.Monitor, now, fromTimer );
+                        if( _timeManager.IsRunning )
+                        {
+                            updatedMinHeapDone = true;
+                            _timeManager.RaiseElapsedEvent( t.Monitor, now, fromTimer );
+                        }
                     }
+                }
+                if( !updatedMinHeapDone )
+                {
+                    // If the time manager is not running, we must
+                    // handle the changed timed events so that the
+                    // active timed event min heap is up to date.
+                    _timeManager.UpdateMinHeap();
                 }
             }
             catch( Exception ex )
@@ -1289,282 +1300,10 @@ namespace CK.Observable
             return Export( w, millisecondsTimeout ) ? w.ToString() : null;
         }
 
-        /// <inheritdoc/>
-        public bool Save( IActivityMonitor monitor,
-                          Stream stream,
-                          bool leaveOpen = false,
-                          bool debugMode = false,
-                          Encoding? encoding = null,
-                          SaveDisposedObjectBehavior saveDisposed = SaveDisposedObjectBehavior.None,
-                          int millisecondsTimeout = -1 )
-        {
-            if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
-            if( stream == null ) throw new ArgumentNullException( nameof( stream ) );
-            CheckDisposed();
-
-            // Since we only need the read lock, whenever multiple threads Save() concurrently,
-            // the monitor (of the fake transaction) is at risk. This is why we secure the Save with its own lock: since
-            // only one Save at a time can be executed and no other "read with a monitor (even in a fake transaction)" exists.
-            // Since this is clearly an edge case, we use a lock with the same timeout and we don't care of a potential 2x wait time.
-            if( !Monitor.TryEnter( _saveLock, millisecondsTimeout ) ) return false;
-
-            int disposedObjectsCount = 0;
-            List<(Type, int)>? disposedList = null;
-            Action<IDisposableObject>? disposedTracker = null;
-            if( saveDisposed != SaveDisposedObjectBehavior.None )
-            {
-                disposedList = new List<(Type, int)>();
-                disposedTracker = o =>
-                {
-                    ++disposedObjectsCount;
-                    var t = o.GetType();
-                    int idx = disposedList.IndexOf( t => t.Item1 == o.GetType() );
-                    if( idx >= 0 ) disposedList[idx] = (t, disposedList[idx].Item2 + 1);
-                    else disposedList.Add( (t, 1) );
-                };
-            }
-
-            using( var w = new BinarySerializer( stream, _serializers, leaveOpen, encoding, disposedTracker ) )
-            {
-                bool isWrite = _lock.IsWriteLockHeld;
-                bool isRead = _lock.IsReadLockHeld;
-                if( !isWrite && !isRead && !_lock.TryEnterReadLock( millisecondsTimeout ) )
-                {
-                    Monitor.Exit( _saveLock );
-                    return false;
-                }
-                bool needFakeTran = _currentTran == null || _currentTran.Monitor != monitor;
-                if( needFakeTran ) new InitializationTransaction( monitor, this, false );
-                try
-                {
-                    using( isWrite ? monitor.OpenInfo( $"Transacted saving domain ({_actualObjectCount} objects, {_internalObjectCount} internals, {_timeManager.AllObservableTimedEvents.Count} timed events)." ) : null )
-                    {
-                        // Version 2: supports DebugMode, TimeManager & Internal objects.
-                        // Version 3: supports TransactionCommitTimeUtc.
-                        w.WriteSmallInt32( CurrentSerializationVersion ); 
-                        w.DebugWriteMode( debugMode ? (bool?)debugMode : null );
-                        w.Write( _currentObjectUniquifier );
-                        w.Write( _domainSecret );
-                        if( debugMode ) monitor.Trace( $"Domain {DomainName}: Tran #{_transactionSerialNumber} - {_transactionCommitTimeUtc:o}, {_actualObjectCount} objects." );
-                        w.Write( DomainName );
-                        w.Write( _transactionSerialNumber );
-                        w.Write( _transactionCommitTimeUtc );
-                        w.Write( _actualObjectCount );
-
-                        w.DebugWriteSentinel();
-                        w.WriteNonNegativeSmallInt32( _freeList.Count );
-                        foreach( var i in _freeList ) w.WriteNonNegativeSmallInt32( i );
-
-                        w.DebugWriteSentinel();
-                        w.WriteNonNegativeSmallInt32( _properties.Count );
-                        foreach( var p in _propertiesByIndex )
-                        {
-                            w.Write( p.PropertyName );
-                        }
-                        w.DebugWriteSentinel();
-                        Debug.Assert( _objectsListCount == _actualObjectCount + _freeList.Count );
-                        for( int i = 0; i < _objectsListCount; ++i )
-                        {
-                            var o = _objects[i];
-                            Debug.Assert( o == null || !o.IsDisposed, "Either it is a free cell (that appears in the free list) or the object is NOT disposed." );
-                            w.WriteObject( o );
-                        }
-
-                        w.DebugWriteSentinel();
-                        w.WriteNonNegativeSmallInt32( _roots.Count );
-                        foreach( var r in _roots ) w.WriteNonNegativeSmallInt32( r.OId.Index );
-
-                        w.DebugWriteSentinel();
-                        w.WriteNonNegativeSmallInt32( _internalObjectCount );
-                        var f = _firstInternalObject;
-                        while( f != null )
-                        {
-                            Debug.Assert( !f.IsDisposed, "Disposed internal objects are removed from the list." );
-                            w.WriteObject( f );
-                            f = f.Next;
-                        }
-                        w.DebugWriteSentinel();
-                        _timeManager.Save( monitor, w );
-                        w.DebugWriteSentinel();
-                        _sidekickManager.Save( w );
-                        w.DebugWriteSentinel();
-
-                        if( disposedList != null )
-                        {
-                            if( disposedObjectsCount == 0 ) monitor.Trace( "No disposed objects found." );
-                            else
-                            {
-                                var message = $"Found {disposedObjectsCount} disposed objects: {disposedList.Select( t => $"{t.Item2} instances of '{t.Item1.Name}'" ).Concatenate()}.";
-                                monitor.Log( saveDisposed == SaveDisposedObjectBehavior.LogWarning ? LogLevel.Warn : LogLevel.Error, message );
-                                if( saveDisposed == SaveDisposedObjectBehavior.Throw )
-                                {
-                                    throw new CKException( message );
-                                }
-                            }
-                        }
-                        return true;
-                    }
-                }
-                finally
-                {
-                    if( needFakeTran ) _currentTran.Dispose();
-                    if( !isWrite && !isRead ) _lock.ExitReadLock();
-                    Monitor.Exit( _saveLock );
-                }
-            }
-        }
-
-        bool DoRealLoad( IActivityMonitor monitor, BinaryDeserializer r, string expectedName, bool? startTimer )
-        {
-            Debug.Assert( _lock.IsWriteLockHeld );
-            _deserializeOrInitializing = true;
-            try
-            {
-                #region Unload/Dispose existing objects.
-                // Call Dispose(false) on all objects.
-                for( int i = 0; i < _objectsListCount; ++i )
-                {
-                    var o = _objects[i];
-                    if( o != null )
-                    {
-                        Debug.Assert( !o.IsDisposed );
-                        // This may still call Dispose() on other objects.
-                        // Disposing() an ObservableObject will call InternalUnregister() here,
-                        // and may affect the counts and object/free lists during loading.
-                        // At least, with false, the Disposed event is not called.
-                        o.Dispose( shouldCleanup: false );
-                    }
-                }
-                // Empty _objects completely.
-                Array.Clear( _objects, 0, _objectsListCount );
-                #endregion
-
-                // Free sidekicks and IObservableDomainActionTracker.
-                _trackers.Clear();
-                _sidekickManager.Clear( monitor );
-
-                int version = r.ReadSmallInt32();
-                if( version < 5 || version > CurrentSerializationVersion )
-                {
-                    throw new InvalidDataException( $"Version must be between 5 and {CurrentSerializationVersion}. Version read: {version}." );
-                }
-                r.SerializationVersion = version;
-                _currentObjectUniquifier = 0;
-                r.DebugReadMode();
-                _currentObjectUniquifier = r.ReadInt32();
-                _domainSecret = r.ReadBytes( DomainSecretKeyLength );
-                var loaded = r.ReadString();
-                if( loaded != expectedName ) throw new InvalidDataException( $"Domain name mismatch: loading domain named '{loaded}' but expected '{expectedName}'." );
-
-                _transactionSerialNumber = r.ReadInt32();
-                _transactionCommitTimeUtc = r.ReadDateTime();
-                _actualObjectCount = r.ReadInt32();
-
-                r.DebugCheckSentinel();
-
-                // Clears and read the new free list.
-                _freeList.Clear();
-                int count = r.ReadNonNegativeSmallInt32();
-                while( --count >= 0 )
-                {
-                    _freeList.Add( r.ReadNonNegativeSmallInt32() );
-                }
-
-                r.DebugCheckSentinel();
-
-                // Clears and read the properties index.
-                _properties.Clear();
-                _propertiesByIndex.Clear();
-                count = r.ReadNonNegativeSmallInt32();
-                for( int iProp = 0; iProp < count; iProp++ )
-                {
-                    string name = r.ReadString();
-                    var p = new ObservablePropertyChangedEventArgs( iProp, name );
-                    _properties.Add( name, p );
-                    _propertiesByIndex.Add( p );
-                }
-
-                r.DebugCheckSentinel();
-
-                // Clears any internal objects.
-                var internalObj = _firstInternalObject;
-                while( internalObj != null )
-                {
-                    internalObj.Dispose( false );
-                    internalObj = internalObj.Next;
-                }
-                _firstInternalObject = _lastInternalObject = null;
-                _internalObjectCount = 0;
-
-                // Clears any time event objects.
-                _timeManager.ClearAndStop( monitor );
-
-                // Resize _objects array.
-                _objectsListCount = count = _actualObjectCount + _freeList.Count;
-                while( _objectsListCount > _objects.Length )
-                {
-                    Array.Resize( ref _objects, _objects.Length * 2 );
-                }
-                
-                // Reads objects. This can read Internal and Timed objects.
-                for( int i = 0; i < count; ++i )
-                {
-                    _objects[i] = (ObservableObject)r.ReadObject();
-                    Debug.Assert( _objects[i] == null || !_objects[i].IsDisposed );
-                }
-
-                // Fill roots array.
-                r.DebugCheckSentinel();
-                _roots.Clear();
-                count = r.ReadNonNegativeSmallInt32();
-                while( --count >= 0 )
-                {
-                    _roots.Add( _objects[r.ReadNonNegativeSmallInt32()] as ObservableRootObject );
-                }
-
-                // Reading InternalObjects.
-                r.DebugCheckSentinel();
-                count = r.ReadNonNegativeSmallInt32();
-                while( --count >= 0 )
-                {
-                    var o = (InternalObject)r.ReadObject();
-                    Debug.Assert( !o.IsDisposed );
-                    Register( o );
-                }
-
-                // Reading Timed events.
-                r.DebugCheckSentinel();
-                bool timerRunning = _timeManager.Load( monitor, r );
-                r.DebugCheckSentinel();
-                _sidekickManager.Load( r );
-                r.DebugCheckSentinel();
-                // This is where specialized typed ObservableDomain bind their roots.
-                OnLoaded();
-                // Calling PostDeserializationActions finalizes the object's graph.
-                r.ImplementationServices.ExecutePostDeserializationActions();
-
-                if( startTimer.HasValue ) timerRunning = startTimer.Value;
-                if( !_sidekickManager.CreateWaitingSidekicks( monitor, ex => { }, true ) )
-                {
-                    var msg = "At least one critical error occurred while activating sidekicks. The error should be investigated since this may well be a blocking error.";
-                    if( timerRunning )
-                    {
-                        timerRunning = false;
-                        msg += " The TimeManager (that should have ran) has been stopped.";
-                    }
-                    monitor.Error( msg );
-                }
-                return timerRunning;
-            }
-            finally
-            {
-                _deserializeOrInitializing = false;
-            }
-        }
-
         /// <summary>
         /// Loads previously <see cref="Save"/>d objects from a named domain into this domain: the <paramref name="expectedLoadedName"/> can be
-        /// this <see cref="DomainName"/> or another name.
+        /// this <see cref="DomainName"/> or another name but it must match the name in the stream otherwise an <see cref="InvalidDataException"/>
+        /// is thrown.
         /// </summary>
         /// <param name="monitor">The monitor to use. Cannot be null.</param>
         /// <param name="stream">The input stream.</param>
@@ -1653,7 +1392,7 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Called after a <see cref="G:Load"/>.
+        /// Called after a <see cref="Load(IActivityMonitor, Stream, string, bool, Encoding?, int, bool?)"/>.
         /// Does nothing at this level.
         /// </summary>
         protected internal virtual void OnLoaded()
@@ -1745,7 +1484,7 @@ namespace CK.Observable
         /// - ObservableObject: normal constructor calls Register() but deserialization constructors don't, deserialization constructors must call this directly.
         /// </summary>
         /// <param name="o">The new object.</param>
-        internal void SideEffectsRegister( IDisposableObject o )
+        internal void SideEffectsRegister( IDestroyable o )
         {
             Debug.Assert( !_trackers.Contains( o ) );
             if( o is IObservableDomainActionTracker tracker ) _trackers.Add( tracker );
@@ -1758,7 +1497,7 @@ namespace CK.Observable
         /// the clear from DoLoad.
         /// </summary>
         /// <param name="o">The disposed object.</param>
-        void SideEffectUnregister( IDisposableObject o )
+        void SideEffectUnregister( IDestroyable o )
         {
             if( o is IObservableDomainActionTracker tracker )
             {
@@ -1767,10 +1506,10 @@ namespace CK.Observable
             }
         }
 
-        internal void CheckBeforeDispose( IDisposableObject o )
+        internal void CheckBeforeDestroy( IDestroyable o )
         {
-            Debug.Assert( !o.IsDisposed );
-            CheckWriteLock( o ).CheckDisposed();
+            Debug.Assert( !o.IsDestroyed );
+            CheckWriteLock( o );
         }
 
         internal void Unregister( ObservableObject o )
@@ -1823,7 +1562,7 @@ namespace CK.Observable
         /// Disposes this domain.
         /// This method calls <see cref="ObtainDomainMonitor(int, bool)"/>. If possible, use <see cref="Dispose(IActivityMonitor)"/> with
         /// an available monitor.
-        /// As usual with Dispose methods, this can be called mulple times.
+        /// As usual with Dispose methods, this can be called multiple times.
         /// </summary>
         public void Dispose()
         {
@@ -1845,7 +1584,7 @@ namespace CK.Observable
         /// Disposes this domain.
         /// If the <see cref="Dispose()"/> without parameters is called, the <see cref="ObtainDomainMonitor(int, bool)"/> is used:
         /// if a monitor is available, it is better to use this overload.
-        /// As usual with Dispose methods, this can be called mulple times.
+        /// As usual with Dispose methods, this can be called multiple times.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         public void Dispose( IActivityMonitor monitor )
@@ -1872,8 +1611,11 @@ namespace CK.Observable
                 DomainClient?.OnDomainDisposed( monitor, this );
                 DomainClient = null;
                 _disposed = true;
+
+                //UnloadDomain( monitor );
                 _timeManager.Timer.Dispose();
                 _sidekickManager.Clear( monitor );
+
                 if( monitor != _domainMonitor && _domainMonitorLock.Wait( 0 ) )
                 {
                     if( _domainMonitor != null ) _domainMonitor.MonitorEnd( "Domain disposed." );
@@ -1896,7 +1638,7 @@ namespace CK.Observable
                 // The first solution seems be to accept 2 (the disposed exception of the lock) and to detect 1 by
                 // checking _disposed after each acquire: if _disposed then we must release the lock and
                 // throw the ObjectDisposedException...
-                // However, the _lock.Dispose() call below MAY occur while a TryEnter has been succesful and before
+                // However, the _lock.Dispose() call below MAY occur while a TryEnter has been successful and before
                 // the _disposed check and the release: this would result in an awful "Incorrect Lock Dispose" exception
                 // since disposing a lock while it is held is an error.
                 // ==> This solution that seems the cleanest and most reasonable one is NOT an option... 
@@ -1912,23 +1654,23 @@ namespace CK.Observable
                 //   - ...and to implement the checks of the first solution.
                 // And we can notice that by doing this:
                 //  - there is no risk to acquire a disposed lock.
-                //  - the domain is 'technically' functionnal, except that:
+                //  - the domain is 'technically' functional, except that:
                 //       - The AutoTimer has been disposed right above, it may throw an ObjectDisposedException and that is fine.
                 //       - The DomainClient has been set to null: no more side effect (like transaction rollback) can occur.
                 // ==> The domain doesn't act as expected anymore. We must throw an ObjectDisposedException to prevent such ambiguity.
                 //
                 // Conclusion:
-                //   - We only protect, inside the lock, the Modify action: readonly operations are free to run and end in this "in between".
+                //   - We only protect, inside the lock, the Modify action: read only operations are free to run and end in this "in between".
                 //     The good place to call CheckDisposed() is in DoBeginTransaction().
-                //   - We comment the folowing line.
+                //   - We comment the following line.
                 //
                 //_lock.Dispose();
             }
         }
 
-        internal void SendCommand( IDisposableObject o, ObservableDomainCommand command )
+        internal void SendCommand( IDestroyable o, ObservableDomainCommand command )
         {
-            CheckWriteLock( o ).CheckDisposed();
+            CheckWriteLock( o ).CheckDestroyed();
             _changeTracker.OnSendCommand( command );
         }
 
@@ -1942,20 +1684,20 @@ namespace CK.Observable
             _changeTracker.OnSendCommand( new ObservableDomainCommand( SaveCommand ) );
         }
 
-        internal bool EnsureSidekicks( IDisposableObject o )
+        internal bool EnsureSidekicks( IDestroyable o )
         {
-            CheckWriteLock( o ).CheckDisposed();
+            CheckWriteLock( o ).CheckDestroyed();
             Debug.Assert( _currentTran != null );
             return _sidekickManager.CreateWaitingSidekicks( _currentTran.Monitor, ex => _currentTran.AddError( CKExceptionData.CreateFrom( ex ) ), false );
         }
 
-        internal ObservablePropertyChangedEventArgs? OnPropertyChanged( ObservableObject o, string propertyName, object after )
+        internal ObservablePropertyChangedEventArgs? OnPropertyChanged( ObservableObject o, string propertyName, object? after )
         {
             if( _deserializeOrInitializing )
             {
                 return null;
             }
-            CheckWriteLock( o ).CheckDisposed();
+            CheckWriteLock( o ).CheckDestroyed();
             ObservablePropertyChangedEventArgs p = EnsurePropertyInfo( propertyName );
             if( o._exporter != null && o._exporter.ExportableProperties.Any( prop => prop.Name == propertyName ) )
             {
@@ -1986,53 +1728,53 @@ namespace CK.Observable
         internal ListRemoveAtEvent? OnListRemoveAt( ObservableObject o, int index )
         {
             if( _deserializeOrInitializing ) return null;
-            CheckWriteLock( o ).CheckDisposed();
+            CheckWriteLock( o ).CheckDestroyed();
             return _changeTracker.OnListRemoveAt( o, index );
         }
 
         internal ListSetAtEvent? OnListSetAt( ObservableObject o, int index, object value )
         {
             if( _deserializeOrInitializing ) return null;
-            CheckWriteLock( o ).CheckDisposed();
+            CheckWriteLock( o ).CheckDestroyed();
             return _changeTracker.OnListSetAt( o, index, value );
         }
 
         internal CollectionClearEvent? OnCollectionClear( ObservableObject o )
         {
             if( _deserializeOrInitializing ) return null;
-            CheckWriteLock( o ).CheckDisposed();
+            CheckWriteLock( o ).CheckDestroyed();
             return _changeTracker.OnCollectionClear( o );
         }
 
-        internal ListInsertEvent? OnListInsert( ObservableObject o, int index, object item )
+        internal ListInsertEvent? OnListInsert( ObservableObject o, int index, object? item )
         {
             if( _deserializeOrInitializing ) return null;
-            CheckWriteLock( o ).CheckDisposed();
+            CheckWriteLock( o ).CheckDestroyed();
             return _changeTracker.OnListInsert( o, index, item );
         }
 
-        internal CollectionMapSetEvent? OnCollectionMapSet( ObservableObject o, object key, object value )
+        internal CollectionMapSetEvent? OnCollectionMapSet( ObservableObject o, object key, object? value )
         {
             if( _deserializeOrInitializing ) return null;
-            CheckWriteLock( o ).CheckDisposed();
+            CheckWriteLock( o ).CheckDestroyed();
             return _changeTracker.OnCollectionMapSet( o, key, value );
         }
 
         internal CollectionRemoveKeyEvent? OnCollectionRemoveKey( ObservableObject o, object key )
         {
             if( _deserializeOrInitializing ) return null;
-            CheckWriteLock( o ).CheckDisposed();
+            CheckWriteLock( o ).CheckDestroyed();
             return _changeTracker.OnCollectionRemoveKey( o, key );
         }
 
         internal CollectionAddKeyEvent? OnCollectionAddKey( ObservableObject o, object key )
         {
             if( _deserializeOrInitializing ) return null;
-            CheckWriteLock( o ).CheckDisposed();
+            CheckWriteLock( o ).CheckDestroyed();
             return _changeTracker.OnCollectionAddKey( o, key );
         }
 
-        IDisposableObject CheckWriteLock( [AllowNull]IDisposableObject o )
+        IDestroyable CheckWriteLock( [AllowNull]IDestroyable o )
         {
             if( !_lock.IsWriteLockHeld )
             {

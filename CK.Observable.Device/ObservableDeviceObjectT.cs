@@ -24,7 +24,7 @@ namespace CK.Observable.Device
         {
         }
 
-        void Write( BinarySerializer s )
+        void Write( BinarySerializer w )
         {
         }
 

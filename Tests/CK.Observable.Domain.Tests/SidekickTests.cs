@@ -33,7 +33,7 @@ namespace CK.Observable.Domain.Tests
                 return false;
             }
 
-            protected override void RegisterClientObject( IActivityMonitor monitor, IDisposableObject o )
+            protected override void RegisterClientObject( IActivityMonitor monitor, IDestroyable o )
             {
                 monitor.Info( $"Registered: {o.GetType().Name}." );
             }
@@ -220,7 +220,7 @@ namespace CK.Observable.Domain.Tests
                 ctorMonitor.Info( "Initializing SKWithDependencies." );
             }
 
-            protected override void RegisterClientObject( IActivityMonitor monitor, IDisposableObject o )
+            protected override void RegisterClientObject( IActivityMonitor monitor, IDestroyable o )
             {
                 o.GetType().Name.Should().Be( "ObjWithSKWithDependenciesViaInterface" );
                 monitor.Info( "ISidekickClientObject<T> registers the objects that implements it." );

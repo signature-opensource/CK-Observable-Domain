@@ -76,7 +76,7 @@ namespace CK.Observable.Device
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="o">The object that just appeared.</param>
-        protected override void RegisterClientObject( IActivityMonitor monitor, IDisposableObject o )
+        protected override void RegisterClientObject( IActivityMonitor monitor, IDestroyable o )
         {
             if( o is TDeviceObject device )
             {
@@ -86,7 +86,7 @@ namespace CK.Observable.Device
                 }
                 // We don't unsubsribe to the Disposed event since a sidekick lives longer (and
                 // ObservableDelegate skips sidekicks while serializing.
-                o.Disposed += OnObjectDestroy;
+                o.Destroyed += OnObjectDestroy;
                 bridge = CreateBridge( monitor, device );
                 _bridges.Add( device.DeviceName, bridge );
                 bridge.Initialize( monitor, this, Host.Find( device.DeviceName ) );
@@ -98,7 +98,7 @@ namespace CK.Observable.Device
                     throw new Exception( $"There must be at most one device host object in a ObservableDomain. Object at index {_objectHost.OId.Index} is already registered." );
                 }
                 _objectHost = host;
-                _objectHost.Disposed += OnObjectHostDisposed;
+                _objectHost.Destroyed += OnObjectHostDisposed;
                 UpdateObjectHost();
                 OnObjectHostAppeared( monitor );
             }

@@ -25,7 +25,7 @@ namespace CK.Observable
     /// <remarks>
     /// This is sealed <see cref="InternalObject"/>, it cannot be specialized and is not exported to remote clients.
     /// </remarks>
-    [SerializationVersion( 0 )]
+    [SerializationVersion( 1 )]
     public sealed class SuspendableClock : InternalObject
     {
         ObservableTimedEventBase? _firstInClock;
@@ -34,13 +34,14 @@ namespace CK.Observable
 
         TimeSpan _cumulativeOffset;
         DateTime _lastStop;
+        int _count;
         bool _isActive;
         bool _cumulateUnloadedTime;
 
         /// <summary>
         /// Creates a new <see cref="SuspendableClock"/>.
         /// </summary>
-        /// <param name="isActive">Whether this clock is initally active or not.</param>
+        /// <param name="isActive">Whether this clock is initially active or not.</param>
         public SuspendableClock( bool isActive = true )
         {
             Debug.Assert( _cumulativeOffset == TimeSpan.Zero );
@@ -52,7 +53,27 @@ namespace CK.Observable
             }
         }
 
-        SuspendableClock( IBinaryDeserializer r, TypeReadInfo? info )
+        List<ObservableTimedEventBase>? _0Bug;
+        bool _0BugDone;
+        internal IReadOnlyList<ObservableTimedEventBase>? V0Bug
+        {
+            get
+            {
+                if( !_0BugDone && _0Bug != null )
+                {
+                    _0BugDone = true;
+                    for( int i = 0; i < _0Bug.Count; ++i )
+                    {
+                        var o = _0Bug[i];
+                        o.PrevInClock = i == 0 ? null : _0Bug[i - 1];
+                        o.NextInClock = i == _0Bug.Count - 1 ? null : _0Bug[i + 1];
+                    }
+                }
+                return _0Bug;
+            }
+        }
+
+        SuspendableClock( IBinaryDeserializer r, TypeReadInfo info )
             : base( RevertSerialization.Default )
         {
             _cumulativeOffset = r.ReadTimeSpan();
@@ -72,8 +93,29 @@ namespace CK.Observable
                 _cumulateUnloadedTime = r.ReadBoolean();
                 _lastStop = r.ReadDateTime();
             }
-            _firstInClock = (ObservableTimedEventBase?)r.ReadObject();
-            _lastInClock = (ObservableTimedEventBase?)r.ReadObject();
+            if( info.Version == 0 )
+            {
+                _firstInClock = (ObservableTimedEventBase?)r.ReadObject();
+                _lastInClock = (ObservableTimedEventBase?)r.ReadObject();
+                var t = _firstInClock;
+                while( t != null )
+                {
+                    if( _0Bug == null ) _0Bug = new List<ObservableTimedEventBase>();
+                    _0Bug.Add( t );
+                    t = t.NextInClock;
+                }
+                _count = _0Bug?.Count ?? 0;
+            }
+            else
+            {
+                int count = r.ReadNonNegativeSmallInt32();
+                while( --count >= 0 )
+                {
+                    var t = (ObservableTimedEventBase)r.ReadObject()!;
+                    t.SetDeserializedClock( this );
+                    Bound( t );
+                }
+            }
             _isActiveChanged = new ObservableEventHandler<ObservableDomainEventArgs>( r );
         }
 
@@ -93,10 +135,21 @@ namespace CK.Observable
                 w.Write( _cumulateUnloadedTime );
                 w.Write( _lastStop );
             }
-            w.WriteObject( _firstInClock );
-            w.WriteObject( _lastInClock );
+            CheckInvariant();
+            w.WriteNonNegativeSmallInt32( _count );
+            ObservableTimedEventBase? t = _firstInClock;
+            while( t != null )
+            {
+                w.WriteObject( t );
+                t = t.NextInClock;
+            }
             _isActiveChanged.Write( w );
         }
+
+        /// <summary>
+        /// Gets the number of <see cref="ObservableTimedEventBase"/> bound to this clock.
+        /// </summary>
+        public int Count => _count;
 
         /// <summary>
         /// Gets the current time for this clock. It is <see cref="DateTime.UtcNow"/> only if this
@@ -109,7 +162,7 @@ namespace CK.Observable
         public DateTime UtcNow => _isActive ? DateTime.UtcNow.Subtract( _cumulativeOffset ) : _lastStop;
 
         /// <summary>
-        /// Gets the time span during wich this clock has been suspended (this is greater than or
+        /// Gets the time span during which this clock has been suspended (this is greater than or
         /// equal to <see cref="TimeSpan.Zero"/>): this is increased each time <see cref="IsActive"/> becomes true.
         /// </summary>
         public TimeSpan CumulativeOffset => _cumulativeOffset;
@@ -182,40 +235,57 @@ namespace CK.Observable
         {
             add
             {
-                this.CheckDisposed();
+                this.CheckDestroyed();
                 _isActiveChanged.Add( value, nameof( IsActiveChanged ) );
             }
             remove => _isActiveChanged.Remove( value );
         }
 
 
-        protected internal override void Dispose( bool shouldDisposeObjects )
+        protected internal override void OnDestroy()
         {
-            if( shouldDisposeObjects )
+            CheckInvariant();
+            while( _firstInClock != null )
             {
-                while( _firstInClock != null )
-                {
-                    Debug.Assert( _firstInClock.SuspendableClock == this );
-                    _firstInClock.SuspendableClock = null;
-                }
+                Debug.Assert( _firstInClock.SuspendableClock == this );
+                _firstInClock.SuspendableClock = null;
             }
-            base.Dispose( shouldDisposeObjects );
+            base.OnDestroy();
         }
 
         internal void Unbound( ObservableTimedEventBase o )
         {
+            --_count;
             if( _firstInClock == o ) _firstInClock = o.NextInClock;
             else o.PrevInClock.NextInClock = o.NextInClock;
             if( _lastInClock == o ) _lastInClock = o.PrevInClock;
             else o.NextInClock.PrevInClock = o.PrevInClock;
+            CheckInvariant();
         }
 
         internal void Bound( ObservableTimedEventBase o )
         {
-            Debug.Assert( o.NextInClock == null );
-            if( (o.NextInClock = _firstInClock) == null ) _lastInClock = o;
-            else _firstInClock.PrevInClock = o;
-            _firstInClock = o;
+            Debug.Assert( o.NextInClock == null && o.PrevInClock == null );
+            ++_count;
+
+            if( (o.PrevInClock = _lastInClock) == null ) _firstInClock = o;
+            else _lastInClock.NextInClock = o;
+            _lastInClock = o;
+
+            CheckInvariant();
+        }
+
+        [Conditional("DEBUG")]
+        void CheckInvariant()
+        {
+            Debug.Assert( (_count > 0 && _firstInClock != null && _lastInClock != null) || (_count == 0 && _firstInClock == null && _lastInClock == null) );
+            var t = _firstInClock;
+            for( int i = 0; i < _count; ++i )
+            {
+                Debug.Assert( t != null );
+                t = t.NextInClock;
+            }
+            Debug.Assert( t == null );
         }
     }
 }

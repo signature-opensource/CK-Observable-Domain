@@ -57,11 +57,11 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Helper methot to export an object.
+        /// Helper method to export an object.
         /// </summary>
         /// <param name="e">The target exporter.</param>
         /// <param name="o">The object to export.</param>
-        protected void ExportEventObject( ObjectExporter e, object o )
+        protected void ExportEventObject( ObjectExporter e, object? o )
         {
             if( o is ObservableObject obs )
             {
@@ -78,7 +78,7 @@ namespace CK.Observable
 
         /// <summary>
         /// Abstract method called by <see cref="Export(ObjectExporter)"/> that must export the
-        /// data specific the the concrete event.
+        /// data specific the concrete event.
         /// </summary>
         /// <param name="e">The target exporter.</param>
         protected abstract void ExportEventData( ObjectExporter e );
