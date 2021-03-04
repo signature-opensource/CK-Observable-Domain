@@ -113,15 +113,15 @@ namespace CK.Observable
                 return DoReadInstance( r, readInfo );
             }
 
-            string? InvokeCtor( object o, object?[] callParams, TypeReadInfo readInfo )
+            string? InvokeCtor( IBinaryDeserializer r, object o, object?[] callParams, TypeReadInfo readInfo )
             {
                 if( _baseType != null )
                 {
-                    if( readInfo.BaseType == null ) 
+                    if( readInfo.BaseType == null )
                     {
                         return $"Missing base type info for type {readInfo.SimpleTypeName}. The type hierarchy has changed between serialization and deserialization.";
                     }
-                    var error = _baseType.InvokeCtor( o, callParams, readInfo.BaseType );
+                    var error = _baseType.InvokeCtor( r, o, callParams, readInfo.BaseType );
                     if( error != null ) return error;
                     if( o is IDestroyable d && d.IsDestroyed ) return null;
                 }
@@ -130,16 +130,19 @@ namespace CK.Observable
                     return $"Missing base type constructor {readInfo.SimpleTypeName}( IBinaryDeserializer, TypeReadInfo ).";
                 }
                 callParams[1] = readInfo;
-                _ctor?.Invoke( o, callParams );
-                if( _useReverSerialization && !RevertSerialization.CheckLastDeserialized( o ) )
+                using( r.IsDebugMode ? r.OpenDebugPushContext( $"Ctor '{readInfo.SimpleTypeName}'." ) : null )
                 {
-                    if( _baseType == null )
+                    _ctor?.Invoke( o, callParams );
+                    if( _useReverSerialization && !RevertSerialization.CheckLastDeserialized( o ) )
                     {
-                        return $"Deserialization constructor {readInfo.SimpleTypeName}( IBinaryDeserializer, TypeReadInfo ) must call RevertSerialization.OnRootDeserialized( this ).";
-                    }
-                    else
-                    {
-                        return $"Deserialization constructor {readInfo.SimpleTypeName}( IBinaryDeserializer, TypeReadInfo ) must call the base( RevertSerialization.Default ) constructor.";
+                        if( _baseType == null )
+                        {
+                            return $"Deserialization constructor {readInfo.SimpleTypeName}( IBinaryDeserializer, TypeReadInfo ) must call RevertSerialization.OnRootDeserialized( this ).";
+                        }
+                        else
+                        {
+                            return $"Deserialization constructor {readInfo.SimpleTypeName}( IBinaryDeserializer, TypeReadInfo ) must call the base( RevertSerialization.Default ) constructor.";
+                        }
                     }
                 }
                 return null;
@@ -159,11 +162,14 @@ namespace CK.Observable
                     var callParams = new object?[] { r, null };
                     if( readInfo == null )
                     {
-                        _ctor?.Invoke( o, callParams );
+                        using( r.IsDebugMode ? r.OpenDebugPushContext( $"Ctor with null readInfo '{o.GetType().FullName}'." ) : null )
+                        {
+                            _ctor?.Invoke( o, callParams );
+                        }
                     }
                     else
                     {
-                        var error = InvokeCtor( o, callParams, readInfo );
+                        var error = InvokeCtor( r, o, callParams, readInfo );
                         if( error != null ) throw new InvalidDataException( error );
                     }
                 }

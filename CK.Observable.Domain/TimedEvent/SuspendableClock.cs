@@ -113,6 +113,7 @@ namespace CK.Observable
                 w.Write( _cumulateUnloadedTime );
                 w.Write( _lastStop );
             }
+            CheckInvariant();
             w.WriteNonNegativeSmallInt32( _count );
             ObservableTimedEventBase? t = _firstInClock;
             while( t != null )
@@ -221,6 +222,7 @@ namespace CK.Observable
 
         protected internal override void OnDestroy()
         {
+            CheckInvariant();
             while( _firstInClock != null )
             {
                 Debug.Assert( _firstInClock.SuspendableClock == this );
@@ -255,6 +257,13 @@ namespace CK.Observable
         void CheckInvariant()
         {
             Debug.Assert( (_count > 0 && _firstInClock != null && _lastInClock != null) || (_count == 0 && _firstInClock == null && _lastInClock == null) );
+            var t = _firstInClock;
+            for( int i = 0; i < _count; ++i )
+            {
+                Debug.Assert( t != null );
+                t = t.NextInClock;
+            }
+            Debug.Assert( t == null );
         }
     }
 }

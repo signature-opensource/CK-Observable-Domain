@@ -180,15 +180,15 @@ namespace CK.Observable
                 }
                 else if( b == SerializationMarker.ObjectBinaryFormatter || b == SerializationMarker.StructBinaryFormatter )
                 {
-                    var dbg = IsDebugMode;
-                    if( dbg ) OpenDebugPushContext( b.ToString() );
-                    if( _binaryFormatter == null ) _binaryFormatter = new BinaryFormatter();
-                    result = _binaryFormatter.Deserialize( BaseStream );
-                    if( b == SerializationMarker.ObjectBinaryFormatter )
+                    using( IsDebugMode ? OpenDebugPushContext( b.ToString() ) : null )
                     {
-                        _objects.Add( result );
+                        if( _binaryFormatter == null ) _binaryFormatter = new BinaryFormatter();
+                        result = _binaryFormatter.Deserialize( BaseStream );
+                        if( b == SerializationMarker.ObjectBinaryFormatter )
+                        {
+                            _objects.Add( result );
+                        }
                     }
-                    if( dbg ) CloseDebugPushContext( $"'{result.GetType().Name}' read." );
                 }
                 else
                 {
@@ -212,27 +212,24 @@ namespace CK.Observable
                     }
                     else
                     {
-                        var dbg = IsDebugMode;
-                        if( dbg ) OpenDebugPushContext( $"Reading '{info.SimpleTypeName}' instance" );
-
-                        ++_recurseCount;
-                        result = d.ReadInstance( this, info );
-                        --_recurseCount;
-
-                        if( dbg ) CloseDebugPushContext( $"Read '{info.SimpleTypeName}'." );
+                        using( IsDebugMode ? OpenDebugPushContext( $"Reading '{info.SimpleTypeName}' instance" ) : null )
+                        {
+                            ++_recurseCount;
+                            result = d.ReadInstance( this, info );
+                            --_recurseCount;
+                        }
                     }
                     if( _recurseCount == 0 && _deferred != null )
                     {
                         var dbg = IsDebugMode;
                         while( _deferred.TryPop( out var s ) )
                         {
-                            if( dbg ) OpenDebugPushContext( $"Reading deferred '{info.SimpleTypeName}' instance" );
-
-                            ++_recurseCount;
-                            s.Item1.ReadInstance( this, s.Item3, s.Item2 );
-                            --_recurseCount;
-
-                            if( dbg ) CloseDebugPushContext( $"Read deferred '{info.SimpleTypeName}'." );
+                            using( dbg ? OpenDebugPushContext( $"Reading deferred '{info.SimpleTypeName}' instance" ) : null )
+                            {
+                                ++_recurseCount;
+                                s.Item1.ReadInstance( this, s.Item3, s.Item2 );
+                                --_recurseCount;
+                            }
                         }
                     }
                 }

@@ -70,5 +70,14 @@ namespace CK.Observable
         /// <param name="line">Current line number used to build the <see cref="InvalidDataException"/> message if sentinel cannot be read back.</param>
         void DebugCheckSentinel( [CallerFilePath]string fileName = null, [CallerLineNumber] int line = 0 );
 
+        /// <summary>
+        /// When <see cref="IsDebugMode"/> is true, records the <paramref name="ctx"/> in a stack
+        /// that will be dumped on error and returns a disposable to pop the stack.
+        /// When <see cref="IsDebugMode"/> is false, returns null.
+        /// </summary>
+        /// <param name="ctx">The stacked message.</param>
+        /// <returns>A disposable that will pop the message or null is not in debug mode.</returns>
+        IDisposable? OpenDebugPushContext( string ctx );
+
     }
 }

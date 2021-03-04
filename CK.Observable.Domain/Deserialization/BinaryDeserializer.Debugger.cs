@@ -68,15 +68,15 @@ namespace CK.Observable
             _lastReadSentinel = fileName + '(' + line.ToString() + ')';
         }
 
-        void OpenDebugPushContext( string ctx )
+        /// <inheritdoc />
+        public IDisposable? OpenDebugPushContext( string ctx )
         {
-            Debug.Assert( IsDebugMode );
-            _debugContext.Push( ctx );
-        }
-
-        void CloseDebugPushContext( string ctx )
-        {
-            _debugContext.Pop();
+            if( IsDebugMode )
+            {
+                _debugContext.Push( ctx );
+                return Core.Util.CreateDisposableAction( () => _debugContext.Pop() );
+            }
+            return null;
         }
 
         void ThrowInvalidDataException( string message, Exception? inner = null )
