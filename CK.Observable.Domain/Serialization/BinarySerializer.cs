@@ -174,7 +174,7 @@ namespace CK.Observable
                 marker = SerializationMarker.Object;
             }
             else marker = SerializationMarker.Struct;
-            ITypeSerializationDriver driver = _drivers.FindDriver( t );
+            ITypeSerializationDriver? driver = _drivers.FindDriver( t );
             if( driver == null )
             {
                 if( !t.IsSerializable ) throw new InvalidOperationException( $"Type {t} is not serializable." );
@@ -267,7 +267,7 @@ namespace CK.Observable
         /// <param name="t">The type to write. Can be null.</param>
         public void Write( Type? t )
         {
-            ITypeSerializationDriver driver = _drivers.FindDriver( t );
+            ITypeSerializationDriver? driver = _drivers.FindDriver( t );
             if( driver != null ) driver.WriteTypeInformation( this );
             else WriteSimpleType( t );
         }
