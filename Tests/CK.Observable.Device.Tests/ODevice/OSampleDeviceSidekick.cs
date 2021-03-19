@@ -59,6 +59,14 @@ namespace CK.Observable.Device.Tests
                 Object.Message = null;
             }
 
+            protected override void OnObjectDisappeared( IActivityMonitor monitor, bool isObjectDestroyed )
+            {
+                if( Device != null )
+                {
+                    Device.MessageChanged.Async -= OnMessageChanged;
+                }
+            }
+
             SampleDevice.SafeDeviceState? IBridge.GetDeviceState() => Device?.State;
         }
     }

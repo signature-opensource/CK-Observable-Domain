@@ -14,9 +14,9 @@ namespace CK.Observable.Device.Tests
         public OSampleDevice( string deviceName )
             : base( deviceName )
         {
-            // This ensures that the sidekicks have been instanciated.
+            // This ensures that the sidekicks have been instantiated.
             // This is called here since it must be called once the object has been fully initialized
-            // (and there is no way to know when this construstor has terminated from the core code).
+            // (and there is no way to know when this constructor has terminated from the core code).
             Domain.EnsureSidekicks();
         }
 
@@ -52,8 +52,6 @@ namespace CK.Observable.Device.Tests
         /// <summary>
         /// The CmdSend helper enables easy command sending.
         /// </summary>
-        public void CmdCommandSync() => CmdSend<SampleSyncCommand>();
-
-        public void CmdCommandAsync() => CmdSend<SampleAsyncCommand>( c => { c.UselessParameter = 3712; c.AnotherUselessParameter = "Nop"; } );
+        public void SendSimpleCommand( string? messagePrefix = null ) => CmdSend<SampleCommand>( c => c.MessagePrefix = messagePrefix );
     }
 }

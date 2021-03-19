@@ -5,6 +5,8 @@ using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
@@ -210,7 +212,7 @@ namespace CK.Observable.Device.Tests
                 device = new OSampleDevice( "n°1" );
                 Debug.Assert( device.Status != null );
                 device.Status.Value.IsRunning.Should().BeTrue( "ConfigurationStatus is RunnableStarted." );
-                device.CmdCommandSync();
+                device.SendSimpleCommand();
             } );
             Debug.Assert( device != null );
             Debug.Assert( device.Status != null );
@@ -221,9 +223,7 @@ namespace CK.Observable.Device.Tests
                 var directState = device.GetSafeState();
                 Debug.Assert( directState != null );
                 directState.SyncCommandCount.Should().Be( 1 );
-                directState.AsyncCommandCount.Should().Be( 0 );
-                device.CmdCommandSync();
-                device.CmdCommandAsync();
+                device.SendSimpleCommand();
             } );
 
             System.Threading.Thread.Sleep( 20 );
@@ -232,10 +232,70 @@ namespace CK.Observable.Device.Tests
                 var directState = device.GetSafeState();
                 Debug.Assert( directState != null );
                 directState.SyncCommandCount.Should().Be( 2 );
-                directState.AsyncCommandCount.Should().Be( 1 );
             } );
 
             await host.ClearAsync( TestHelper.Monitor );
         }
+
+
+        [Test]
+        public async Task bridges_rebind_to_their_Device_when_reloaded()
+        {
+            // The device is available and running.
+            var host = new SampleDeviceHost( new DefaultDeviceAlwaysRunningPolicy() );
+            var sp = new SimpleServiceContainer();
+            sp.Add( host );
+            var config = new SampleDeviceConfiguration()
+            {
+                Name = "n°1",
+                PeriodMilliseconds = 5,
+                Status = DeviceConfigurationStatus.RunnableStarted
+            };
+            (await host.ApplyDeviceConfigurationAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.CreateAndStartSucceeded );
+
+            using var obs = new ObservableDomain( TestHelper.Monitor, nameof( bridges_rebind_to_their_Device_when_reloaded ), true, serviceProvider: sp );
+
+            // The bridge relay the event: the message is updated.
+            OSampleDevice? device = null;
+            await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
+            {
+                device = new OSampleDevice( "n°1" );
+                Debug.Assert( device.Status != null );
+                device.Status.Value.IsRunning.Should().BeTrue( "ConfigurationStatus is RunnableStarted." );
+                device.SendSimpleCommand( "NEXT" );
+            } );
+            Debug.Assert( device != null );
+            Debug.Assert( device.Status != null );
+
+            System.Threading.Thread.Sleep( 100 );
+            using( obs.AcquireReadLock() )
+            {
+                device.Message.Should().StartWith( "NEXT", "The device Message has been updated by the bridge." );
+            }
+
+            // Unloading/Reloading the domain.
+            using( TestHelper.Monitor.OpenInfo( "Serializing/Deserializing." ) )
+            {
+                using var s = new MemoryStream();
+                if( !obs.Save( TestHelper.Monitor, s, true ) ) throw new Exception( "Failed to save." );
+                s.Position = 0;
+                if( !obs.Load( TestHelper.Monitor, s ) ) throw new Exception( "Reload failed." );
+            }
+
+            device = obs.AllObjects.OfType<OSampleDevice>().Single();
+            await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
+            {
+                device.Message.Should().StartWith( "NEXT" );
+                device.SendSimpleCommand( "NEXT again" );
+            } );
+            System.Threading.Thread.Sleep( 20 );
+            using( obs.AcquireReadLock() )
+            {
+                device.Message.Should().StartWith( "NEXT again" );
+            }
+
+            await host.ClearAsync( TestHelper.Monitor );
+        }
+
     }
 }

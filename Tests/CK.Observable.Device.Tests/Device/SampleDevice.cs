@@ -18,7 +18,8 @@ namespace CK.Observable.Device.Tests
         Task _run;
         CancellationTokenSource? _stopToken;
 
-        string _messagePrefix;
+        string? _messagePrefixFromCommand;
+        string _messagePrefixFromConfig;
         int _period;
         int _count;
         PerfectEventSender<SampleDevice, string> _messageChanged;
@@ -30,7 +31,7 @@ namespace CK.Observable.Device.Tests
         {
             _run = Task.CompletedTask;
             _period = c.Configuration.PeriodMilliseconds;
-            _messagePrefix = c.Configuration.Message;
+            _messagePrefixFromConfig = c.Configuration.Message;
             _messageChanged = new PerfectEventSender<SampleDevice, string>();
         }
 
@@ -65,7 +66,6 @@ namespace CK.Observable.Device.Tests
                 DangerousCurrentMessage = message;
                 DangerousCurrentCount = d._count;
                 SyncCommandCount = d._syncCommandCount;
-                AsyncCommandCount = d._asyncCommandCount;
             }
 
             public string DangerousCurrentMessage { get; }
@@ -74,15 +74,13 @@ namespace CK.Observable.Device.Tests
 
             public int SyncCommandCount { get; }
 
-            public int AsyncCommandCount { get; }
-
         }
 
         /// <summary>
         /// The current state that, as a class instance, supports atomic access:
         /// it is replaced as a whole.
         /// <para>
-        /// Accessing this state should de done through a local variable that captures
+        /// Accessing this state should be done through a local variable that captures
         /// this reference.
         /// </para>
         /// </summary>
@@ -117,7 +115,7 @@ namespace CK.Observable.Device.Tests
                 }
                 monitor.Debug( "Running." );
                 // This is where exposed message/count can be incoherent.
-                var message = $"{_messagePrefix} - {_count++}";
+                var message = $"{_messagePrefixFromCommand} - {_messagePrefixFromConfig} - {_count++}";
                 DangerousCurrentMessage = message;
                 // Setting the reference to the new state object is atomic.
                 State = new SafeDeviceState( this, message );
@@ -125,7 +123,7 @@ namespace CK.Observable.Device.Tests
                 // DangerousCurrentMessage/Count are read DURING the handling of
                 // such events, everything is safe!
                 // However, we should never trust the developer to NOT access such properties
-                // outside of an event context: such dangerous state exposure should be forbidden.
+                // outside of an event context: such dangerous state exposure should be avoided.
                 await _messageChanged.SafeRaiseAsync( monitor, this, message ).ConfigureAwait( false );
             }
             State = null;
@@ -144,7 +142,7 @@ namespace CK.Observable.Device.Tests
             if( _period != config.PeriodMilliseconds )
             {
                 _period = config.PeriodMilliseconds;
-                _messagePrefix = config.Message;
+                _messagePrefixFromConfig = config.Message;
                 return Task.FromResult( DeviceReconfiguredResult.UpdateSucceeded );
             }
             return Task.FromResult( DeviceReconfiguredResult.None );
@@ -157,28 +155,14 @@ namespace CK.Observable.Device.Tests
         /// <param name="command">The command to handle.</param>
         protected override void DoHandleCommand( IActivityMonitor monitor, SyncDeviceCommand command )
         {
-            if( command is SampleSyncCommand )
+            if( command is SampleCommand c )
             {
                 Interlocked.Increment( ref _syncCommandCount );
+                _messagePrefixFromCommand = c.MessagePrefix;
                 return;
             }
             // The base implementation throws.
             base.DoHandleCommand( monitor, command );
-        }
-
-        /// <summary>
-        /// Caution: Handling command is done out of any lock: this may be called concurrently.
-        /// </summary>
-        /// <param name="monitor">The monitor to use.</param>
-        /// <param name="command">The command to handle.</param>
-        protected override Task DoHandleCommandAsync( IActivityMonitor monitor, AsyncDeviceCommand command )
-        {
-            if( command is SampleAsyncCommand )
-            {
-                Interlocked.Increment( ref _asyncCommandCount );
-                return Task.CompletedTask;
-            }
-            return base.DoHandleCommandAsync( monitor, command );
         }
 
         /// <summary>

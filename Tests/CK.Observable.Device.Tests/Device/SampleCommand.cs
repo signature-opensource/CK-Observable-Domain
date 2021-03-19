@@ -5,7 +5,8 @@ using System.Text;
 
 namespace CK.Observable.Device.Tests
 {
-    public class SampleSyncCommand : SyncDeviceCommand<SampleDeviceHost>
+    public class SampleCommand : SyncDeviceCommand<SampleDeviceHost>
     {
+        public string? MessagePrefix { get; set; } 
     }
 }
