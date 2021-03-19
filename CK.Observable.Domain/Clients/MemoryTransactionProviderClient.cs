@@ -238,6 +238,7 @@ namespace CK.Observable
             if( v == 1 )
             {
                 Span<byte> bytes = stackalloc byte[SnapshotHeaderLength - 1];
+                s.Read( bytes );
                 return (ReadHeader( bytes ), SnapshotHeaderLength); 
             }
             if( v == 0 )
