@@ -267,7 +267,7 @@ namespace CK.Observable.Device.Tests
             Debug.Assert( device != null );
             Debug.Assert( device.Status != null );
 
-            System.Threading.Thread.Sleep( 100 );
+            System.Threading.Thread.Sleep( 90 );
             using( obs.AcquireReadLock() )
             {
                 device.Message.Should().StartWith( "NEXT", "The device Message has been updated by the bridge." );
