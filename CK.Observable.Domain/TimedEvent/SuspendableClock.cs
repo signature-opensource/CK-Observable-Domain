@@ -25,7 +25,7 @@ namespace CK.Observable
     /// <remarks>
     /// This is sealed <see cref="InternalObject"/>, it cannot be specialized and is not exported to remote clients.
     /// </remarks>
-    [SerializationVersion( 1 )]
+    [SerializationVersion( 2 )]
     public sealed class SuspendableClock : InternalObject
     {
         ObservableTimedEventBase? _firstInClock;
@@ -106,10 +106,23 @@ namespace CK.Observable
                 }
                 _count = _0Bug?.Count ?? 0;
             }
-            else
+            else if( info.Version == 1 )
             {
                 int count = r.ReadNonNegativeSmallInt32();
                 while( --count >= 0 )
+                {
+                    if( count == 6425 ) break;
+                    var t = (ObservableTimedEventBase)r.ReadObject()!;
+                    t.SetDeserializedClock( this );
+                    Bound( t );
+                }
+            }
+            else
+            {
+                // There is a bug in count/linked list.
+                // Rely only on the linked list.
+                int count = r.ReadNonNegativeSmallInt32();
+                while( r.ReadBoolean() )
                 {
                     var t = (ObservableTimedEventBase)r.ReadObject()!;
                     t.SetDeserializedClock( this );
@@ -140,9 +153,11 @@ namespace CK.Observable
             ObservableTimedEventBase? t = _firstInClock;
             while( t != null )
             {
+                w.Write( true );
                 w.WriteObject( t );
                 t = t.NextInClock;
             }
+            w.Write( false );
             _isActiveChanged.Write( w );
         }
 
