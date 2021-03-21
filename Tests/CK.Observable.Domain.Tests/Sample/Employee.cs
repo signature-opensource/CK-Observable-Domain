@@ -1,8 +1,5 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using CK.Core;
+using System.Diagnostics;
 
 namespace CK.Observable.Domain.Tests.Sample
 {
@@ -15,9 +12,11 @@ namespace CK.Observable.Domain.Tests.Sample
             Garage.Employees.Add( this );
         }
 
-        protected Employee( IBinaryDeserializerContext d ) : base( d )
+        protected Employee( RevertSerialization _ ) : base( _ ) { }
+
+        Employee( IBinaryDeserializer r, TypeReadInfo? info )
+            : base( RevertSerialization.Default )
         {
-            var r = d.StartReading();
             Garage = (Garage)r.ReadObject();
         }
 
@@ -28,9 +27,10 @@ namespace CK.Observable.Domain.Tests.Sample
 
         public Garage Garage { get; set; }
 
-        protected override void OnDisposed()
+        protected override void OnDestroy()
         {
             Garage.Employees.Remove( this );
+            base.OnDestroy();
         }
 
         public override string ToString() => $"'Employee {FirstName} {LastName} - {Garage?.CompanyName ?? "(no company name)"}'";

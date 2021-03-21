@@ -2,18 +2,26 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CK.Observable
 {
+    /// <summary>
+    /// Registers export drivers. This can be instanciated if needed but most often,
+    /// the <see cref="Default"/> registry is enough.
+    /// </summary>
     public class ExporterRegistry : IExporterResolver
     {
         readonly ConcurrentDictionary<Type, IObjectExportTypeDriver> _drivers;
 
+        /// <summary>
+        /// Gets the default, shared, registry.
+        /// </summary>
         public static readonly ExporterRegistry Default = new ExporterRegistry();
 
+        /// <summary>
+        /// Initializes a new <see cref="ExporterRegistry"/> with preregistered
+        /// basic export drivers.
+        /// </summary>
         public ExporterRegistry()
         {
             _drivers = new ConcurrentDictionary<Type, IObjectExportTypeDriver>();
@@ -36,17 +44,6 @@ namespace CK.Observable
             RegisterDriver( BasicTypeDrivers.DUInt16.Default.ExportDriver );
             RegisterDriver( BasicTypeDrivers.DUInt32.Default.ExportDriver );
             RegisterDriver( BasicTypeDrivers.DUInt64.Default.ExportDriver );
-        }
-
-        /// <summary>
-        /// Registers a full driver (<see cref="UnifiedTypeDriverExtension.CheckValidFullDriver"/> is called).
-        /// This replaces any existing export driver for the Type.
-        /// </summary>
-        /// <param name="driver">The driver to register.</param>
-        public void RegisterValidFullDriver( IUnifiedTypeDriver driver )
-        {
-            driver.CheckValidFullDriver();
-            RegisterDriver( driver.ExportDriver );
         }
 
         /// <summary>

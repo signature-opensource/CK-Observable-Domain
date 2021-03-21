@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 namespace CK.Observable
 {
@@ -18,13 +15,15 @@ namespace CK.Observable
 
         public Type Type => typeof(List<T>);
 
+        bool ITypeSerializationDriver.IsFinalType => false;
+
         void ITypeSerializationDriver<List<T>>.WriteData( BinarySerializer w, List<T> o ) => DoWriteData( w, o );
 
         void DoWriteData( BinarySerializer w, List<T> o ) => ArraySerializer<T>.WriteObjects( w, o?.Count ?? 0, o, _itemSerializer );
 
         void ITypeSerializationDriver.WriteData( BinarySerializer w, object o ) => DoWriteData( w, (List<T>)o );
 
-        public void WriteTypeInformation( BinarySerializer s ) => s.WriteSimpleType( Type, null );
+        public void WriteTypeInformation( BinarySerializer s ) => s.WriteSimpleType( Type );
 
     }
 }

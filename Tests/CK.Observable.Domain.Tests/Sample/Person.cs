@@ -1,8 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace CK.Observable.Domain.Tests.Sample
 {
@@ -13,13 +9,16 @@ namespace CK.Observable.Domain.Tests.Sample
         {
         }
 
-        protected Person( IBinaryDeserializerContext d ) : base( d )
+        protected Person( RevertSerialization _ ) : base( _ ) { }
+
+        Person( IBinaryDeserializer r, TypeReadInfo? info )
+            : base( RevertSerialization.Default )
         {
-            var r = d.StartReading();
+            Debug.Assert( !IsDestroyed );
             Friend = (Person)r.ReadObject();
             FirstName = r.ReadNullableString();
             LastName = r.ReadNullableString();
-            if( r.CurrentReadInfo.Version >= 1 )
+            if( info.Version >= 1 )
             {
                 Age = r.ReadNonNegativeSmallInt32();
             }
@@ -27,6 +26,7 @@ namespace CK.Observable.Domain.Tests.Sample
 
         void Write( BinarySerializer s )
         {
+            Debug.Assert( !IsDestroyed );
             s.WriteObject( Friend );
             s.WriteNullableString( FirstName );
             s.WriteNullableString( LastName );

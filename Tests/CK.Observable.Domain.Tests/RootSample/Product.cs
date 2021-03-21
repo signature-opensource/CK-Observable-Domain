@@ -1,9 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 namespace CK.Observable.Domain.Tests.RootSample
 {
     [SerializationVersion(0)]
@@ -14,10 +8,9 @@ namespace CK.Observable.Domain.Tests.RootSample
             ProductInfo = p;
         }
 
-        public Product( IBinaryDeserializerContext d )
-            : base( d )
+        Product( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
         {
-            var r = d.StartReading();
             ProductNumber = r.ReadInt32();
             Name = r.ReadNullableString();
             ProductInfo = (ProductInfo)r.ReadObject();

@@ -3,14 +3,13 @@ using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
-using System.Text;
-using System.Threading.Tasks;
+using CK.Core;
+using static CK.Testing.MonitorTestHelper;
 
-namespace CK.Serialization.Tests
+namespace CK.Observable.Domain.Tests.Serialization
 {
-     [TestFixture]
+    [TestFixture]
     public class DictionarySerializationTests
     {
         [Test]
@@ -20,7 +19,7 @@ namespace CK.Serialization.Tests
             d.Add( "A", 1 );
             d["a"].Should().Be( 1 );
 
-            var d2 = (Dictionary<string, int>)SaveAndLoadStandard( d );
+            var d2 = (Dictionary<string, int>)TestHelper.SaveAndLoadViaStandardSerialization( d );
             d2["a"].Should().Be( 1 );
             d2.Add( "B", 2 );
             d2["b"].Should().Be( 2 );
@@ -28,15 +27,6 @@ namespace CK.Serialization.Tests
             d2.Comparer.Should().NotBeSameAs( StringComparer.InvariantCultureIgnoreCase );
         }
 
-        internal static object SaveAndLoadStandard( object o )
-        {
-            using( var s = new MemoryStream() )
-            {
-                new BinaryFormatter().Serialize( s, o );
-                s.Position = 0;
-                return new BinaryFormatter().Deserialize( s );
-            }
-        }
 
         [Test]
         public void basic_types_dictionary_serialization()
@@ -49,7 +39,7 @@ namespace CK.Serialization.Tests
                 { 9, "Nine" },
                 { 8, "Eight" }
             };
-            object back = SaveAndLoad( int2String );
+            object back = TestHelper.SaveAndLoadObject( int2String );
             back.Should().BeAssignableTo<Dictionary<int, string>>();
             var b = (Dictionary<int, string>)back;
             b.Should().BeEquivalentTo( int2String );
@@ -66,14 +56,12 @@ namespace CK.Serialization.Tests
                 { "Nine", 9 },
                 { "Eight", 8 }
             };
-            object back = SaveAndLoad( string2Int );
+            object back = TestHelper.SaveAndLoadObject( string2Int );
             back.Should().BeAssignableTo<Dictionary<string,int>>();
             var b = (Dictionary<string, int>)back;
             b.Should().BeEquivalentTo( string2Int );
             b["TWELVE"].Should().Be( 12 );
         }
-
-        static object SaveAndLoad( object o ) => ArraySerializationTests.SaveAndLoad( o );
 
     }
 }

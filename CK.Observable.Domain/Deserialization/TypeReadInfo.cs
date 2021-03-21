@@ -2,18 +2,23 @@ using CK.Core;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CK.Observable
 {
+    /// <summary>
+    /// Descriptor for a potential <see cref="Type"/>.
+    /// </summary>
     public class TypeReadInfo
     {
         /// <summary>
-        /// Gets the serialized type name. It may be an assembly qualified name or an alias.
+        /// Gets the serialized type name. It's the assembly qualified name.
         /// </summary>
         public string TypeName { get; }
+
+        /// <summary>
+        /// Gets the simplified <see cref="TypeName"/>.
+        /// </summary>
+        public string SimpleTypeName => TypeName.Split( ',' )[0];
 
         /// <summary>
         /// Gets whether the object is tracked (reference type) or not (value type).
@@ -59,6 +64,7 @@ namespace CK.Observable
         /// <summary>
         /// Gets the deserialization driver if it can be resolved, null otherwise.
         /// </summary>
+        /// <param name="r">The deserializer.</param>
         public IDeserializationDriver GetDeserializationDriver( IDeserializerResolver r )
         {
             if( !_driverLookupDone )
@@ -81,6 +87,22 @@ namespace CK.Observable
             TypeName = t;
             Version = version;
             IsTrackedObject = isTrackedObject;
+        }
+
+        /// <summary>
+        /// Constructor for Object type, bound to <see cref="BasicTypeDrivers.DObject"/>.
+        /// </summary>
+        /// <param name="r">The resolver.</param>
+        internal TypeReadInfo( IDeserializerResolver r )
+        {
+            _localType = typeof( object );
+            _typePath = new[] { this };
+            TypeName = String.Empty;
+            Version = 0;
+            IsTrackedObject = true;
+            _localTypeLookupDone = true;
+            _driverLookupDone = true;
+            _driver = r.FindDriver( _localType.AssemblyQualifiedName );
         }
 
         internal void SetBaseType( TypeReadInfo b )

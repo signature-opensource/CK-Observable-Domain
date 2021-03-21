@@ -1,21 +1,13 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 namespace CK.Observable
 {
     /// <summary>
     /// Handles deserialization from a type's assembly qualified name.
+    /// Just like <see cref="ITypeSerializationDriver"/> is not bound to a Type, a deserializer
+    /// is not bound to a <see cref="System.Type.AssemblyQualifiedName"/>: it is the <see cref="DeserializerRegistry"/>
+    /// that is in charge of the mapping from the "name" to the desrializer to use.
     /// </summary>
     public interface IDeserializationDriver
     {
-        /// <summary>
-        /// Gets the type's assembly qualified name that this driver handles.
-        /// </summary>
-        string AssemblyQualifiedName { get; }
-
         /// <summary>
         /// Reads the data and instanciates a new object.
         /// </summary>
@@ -25,7 +17,7 @@ namespace CK.Observable
         /// If type based serialization has been used (with versions and ancestors). 
         /// </param>
         /// <returns>Must return the new instance.</returns>
-        object ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  );
+        object? ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  );
 
     }
 }

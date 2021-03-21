@@ -13,16 +13,16 @@ namespace Signature.Process.Dispatching
 
         public BarcodeScannerState BarcodeScanner { get; }
 
-        public NotificationState2( ObservableDomain domain ) : base( domain )
+        public NotificationState2()
         {
             BarcodeScanner = new BarcodeScannerState();
             ProductDispatchErrors = new ObservableChannel<DispatchProductResult>();
             Exceptions = new ObservableChannel<CKExceptionData>();
         }
 
-        protected NotificationState2( IBinaryDeserializerContext d ) : base( d )
+        protected NotificationState2( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
         {
-            var r = d.StartReading();
             BarcodeScanner = (BarcodeScannerState)r.ReadObject();
             ProductDispatchErrors = (ObservableChannel<DispatchProductResult>)r.ReadObject();
             Exceptions = (ObservableChannel<CKExceptionData>)r.ReadObject();

@@ -1,9 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 namespace CK.Observable
 {
@@ -17,7 +15,7 @@ namespace CK.Observable
         {
             if( target == null ) throw new ArgumentNullException( nameof( target ) );
             _target = target;
-            _seen = new Dictionary<object, int>( PureObjectRefEqualityComparer<object>.Default );
+            _seen = new Dictionary<object, int>( CK.Core.PureObjectRefEqualityComparer<object>.Default );
             _drivers = drivers ?? ExporterRegistry.Default;
         }
 
@@ -44,12 +42,12 @@ namespace CK.Observable
             Target.EmitStartObject( num, ObjectExportedKind.Map );
             foreach( var kv in map )
             {
-                Target.EmitStartMapEntry();
+                Target.EmitStartList();
                 if( keyExporter == null ) ExportObject( kv.Key );
                 else Export( kv.Key, keyExporter );
                 if( valueExporter == null ) ExportObject( kv.Value );
                 else Export( kv.Value, valueExporter );
-                Target.EmitEndMapEntry();
+                Target.EmitEndList();
             }
             Target.EmitEndObject( num, ObjectExportedKind.Map );
         }
@@ -104,7 +102,7 @@ namespace CK.Observable
         }
 
 
-        public void ExportObject( object o )
+        public void ExportObject( object? o )
         {
             switch( o )
             {

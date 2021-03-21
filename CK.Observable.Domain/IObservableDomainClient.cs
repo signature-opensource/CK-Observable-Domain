@@ -1,0 +1,80 @@
+using CK.Core;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
+namespace CK.Observable
+{
+    /// <summary>
+    /// Primary interface to implement actual behavior behind an observable domain.
+    /// This is intended to be implemented as a a chain of responsibility: Start,
+    /// Commit and Failure should be synchronously propagated through a linked list
+    /// (or tree structure) of such clients.
+    /// See <see cref="MemoryTransactionProviderClient"/> for concrete implementations of transaction manager.
+    /// </summary>
+    public interface IObservableDomainClient
+    {
+        /// <summary>
+        /// Called when the domain instance is created. It may be brand new (<see cref="IObservableDomain.TransactionSerialNumber"/> is 0)
+        /// or has been loaded from a stream (<see cref="IObservableDomain.TransactionSerialNumber"/> is greater than 0).
+        /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
+        /// <param name="d">The newly created or loaded domain.</param>
+        /// <param name="startTimer">
+        /// Whether the <see cref="ObservableDomain.TimeManager"/> must be running or stopped.
+        /// A client can alter the value (typically setting it to false if needed).
+        /// </param>
+        void OnDomainCreated( IActivityMonitor monitor, ObservableDomain d, ref bool startTimer );
+
+        /// <summary>
+        /// Called before a transaction starts.
+        /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
+        /// <param name="d">The associated domain.</param>
+        /// <param name="timeUtc">The date time utc of the transaction start.</param>
+        void OnTransactionStart( IActivityMonitor monitor, ObservableDomain d, DateTime timeUtc );
+
+        /// <summary>
+        /// Called when a transaction ends successfully. The domain's write lock is held while this is called.
+        /// Any exception raised by this method will set <see cref="TransactionResult.IsCriticalError"/> to true.
+        /// <para>
+        /// Implementations may capture any required domain object's state and use
+        /// <see cref="SuccessfulTransactionEventArgs.PostActions"/> or <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/>
+        /// to post asynchronous actions (or to send commands thanks to <see cref="SuccessfulTransactionEventArgs.SendCommand(in ObservableDomainCommand)"/>
+        /// that will be processed by the sidekicks).
+        /// </para>
+        /// </summary>
+        /// <param name="context">The successful context.</param>
+        void OnTransactionCommit( in SuccessfulTransactionEventArgs context );
+
+        /// <summary>
+        /// Called from inside a transaction whenever an unhandled exception is thrown.
+        /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
+        /// <param name="d">The associated domain.</param>
+        /// <param name="ex">The exception that has been raised.</param>
+        /// <param name="swallowError">
+        /// Defaults to false since by default the transaction will fail.
+        /// Setting this to true will silently swallow the exception (this is up to this implementation
+        /// to log it) and generate a call to <see cref="OnTransactionCommit"/> with a <see cref="SuccessfulTransactionEventArgs"/>.
+        /// </param>
+        void OnUnhandledError( IActivityMonitor monitor, ObservableDomain d, Exception ex, ref bool swallowError );
+
+        /// <summary>
+        /// Called when an error occurred in a transaction.
+        /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
+        /// <param name="d">The associated domain.</param>
+        /// <param name="errors">
+        /// A necessarily non null list of errors with at least one error.
+        /// </param>
+        void OnTransactionFailure( IActivityMonitor monitor, ObservableDomain d, IReadOnlyList<CKExceptionData> errors );
+
+        /// <summary>
+        /// Called at the start of the <see cref="ObservableDomain.Dispose(IActivityMonitor)"/> while the write lock is held.
+        /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
+        /// <param name="d">The domain being disposed.</param>
+        void OnDomainDisposed( IActivityMonitor monitor, ObservableDomain d );
+    }
+}

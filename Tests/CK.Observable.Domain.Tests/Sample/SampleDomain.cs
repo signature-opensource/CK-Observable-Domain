@@ -1,19 +1,16 @@
 using FluentAssertions;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
 
 namespace CK.Observable.Domain.Tests.Sample
 {
     public static class SampleDomain
     {
-        public static ObservableDomain CreateSample( IObservableTransactionManager tm = null )
+        public static ObservableDomain CreateSample( IObservableDomainClient tm = null )
         {
-            var d = new ObservableDomain( tm, TestHelper.Monitor );
-            d.Modify( () =>
+            var d = new ObservableDomain(TestHelper.Monitor, "TEST", startTimer: false, client: tm );
+            d.Modify( TestHelper.Monitor, () =>
             {
                 var g1 = new Garage() { CompanyName = "Boite" };
                 g1.Cars.AddRange( Enumerable.Range( 0, 10 ).Select( i => new Car( $"Renault n°{i}" ) ) );
@@ -36,12 +33,12 @@ namespace CK.Observable.Domain.Tests.Sample
             return d;
         }
 
-        public static IReadOnlyList<ObservableEvent> TransactedSetPaulMincLastName( ObservableDomain d, string newLastName, bool throwException = false )
+        public static TransactionResult TransactedSetPaulMincLastName( ObservableDomain d, string newLastName, bool throwException = false )
         {
-            return d.Modify( () =>
+            return d.Modify( TestHelper.Monitor, () =>
             {
                 d.AllObjects.OfType<Person>().Single( x => x.FirstName == "Paul" ).LastName = newLastName;
-                if( throwException ) throw new Exception( $"After Paul minc renaled to {newLastName}." );
+                if( throwException ) throw new Exception( $"After Paul minc renamed to {newLastName}." );
             } );
         }
 
@@ -51,7 +48,7 @@ namespace CK.Observable.Domain.Tests.Sample
             g1.Cars.Select( c => c.Name ).Should().BeEquivalentTo( Enumerable.Range( 0, 10 ).Select( i => $"Renault n°{i}" ) );
             var minc = d.AllObjects.OfType<Person>().Single( x => x.FirstName == "Paul" );
             minc.LastName.Should().Be( "Minc" );
-            var scott =  d.AllObjects.OfType<Mechanic>().Single( x => x.FirstName == "Scott" );
+            var scott = d.AllObjects.OfType<Mechanic>().Single( x => x.FirstName == "Scott" );
             scott.CurrentCar.Should().BeSameAs( g1.Cars[2] );
             scott.Garage.Should().BeSameAs( g1 );
             g1.Employees.Should().Contain( scott );

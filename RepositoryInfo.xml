@@ -1,16 +1,15 @@
-<?xml version="1.0" encoding="utf-8"?>
-<RepositoryInfo xmlns="http://csemver.org/schemas/2015">
-  <StartingVersionForCSemVer>v0.1.0</StartingVersionForCSemVer>
-  <!--<Debug IgnoreDirtyWorkingFolder="true"/>-->
-  <PossibleVersionsMode>AllSuccessors</PossibleVersionsMode>
-  <Branches>
-    <Branch Name="develop" VersionName="develop" CIVersionMode="LastReleaseBased" />
-    <Branch Name="build" VersionName="build" CIVersionMode="LastReleaseBased" />
-  </Branches>
-  <IgnoreModifiedFiles>
-    <!-- These are modified by VSTS itself as part of NPM authentication -->
-    <Add>js/.npmrc</Add>
-    <Add>js/package.json</Add>
-    <Add>js/package-lock.json</Add>
-  </IgnoreModifiedFiles>
+
+<RepositoryInfo>
+
+  <SimpleGitVersion StartingVersion="v0.6.0">
+    <IgnoreModifiedFiles>
+      <Add>js/.npmrc</Add>
+      <Add>js/package.json</Add>
+      <Add>js/package-lock.json</Add>
+    </IgnoreModifiedFiles>
+    <Branches>
+      <Branch Name="develop" CIVersionMode="LastReleaseBased" VersionName="develop" />
+      <Branch Name="garbage-collector" CIVersionMode="ZeroTimed" VersionName="gc" />
+    </Branches>
+  </SimpleGitVersion>
 </RepositoryInfo>

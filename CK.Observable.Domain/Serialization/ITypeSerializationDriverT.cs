@@ -1,11 +1,9 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 namespace CK.Observable
 {
+    /// <summary>
+    /// Strongly typed specialization of <see cref="ITypeSerializationDriver"/>.
+    /// </summary>
+    /// <typeparam name="T">The type of object to serialize.</typeparam>
     public interface ITypeSerializationDriver<T> : ITypeSerializationDriver
     {
         /// <summary>

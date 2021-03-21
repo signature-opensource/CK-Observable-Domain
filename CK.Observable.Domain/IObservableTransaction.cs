@@ -1,9 +1,6 @@
 using CK.Core;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CK.Observable
 {
@@ -13,10 +10,32 @@ namespace CK.Observable
     public interface IObservableTransaction : IDisposable
     {
         /// <summary>
-        /// Commits all changes and retrieves the event list.
+        /// Gets the transaction start time.
         /// </summary>
-        /// <returns>The event list.</returns>
-        IReadOnlyList<ObservableEvent> Commit();
+        DateTime StartTime { get; }
+
+        /// <summary>
+        /// Gets the monitor associated to the transaction.
+        /// </summary>
+        IActivityMonitor Monitor { get; }
+
+        /// <summary>
+        /// Commits all changes and retrieves the events on success.
+        /// If errors occurred, the <see cref="TransactionResult"/> contains
+        /// the errors but no events nor commands.
+        /// <para>
+        /// <para>
+        /// This method executes the commands by calling all the registered sidekicks (see <see cref="ObservableDomainSidekick.ExecuteCommand"/>).
+        /// </para>
+        /// </para>
+        /// This method NEVER throws: it calls <see cref="IObservableDomainClient.OnTransactionFailure"/>
+        /// or <see cref="IObservableDomainClient.OnTransactionCommit"/>, and may set
+        /// <see cref="TransactionResult.ClientError"/> if an Exception is thrown
+        /// when calling them. Then, on success, it sets the <see cref="TransactionResult.CommandHandlingErrors"/> list if errors
+        /// occurred during command processing.
+        /// </summary>
+        /// <returns>The transaction result.</returns>
+        TransactionResult Commit();
 
         /// <summary>
         /// Gets any errors that have been added by <see cref="AddError"/>.
@@ -26,7 +45,8 @@ namespace CK.Observable
         /// <summary>
         /// Adds an error to this transaction.
         /// This prevents this transaction to be successfully committed; calling <see cref="Commit"/>
-        /// will be the same as disposing this transaction without committing.
+        /// will be the same as disposing this transaction without committing: a <see cref="TransactionResult"/>
+        /// with only <see cref="Errors"/> will be obtained.
         /// </summary>
         /// <param name="d">An exception data.</param>
         void AddError( CKExceptionData d );

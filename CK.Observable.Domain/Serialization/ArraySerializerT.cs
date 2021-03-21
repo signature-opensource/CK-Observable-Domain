@@ -1,13 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 namespace CK.Observable
 {
-    class ArraySerializer<T> : ArraySerializer, ITypeSerializationDriver<T[]>
+    public class ArraySerializer<T> : ArraySerializer, ITypeSerializationDriver<T[]>
     {
         readonly ITypeSerializationDriver<T> _itemSerializer;
 
@@ -19,18 +17,19 @@ namespace CK.Observable
 
         public Type Type => typeof(T[]);
 
+        bool ITypeSerializationDriver.IsFinalType => true;
+
         void ITypeSerializationDriver<T[]>.WriteData( BinarySerializer w, T[] o ) => DoWriteData( w, o );
 
         void ITypeSerializationDriver.WriteData( BinarySerializer w, object o ) => DoWriteData( w, (T[])o );
 
         void DoWriteData( BinarySerializer w, T[] o ) => WriteObjects( w, o?.Length ?? 0, o, _itemSerializer );
 
-        public void WriteTypeInformation( BinarySerializer s ) => s.WriteSimpleType( Type, null );
+        public void WriteTypeInformation( BinarySerializer s ) => s.WriteSimpleType( Type );
 
         /// <summary>
         /// Writes any list content.
         /// </summary>
-        /// <typeparam name="T">The item type.</typeparam>
         /// <param name="w">The binary serializer to use. Must not be null.</param>
         /// <param name="count">The number of items. Must be 0 zero or positive.</param>
         /// <param name="items">The items. Can be null (in such case, <paramref name="count"/> must be zero).</param>
@@ -48,15 +47,14 @@ namespace CK.Observable
             w.WriteSmallInt32( count );
             if( count > 0 )
             {
-                var tI = itemSerializer.Type;
-                bool monoType = tI.IsSealed || tI.IsValueType;
+                if( itemSerializer == null ) itemSerializer = w.Drivers.FindDriver<T>();
+                bool monoType = itemSerializer?.IsFinalType ?? false;
                 w.Write( monoType );
                 if( monoType )
                 {
-                    if( itemSerializer == null ) itemSerializer = w.Drivers.FindDriver<T>();
                     foreach( var i in items )
                     {
-                        w.Write( i, itemSerializer );
+                        itemSerializer.WriteData( w, i );
                         if( --count == 0 ) break;
                     }
                     if( count > 0 ) throw new ArgumentException( $"Not enough items: missing {count} items.", nameof( count ) );

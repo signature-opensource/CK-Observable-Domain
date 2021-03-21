@@ -2,40 +2,52 @@ using CK.Core;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.ComponentModel;
 
 namespace CK.Observable
 {
+    /// <summary>
+    /// Registers deserialization drivers. This can be instanciated if needed but most often,
+    /// the <see cref="Default"/> registry is enough.
+    /// </summary>
     public class DeserializerRegistry : IDeserializerResolver
     {
         readonly ConcurrentDictionary<string, IDeserializationDriver> _drivers;
 
+        /// <summary>
+        /// Gets the default, shared, registry.
+        /// </summary>
         public static readonly DeserializerRegistry Default = new DeserializerRegistry();
 
+        /// <summary>
+        /// Initializes a new <see cref="DeserializerRegistry"/> with preregistered
+        /// basic deserialization drivers.
+        /// </summary>
         public DeserializerRegistry()
         {
             _drivers = new ConcurrentDictionary<string, IDeserializationDriver>();
-            Register( BasicTypeDrivers.DObject.Default.DeserializationDriver, BasicTypeDrivers.DObject.Alias );
-            Register( BasicTypeDrivers.DBool.Default.DeserializationDriver, BasicTypeDrivers.DBool.Alias );
-            Register( BasicTypeDrivers.DByte.Default.DeserializationDriver, BasicTypeDrivers.DByte.Alias );
-            Register( BasicTypeDrivers.DChar.Default.DeserializationDriver, BasicTypeDrivers.DChar.Alias );
-            Register( BasicTypeDrivers.DDateTime.Default.DeserializationDriver, BasicTypeDrivers.DDateTime.Alias );
-            Register( BasicTypeDrivers.DDateTimeOffset.Default.DeserializationDriver, BasicTypeDrivers.DDateTimeOffset.Alias );
-            Register( BasicTypeDrivers.DDecimal.Default.DeserializationDriver, BasicTypeDrivers.DDecimal.Alias );
-            Register( BasicTypeDrivers.DDouble.Default.DeserializationDriver, BasicTypeDrivers.DDouble.Alias );
-            Register( BasicTypeDrivers.DGuid.Default.DeserializationDriver, BasicTypeDrivers.DGuid.Alias );
-            Register( BasicTypeDrivers.DInt16.Default.DeserializationDriver, BasicTypeDrivers.DInt16.Alias );
-            Register( BasicTypeDrivers.DInt32.Default.DeserializationDriver, BasicTypeDrivers.DInt32.Alias );
-            Register( BasicTypeDrivers.DInt64.Default.DeserializationDriver, BasicTypeDrivers.DInt64.Alias );
-            Register( BasicTypeDrivers.DSByte.Default.DeserializationDriver, BasicTypeDrivers.DSByte.Alias );
-            Register( BasicTypeDrivers.DSingle.Default.DeserializationDriver, BasicTypeDrivers.DSingle.Alias );
-            Register( BasicTypeDrivers.DString.Default.DeserializationDriver, BasicTypeDrivers.DString.Alias );
-            Register( BasicTypeDrivers.DTimeSpan.Default.DeserializationDriver, BasicTypeDrivers.DTimeSpan.Alias );
-            Register( BasicTypeDrivers.DUInt16.Default.DeserializationDriver, BasicTypeDrivers.DUInt16.Alias );
-            Register( BasicTypeDrivers.DUInt32.Default.DeserializationDriver, BasicTypeDrivers.DUInt32.Alias );
-            Register( BasicTypeDrivers.DUInt64.Default.DeserializationDriver, BasicTypeDrivers.DUInt64.Alias );
+            Reg( BasicTypeDrivers.DObject.Default );
+            Reg( BasicTypeDrivers.DType.Default );
+            Reg( BasicTypeDrivers.DBool.Default );
+            Reg( BasicTypeDrivers.DByte.Default );
+            Reg( BasicTypeDrivers.DChar.Default );
+            Reg( BasicTypeDrivers.DDateTime.Default );
+            Reg( BasicTypeDrivers.DDateTimeOffset.Default );
+            Reg( BasicTypeDrivers.DDecimal.Default );
+            Reg( BasicTypeDrivers.DDouble.Default );
+            Reg( BasicTypeDrivers.DGuid.Default );
+            Reg( BasicTypeDrivers.DInt16.Default );
+            Reg( BasicTypeDrivers.DInt32.Default );
+            Reg( BasicTypeDrivers.DInt64.Default );
+            Reg( BasicTypeDrivers.DSByte.Default );
+            Reg( BasicTypeDrivers.DSingle.Default );
+            Reg( BasicTypeDrivers.DString.Default );
+            Reg( BasicTypeDrivers.DTimeSpan.Default );
+            Reg( BasicTypeDrivers.DUInt16.Default );
+            Reg( BasicTypeDrivers.DUInt32.Default );
+            Reg( BasicTypeDrivers.DUInt64.Default );
+
+            void Reg<T>( IUnifiedTypeDriver<T> u ) => Register( u.Type, u.DeserializationDriver );
         }
 
         /// <summary>
@@ -46,24 +58,24 @@ namespace CK.Observable
         /// <param name="driver">The driver to register.</param>
         public void Register( string name, IDeserializationDriver driver )
         {
-            if( String.IsNullOrWhiteSpace( name ) ) throw new ArgumentNullException( nameof( name ) );
+            if( name == null ) throw new ArgumentNullException( nameof( name ) );
             if( driver == null ) throw new ArgumentNullException( nameof( driver ) );
             _drivers.AddOrUpdate( name, driver, ( type, already ) => driver );
         }
 
         /// <summary>
-        /// Registers a desererializer. Its <see cref="IDeserializationDriver.AssemblyQualifiedName"/> is used.
-        /// This replaces any existing desererializer associated to this assembly qualified name.
+        /// Registers a desererializer. The <see cref="Type.AssemblyQualifiedName"/> is used as well
+        /// as the result of the <see cref="SimpleTypeFinder.WeakenAssemblyQualifiedName(string, out string)"/>.
+        /// This replaces any existing desererializer associated to these names.
         /// </summary>
+        /// <param name="type">The type for which names must be registered.</param>
         /// <param name="driver">The driver to register.</param>
-        /// <param name="alias">An optional alias for the driver.</param>
-        public void Register( IDeserializationDriver driver, string alias = null )
+        public void Register( Type type, IDeserializationDriver driver )
         {
             if( driver == null ) throw new ArgumentNullException( nameof( driver ) );
-            Register( driver.AssemblyQualifiedName, driver );
-            if( alias != null ) Register( alias, driver );
-            if( SimpleTypeFinder.WeakenAssemblyQualifiedName( driver.AssemblyQualifiedName, out string weakName )
-                && weakName != driver.AssemblyQualifiedName )
+            var n = type.AssemblyQualifiedName;
+            Register( n, driver );
+            if( SimpleTypeFinder.WeakenAssemblyQualifiedName( n, out string weakName ) && weakName != n )
             {
                 Register( weakName, driver );
             }

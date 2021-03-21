@@ -1,0 +1,128 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1" MembersFormat="FullSignature">
+  <Class Name="CK.Observable.ObservableDomain&lt;T&gt;">
+    <Position X="0.5" Y="1.75" Width="9.75" />
+    <Members>
+      <Method Name="BindRoots" Hidden="true" />
+      <Method Name="OnLoaded" Hidden="true" />
+    </Members>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAACAAQAAAQAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>ObservableDomainT.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CK.Observable.ObservableDomain" Collapsed="true">
+    <Position X="4.5" Y="0.5" Width="1.75" />
+    <Members>
+      <Field Name="_actualObjectCount" Hidden="true" />
+      <Field Name="_changeTracker" Hidden="true" />
+      <Field Name="_currentTran" Hidden="true" />
+      <Field Name="_deserializers" Hidden="true" />
+      <Field Name="_deserializing" Hidden="true" />
+      <Field Name="_domainNumber" Hidden="true" />
+      <Field Name="_exporters" Hidden="true" />
+      <Field Name="_exposedObjects" Hidden="true" />
+      <Field Name="_freeList" Hidden="true" />
+      <Field Name="_lock" Hidden="true" />
+      <Field Name="_objects" Hidden="true" />
+      <Field Name="_objectsListCount" Hidden="true" />
+      <Field Name="_observableRootCtorParameters" Hidden="true" />
+      <Field Name="_properties" Hidden="true" />
+      <Field Name="_propertiesByIndex" Hidden="true" />
+      <Field Name="_roots" Hidden="true" />
+      <Field Name="_serializers" Hidden="true" />
+      <Field Name="_transactionSerialNumber" Hidden="true" />
+      <Method Name="AcquireReadLock" Hidden="true" />
+      <Method Name="AddRoot" Hidden="true" />
+      <Method Name="BeginTransaction" Hidden="true" />
+      <Method Name="CheckWriteLockAndObjectDisposed" Hidden="true" />
+      <Field Name="CurrentThreadDomain" Hidden="true" />
+      <Method Name="DoLoad" Hidden="true" />
+      <Method Name="EnsurePropertyInfo" Hidden="true" />
+      <Method Name="Export" Hidden="true" />
+      <Method Name="ExportToString" Hidden="true" />
+      <Method Name="GetCurrentActiveDomain" Hidden="true" />
+      <Method Name="Load" Hidden="true" />
+      <Method Name="Modify" Hidden="true" />
+      <Method Name="ObservableDomain" Hidden="true" />
+      <Method Name="OnCollectionClear" Hidden="true" />
+      <Method Name="OnCollectionMapSet" Hidden="true" />
+      <Method Name="OnCollectionRemoveKey" Hidden="true" />
+      <Method Name="OnListInsert" Hidden="true" />
+      <Method Name="OnListRemoveAt" Hidden="true" />
+      <Method Name="OnListSetAt" Hidden="true" />
+      <Method Name="OnLoaded" Hidden="true" />
+      <Method Name="OnPropertyChanged" Hidden="true" />
+      <Method Name="Register" Hidden="true" />
+      <Method Name="Save" Hidden="true" />
+      <Method Name="SendCommand" Hidden="true" />
+      <Field Name="UncomittedTransaction" Hidden="true" />
+      <Method Name="Unregister" Hidden="true" />
+    </Members>
+    <NestedTypes>
+      <Class Name="CK.Observable.ObservableDomain.PropInfo" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>ObservableDomain.cs</NewMemberFileName>
+        </TypeIdentifier>
+      </Class>
+      <Class Name="CK.Observable.ObservableDomain.AllCollection" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>ObservableDomain.cs</NewMemberFileName>
+        </TypeIdentifier>
+        <Lollipop Position="0.2" />
+      </Class>
+      <Class Name="CK.Observable.ObservableDomain.ChangeTracker" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>ObservableDomain.cs</NewMemberFileName>
+        </TypeIdentifier>
+      </Class>
+      <Class Name="CK.Observable.ObservableDomain.Transaction" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>ObservableDomain.cs</NewMemberFileName>
+        </TypeIdentifier>
+        <Lollipop Position="0.2" />
+      </Class>
+      <Class Name="CK.Observable.ObservableDomain.InitializationTransaction" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>ObservableDomain.cs</NewMemberFileName>
+        </TypeIdentifier>
+        <Lollipop Position="0.2" />
+      </Class>
+    </NestedTypes>
+    <TypeIdentifier>
+      <HashCode>BAiAoIARAQQQEKAoYAqAHRIIACQFCQBECABBBGIAEJg=</HashCode>
+      <FileName>ObservableDomain.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CK.Observable.ObservableDomain&lt;T1, T2&gt;">
+    <Position X="0.75" Y="4.75" Width="2.25" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="true" />
+    </Compartments>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAQAAAQAAAAAAAAAAIAAAAAAAEAAA=</HashCode>
+      <FileName>ObservableDomainTT.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CK.Observable.ObservableDomain&lt;T1, T2, T3&gt;">
+    <Position X="3.25" Y="4.75" Width="2.5" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="true" />
+    </Compartments>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAQAAAQAAAAAAAAAAIAAAAAAEEAAA=</HashCode>
+      <FileName>ObservableDomainTTT.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CK.Observable.ObservableDomain&lt;T1, T2, T3, T4&gt;">
+    <Position X="6" Y="4.75" Width="2.75" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="true" />
+    </Compartments>
+    <TypeIdentifier>
+      <HashCode>AAAAAgAAAAAAAAAAQAAAQAAAAAAAAAAIAAAAAAEEAAA=</HashCode>
+      <FileName>ObservableDomainTTTT.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>

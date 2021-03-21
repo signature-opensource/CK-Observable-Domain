@@ -1,13 +1,8 @@
 using CK.Core;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CK.Observable.Domain.Tests.Sample
 {
-    [SerializationVersionAttribute( 0 )]
+    [SerializationVersion( 0 )]
     public class Mechanic : Employee
     {
         public Mechanic( Garage garage )
@@ -15,9 +10,9 @@ namespace CK.Observable.Domain.Tests.Sample
         {
         }
 
-        protected Mechanic( IBinaryDeserializerContext d ) : base( d )
+        Mechanic( IBinaryDeserializer r, TypeReadInfo? info )
+            : base( RevertSerialization.Default )
         {
-            var r = d.StartReading();
             CurrentCar = (Car)r.ReadObject();
         }
 
@@ -32,8 +27,8 @@ namespace CK.Observable.Domain.Tests.Sample
 
         void OnCurrentCarChanged( object before, object after )
         {
-            if( IsDeserializing ) return;
-            DomainMonitor.Info( $"{ToString()} has a new Car: {CurrentCar?.ToString() ?? "null"}." );
+            if( Domain.IsDeserializing ) return;
+            Domain.Monitor.Info( $"{ToString()} has a new Car: {CurrentCar?.ToString() ?? "null"}." );
             if( CurrentCar != null ) CurrentCar.CurrentMechanic = this;
             else ((Car)before).CurrentMechanic = null;
         }

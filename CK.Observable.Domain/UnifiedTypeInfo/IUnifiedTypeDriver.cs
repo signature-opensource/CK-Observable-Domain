@@ -1,9 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 namespace CK.Observable
 {
     /// <summary>
@@ -15,18 +9,18 @@ namespace CK.Observable
         /// Gets the serialization driver.
         /// Null if no serialization driver is available.
         /// </summary>
-        ITypeSerializationDriver SerializationDriver { get; }
+        ITypeSerializationDriver? SerializationDriver { get; }
 
         /// <summary>
         /// Gets the deserialization driver.
         /// Null if no deserialization driver is available.
         /// </summary>
-        IDeserializationDriver DeserializationDriver { get; }
+        IDeserializationDriver? DeserializationDriver { get; }
 
         /// <summary>
         /// Gets the export driver.
         /// Null if no export driver is available.
         /// </summary>
-        IObjectExportTypeDriver ExportDriver { get; }
+        IObjectExportTypeDriver? ExportDriver { get; }
     }
 }

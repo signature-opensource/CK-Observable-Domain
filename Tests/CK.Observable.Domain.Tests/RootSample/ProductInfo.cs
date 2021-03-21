@@ -1,13 +1,9 @@
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CK.Observable.Domain.Tests.RootSample
 {
     [SerializationVersion(0)]
-    public class ProductInfo
+    public struct ProductInfo
     {
         public ProductInfo( string n, int p )
         {
@@ -16,9 +12,8 @@ namespace CK.Observable.Domain.Tests.RootSample
             ExtraData = new Dictionary<string, string>();
         }
 
-        public ProductInfo( IBinaryDeserializerContext d )
+        ProductInfo( IBinaryDeserializer r, TypeReadInfo? info )
         {
-            var r = d.StartReading();
             Name = r.ReadNullableString();
             Power = r.ReadInt32();
             ExtraData = (IDictionary<string, string>)r.ReadObject();

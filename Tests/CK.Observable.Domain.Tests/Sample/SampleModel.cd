@@ -1,0 +1,80 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1" MembersFormat="FullSignature">
+  <Class Name="CK.Observable.Domain.Tests.Sample.Car">
+    <Position X="5.5" Y="3" Width="3.25" />
+    <AssociationLine Name="CurrentMechanic" Type="CK.Observable.Domain.Tests.Sample.Mechanic">
+      <MemberNameLabel ManuallyPlaced="true">
+        <Position X="0.148" Y="-1.422" />
+      </MemberNameLabel>
+    </AssociationLine>
+    <TypeIdentifier>
+      <HashCode>CAAAAAAAAARAAEAkAgAgAARAACABAGABEAAAgAEAAAA=</HashCode>
+      <FileName>Sample\Car.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="Position" />
+      <Property Name="CurrentMechanic" />
+    </ShowAsAssociation>
+  </Class>
+  <Class Name="CK.Observable.Domain.Tests.Sample.Employee">
+    <Position X="0.75" Y="7.75" Width="2.75" />
+    <AssociationLine Name="Garage" Type="CK.Observable.Domain.Tests.Sample.Garage">
+      <MemberNameLabel ManuallyPlaced="true">
+        <Position X="-0.838" Y="0.148" />
+      </MemberNameLabel>
+    </AssociationLine>
+    <TypeIdentifier>
+      <HashCode>AAAFAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAEAAAA=</HashCode>
+      <FileName>Sample\Employee.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="Garage" />
+    </ShowAsAssociation>
+  </Class>
+  <Class Name="CK.Observable.Domain.Tests.Sample.Garage">
+    <Position X="0.5" Y="0.5" Width="3.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAQAACAAAAAAAAAAAAAAAACAAAAAIACAAAAAEAAAA=</HashCode>
+      <FileName>Sample\Garage.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CK.Observable.Domain.Tests.Sample.Mechanic">
+    <Position X="4.25" Y="8" Width="3.75" />
+    <AssociationLine Name="CurrentCar" Type="CK.Observable.Domain.Tests.Sample.Car">
+      <MemberNameLabel ManuallyPlaced="true">
+        <Position X="0.181" Y="0.143" />
+      </MemberNameLabel>
+    </AssociationLine>
+    <TypeIdentifier>
+      <HashCode>AQAAAAAACAAAAAAEAAAAAAAAAAAAAAABAAAAAAEAAAA=</HashCode>
+      <FileName>Sample\Mechanic.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="CurrentCar" />
+      <Property Name="Level" />
+    </ShowAsAssociation>
+  </Class>
+  <Class Name="CK.Observable.Domain.Tests.Sample.Person">
+    <Position X="0.5" Y="4" Width="3.25" />
+    <TypeIdentifier>
+      <HashCode>AAAAAEAAAAAAAAAEAEAAAAAAAAAAAAAACAAAAAEAAAg=</HashCode>
+      <FileName>Sample\Person.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Struct Name="CK.Observable.Domain.Tests.Sample.Position">
+    <Position X="10" Y="4" Width="3.25" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAEAAAAAEgAAIBAAAAAAAAIAAAAAAAAEAAiA=</HashCode>
+      <FileName>Sample\Position.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Struct>
+  <Enum Name="CK.Observable.Domain.Tests.Sample.MechanicLevel">
+    <Position X="9.75" Y="8.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAEAAAAAAAACAAAAAAAAAAAAAAAAAAAAgCAEAQAA=</HashCode>
+      <FileName>Sample\MechanicLevel.cs</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>

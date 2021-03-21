@@ -1,10 +1,6 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 namespace CK.Observable
 {
@@ -16,13 +12,14 @@ namespace CK.Observable
         public EnumTypeSerializer( ITypeSerializationDriver<TU> underlyingType )
         {
             Debug.Assert( underlyingType != null );
-            Debug.Assert( Enum.GetUnderlyingType( typeof( T ) ) == underlyingType.Type );
             _underlyingType = underlyingType;
         }
 
         public Type Type => typeof( T );
 
-        void ITypeSerializationDriver.WriteTypeInformation( BinarySerializer s ) => s.WriteSimpleType( Type, null );
+        bool ITypeSerializationDriver.IsFinalType => true;
+
+        void ITypeSerializationDriver.WriteTypeInformation( BinarySerializer s ) => s.WriteSimpleType( Type );
 
         void ITypeSerializationDriver.WriteData( BinarySerializer w, object o ) => _underlyingType.WriteData( w, (TU)o );
 

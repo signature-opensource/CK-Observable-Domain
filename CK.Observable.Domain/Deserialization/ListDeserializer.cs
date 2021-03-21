@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 namespace CK.Observable
 {
@@ -23,11 +20,6 @@ namespace CK.Observable
 
         object IDeserializationDriver.ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  ) => ReadInstance( r, readInfo );
 
-        /// <summary>
-        /// Reads a list of objects that have been previously written
-        /// by <see cref="ArraySerializer.WriteObjects(int, System.Collections.IEnumerable)"/>.
-        /// </summary>
-        /// <returns>The object list.</returns>
         public static List<T> ReadObjectList( IBinaryDeserializer r )
         {
             if( r == null ) throw new ArgumentNullException( nameof( r ) );
@@ -39,13 +31,6 @@ namespace CK.Observable
             return result;
         }
 
-        /// <summary>
-        /// Reads a list of <typeparamref name="T"/> that have been previously written
-        /// by <see cref="ArraySerializer{T}.WriteObjects(BinarySerializer, int, IEnumerable{T}, ITypeSerializationDriver{T})" />.
-        /// </summary>
-        /// <typeparam name="T">Type of the item.</typeparam>
-        /// <param name="itemDeserialization">Item deserializer. Must not be null.</param>
-        /// <returns>The list.</returns>
         public static List<T> ReadList( IBinaryDeserializer r, IDeserializationDriver<T> itemDeserialization )
         {
             if( r == null ) throw new ArgumentNullException( nameof( r ) );
@@ -56,7 +41,7 @@ namespace CK.Observable
             var result = r.ImplementationServices.TrackObject( new List<T>( len ) );
             if( r.ReadBoolean() )
             {
-                for( int i = 0; i < len; ++i ) result.Add( r.Read( itemDeserialization ) );
+                for( int i = 0; i < len; ++i ) result.Add( itemDeserialization.ReadInstance( r, null ) );
             }
             else
             {

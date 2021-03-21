@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 namespace CK.Observable
 {
@@ -17,6 +14,8 @@ namespace CK.Observable
             _key = key;
             _value = value;
         }
+
+        bool ITypeSerializationDriver.IsFinalType => false;
 
         public Type Type => typeof( Dictionary<TKey, TValue> );
 
@@ -38,8 +37,8 @@ namespace CK.Observable
             BinarySerializer w,
             int count,
             IEnumerable<KeyValuePair<TKey, TValue>> items,
-            ITypeSerializationDriver<TKey> keySerialization = null,
-            ITypeSerializationDriver<TValue> valueSerialization = null )
+            ITypeSerializationDriver<TKey>? keySerialization = null,
+            ITypeSerializationDriver<TValue>? valueSerialization = null )
         {
             if( w == null ) throw new ArgumentNullException( nameof( w ) );
             if( count < 0 ) throw new ArgumentException( "Must be greater or equal to 0.", nameof( count ) );
@@ -54,9 +53,9 @@ namespace CK.Observable
             {
                 var tKey = typeof(TKey);
                 var tVal = typeof(TValue);
-                bool monoTypeKey = tKey.IsSealed || tKey.IsValueType;
+                bool monoTypeKey = tKey.IsValueType;
                 if( monoTypeKey && keySerialization == null ) keySerialization = w.Drivers.FindDriver<TKey>();
-                bool monoTypeVal = tVal.IsSealed || tVal.IsValueType;
+                bool monoTypeVal = tVal.IsValueType;
                 if( monoTypeVal && valueSerialization == null ) valueSerialization = w.Drivers.FindDriver<TValue>();
 
                 int dicType = monoTypeKey ? 1 : 0;
@@ -65,9 +64,9 @@ namespace CK.Observable
 
                 foreach( var kv in items )
                 {
-                    if( monoTypeKey ) w.Write( kv.Key, keySerialization );
+                    if( monoTypeKey ) keySerialization!.WriteData( w, kv.Key );
                     else w.WriteObject( kv.Key );
-                    if( monoTypeVal ) w.Write( kv.Value, valueSerialization );
+                    if( monoTypeVal ) valueSerialization!.WriteData( w, kv.Value );
                     else w.WriteObject( kv.Value );
                     if( --count == 0 ) break;
                 }
@@ -89,7 +88,7 @@ namespace CK.Observable
 
         public void WriteData( BinarySerializer w, object o ) => DoWrite( w, (Dictionary<TKey,TValue>)o, _key, _value );
 
-        public void WriteTypeInformation( BinarySerializer s ) => s.WriteSimpleType( Type, null );
+        public void WriteTypeInformation( BinarySerializer s ) => s.WriteSimpleType( Type );
 
     }
 }

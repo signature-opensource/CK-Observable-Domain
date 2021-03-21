@@ -1,67 +1,162 @@
+using CK.Core;
 using FluentAssertions;
 using NUnit.Framework;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using static CK.Testing.MonitorTestHelper;
 
 namespace CK.Observable.Domain.Tests
 {
     [TestFixture]
     public class ObservableSerializationTests
     {
+        [TestCase( "Person" )]
+        [TestCase( "SuspendableClock" )]
+        [TestCase( "Timer" )]
+        [TestCase( "Reminder" )]
+        [TestCase( "AutoCounter" )]
+        public void one_object_serialization( string type )
+        {
+            using var handler = TestHelper.CreateDomainHandler( $"{nameof( one_object_serialization )}-{type}", startTimer: false, serviceProvider: null );
+
+            object o = null;
+            handler.Domain.Modify( TestHelper.Monitor, () =>
+            {
+                switch( type )
+                {
+                    case "Person": o = new Sample.Person() { FirstName = "XX", LastName = "YY", Age = 35 }; break;
+                    case "SuspendableClock": o = new SuspendableClock(); break;
+                    case "Timer": o = new ObservableTimer( DateTime.UtcNow.AddDays( 1 ) ); break;
+                    case "Reminder": o = new ObservableReminder( DateTime.UtcNow.AddDays( 1 ) ); break;
+                    case "AutoCounter": o = new TimedEvents.AutoCounter( 10000 ); break;
+                }
+
+            } ).Success.Should().BeTrue();
+
+            handler.Reload( TestHelper.Monitor, idempotenceCheck: type != "SuspendableClock" );
+
+            using( handler.Domain.AcquireReadLock() )
+            {
+                if( o is ObservableObject )
+                {
+                    handler.Domain.AllObjects.Should().HaveCount( 1 );
+                }
+                else if( o is ObservableTimer )
+                {
+                    handler.Domain.TimeManager.Timers.Should().HaveCount( 1 );
+                }
+                else if( o is ObservableReminder )
+                {
+                    handler.Domain.TimeManager.Reminders.Should().HaveCount( 1 );
+                }
+                else if( o is InternalObject )
+                {
+                    handler.Domain.AllInternalObjects.Should().HaveCount( 1 );
+                }
+            }
+
+            handler.Reload( TestHelper.Monitor, idempotenceCheck: type != "SuspendableClock" );
+        }
+
+        [Test]
+        public void simple_idempotence_checks()
+        {
+            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( simple_idempotence_checks ), startTimer: true ) )
+            {
+                TestHelper.Monitor.Info( "Test 1" );
+                d.Modify( TestHelper.Monitor, () => new Sample.Car( "Zoé" ) );
+                d.AllObjects.Should().HaveCount( 1 );
+                ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
+
+                TestHelper.Monitor.Info( "Test 2" );
+                d.Modify( TestHelper.Monitor, () => d.AllObjects.Single().Destroy() );
+                ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
+
+                TestHelper.Monitor.Info( "Test 3" );
+                d.Modify( TestHelper.Monitor, () => new Sample.Car( "Zoé is back!" ) );
+                ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
+            }
+        }
+
+
         [Test]
         public void immutable_string_serialization_test()
         {
-            var od = new ObservableDomain<CustomRoot>();
-
-            od.Modify( () =>
+            using( var od = new ObservableDomain<CustomRoot>( TestHelper.Monitor, nameof( immutable_string_serialization_test ), startTimer: false) )
             {
-                od.Root.ImmutablesById = new ObservableDictionary<string, CustomImmutable>();
+                od.Modify( TestHelper.Monitor, () =>
+                {
+                    od.Root.ImmutablesById = new ObservableDictionary<string, CustomImmutable>();
 
-                var myImmutable = new CustomImmutable( "ABC000", "My object" );
-                od.Root.ImmutablesById.Add( myImmutable.Id, myImmutable );
-
-
-                od.Root.SomeList = new ObservableList<string>();
-            } );
-            ObservableRootTests.SaveAndLoad( od );
+                    var myImmutable = new CustomImmutable( "ABC000", "My object" );
+                    od.Root.ImmutablesById.Add( myImmutable.Id, myImmutable );
+                    od.Root.SomeList = new ObservableList<string>();
+                } );
+                ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, od );
+            }
         }
 
         [Test]
         public void created_then_disposed_event_test()
         {
-            var od = new ObservableDomain<CustomRoot>();
-
-            // Prepare initial state
-            od.Modify( () =>
+            using( var od = new ObservableDomain<CustomRoot>( TestHelper.Monitor, nameof( created_then_disposed_event_test ), startTimer: true ) )
             {
-                od.Root.CustomObservableList = new ObservableList<CustomObservable>();
-            } );
+                // Prepare initial state
+                od.Modify( TestHelper.Monitor, () =>
+                {
+                    od.Root.CustomObservableList = new ObservableList<CustomObservable>();
+                } );
 
-            var initialState = od.ExportToString();
+                var initialState = od.ExportToString();
 
-            // Add some events for good measure
-            var events = od.Modify( () =>
-            {
-                // Create Observable and Immutables
-                var myImmutable = new CustomImmutable( "ABC000", "My object" );
-                var myCustomObservable = new CustomObservable();
+                // Add some events for good measure
+                var events = od.Modify( TestHelper.Monitor, () =>
+                {
+                    // Create Observable and immutables
+                    var myImmutable = new CustomImmutable( "ABC000", "My object" );
+                    var myCustomObservable = new CustomObservable();
 
-                // Set Immutable in Dictionary of Observable
-                myCustomObservable.ImmutablesById.Add( myImmutable.Id, myImmutable );
+                    // Set Immutable in Dictionary of Observable
+                    myCustomObservable.ImmutablesById.Add( myImmutable.Id, myImmutable );
 
-                // Add observable to List of Root
-                od.Root.CustomObservableList.Add( myCustomObservable );
+                    // Add observable to List of Root
+                    od.Root.CustomObservableList.Add( myCustomObservable );
 
-                // Destroy Dictionary of Observable
-                myCustomObservable.ImmutablesById.Dispose();
+                    // Destroy Dictionary of Observable
+                    myCustomObservable.ImmutablesById.Destroy();
 
-                // Destroy Observable
-                myCustomObservable.Dispose();
+                    // Destroy Observable
+                    myCustomObservable.Destroy();
 
-                // Remove Observable from List of Root
-                bool removed = od.Root.CustomObservableList.Remove( myCustomObservable );
-                removed.Should().BeTrue();
-            } );
-
+                    // Remove Observable from List of Root
+                    bool removed = od.Root.CustomObservableList.Remove( myCustomObservable );
+                    removed.Should().BeTrue();
+                } );
+            }
         }
+
+        [TestCase( true )]
+        [TestCase( false )]
+        public void IdempotenceSerializationCheck_works_on_disposing_Observables( bool alwaysDisposeChild )
+        {
+            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( IdempotenceSerializationCheck_works_on_disposing_Observables ), startTimer: true ) )
+            {
+                TestDisposableObservableObject oldObject = null;
+                d.Modify( TestHelper.Monitor, () =>
+                {
+                    oldObject = new TestDisposableObservableObject( alwaysDisposeChild );
+                } );
+                ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
+
+                oldObject.Should().NotBeNull();
+                oldObject.IsDestroyed.Should().BeTrue( "The reference of the object was disposed when the domain was reloaded" );
+                oldObject.ChildObject.IsDestroyed.Should().BeTrue( "The reference of the object's ObservableObject child was disposed when the domain was reloaded" );
+            }
+        }
+
+
 
         [SerializationVersion( 0 )]
         public class CustomRoot : ObservableRootObject
@@ -70,13 +165,11 @@ namespace CK.Observable.Domain.Tests
             public ObservableList<string> SomeList { get; set; }
             public ObservableList<CustomObservable> CustomObservableList { get; set; }
 
-            protected CustomRoot( ObservableDomain domain ) : base( domain )
-            {
-            }
+            public CustomRoot() { }
 
-            protected CustomRoot( IBinaryDeserializerContext d ) : base( d )
+            CustomRoot( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
             {
-                var r = d.StartReading();
                 ImmutablesById = (ObservableDictionary<string, CustomImmutable>)r.ReadObject();
                 SomeList = (ObservableList<string>)r.ReadObject();
                 CustomObservableList = (ObservableList<CustomObservable>)r.ReadObject();
@@ -102,9 +195,8 @@ namespace CK.Observable.Domain.Tests
                 Title = title;
             }
 
-            protected CustomImmutable( IBinaryDeserializerContext d )
+            CustomImmutable( IBinaryDeserializer r, TypeReadInfo? info )
             {
-                var r = d.StartReading();
                 Id = r.ReadNullableString();
                 Title = r.ReadNullableString();
             }
@@ -128,9 +220,9 @@ namespace CK.Observable.Domain.Tests
                 ImmutablesById = new ObservableDictionary<string, CustomImmutable>();
             }
 
-            protected CustomObservable( IBinaryDeserializerContext d )
+            protected CustomObservable( IBinaryDeserializer r, TypeReadInfo? info )
+            : base( RevertSerialization.Default )
             {
-                var r = d.StartReading();
                 ImmutablesById = (ObservableDictionary<string, CustomImmutable>)r.ReadObject();
             }
 
@@ -141,5 +233,126 @@ namespace CK.Observable.Domain.Tests
             }
 
         }
+
+        [SerializationVersion( 0 )]
+        public class TestDisposableObservableObject : ObservableObject
+        {
+            public bool AlwaysDisposeChild { get; }
+            public ObservableList<int> ChildObject { get; }
+
+            public TestDisposableObservableObject( bool alwaysDisposeChild )
+            {
+                AlwaysDisposeChild = alwaysDisposeChild;
+                ChildObject = new ObservableList<int>();
+            }
+
+            TestDisposableObservableObject( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
+            {
+                AlwaysDisposeChild = r.ReadBoolean();
+                ChildObject = (ObservableList<int>)r.ReadObject();
+            }
+
+            void Write( BinarySerializer w )
+            {
+                w.Write( AlwaysDisposeChild );
+                w.WriteObject( ChildObject );
+            }
+
+            protected override void OnDestroy()
+            {
+                ChildObject.Destroy();
+                base.OnDestroy();
+            }
+
+            protected override void OnUnload()
+            {
+                if( AlwaysDisposeChild )
+                {
+                    ChildObject.Destroy();
+                }
+            }
+        }
+
+
+        [SerializationVersion( 0 )]
+        public class ReminderAndTimerBag : InternalObject
+        {
+            readonly List<ObservableReminder> _reminders;
+            readonly ObservableList<ObservableReminder> _oReminders;
+            readonly List<ObservableTimer> _timers;
+            readonly ObservableList<ObservableTimer> _oTimers;
+            readonly int _identifier;
+
+            public ReminderAndTimerBag( int id )
+            {
+                _identifier = id;
+                _reminders = new List<ObservableReminder>();
+                _oReminders = new ObservableList<ObservableReminder>();
+                _timers = new List<ObservableTimer>();
+                _oTimers = new ObservableList<ObservableTimer>();
+            }
+
+            ReminderAndTimerBag( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
+            {
+                _identifier = r.ReadInt32();
+                _reminders = (List<ObservableReminder>)r.ReadObject()!;
+                _oReminders = (ObservableList<ObservableReminder>)r.ReadObject()!;
+                _timers = (List<ObservableTimer>)r.ReadObject()!;
+                _oTimers = (ObservableList<ObservableTimer>)r.ReadObject()!;
+            }
+
+            void Write( BinarySerializer w )
+            {
+                w.Write( _identifier );
+                w.WriteObject( _reminders );
+                w.WriteObject( _oReminders );
+                w.WriteObject( _timers );
+                w.WriteObject( _oTimers );
+            }
+
+            public void Create( int count = 5 )
+            {
+                for( int i = 0; i < count; ++i )
+                {
+                    var r1 = new ObservableReminder( DateTime.UtcNow.AddDays( 1 ) );
+                    _reminders.Add( r1 );
+                    var r2 = new ObservableReminder( DateTime.UtcNow.AddDays( 1 ) );
+                    _oReminders.Add( r2 );
+                    var t1 = new ObservableTimer( DateTime.UtcNow.AddDays( 1 ) ) { Name = $"LTimer n°{i}" };
+                    _timers.Add( t1 );
+                    var t2 = new ObservableTimer( DateTime.UtcNow.AddDays( 1 ) ) { Name = $"OTimer n°{i}" };
+                    _oTimers.Add( t2 );
+                }
+            }
+        }
+
+        [Test]
+        public void lot_of_timed_events_test()
+        {
+            using( var od = new ObservableDomain( TestHelper.Monitor, nameof( lot_of_timed_events_test ), startTimer: true ) )
+            {
+                od.Modify( TestHelper.Monitor, () =>
+                {
+                    new ReminderAndTimerBag( 1 ).Create( 1 );
+
+                } );
+                od.AllInternalObjects.Should().HaveCount( 1 );
+                od.TimeManager.AllObservableTimedEvents.Should().HaveCount( 4 );
+                ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, od );
+
+                od.Modify( TestHelper.Monitor, () =>
+                {
+                    new ReminderAndTimerBag( 2 ).Create( 20 );
+
+                } );
+                od.AllInternalObjects.Should().HaveCount( 2 );
+                od.TimeManager.AllObservableTimedEvents.Should().HaveCount( 4 * 21 );
+                ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, od );
+            }
+        }
+
+
     }
 }

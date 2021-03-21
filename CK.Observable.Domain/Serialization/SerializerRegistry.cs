@@ -1,61 +1,63 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CK.Observable
 {
+    /// <summary>
+    /// Registers serialization drivers. This can be instanciated if needed but most often,
+    /// the <see cref="Default"/> registry is enough.
+    /// used 
+    /// </summary>
     public class SerializerRegistry : ISerializerResolver
     {
         readonly ConcurrentDictionary<Type, ITypeSerializationDriver> _types;
 
+        /// <summary>
+        /// Gets the default, shared, registry.
+        /// </summary>
         public static readonly SerializerRegistry Default = new SerializerRegistry();
 
+        /// <summary>
+        /// Initializes a new <see cref="SerializerRegistry"/> with preregistered
+        /// basic serialization drivers.
+        /// </summary>
         public SerializerRegistry()
         {
             _types = new ConcurrentDictionary<Type, ITypeSerializationDriver>();
-            RegisterDriver( BasicTypeDrivers.DObject.Default.SerializationDriver );
-            RegisterDriver( BasicTypeDrivers.DBool.Default.SerializationDriver );
-            RegisterDriver( BasicTypeDrivers.DByte.Default.SerializationDriver );
-            RegisterDriver( BasicTypeDrivers.DChar.Default.SerializationDriver );
-            RegisterDriver( BasicTypeDrivers.DDateTime.Default.SerializationDriver );
-            RegisterDriver( BasicTypeDrivers.DDateTimeOffset.Default.SerializationDriver );
-            RegisterDriver( BasicTypeDrivers.DDecimal.Default.SerializationDriver );
-            RegisterDriver( BasicTypeDrivers.DDouble.Default.SerializationDriver );
-            RegisterDriver( BasicTypeDrivers.DGuid.Default.SerializationDriver );
-            RegisterDriver( BasicTypeDrivers.DInt16.Default.SerializationDriver );
-            RegisterDriver( BasicTypeDrivers.DInt32.Default.SerializationDriver );
-            RegisterDriver( BasicTypeDrivers.DInt64.Default.SerializationDriver );
-            RegisterDriver( BasicTypeDrivers.DSByte.Default.SerializationDriver );
-            RegisterDriver( BasicTypeDrivers.DSingle.Default.SerializationDriver );
-            RegisterDriver( BasicTypeDrivers.DString.Default.SerializationDriver );
-            RegisterDriver( BasicTypeDrivers.DTimeSpan.Default.SerializationDriver );
-            RegisterDriver( BasicTypeDrivers.DUInt16.Default.SerializationDriver );
-            RegisterDriver( BasicTypeDrivers.DUInt32.Default.SerializationDriver );
-            RegisterDriver( BasicTypeDrivers.DUInt64.Default.SerializationDriver );
-        }
+            Reg( BasicTypeDrivers.DObject.Default );
+            Reg( BasicTypeDrivers.DType.Default );
+            Reg( BasicTypeDrivers.DBool.Default );
+            Reg( BasicTypeDrivers.DByte.Default );
+            Reg( BasicTypeDrivers.DChar.Default );
+            Reg( BasicTypeDrivers.DDateTime.Default );
+            Reg( BasicTypeDrivers.DDateTimeOffset.Default );
+            Reg( BasicTypeDrivers.DDecimal.Default );
+            Reg( BasicTypeDrivers.DDouble.Default );
+            Reg( BasicTypeDrivers.DGuid.Default );
+            Reg( BasicTypeDrivers.DInt16.Default );
+            Reg( BasicTypeDrivers.DInt32.Default );
+            Reg( BasicTypeDrivers.DInt64.Default );
+            Reg( BasicTypeDrivers.DSByte.Default );
+            Reg( BasicTypeDrivers.DSingle.Default );
+            Reg( BasicTypeDrivers.DString.Default );
+            Reg( BasicTypeDrivers.DTimeSpan.Default );
+            Reg( BasicTypeDrivers.DUInt16.Default );
+            Reg( BasicTypeDrivers.DUInt32.Default );
+            Reg( BasicTypeDrivers.DUInt64.Default );
 
-        /// <summary>
-        /// Registers a full driver (<see cref="UnifiedTypeDriverExtension.CheckValidFullDriver"/> is called).
-        /// This replaces any existing serialization driver for the Type.
-        /// </summary>
-        /// <param name="driver">The driver to register.</param>
-        public void RegisterValidFullDriver( IUnifiedTypeDriver driver )
-        {
-            driver.CheckValidFullDriver();
-            RegisterDriver( driver.SerializationDriver );
+            void Reg<T>( IUnifiedTypeDriver<T> u ) => Register( u.Type, u.SerializationDriver );
         }
 
         /// <summary>
         /// Registers a driver.
         /// This replaces any existing export driver for the Type.
         /// </summary>
+        /// <param name="t">The type for wich the deserializer should be registered.</param>
         /// <param name="driver">The driver to register.</param>
-        public void RegisterDriver( ITypeSerializationDriver driver )
+        public void Register( Type t, ITypeSerializationDriver driver )
         {
-            _types.AddOrUpdate( driver.Type, driver, ( type, already ) => driver );
+            _types.AddOrUpdate( t, driver, ( type, already ) => driver );
         }
 
         /// <summary>

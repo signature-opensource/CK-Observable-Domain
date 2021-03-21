@@ -19,17 +19,17 @@ namespace Signature.Process.Dispatching
 
         public BarcodeScannerState BarcodeScanner { get; }
 
-        public NotificationState( ObservableDomain domain ) : base( domain )
+        public NotificationState()
         {
             _productDispatchErrors = new ObservableList<Notification<DispatchProductResult>>();
             _exceptions = new ObservableList<Notification<CKExceptionData>>();
             BarcodeScanner = new BarcodeScannerState();
         }
 
-        protected NotificationState( IBinaryDeserializerContext d ) : base( d )
+        protected NotificationState( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
         {
-            var r = d.StartReading();
-            if( r.CurrentReadInfo.Version != 0 ) throw new NotSupportedException( $"Cannot deserialize {nameof( NotificationState )} version {r.CurrentReadInfo.Version}" );
+            if( info.Version != 0 ) throw new NotSupportedException( $"Cannot deserialize {nameof( NotificationState )} version {info.Version}" );
 
             _productDispatchErrors = (ObservableList<Notification<DispatchProductResult>>)r.ReadObject();
             _exceptions = (ObservableList<Notification<CKExceptionData>>)r.ReadObject();
@@ -80,9 +80,9 @@ namespace Signature.Process.Dispatching
             Body = body;
         }
 
-        public Notification( IBinaryDeserializerContext d )
+        Notification( IBinaryDeserializer r, TypeReadInfo? info )
+            : base( RevertSerialization.Default )
         {
-            var r = d.StartReading();
             Body = (T)r.ReadObject();
         }
 
@@ -119,9 +119,9 @@ namespace Signature.Process.Dispatching
             LastScanMetadata = new ObservableDictionary<string, string>();
         }
 
-        protected BarcodeScannerState( IBinaryDeserializerContext d ) : base( d )
+        BarcodeScannerState( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
         {
-            var r = d.StartReading();
             LastSeen = r.ReadDateTime();
             LastScanIdentifier = r.ReadNullableString();
             LastScanMetadata = (ObservableDictionary<string, string>)r.ReadObject();
@@ -201,9 +201,8 @@ namespace Signature.Process.Dispatching
             }
         }
 
-        public DispatchProductResult( IBinaryDeserializerContext d )
+        public DispatchProductResult( IBinaryDeserializer r, TypeReadInfo? info )
         {
-            var r = d.StartReading();
             DispatchProductResultType = (DispatchProductResultType)r.ReadObject();
             ProductId = r.ReadNullableString();
             OrdersWithProduct = (ObservableList<string>)r.ReadObject();

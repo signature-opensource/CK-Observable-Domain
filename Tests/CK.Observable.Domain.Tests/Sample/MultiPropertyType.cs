@@ -1,16 +1,11 @@
 using CK.Core;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CK.Observable.Domain.Tests.Sample
 {
     [SerializationVersionAttribute(0)]
-    public class MultiPropertyType : ObservableObject, IEquatable<MultiPropertyType>
+    public sealed class MultiPropertyType : ObservableObject, IEquatable<MultiPropertyType>
     {
         public static readonly string DefString = "MultiPropertyType";
         public static readonly Guid DefGuid = new Guid( "4F5E996D-51E9-4B04-B572-5126B14A5ECA" );
@@ -82,9 +77,9 @@ namespace CK.Observable.Domain.Tests.Sample
             Position = new Position( Position.Latitude + delta, Position.Longitude + delta );
         }
 
-        public MultiPropertyType( IBinaryDeserializerContext d ) : base( d )
+        MultiPropertyType( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
         {
-            var r = d.StartReading();
             String = r.ReadNullableString();
             Int32 = r.ReadInt32();
             UInt32 = r.ReadUInt32();
@@ -143,27 +138,28 @@ namespace CK.Observable.Domain.Tests.Sample
 
         public override int GetHashCode()
         {
-            return (int)Util.Hash.Combine( Util.Hash.StartValue,
+            return HashCode.Combine(
                     String,
                     Int32,
                     UInt32,
                     Int64,
                     UInt64,
-                    Int16,
-                    UInt16,
-                    Byte,
-                    SByte,
-                    DateTime,
-                    TimeSpan,
-                    DateTimeOffset,
-                    Guid,
-                    Double,
-                    Single,
-                    Char,
-                    Boolean,
-                    Position.Latitude,
-                    Position.Longitude,
-                    Enum );
+                    HashCode.Combine( SByte,
+                        Int16,
+                        UInt16,
+                        Byte,
+                        DateTime,
+                        TimeSpan,
+                        DateTimeOffset,
+                        Guid ),
+                    HashCode.Combine(
+                        Double,
+                        Single,
+                        Char,
+                        Boolean,
+                        Position.Latitude,
+                        Position.Longitude,
+                        Enum ) );
         }
 
         public bool Equals( MultiPropertyType other )

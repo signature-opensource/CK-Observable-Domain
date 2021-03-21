@@ -1,12 +1,9 @@
 using CK.Text;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 namespace CK.Observable
 {
@@ -141,14 +138,14 @@ namespace CK.Observable
             _commaNeeded = true;
         }
 
-        public void EmitStartMapEntry()
+        public void EmitStartList()
         {
             if( _commaNeeded ) _w.Write( ',' );
             _w.Write( '[' );
             _commaNeeded = false;
         }
 
-        public void EmitEndMapEntry()
+        public void EmitEndList()
         {
             _w.Write( ']' );
             _commaNeeded = true;

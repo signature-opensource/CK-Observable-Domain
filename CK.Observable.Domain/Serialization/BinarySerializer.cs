@@ -1,24 +1,32 @@
 using CK.Core;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace CK.Observable
 {
+    /// <summary>
+    /// Specializes <see cref="CKBinaryWriter"/> to be able to serialize objects graph.
+    /// </summary>
     public class BinarySerializer : CKBinaryWriter
     {
+        public const int MaxRecurse = 50;
+
         readonly Dictionary<Type, TypeInfo> _types;
         readonly Dictionary<object, int> _seen;
         readonly ISerializerResolver _drivers;
-        BinaryFormatter _binaryFormatter;
+        int _recurseCount;
+        Stack<(object, ITypeSerializationDriver)>? _deferred;
+        BinaryFormatter? _binaryFormatter;
 
-        struct TypeInfo
+        int _debugModeCounter;
+        int _debugSentinel;
+
+        readonly struct TypeInfo
         {
             public readonly Type Type;
             public readonly int Number;
@@ -34,18 +42,22 @@ namespace CK.Observable
         /// Initializes a new <see cref="BinarySerializer"/> onto a stream.
         /// </summary>
         /// <param name="output">The stream to write to.</param>
-        /// <param name="leaveOpen">True to leave the stram opened when disposing. False to close it.</param>
+        /// <param name="drivers">Optional driver resolver to use. Uses <see cref="SerializerRegistry.Default"/> by default.</param>
+        /// <param name="leaveOpen">True to leave the stream opened when disposing. False to close it.</param>
         /// <param name="encoding">Optional encoding for texts. Defaults to UTF-8.</param>
+        /// <param name="disposedTracker">Optional collector of disposed instance. See <see cref="DisposedTracker"/>.</param>
         public BinarySerializer(
             Stream output,
-            ISerializerResolver drivers = null,
+            ISerializerResolver? drivers = null,
             bool leaveOpen = false,
-            Encoding encoding = null )
+            Encoding? encoding = null,
+            Action<IDestroyable>? disposedTracker = null )
             : base( output, encoding ?? Encoding.UTF8, leaveOpen )
         {
             _types = new Dictionary<Type, TypeInfo>();
             _seen = new Dictionary<object, int>( PureObjectRefEqualityComparer<object>.Default );
             _drivers = drivers ?? SerializerRegistry.Default;
+            DisposedTracker = disposedTracker;
         }
 
         /// <summary>
@@ -57,104 +69,112 @@ namespace CK.Observable
         /// Writes an object that can be null and of any type.
         /// </summary>
         /// <param name="o">The object to write.</param>
-        public void WriteObject( object o )
+        /// <returns>
+        /// True if write, false if the object has already been
+        /// written and only a reference has been written.
+        /// </returns>
+        public bool WriteObject( object? o )
         {
             switch( o )
             {
                 case null:
                     {
                         Write( (byte)SerializationMarker.Null );
-                        return;
+                        return true;
                     }
                 case string s:
                     {
                         Write( (byte)SerializationMarker.String );
                         Write( s );
-                        return;
+                        return true;
                     }
                 case int i:
                     {
                         Write( (byte)SerializationMarker.Int32 );
                         Write( i );
-                        return;
+                        return true;
                     }
                 case double d:
                     {
                         Write( (byte)SerializationMarker.Double );
                         Write( d );
-                        return;
+                        return true;
                     }
                 case char c:
                     {
                         Write( (byte)SerializationMarker.Char );
                         Write( c );
-                        return;
+                        return true;
                     }
                 case bool b:
                     {
                         Write( (byte)SerializationMarker.Boolean );
                         Write( b );
-                        return;
+                        return true;
                     }
                 case uint ui:
                     {
                         Write( (byte)SerializationMarker.UInt32 );
                         Write( ui );
-                        return;
+                        return true;
                     }
                 case float f:
                     {
                         Write( (byte)SerializationMarker.Float );
                         Write( f );
-                        return;
+                        return true;
                     }
                 case DateTime d:
                     {
                         Write( (byte)SerializationMarker.DateTime );
                         Write( d );
-                        return;
+                        return true;
                     }
                 case Guid g:
                     {
                         Write( (byte)SerializationMarker.Guid );
                         Write( g );
-                        return;
+                        return true;
                     }
                 case TimeSpan ts:
                     {
                         Write( (byte)SerializationMarker.TimeSpan );
                         Write( ts );
-                        return;
+                        return true;
                     }
                 case DateTimeOffset ds:
                     {
                         Write( (byte)SerializationMarker.DateTimeOffset );
                         Write( ds );
-                        return;
+                        return true;
+                    }
+                case Type type:
+                    {
+                        Write( (byte)SerializationMarker.Type );
+                        Write( type );
+                        return true;
                     }
             }
             SerializationMarker marker;
             Type t = o.GetType();
-            int idxSeen = -1;
             if( t.IsClass )
             {
                 if( _seen.TryGetValue( o, out var num ) )
                 {
                     Write( (byte)SerializationMarker.Reference );
                     Write( num );
-                    return;
+                    return false;
                 }
-                idxSeen = _seen.Count;
                 _seen.Add( o, _seen.Count );
                 if( t == typeof( object ) )
                 {
                     Write( (byte)SerializationMarker.EmptyObject );
-                    return;
+                    return true;
                 }
                 marker = SerializationMarker.Object;
             }
             else marker = SerializationMarker.Struct;
-            ITypeSerializationDriver driver = _drivers.FindDriver( t );
+            ITypeSerializationDriver? driver = _drivers.FindDriver( t );
             if( driver == null )
             {
                 if( !t.IsSerializable ) throw new InvalidOperationException( $"Type {t} is not serializable." );
@@ -165,60 +185,113 @@ namespace CK.Observable
             }
             else
             {
-                Write( (byte)marker );
-                driver.WriteTypeInformation( this );
-                driver.WriteData( this, o );
+                if( _recurseCount > MaxRecurse
+                    && marker == SerializationMarker.Object
+                    && driver.AllowDeferred )
+                {
+                    if( _deferred == null ) _deferred = new Stack<(object, ITypeSerializationDriver)>( 200 );
+                    _deferred.Push( (o, driver) );
+                    Write( (byte)SerializationMarker.DeferredObject );
+                    driver.WriteTypeInformation( this );
+                }
+                else
+                {
+                    ++_recurseCount;
+                    Write( (byte)marker );
+                    driver.WriteTypeInformation( this );
+                    driver.WriteData( this, o );
+                    --_recurseCount;
+                }
+                if( _recurseCount == 0 && _deferred != null )
+                {
+                    while( _deferred.TryPop( out var d ) )
+                    {
+                        ++_recurseCount;
+                        d.Item2.WriteData( this, d.Item1 );
+                        --_recurseCount;
+                    }
+                }
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Gets whether this serializer is currently in debug mode.
+        /// Initially defaults to false.
+        /// </summary>
+        public bool IsDebugMode => _debugModeCounter > 0;
+
+        /// <summary>
+        /// Activates or deactivates the debug mode. This is cumulative so that scoped activations are handled:
+        /// activation/deactivation should be paired and <see cref="IsDebugMode"/> must be used to
+        /// know whether debug mode is actually active.
+        /// </summary>
+        /// <param name="active">Whether the debug mode should be activated, deactivated or (when null) be left as it is.</param>
+        public void DebugWriteMode( bool? active )
+        {
+            if( active.HasValue )
+            {
+                if( active.Value )
+                {
+                    Write( (byte)182 );
+                    ++_debugModeCounter;
+                }
+                else
+                {
+                    Write( (byte)181 );
+                    --_debugModeCounter;
+                }
+            }
+            else Write( (byte)180 );
+        }
+
+        /// <summary>
+        /// Writes a sentinel that must be read back by <see cref="IBinaryDeserializer.DebugCheckSentinel"/>.
+        /// If <see cref="IsDebugMode"/> is false, nothing is written.
+        /// </summary>
+        /// <param name="fileName">Current file name that wrote the data. Used to build the <see cref="InvalidDataException"/> message if sentinel cannot be read back.</param>
+        /// <param name="line">Current line number that wrote the data. Used to build the <see cref="InvalidDataException"/> message if sentinel cannot be read back.</param>
+        public void DebugWriteSentinel( [CallerFilePath]string? fileName = null, [CallerLineNumber] int line = 0 )
+        {
+            if( IsDebugMode )
+            {
+                Write( 987654321 );
+                Write( _debugSentinel++ );
+                Write( fileName + '(' + line.ToString() + ')' );
             }
         }
 
-        public void Write<T>( T o, ITypeSerializationDriver<T> driver )
+        /// <summary>
+        /// Writes a type.
+        /// </summary>
+        /// <param name="t">The type to write. Can be null.</param>
+        public void Write( Type? t )
         {
-            if( driver == null ) throw new ArgumentNullException( nameof( driver ) );
-            if( o == null )
-            {
-                Write( (byte)SerializationMarker.Null );
-                return;
-            }
-            SerializationMarker marker;
-            Type t = o.GetType();
-            int idxSeen = -1;
-            // This is awful. Drivers need to be the actual handler of the full
-            // serialization/deserialization process, including instance tracking,
-            // regardless of the struct/class kind of the objects.
-            // New object pools from CK.Core should definitly help for this.
-            if( t.IsClass && t != typeof(string) )
-            {
-                if( _seen.TryGetValue( o, out var num ) )
-                {
-                    Write( (byte)SerializationMarker.Reference );
-                    Write( num );
-                    return;
-                }
-                idxSeen = _seen.Count;
-                _seen.Add( o, _seen.Count );
-                if( t == typeof( object ) )
-                {
-                    Write( (byte)SerializationMarker.EmptyObject );
-                    return;
-                }
-                marker = SerializationMarker.Object;
-            }
-            else marker = SerializationMarker.Struct;
-            Write( (byte)marker );
-            driver.WriteData( this, o );
+            ITypeSerializationDriver? driver = _drivers.FindDriver( t );
+            if( driver != null ) driver.WriteTypeInformation( this );
+            else WriteSimpleType( t );
         }
 
-        internal bool WriteSimpleType( Type t, string alias)
+        internal bool WriteSimpleType( Type? t )
         {
-            if( DoWriteSimpleType( t, alias ) )
+            if( DoWriteSimpleType( t ) )
             {
+                // Fake version when the type is new: AutoTypeRegistry serializes the base class
+                // (it directly calls DoWriteSimpleType) right after their own version that is,
+                // by design, positive. -1 stops the chain.
                 WriteSmallInt32( -1 );
                 return true;
             }
             return false;
         }
 
-        internal bool DoWriteSimpleType( Type t, string alias )
+        /// <summary>
+        /// Writes the type, returning true if the type has been written for the first time
+        /// or false if it has been previously written.
+        /// </summary>
+        /// <param name="t">Type to serialize. Can be null.</param>
+        /// <returns>True if the type has been written, false if it was already serialized.</returns>
+        internal bool DoWriteSimpleType( Type? t )
         {
             if( t == null ) Write( (byte)0 );
             else if( t == typeof( object ) )
@@ -232,7 +305,7 @@ namespace CK.Observable
                     info = new TypeInfo( t, _types.Count );
                     _types.Add( t, info );
                     Write( (byte)2 );
-                    Write( alias ?? info.Type.AssemblyQualifiedName );
+                    Write( info.Type.AssemblyQualifiedName );
                     return true;
                 }
                 Write( (byte)3 );
@@ -241,13 +314,80 @@ namespace CK.Observable
             return false;
         }
 
-        TypeInfo RegisterType( Type t )
+        /// <summary>
+        /// Called by <see cref="AutoTypeRegistry"/> serialization drivers when a disposed <see cref="IDestroyable"/> has been
+        /// written.
+        /// <para>
+        /// This should clearly be on "ImplementationServices" or any other of this writer extensions. But currently, the
+        /// serialization is embedded inside the Observable library, so we don't care.
+        /// Note that if a IDestroyableObject { bool IsDestroyed { get; } } basic interface (without Destroyed event) in the "generic" serialization library
+        /// (or deeper? "System.ComponentModel.IDestroyableObject, CK.Core"?), then this could remain this way. 
+        /// </para>
+        /// </summary>
+        public Action<IDestroyable>? DisposedTracker { get; }
+
+
+        internal class CheckedWriteStream : Stream
         {
-            var info = new TypeInfo( t, _types.Count );
-            _types.Add( t, info );
-            return info;
+            readonly byte[] _already;
+            int _position;
+
+            public CheckedWriteStream( byte[] already )
+            {
+                _already = already;
+            }
+
+            public override bool CanRead => false;
+
+            public override bool CanSeek => false;
+
+            public override bool CanWrite => true;
+
+            public override long Length => throw new NotSupportedException();
+
+            public override long Position { get => _position; set => throw new NotSupportedException(); }
+
+            public override void Flush()
+            {
+            }
+
+            public override int Read( byte[] buffer, int offset, int count )
+            {
+                throw new NotSupportedException();
+            }
+
+            public override long Seek( long offset, SeekOrigin origin )
+            {
+                throw new NotSupportedException();
+            }
+
+            public override void SetLength( long value )
+            {
+                throw new NotSupportedException();
+            }
+
+            public override void Write( byte[] buffer, int offset, int count )
+            {
+                for( int i = offset; i < count; ++i )
+                {
+                    var actual = _already[_position++];
+                    if( buffer[i] != actual )
+                    {
+                        throw new CKException( $"Write stream differ @{_position - 1}. Expected byte '{actual}', got '{buffer[i]}'." );
+                    }
+                }
+            }
         }
 
+        /// <summary>
+        /// Magic yet simple helper to check the serialization implementation: the object (and potentially the whole graph behind)
+        /// is serialized then deserialized and the result of the deserialization is then serialized again but in a special stream
+        /// that throws a <see cref="CKException"/> as soon as a byte differ.
+        /// </summary>
+        /// <param name="o">The object to check.</param>
+        /// <param name="services">Optional services that deserialization may require.</param>
+        /// <param name="throwOnFailure">False to log silently fail and return false.</param>
+        /// <returns>True on success, false on error (if <paramref name="throwOnFailure"/> is false).</returns>
         public static bool IdempotenceCheck( object o, IServiceProvider services, bool throwOnFailure = true )
         {
             try
@@ -261,15 +401,11 @@ namespace CK.Observable
                     using( var r = new BinaryDeserializer( s, services, null ) )
                     {
                         var o2 = r.ReadObject();
-                        using( var s2 = new MemoryStream() )
-                        using( var w2 = new BinarySerializer( s2, null, true ) )
+                        r.ImplementationServices.ExecutePostDeserializationActions();
+                        using( var checker = new CheckedWriteStream( originalBytes ) )
+                        using( var w2 = new BinarySerializer( checker, null, true ) )
                         {
                             w2.WriteObject( o2 );
-                            var rewriteBytes = s2.ToArray();
-                            if( !originalBytes.SequenceEqual( rewriteBytes ) )
-                            {
-                                throw new Exception( "Reserialized bytes differ from original serialized bytes." );
-                            }
                         }
                     }
                 }
@@ -280,45 +416,6 @@ namespace CK.Observable
                 if( throwOnFailure ) throw;
             }
             return false;
-        }
-
-        // TODO: To be removed @next CK.Core version (transfered to CKBinaryWriter).
-
-        /// <summary>
-        /// Writes a DateTime value.
-        /// </summary>
-        /// <param name="d">The value to write.</param>
-        public void Write( DateTime d )
-        {
-            Write( d.ToBinary() );
-        }
-
-        /// <summary>
-        /// Writes a TimeSpan value.
-        /// </summary>
-        /// <param name="t">The value to write.</param>
-        public void Write( TimeSpan t )
-        {
-            Write( t.Ticks );
-        }
-
-        /// <summary>
-        /// Writes a DateTimeOffset value.
-        /// </summary>
-        /// <param name="ds">The value to write.</param>
-        public void Write( DateTimeOffset ds )
-        {
-            Write( ds.DateTime );
-            Write( (short)ds.Offset.TotalMinutes );
-        }
-
-        /// <summary>
-        /// Writes a DateTimeOffset value.
-        /// </summary>
-        /// <param name="g">The value to write.</param>
-        public void Write( Guid g )
-        {
-            Write( g.ToByteArray() );
         }
 
     }

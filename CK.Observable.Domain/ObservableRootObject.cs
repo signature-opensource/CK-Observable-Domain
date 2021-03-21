@@ -1,32 +1,41 @@
+using CK.Core;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CK.Observable
 {
-    [SerializationVersion(0)]
+    /// <summary>
+    /// Defines a root <see cref="ObservableObject"/>.
+    /// This object is not disposable and is initialized with its holding domain.
+    /// </summary>
+    [SerializationVersion( 0 )]
     public class ObservableRootObject : ObservableObject
     {
-        protected ObservableRootObject( ObservableDomain domain )
-            : base( domain )
+        /// <summary>
+        /// Gets or sets a flag that allows <see cref="ObservableObject.Destroy()"/> to be called on
+        /// root objects that are not real roots (they don't belong to <see cref="ObservableDomain.AllRoots"/>).
+        /// <para>
+        /// Defaults to false: this should not be needed (but this can be useful to cleanup a domain).
+        /// </para>
+        /// </summary>
+        public static bool AllowRootObjectDestroying { get; set; } = false;
+
+        /// <summary>
+        /// Initializes a new root for the current domain that is retrieved automatically: it
+        /// is the last one on the current thread that has started a transaction (see <see cref="ObservableDomain.BeginTransaction"/>).
+        /// </summary>
+        protected ObservableRootObject()
         {
         }
 
-        protected ObservableRootObject( IBinaryDeserializerContext d )
-            : base( d )
+        protected ObservableRootObject( RevertSerialization _ ) : base( _ ) { }
+
+        ObservableRootObject( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
         {
-            d.StartReading();
         }
 
         void Write( BinarySerializer w )
         {
-        }
-
-        protected override void OnDisposed()
-        {
-            throw new InvalidOperationException( "ObservableRootObject can not be disposed." );
         }
     }
 }

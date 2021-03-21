@@ -1,8 +1,5 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 namespace CK.Observable
 {
@@ -16,9 +13,7 @@ namespace CK.Observable
         /// </summary>
         public sealed class DObject : UnifiedTypeDriverBase<Object>
         {
-            public DObject() : base( Alias ) {}
-
-            public static readonly string Alias = "#object";
+            public DObject() : base( isFinalType: false ) { }
 
             public static readonly DObject Default = new DObject();
 
@@ -30,11 +25,29 @@ namespace CK.Observable
 
         }
 
+        public sealed class DType : UnifiedTypeDriverBase<Type>
+        {
+            public DType() { }
+
+            public static readonly DType Default = new DType();
+
+            public override Type ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo ) => r.ReadType();
+
+            public override void WriteData( BinarySerializer w, Type t ) => w.Write( t );
+
+            public override void Export( Type o, int num, ObjectExporter exporter )
+            {
+                var t = exporter.Target;
+                t.EmitStartObject( num, ObjectExportedKind.Object );
+                t.EmitPropertyName( nameof( Type.AssemblyQualifiedName ) );
+                t.EmitString( o.AssemblyQualifiedName );
+                t.EmitEndObject( num, ObjectExportedKind.Object );
+            }
+        }
+
         public sealed class DBool : UnifiedTypeDriverBase<Boolean>
         {
-            public DBool() : base( Alias ) { }
-
-            public static readonly string Alias = "#bool";
+            public DBool() { }
 
             public static readonly DBool Default = new DBool();
 
@@ -47,9 +60,7 @@ namespace CK.Observable
 
         public sealed class DChar : UnifiedTypeDriverBase<Char>
         {
-            public DChar() : base( Alias ) { }
-
-            public static readonly string Alias = "#char";
+            public DChar() { }
 
             public static readonly DChar Default = new DChar();
 
@@ -62,9 +73,7 @@ namespace CK.Observable
 
         public sealed class DDouble : UnifiedTypeDriverBase<Double>
         {
-            public DDouble() : base( Alias ) { }
-
-            public static readonly string Alias = "#double";
+            public DDouble() { }
 
             public static readonly DDouble Default = new DDouble();
 
@@ -77,9 +86,7 @@ namespace CK.Observable
 
         public sealed class DSingle : UnifiedTypeDriverBase<Single>
         {
-            public DSingle() : base( Alias ) { }
-
-            public static readonly string Alias = "#single";
+            public DSingle() { }
 
             public static readonly DSingle Default = new DSingle();
 
@@ -92,9 +99,7 @@ namespace CK.Observable
 
         public sealed class DDecimal : UnifiedTypeDriverBase<Decimal>
         {
-            public DDecimal() : base( Alias ) { }
-
-            public static readonly string Alias = "#decimal";
+            public DDecimal() { }
 
             public static readonly DDecimal Default = new DDecimal();
 
@@ -107,9 +112,7 @@ namespace CK.Observable
 
         public sealed class DSByte : UnifiedTypeDriverBase<SByte>
         {
-            public DSByte() : base( Alias ) { }
-
-            public static readonly string Alias = "#sbyte";
+            public DSByte() { }
 
             public static readonly DSByte Default = new DSByte();
 
@@ -122,9 +125,7 @@ namespace CK.Observable
 
         public sealed class DByte : UnifiedTypeDriverBase<Byte>
         {
-            public DByte() : base( Alias ) { }
-
-            public static readonly string Alias = "#byte";
+            public DByte() { }
 
             public static readonly DByte Default = new DByte();
 
@@ -137,9 +138,7 @@ namespace CK.Observable
 
         public sealed class DInt16 : UnifiedTypeDriverBase<Int16>
         {
-            public DInt16() : base( Alias ) { }
-
-            public static readonly string Alias = "#short";
+            public DInt16() { }
 
             public static readonly DInt16 Default = new DInt16();
 
@@ -152,9 +151,7 @@ namespace CK.Observable
 
         public sealed class DUInt16 : UnifiedTypeDriverBase<UInt16>
         {
-            public DUInt16() : base( Alias ) { }
-
-            public static readonly string Alias = "#ushort";
+            public DUInt16() { }
 
             public static readonly DUInt16 Default = new DUInt16();
 
@@ -167,9 +164,7 @@ namespace CK.Observable
 
         public sealed class DInt32 : UnifiedTypeDriverBase<Int32>
         {
-            public DInt32() : base( Alias ) { }
-
-            public static readonly string Alias = "#int";
+            public DInt32() { }
 
             public static readonly DInt32 Default = new DInt32();
 
@@ -182,9 +177,7 @@ namespace CK.Observable
 
         public sealed class DUInt32 : UnifiedTypeDriverBase<UInt32>
         {
-            public DUInt32() : base( Alias ) { }
-
-            public static readonly string Alias = "#uint";
+            public DUInt32() { }
 
             public static readonly DUInt32 Default = new DUInt32();
 
@@ -197,9 +190,7 @@ namespace CK.Observable
 
         public sealed class DInt64 : UnifiedTypeDriverBase<Int64>
         {
-            public DInt64() : base( Alias ) { }
-
-            public static readonly string Alias = "#long";
+            public DInt64() { }
 
             public static readonly DInt64 Default = new DInt64();
 
@@ -212,9 +203,7 @@ namespace CK.Observable
 
         public sealed class DUInt64 : UnifiedTypeDriverBase<UInt64>
         {
-            public DUInt64() : base( Alias ) { }
-
-            public static readonly string Alias = "#ulong";
+            public DUInt64() { }
 
             public static readonly DUInt64 Default = new DUInt64();
 
@@ -227,9 +216,7 @@ namespace CK.Observable
 
         public sealed class DString : UnifiedTypeDriverBase<String>
         {
-            public DString() : base( Alias ) { }
-
-            public static readonly string Alias = "#string";
+            public DString() { }
 
             public static readonly DString Default = new DString();
 
@@ -242,9 +229,7 @@ namespace CK.Observable
 
         public sealed class DGuid : UnifiedTypeDriverBase<Guid>
         {
-            public DGuid() : base( Alias ) { }
-
-            public static readonly string Alias = "#Guid";
+            public DGuid() { }
 
             public static readonly DGuid Default = new DGuid();
 
@@ -257,9 +242,7 @@ namespace CK.Observable
 
         public sealed class DDateTime : UnifiedTypeDriverBase<DateTime>
         {
-            public DDateTime() : base( Alias ) { }
-
-            public static readonly string Alias = "#DateTime";
+            public DDateTime() { }
 
             public static readonly DDateTime Default = new DDateTime();
 
@@ -272,9 +255,7 @@ namespace CK.Observable
 
         public sealed class DTimeSpan : UnifiedTypeDriverBase<TimeSpan>
         {
-            public DTimeSpan() : base( Alias ) { }
-
-            public static readonly string Alias = "#TimeSpan";
+            public DTimeSpan() { }
 
             public static readonly DTimeSpan Default = new DTimeSpan();
 
@@ -287,9 +268,7 @@ namespace CK.Observable
 
         public sealed class DDateTimeOffset : UnifiedTypeDriverBase<DateTimeOffset>
         {
-            public DDateTimeOffset() : base( Alias ) { }
-
-            public static readonly string Alias = "#DateTimeOffset";
+            public DDateTimeOffset() { }
 
             public static readonly DDateTimeOffset Default = new DDateTimeOffset();
 

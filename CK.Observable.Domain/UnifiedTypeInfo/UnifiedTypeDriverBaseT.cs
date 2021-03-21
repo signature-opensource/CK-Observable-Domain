@@ -1,26 +1,39 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CK.Observable
 {
+    /// <summary>
+    /// Base class that implements <see cref="IUnifiedTypeDriver{T}"/>.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
     public abstract class UnifiedTypeDriverBase<T> : IUnifiedTypeDriver<T>, ITypeSerializationDriver<T>, IDeserializationDriver<T>, IObjectExportTypeDriver<T>
     {
-        readonly string _typeAlias;
+        readonly bool _isFinalType;
 
-        protected UnifiedTypeDriverBase( string typeAlias = null )
+        /// <summary>
+        /// Initializes a new unified driver.
+        /// </summary>
+        /// <param name="isFinalType">States whether this type can have subordinate types or not.</param>
+        protected UnifiedTypeDriverBase( bool isFinalType = true )
         {
-            _typeAlias = null;
+            _isFinalType = isFinalType;
         }
 
+        /// <summary>
+        /// Gets this unified driver as the serialization driver.
+        /// </summary>
         public ITypeSerializationDriver<T> SerializationDriver => this;
 
+        /// <summary>
+        /// Gets this unified driver as the deserialization driver.
+        /// </summary>
         public IDeserializationDriver<T> DeserializationDriver => this;
 
+        /// <summary>
+        /// Gets this unified driver as the export driver.
+        /// </summary>
         public IObjectExportTypeDriver<T> ExportDriver => this;
 
         ITypeSerializationDriver IUnifiedTypeDriver.SerializationDriver => this;
@@ -29,19 +42,22 @@ namespace CK.Observable
 
         IObjectExportTypeDriver IUnifiedTypeDriver.ExportDriver => this;
 
+        /// <summary>
+        /// Gets the type handled.
+        /// </summary>
         public Type Type => typeof( T );
 
         bool IObjectExportTypeDriver.IsDefaultBehavior => false;
 
         IReadOnlyList<PropertyInfo> IObjectExportTypeDriver.ExportableProperties => Array.Empty<PropertyInfo>();
 
-        void ITypeSerializationDriver.WriteTypeInformation( BinarySerializer s ) => s.WriteSimpleType( typeof( T ), _typeAlias );
+        bool ITypeSerializationDriver.IsFinalType => _isFinalType;
+
+        void ITypeSerializationDriver.WriteTypeInformation( BinarySerializer s ) => s.WriteSimpleType( typeof( T ) );
 
         void ITypeSerializationDriver.WriteData( BinarySerializer w, object o ) => WriteData( w, (T)o );
 
-        object IDeserializationDriver.ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  ) => ReadInstance( r, readInfo );
-
-        string IDeserializationDriver.AssemblyQualifiedName => typeof( T ).AssemblyQualifiedName;
+        object? IDeserializationDriver.ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  ) => ReadInstance( r, readInfo );
 
         void IObjectExportTypeDriver.Export( object o, int num, ObjectExporter exporter ) => Export( (T)o, num, exporter );
 

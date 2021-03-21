@@ -1,14 +1,13 @@
+using Microsoft.VisualBasic.CompilerServices;
 using System;
-using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Runtime.CompilerServices;
 
 namespace CK.Observable.Domain.Tests.Sample
 {
     [SerializationVersionAttribute( 0 )]
-    public struct Position
+    public struct Position : IEquatable<Position>
     {
         public readonly double Latitude;
         public readonly double Longitude;
@@ -19,9 +18,8 @@ namespace CK.Observable.Domain.Tests.Sample
             Longitude = longitude;
         }
 
-        Position( IBinaryDeserializerContext d )
+        Position( IBinaryDeserializer r, TypeReadInfo? info )
         {
-            var r = d.StartReading();
             Latitude = r.ReadDouble();
             Longitude = r.ReadDouble();
         }
@@ -41,5 +39,12 @@ namespace CK.Observable.Domain.Tests.Sample
         }
 
         public override string ToString() => $"({Latitude.ToString( CultureInfo.InvariantCulture )},{Longitude.ToString( CultureInfo.InvariantCulture )})";
+
+
+        public bool Equals( Position other ) => Latitude == other.Latitude && Longitude == other.Longitude;
+        public override bool Equals( object? obj ) => obj is Position p && Equals( p );
+        public override int GetHashCode() => HashCode.Combine( Latitude, Longitude );
+        public static bool operator ==( Position o1, Position o2 ) => o1.Equals( o2 );
+        public static bool operator !=( Position o1, Position o2 ) => !o1.Equals( o2 );
     }
 }

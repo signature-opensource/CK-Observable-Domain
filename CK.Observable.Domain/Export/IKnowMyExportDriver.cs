@@ -1,13 +1,14 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 namespace CK.Observable
 {
+    /// <summary>
+    /// Optimization helper that enables exportable objects to cache
+    /// their associated <see cref="ExportDriver"/>.
+    /// </summary>
     public interface IKnowMyExportDriver
     {
+        /// <summary>
+        /// Gets the export driver to use.
+        /// </summary>
         IObjectExportTypeDriver ExportDriver { get; }
     }
 }

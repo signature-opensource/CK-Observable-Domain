@@ -1,11 +1,10 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CK.Observable
 {
+    /// <summary>
+    /// Finds <see cref="IObjectExportTypeDriver"/> for a type.
+    /// </summary>
     public interface IExporterResolver
     {
         /// <summary>

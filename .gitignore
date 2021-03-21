@@ -241,3 +241,13 @@ CodeCakeBuilder/Tools/nuget.exe
 SGVVersionInfo.cs
 Tests/CK.Core.NetCore.Tests/TestDir/
 TestResult.*.xml
+
+Tests/**/TestResult*.xml
+Tests/**/Logs/
+Tests/**/CKSetup-WorkingDir/
+CodeCakeBuilder/MemoryKey.*.txt
+CodeCakeBuilder/UnitTestsDone.*.txt
+/Tests/CK.Observable.League.Tests/TestStores/
+/Tests/CK.Observable.Domain.Tests/TestTemp/
+
+$StObjGen/

@@ -1,20 +1,32 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CK.Observable
 {
     /// <summary>
-    /// Handles serialization for instances of a given type.
+    /// Handles serialization of instances of a given type.
+    /// Note that this abstraction doesn't require to be bound to a Type: the <see cref="SerializerRegistry"/>
+    /// is in charge of the association from a Type to a driver.
     /// </summary>
     public interface ITypeSerializationDriver
     {
         /// <summary>
-        /// Gets the type that this driver handles.
+        /// Gets whether this type cannot have any subordinate types.
         /// </summary>
-        Type Type { get; }
+        bool IsFinalType { get; }
+
+        /// <summary>
+        /// Gets whether this type can be written in two parts (header and then the actual data).
+        /// This enables to handle too deep recursion in object graphs (typically because of linked list).
+        /// When an object is written in defferred mode, its deserialization driver must be able to handle this: it must be
+        /// a  <see cref="IDeserializationDeferredDriver"/>.
+        /// Defaults to false.
+        /// </summary>
+        /// <remarks>
+        /// Currently only <see cref="IUnifiedTypeDriver"/> automatic implementation allows deferred deserialization
+        /// and since this is the one used for every objects other tha array, list and dictionary, it is fine: regular
+        /// objects benefit from this behavior (and they are the ones that may be chained).
+        /// </remarks>
+        bool AllowDeferred => false;
 
         /// <summary>
         /// Writes the type descriptor in the serializer.

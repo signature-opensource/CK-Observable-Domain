@@ -3,17 +3,22 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
+using System.Transactions;
 
 namespace CK.Observable
 {
+    /// <summary>
+    /// Maintains a set of automatically created internal object that implement <see cref="IUnifiedTypeDriver"/>.
+    /// </summary>
     public static class AutoTypeRegistry
     {
         static readonly ConcurrentDictionary<Type, IUnifiedTypeDriver> _drivers;
-        static readonly Type[] _ctorParameters = new Type[] { typeof( IBinaryDeserializerContext ) };
+        static readonly Type[] _ctorDeserializationParameters = new Type[] { typeof( IBinaryDeserializer ), typeof( TypeReadInfo ) };
+        static readonly Type[] _ctorRevertParameters = new Type[] { typeof( RevertSerialization ) };
         static readonly Type[] _writeParameters = new Type[] { typeof( BinarySerializer ) };
         static readonly Type[] _exportParameters = new Type[] { typeof( int ), typeof( ObjectExporter ) };
         static readonly Type[] _exportBaseParameters = new Type[] { typeof( int ), typeof( ObjectExporter ), typeof( IReadOnlyList<ExportableProperty> ) };
@@ -26,46 +31,63 @@ namespace CK.Observable
         /// <summary>
         /// Type based unified driver.
         /// </summary>
-        class AutoTypeDriver : IUnifiedTypeDriver, ITypeSerializationDriver, IDeserializationDriver, IObjectExportTypeDriver
+        class AutoTypeDriver : IUnifiedTypeDriver, ITypeSerializationDriver, IDeserializationDeferredDriver, IObjectExportTypeDriver
         {
             readonly Type _type;
-            readonly AutoTypeDriver _baseType;
+            readonly AutoTypeDriver? _baseType;
             readonly AutoTypeDriver[] _typePath;
 
-            // Serialization.
-            readonly MethodInfo _write;
             /// <summary>
             /// The version from the <see cref="SerializationVersionAttribute"/>.
+            /// Whenever this is >= 0, then the _writer and the _ctor are not null.
             /// </summary>
             readonly int _version;
+
+            // Serialization.
+            readonly Action<object,BinarySerializer> _writer;
 
             // Deserialization.
             readonly ConstructorInfo _ctor;
 
             // Export.
-            readonly MethodInfo _exporter;
-            readonly MethodInfo _exporterBase;
+            readonly MethodInfo? _exporter;
+            readonly MethodInfo? _exporterBase;
+
+            /// <summary>
+            /// This is null if this Type is NOT exportable but this doesn't trigger an error [NotExportable]: ExportDriver is simply null.
+            /// <para>
+            /// When _exportError is not null, then ExportDriver is not null:
+            ///  - This is empty if this Type is exportable: ExportDriver works as expected.
+            ///  - This is an error message if any export attempt should trigger an error [NotExportable( Error = "..." )]: ExportDriver throws the message.
+            /// </para>
+            /// </summary>
+            readonly string? _exportError;
             readonly IReadOnlyList<PropertyInfo> _exportableProperties;
-            readonly bool _isExportable;
+
+            readonly bool _useReverSerialization;
 
             /// <summary>
             /// Gets the type itself.
             /// </summary>
             public Type Type => _type;
 
-            public ITypeSerializationDriver SerializationDriver => _write != null ? this : null;
+            bool ITypeSerializationDriver.IsFinalType => _type.IsValueType;
 
-            public IDeserializationDriver DeserializationDriver => _ctor != null ? this : null;
+            public ITypeSerializationDriver? SerializationDriver => _version >= 0 ? this : null;
 
-            public IObjectExportTypeDriver ExportDriver => _isExportable ? this : null;
+            public IDeserializationDriver? DeserializationDriver => _version >= 0 ? this : null;
+
+            public IObjectExportTypeDriver? ExportDriver => _exportError != null ? this : null;
 
             IReadOnlyList<PropertyInfo> IObjectExportTypeDriver.ExportableProperties => _exportableProperties;
 
-            bool IObjectExportTypeDriver.IsDefaultBehavior => _isExportable && _exporter == null && _exporterBase == null;
+            bool IObjectExportTypeDriver.IsDefaultBehavior => (_exportError != null && _exportError.Length == 0)
+                                                                && _exporter == null
+                                                                && _exporterBase == null;
 
             Type IObjectExportTypeDriver.BaseType => Type;
 
-            string IDeserializationDriver.AssemblyQualifiedName => _type.AssemblyQualifiedName;
+            bool ITypeSerializationDriver.AllowDeferred => true;
 
             /// <summary>
             /// Invokes the deserialization constructor.
@@ -76,49 +98,132 @@ namespace CK.Observable
             /// Null if the type has been previously written by an external driver.
             /// </param>
             /// <returns>The new instance.</returns>
-            object IDeserializationDriver.ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo ) 
+            void IDeserializationDeferredDriver.ReadInstance( IBinaryDeserializer r, TypeReadInfo? readInfo, object o )
+            {
+                DoReadInstance( r, readInfo, o );
+            }
+
+            object IDeserializationDeferredDriver.Allocate( IBinaryDeserializer r, TypeReadInfo readInfo )
+            {
+                return r.ImplementationServices.CreateUninitializedInstance( Type, readInfo.IsTrackedObject );
+            }
+
+            object IDeserializationDriver.ReadInstance( IBinaryDeserializer r, TypeReadInfo? readInfo )
             {
                 return DoReadInstance( r, readInfo );
             }
 
-            protected object DoReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo )
+            string? InvokeCtor( IBinaryDeserializer r, object o, object?[] callParams, TypeReadInfo readInfo )
             {
-                var o = r.ImplementationServices.CreateUninitializedInstance( Type, readInfo.IsTrackedObject );
-                var ctx = r.ImplementationServices.PushConstructorContext( readInfo );
-                _ctor.Invoke( o, new object[] { ctx } );
-                r.ImplementationServices.PopConstructorContext();
+                if( _baseType != null )
+                {
+                    if( readInfo.BaseType == null )
+                    {
+                        return $"Missing base type info for type {readInfo.SimpleTypeName}. The type hierarchy has changed between serialization and deserialization.";
+                    }
+                    var error = _baseType.InvokeCtor( r, o, callParams, readInfo.BaseType );
+                    if( error != null ) return error;
+                    if( o is IDestroyable d && d.IsDestroyed ) return null;
+                }
+                else if( readInfo.TypePath.Count > 1 )
+                {
+                    return $"Missing base type constructor {readInfo.SimpleTypeName}( IBinaryDeserializer, TypeReadInfo ).";
+                }
+                callParams[1] = readInfo;
+                using( r.IsDebugMode ? r.OpenDebugPushContext( $"Ctor '{readInfo.SimpleTypeName}'." ) : null )
+                {
+                    _ctor?.Invoke( o, callParams );
+                    if( _useReverSerialization && !RevertSerialization.CheckLastDeserialized( o ) )
+                    {
+                        if( _baseType == null )
+                        {
+                            return $"Deserialization constructor {readInfo.SimpleTypeName}( IBinaryDeserializer, TypeReadInfo ) must call RevertSerialization.OnRootDeserialized( this ).";
+                        }
+                        else
+                        {
+                            return $"Deserialization constructor {readInfo.SimpleTypeName}( IBinaryDeserializer, TypeReadInfo ) must call the base( RevertSerialization.Default ) constructor.";
+                        }
+                    }
+                }
+                return null;
+            }
+
+            protected object DoReadInstance( IBinaryDeserializer r, TypeReadInfo? readInfo )
+            {
+                var o = r.ImplementationServices.CreateUninitializedInstance( Type, readInfo?.IsTrackedObject ?? false );
+                return DoReadInstance( r, readInfo, o );
+            }
+
+            object DoReadInstance( IBinaryDeserializer r, TypeReadInfo? readInfo, object o )
+            {
+                IDisposable? scope = _useReverSerialization ? RevertSerialization.StartRevertSerializationCheck() : null;
+                try
+                {
+                    var callParams = new object?[] { r, null };
+                    if( readInfo == null )
+                    {
+                        using( r.IsDebugMode ? r.OpenDebugPushContext( $"Ctor with null readInfo '{o.GetType().FullName}'." ) : null )
+                        {
+                            _ctor?.Invoke( o, callParams );
+                        }
+                    }
+                    else
+                    {
+                        var error = InvokeCtor( r, o, callParams, readInfo );
+                        if( error != null ) throw new InvalidDataException( error );
+                    }
+                }
+                catch( TargetInvocationException ex )
+                {
+                    var inner = System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture( ex.InnerException );
+                    inner.Throw();
+                }
+                finally
+                {
+                    scope?.Dispose();
+                }
                 return o;
             }
 
             /// <summary>
-            /// Writes types in <see cref="TypePath"/> that has not been
-            /// written yet (they are unknown to the Serializer).
+            /// Writes types from this <see cref="Type"/> to the object base type
+            /// that have not been written yet (they are still unknown to the Serializer).
             /// </summary>
             /// <param name="s">The serializer.</param>
             void ITypeSerializationDriver.WriteTypeInformation( BinarySerializer s )
             {
-                var tInfo = this;
-                while( s.DoWriteSimpleType( tInfo?.Type, null ) )
+                AutoTypeDriver? tInfo = this;
+                while( s.DoWriteSimpleType( tInfo?.Type ) )
                 {
-                    Debug.Assert( tInfo._version >= 0 );
-                    s.WriteSmallInt32( tInfo._version );
+                    Debug.Assert( tInfo != null && tInfo._version >= 0 );
+                    s.WriteSmallInt32( tInfo!._version );
                     tInfo = tInfo._baseType;
                 }
             }
 
             /// <summary>
-            /// Calls the Write methods on <see cref="TypePath"/>.
+            /// Calls the Write methods from base object type down to this one.
             /// </summary>
             /// <param name="w">The serializer.</param>
             /// <param name="o">The object instance.</param>
             void ITypeSerializationDriver.WriteData( BinarySerializer w, object o ) => DoWriteData( w, o );
 
+            string SimpleTypeName => _type.AssemblyQualifiedName.Split( ',' )[0];
+
             protected void DoWriteData( BinarySerializer w, object o )
             {
                 var parameters = new object[] { w };
-                foreach( var t in _typePath )
+                if( o is IDestroyable d && d.IsDestroyed )
                 {
-                    t._write.Invoke( o, parameters );
+                    _typePath[0]._writer?.Invoke( o, w );
+                    w.DisposedTracker?.Invoke( d );
+                }
+                else
+                {
+                    foreach( var t in _typePath )
+                    {
+                        t._writer?.Invoke( o, w );
+                    }
                 }
             }
 
@@ -129,6 +234,11 @@ namespace CK.Observable
 
             protected void DoExport( object o, int num, ObjectExporter exporter )
             {
+                Debug.Assert( _exportError != null, "When null, this is not exportable." );
+                if( _exportError.Length > 0 )
+                {
+                    throw new CKException( _exportError );
+                }
                 if( _exporter != null )
                 {
                     _exporter.Invoke( o, new object[] { num, exporter } );
@@ -159,7 +269,7 @@ namespace CK.Observable
 
             internal AutoTypeDriver( Type t, AutoTypeDriver baseType )
             {
-                GetAndCheckTypeAutoParts( t, out _version, out _ctor, out _write, out _exporter, out _exporterBase );
+                GetAndCheckTypeAutoParts( t, out _version, out _ctor, out _writer, out _exporter, out _exporterBase );
                 _type = t;
                 _baseType = baseType;
                 if( baseType != null )
@@ -168,8 +278,25 @@ namespace CK.Observable
                     Array.Copy( baseType._typePath, p, baseType._typePath.Length );
                     p[baseType._typePath.Length] = this;
                     _typePath = p;
+                    _useReverSerialization = baseType._useReverSerialization;
+                    if( _useReverSerialization && _version < 0 )
+                    {
+                        throw new InvalidOperationException( $"Base type '{_baseType.SimpleTypeName}' uses revert serialization: "
+                                                             + $"specialized '{t.Name}' should implement it also with a required [SerializableVersion] attribute, "
+                                                             + $"private 'void {t.Name}.Write( {nameof( BinarySerializer )} )' and deserialization constructor "
+                                                             + $"'{t.Name}( IBinaryDeserializer r, TypeReadInfo info )'." );
+                    }
                 }
-                else _typePath = new[] { this };
+                else
+                {
+                    _typePath = new[] { this };
+                    // We are on a base type. If it's serializable, then we check if it supports
+                    // the RevertSerialization.
+                    _useReverSerialization = t.GetConstructor( BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+                                                               null,
+                                                               _ctorRevertParameters,
+                                                               null ) != null;
+                }
 
                 // Propagates exporterBase method if any regardless of exportability
                 // of this exact type.
@@ -178,16 +305,47 @@ namespace CK.Observable
                     _exporterBase = baseType?._exporterBase;
                 }
                 _exportableProperties = Array.Empty<PropertyInfo>();
-                if( !Type.GetCustomAttributes<NotExportableAttribute>().Any() )
+
+                // CS0192  A readonly field cannot be used as a ref or out value (except in a constructor).
+                // Using exportError to set _exportError.
+                // Defaults to null: not exportable, no error.
+                string? exportError = null;
+
+                if( CheckTypeOrPropertyNotExportable( Type, ref exportError ) )
                 {
-                    _isExportable = true;
+                    // Should be exportable unless a property prevents it.
+                    exportError = String.Empty;
                     if( _exporter == null )
                     {
+                        // This is far from perfect: the property type may be not exportable for another
+                        // reason than being marked with the NotExportableAttribute... However, this would made
+                        // this property list dependent on the IExporterResolver being used.
+                        // That would imply a heavy refactoring of the export API. For the moment, this does the job.
                         _exportableProperties = Type.GetProperties().Where( p => p.GetIndexParameters().Length == 0
-                                                            && !p.GetCustomAttributes<NotExportableAttribute>().Any() )
+                                                            && CheckTypeOrPropertyNotExportable( p, ref exportError )
+                                                            && CheckTypeOrPropertyNotExportable( p.PropertyType, ref exportError ) )
                                                 .ToArray();
                     }
                 }
+                _exportError = exportError;
+            }
+
+            static bool CheckTypeOrPropertyNotExportable( MemberInfo m, ref string? exportError )
+            {
+                bool exportable = true;
+                foreach( var a in m.GetCustomAttributes<NotExportableAttribute>() )
+                {
+                    if( !String.IsNullOrWhiteSpace( a.Error ) )
+                    {
+                        var n = m.DeclaringType?.Name;
+                        if( n != null ) n += '.' + m.Name;
+                        else n = m.Name;
+                        if( !String.IsNullOrEmpty( exportError ) ) exportError += Environment.NewLine;
+                        exportError += $"Exporting '{n}' is forbidden: {a.Error}";
+                    }
+                    exportable = false;
+                }
+                return exportable;
             }
         }
 
@@ -244,29 +402,52 @@ namespace CK.Observable
             Type t,
             out int version,
             out ConstructorInfo ctor,
-            out MethodInfo write,
+            out Action<object,BinarySerializer> writer,
             out MethodInfo exporter,
             out MethodInfo exporterBase )
         {
             int? v = t.GetCustomAttribute<SerializationVersionAttribute>()?.Version;
             ctor = t.GetConstructor( BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
                                      null,
-                                     _ctorParameters,
+                                     _ctorDeserializationParameters,
                                      null );
-            write = t.GetMethod( "Write",
-                                 BindingFlags.Instance | BindingFlags.NonPublic,
+            if( ctor != null && !ctor.IsPrivate )
+            {
+                throw new InvalidOperationException( $"Deserialization constructor '{t.Name}( IBinaryDeserializer r, TypeReadInfo info )' must be private." );
+            }
+
+            // void Write( BinarySerializer w ) can be a regular method. We check its 'Private' if we have a Version or a Ctor.
+            var writeMethod = t.GetMethod( "Write",
+                                 BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
                                  null,
                                  _writeParameters,
                                  null );
 
-            if( v != null || write != null )
+            if( v != null || ctor != null )
             {
                 if( v == null ) throw new InvalidOperationException( $"Missing [{nameof( SerializationVersionAttribute )}] attribute on type '{t.Name}'." );
                 Debug.Assert( v.Value >= 0 );
-                if( write == null ) throw new InvalidOperationException( $"Missing 'void {t.Name}.Write({nameof( BinarySerializer )} )' method." );
                 version = v.Value;
+
+                if( ctor == null ) throw new InvalidOperationException( $"Missing private deserialization constructor '{t.Name}( IBinaryDeserializer r, TypeReadInfo info ) : base( RevertSerialization.Default ) {{ ... }}'." );
+
+                if( writeMethod == null ) throw new InvalidOperationException( $"Missing private 'void {t.Name}.Write( {nameof( BinarySerializer )} )'." );
+                if( !writeMethod.IsPrivate )
+                {
+                    throw new InvalidOperationException( $"Serialization method 'void {t.Name}.Write( {nameof( BinarySerializer )} )' must be private." );
+                }
+
+                // Creates the writer compiled method.
+                var pTarget = ParameterExpression.Parameter( typeof( object ) );
+                var pCtx = ParameterExpression.Parameter( typeof( BinarySerializer ) );
+                var body = Expression.Call( Expression.Convert( pTarget, t ), writeMethod, pCtx );
+                writer = Expression.Lambda<Action<object, BinarySerializer>>( body, pTarget, pCtx ).Compile();
             }
-            else version = -1;
+            else
+            {
+                version = -1;
+                writer = null;
+            }
 
             exporter = t.GetMethod( "Export",
                                     BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly,

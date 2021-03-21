@@ -1,22 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  
+  <Sdk Name="Microsoft.Build.CentralPackageVersions" Version="2.0.79" />
   <Import Project="..\Common\Shared.props" />
-  
   <PropertyGroup>
-    <TargetFrameworks>net461;netstandard2.0</TargetFrameworks>
-    <GenerateDocumentationFile Condition=" '$Configuration' == 'DEBUG' ">true</GenerateDocumentationFile>
-    <LangVersion>7.3</LangVersion>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <Nullable>enable</Nullable>
+    <LangVersion>Latest</LangVersion>
   </PropertyGroup>
   
   <ItemGroup>
-    <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="10.1.1" />
-    <PackageReference Include="Fody" Version="4.0.2">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="PropertyChanged.Fody" Version="2.6.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
-    </PackageReference>
+    <PackageReference Include="CK.StObj.Model" />
+    <PackageReference Include="System.Threading.Channels" />
   </ItemGroup>
+
 </Project>
