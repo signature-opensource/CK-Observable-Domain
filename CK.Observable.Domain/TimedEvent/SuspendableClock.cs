@@ -68,6 +68,8 @@ namespace CK.Observable
                         o.PrevInClock = i == 0 ? null : _0Bug[i - 1];
                         o.NextInClock = i == _0Bug.Count - 1 ? null : _0Bug[i + 1];
                     }
+                    _firstInClock = _0Bug[0];
+                    _lastInClock = _0Bug[^1];
                 }
                 return _0Bug;
             }
