@@ -686,5 +686,49 @@ namespace CK.Observable.Domain.Tests.TimedEvents
         }
 
 
+        [Test]
+        public async Task auto_destroying_reminders()
+        {
+            using var od = new ObservableDomain<Root>( TestHelper.Monitor, nameof( auto_destroying_reminders ), true );
+
+            od.Modify( TestHelper.Monitor, () =>
+            {
+                var r = new Random();
+                var m = new Machine();
+                od.Root.Objects.Add( m );
+                for( int i = 0; i < 500; ++i )
+                {
+                    var o = new ObservableProductSample( m );
+                    od.Root.Objects.Add( o );
+                    o.SetAutoDestroyTimeout( TimeSpan.FromMilliseconds( r.Next( 150 ) ) );
+                }
+                for( int i = 0; i < 100; ++i )
+                {
+                    var o = new ObservableProductSample( m );
+                    od.Root.Objects.Add( o );
+                    o.SetAutoDestroyTimeout( TimeSpan.FromDays( 1 ) );
+                }
+            } );
+
+            await Task.Delay( 200 );
+
+            ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, od );
+
+            od.Modify( TestHelper.Monitor, () =>
+            {
+                int i = 1;
+                while( i < 501 )
+                {
+                    od.Root.Objects[i++].IsDestroyed.Should().BeTrue();
+                }
+                while( i < 601 )
+                {
+                    od.Root.Objects[i++].IsDestroyed.Should().BeTrue();
+                }
+            } );
+
+            ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, od );
+        }
+
     }
 }

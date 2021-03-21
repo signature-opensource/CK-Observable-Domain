@@ -1,4 +1,3 @@
-using CK.Core;
 using CK.Observable.Domain.Tests.Sample;
 using FluentAssertions;
 using Newtonsoft.Json.Linq;
@@ -15,7 +14,7 @@ namespace CK.Observable.Domain.Tests
 {
 
     [TestFixture]
-    public class GarbageCollectorTests
+    public partial class GarbageCollectorTests
     {
         [Test]
         public async Task garbage_collect_observable_objects()
@@ -49,152 +48,6 @@ namespace CK.Observable.Domain.Tests
 
             lostPow.IsDestroyed.Should().BeTrue();
             od.EnsureLostObjectTracker( TestHelper.Monitor ).HasIssues.Should().BeFalse();
-        }
-
-        [SerializationVersion( 0 )]
-        class Machine : ObservableObject
-        {
-            public Machine()
-            {
-            }
-
-            public SuspendableClock? Clock { get; set; }
-
-            public InternalObject? Internal { get; set; }
-
-            public ObservableObject? Observable { get; set; }
-
-            Machine( IBinaryDeserializer r, TypeReadInfo info )
-            {
-                Clock = (SuspendableClock?)r.ReadObject();
-                Internal = (InternalObject?)r.ReadObject();
-                Observable = (ObservableObject?)r.ReadObject();
-            }
-
-            void Write( BinarySerializer w )
-            {
-                w.WriteObject( Clock );
-                w.WriteObject( Internal );
-                w.WriteObject( Observable );
-            }
-        }
-
-        [SerializationVersion( 0 )]
-        class InternalSample : InternalObject
-        {
-            public InternalSample()
-            {
-            }
-
-            public string? Name { get; set; }
-
-            InternalSample( IBinaryDeserializer r, TypeReadInfo info )
-            {
-                Name = r.ReadNullableString();
-            }
-
-            void Write( BinarySerializer w )
-            {
-                w.WriteNullableString( Name );
-            }
-        }
-
-        [SerializationVersion( 0 )]
-        class ObservableProductSample : ObservableObject
-        {
-            ObservableReminder? _autoDestroyReminder;
-
-            public ObservableProductSample( Machine m )
-            {
-                Machine = m;
-            }
-
-            public string? Name { get; set; }
-
-            public Machine Machine { get; }
-
-            ObservableProductSample( IBinaryDeserializer r, TypeReadInfo info )
-            {
-                Name = r.ReadNullableString();
-                Machine = (Machine)r.ReadObject();
-                _autoDestroyReminder = (ObservableReminder?)r.ReadObject();
-            }
-
-            void Write( BinarySerializer w )
-            {
-                w.WriteNullableString( Name );
-                w.WriteObject( Machine );
-                w.WriteObject( _autoDestroyReminder );
-            }
-
-            protected override void OnDestroy()
-            {
-                _autoDestroyReminder?.Destroy();
-                base.OnDestroy();
-            }
-
-            public void SetAutoDestroyTimeout( TimeSpan? delay )
-            {
-                if( !delay.HasValue )
-                {
-                    _autoDestroyReminder?.Destroy();
-                    _autoDestroyReminder = null;
-                }
-                else
-                {
-                    if( _autoDestroyReminder != null )
-                    {
-                        _autoDestroyReminder.DueTimeUtc = DateTime.UtcNow.Add( delay.Value );
-                    }
-                    else
-                    {
-                        _autoDestroyReminder = new ObservableReminder( DateTime.UtcNow.Add( delay.Value ) );
-                        _autoDestroyReminder.Elapsed += OnAutoDestroyedTimeout;
-                        _autoDestroyReminder.SuspendableClock = Machine.Clock;
-                    }
-                }
-            }
-
-            // This method should not be renamed because of deserialization.
-            void OnAutoDestroyedTimeout( object sender, ObservableReminderEventArgs e )
-            {
-                e.Monitor.Trace( $"AutoDestroying {ToString()}." );
-                Destroy();
-            }
-
-        }
-
-        [SerializationVersion( 0 )]
-        class Root : ObservableRootObject
-        {
-            public ObservableList<ObservableObject> Objects { get; }
-
-            public ObservableList<ObservableTimedEventBase> TimedEvents { get; }
-
-            public Root()
-            {
-                Objects = new ObservableList<ObservableObject>();
-                TimedEvents = new ObservableList<ObservableTimedEventBase>();
-            }
-
-            Root( IBinaryDeserializer r, TypeReadInfo info )
-                : base( RevertSerialization.Default )
-            {
-                Objects = (ObservableList<ObservableObject>)r.ReadObject()!;
-                TimedEvents = (ObservableList<ObservableTimedEventBase>)r.ReadObject()!;
-            }
-
-            void Write( BinarySerializer w )
-            {
-                w.WriteObject( Objects );
-                w.WriteObject( TimedEvents );
-            }
-
-            public void RemindFromPool( DateTime dueTime, SafeEventHandler<ObservableReminderEventArgs> callback )
-            {
-                Domain.Remind( dueTime, callback );
-            }
-
         }
 
         [Test]
@@ -397,7 +250,6 @@ namespace CK.Observable.Domain.Tests
 
             ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, od );
         }
-
 
     }
 }

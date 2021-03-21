@@ -128,6 +128,7 @@ namespace CK.Observable
                     t.SetDeserializedClock( this );
                     Bound( t );
                 }
+                CheckInvariant();
             }
             _isActiveChanged = new ObservableEventHandler<ObservableDomainEventArgs>( r );
         }
@@ -183,12 +184,12 @@ namespace CK.Observable
         public TimeSpan CumulativeOffset => _cumulativeOffset;
 
         /// <summary>
-        /// Gets or sets whether the time spent unloaded should be added to <see cref="CumulativeOffset"/> even
+        /// Gets or sets whether the time spent unloaded should be added to <see cref="CumulativeOffset"/>
         /// when <see cref="IsActive"/> is true.
         /// Defaults to true.
         /// <para>
-        /// When IsActive is false, the time of the last suspension is memorized and will remain the same whether
-        /// the domain is loaded or not: the time spent unloaded will, by design, appear in the CumulativeOffset.
+        /// When IsActive is false, we have nothing to do: the time of the last suspension is memorized and will
+        /// remain the same whether the domain is loaded or not (the time spent unloaded, by design, appear in the CumulativeOffset).
         /// </para>
         /// </summary>
         public bool CumulateUnloadedTime
@@ -294,12 +295,16 @@ namespace CK.Observable
         void CheckInvariant()
         {
             Debug.Assert( (_count > 0 && _firstInClock != null && _lastInClock != null) || (_count == 0 && _firstInClock == null && _lastInClock == null) );
+            ObservableTimedEventBase? prev = null;
             var t = _firstInClock;
             for( int i = 0; i < _count; ++i )
             {
                 Debug.Assert( t != null );
+                Debug.Assert( t.PrevInClock == prev );
+                prev = t;
                 t = t.NextInClock;
             }
+            Debug.Assert( _lastInClock == prev );
             Debug.Assert( t == null );
         }
     }
