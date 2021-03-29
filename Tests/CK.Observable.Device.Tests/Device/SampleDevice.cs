@@ -148,21 +148,18 @@ namespace CK.Observable.Device.Tests
             return Task.FromResult( DeviceReconfiguredResult.None );
         }
 
-        /// <summary>
-        /// Caution: Handling command is done out of any lock: this may be called concurrently.
-        /// </summary>
-        /// <param name="monitor">The monitor to use.</param>
-        /// <param name="command">The command to handle.</param>
-        protected override void DoHandleCommand( IActivityMonitor monitor, SyncDeviceCommand command )
+        /// <inheritdoc />
+        protected override Task DoHandleCommandAsync( IActivityMonitor monitor, BaseDeviceCommand command, CancellationToken token )
         {
             if( command is SampleCommand c )
             {
                 Interlocked.Increment( ref _syncCommandCount );
                 _messagePrefixFromCommand = c.MessagePrefix;
-                return;
+                c.Completion.SetResult();
+                return Task.CompletedTask;
             }
-            // The base implementation throws.
-            base.DoHandleCommand( monitor, command );
+            base.DoHandleCommandAsync( monitor, command, token );
+            return Task.CompletedTask;
         }
 
         /// <summary>

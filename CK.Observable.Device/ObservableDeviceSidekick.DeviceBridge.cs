@@ -59,7 +59,10 @@ namespace CK.Observable.Device
 
             ObservableDomainSidekick ObservableDeviceObject.IDeviceBridge.Sidekick => _sidekick;
 
-            BasicControlDeviceCommand ObservableDeviceObject.IDeviceBridge.CreateBasicCommand() => new BasicControlDeviceCommand<THost>();
+            BaseStartDeviceCommand ObservableDeviceObject.IDeviceBridge.CreateStartCommand() => new StartDeviceCommand<THost>();
+            BaseStopDeviceCommand ObservableDeviceObject.IDeviceBridge.CreateStopCommand() => new StopDeviceCommand<THost>();
+            BaseDestroyDeviceCommand ObservableDeviceObject.IDeviceBridge.CreateDestroyCommand() => new DestroyDeviceCommand<THost>();
+            BaseSetControllerKeyDeviceCommand ObservableDeviceObject.IDeviceBridge.CreateSetControllerKeyCommand() => new SetControllerKeyDeviceCommand<THost>();
 
             IEnumerable<string> ObservableDeviceObject.IDeviceBridge.CurrentlyAvailableDeviceNames => _sidekick._objectHost?.Devices.Select( d => d.Name )
                                                                                                         ?? _sidekick.Host.GetConfiguredDevices().Select( d => d.Item2.Name );
@@ -153,8 +156,8 @@ namespace CK.Observable.Device
                 OnObjectDisappeared( monitor, isObjectDestroyed );
             }
 
-            /// <inheritdoc cref="ObservableDeviceObject.CreateCommand{T}(Action{T}?)" />
-            public T CreateCommand<T>( Action<T>? configuration ) where T : DeviceCommand, new()
+            /// <inheritdoc cref="ObservableDeviceObject.CreateDeviceCommand{T}(Action{T}?)" />
+            public T CreateCommand<T>( Action<T>? configuration ) where T : BaseDeviceCommand, new()
             {
                 var c = new T();
                 if( !c.HostType.IsAssignableFrom( _sidekick.Host.GetType() ) )

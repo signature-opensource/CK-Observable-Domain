@@ -44,7 +44,7 @@ namespace CK.Observable.Device.Tests
                 Message = "Hello World!",
                 PeriodMilliseconds = 5
             };
-            (await host.ApplyDeviceConfigurationAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.CreateSucceeded );
+            (await host.EnsureDeviceAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.CreateSucceeded );
 
             using( obs.AcquireReadLock() )
             {
@@ -65,7 +65,7 @@ namespace CK.Observable.Device.Tests
             }
 
             config.Status = DeviceConfigurationStatus.AlwaysRunning;
-            (await host.ApplyDeviceConfigurationAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.UpdateSucceeded );
+            (await host.EnsureDeviceAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.UpdateSucceeded );
 
             using( obs.AcquireReadLock() )
             {
@@ -77,7 +77,7 @@ namespace CK.Observable.Device.Tests
             }
 
             config.ControllerKey = obs.DomainName;
-            (await host.ApplyDeviceConfigurationAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.UpdateSucceeded );
+            (await host.EnsureDeviceAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.UpdateSucceeded );
             using( obs.AcquireReadLock() )
             {
                 device1.HasDeviceControl.Should().BeTrue();
@@ -85,7 +85,7 @@ namespace CK.Observable.Device.Tests
             }
 
             config.ControllerKey = obs.DomainName + "No more!";
-            (await host.ApplyDeviceConfigurationAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.UpdateSucceeded );
+            (await host.EnsureDeviceAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.UpdateSucceeded );
 
             using( obs.AcquireReadLock() )
             {
@@ -93,7 +93,7 @@ namespace CK.Observable.Device.Tests
                 device1.HasExclusiveDeviceControl.Should().BeFalse();
             }
 
-            await host.DestroyDeviceAsync( TestHelper.Monitor, "n°1" );
+            await host.Find( "n°1" )!.DestroyAsync( TestHelper.Monitor );
 
             using( obs.AcquireReadLock() )
             {
@@ -127,7 +127,7 @@ namespace CK.Observable.Device.Tests
                 PeriodMilliseconds = 150,
                 Status = DeviceConfigurationStatus.RunnableStarted
             };
-            (await host.ApplyDeviceConfigurationAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.CreateAndStartSucceeded );
+            (await host.EnsureDeviceAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.CreateAndStartSucceeded );
 
             using var obs = new ObservableDomain(TestHelper.Monitor, nameof(Start_and_Stop_commands), true, serviceProvider: sp );
 
@@ -149,7 +149,7 @@ namespace CK.Observable.Device.Tests
 
             await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
-                device.CmdStop();
+                device.SendStopDeviceCommand();
             } );
 
             while( isRunning )
@@ -164,7 +164,7 @@ namespace CK.Observable.Device.Tests
 
             await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
-                device.CmdStart();
+                device.SendStartDeviceCommand();
             } );
 
             while( !isRunning )
@@ -177,7 +177,7 @@ namespace CK.Observable.Device.Tests
             DeviceStatusChanged.Should().BeTrue();
             DeviceStatusChanged = false;
 
-            await host.DestroyDeviceAsync( TestHelper.Monitor, "The device..." );
+            await host.Find( "The device..." )!.DestroyAsync( TestHelper.Monitor );
             await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 device.IsBoundDevice.Should().BeFalse();
@@ -202,7 +202,7 @@ namespace CK.Observable.Device.Tests
                 PeriodMilliseconds = 5,
                 Status = DeviceConfigurationStatus.RunnableStarted
             };
-            (await host.ApplyDeviceConfigurationAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.CreateAndStartSucceeded );
+            (await host.EnsureDeviceAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.CreateAndStartSucceeded );
 
             using var obs = new ObservableDomain(TestHelper.Monitor, nameof(commands_are_easy_to_send), true, serviceProvider: sp );
 
@@ -251,7 +251,7 @@ namespace CK.Observable.Device.Tests
                 PeriodMilliseconds = 5,
                 Status = DeviceConfigurationStatus.RunnableStarted
             };
-            (await host.ApplyDeviceConfigurationAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.CreateAndStartSucceeded );
+            (await host.EnsureDeviceAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.CreateAndStartSucceeded );
 
             using var obs = new ObservableDomain( TestHelper.Monitor, nameof( bridges_rebind_to_their_Device_when_reloaded ), true, serviceProvider: sp );
 

@@ -84,7 +84,7 @@ namespace CK.Observable.Device
                 {
                     throw new Exception( $"Duplicate device error: A device named '{device.DeviceName}' already in the domain (index {bridge.Object.OId.Index})." );
                 }
-                // We don't unsubsribe to the Disposed event since a sidekick lives longer (and
+                // We don't unsubscribe to the Disposed event since a sidekick lives longer (and
                 // ObservableDelegate skips sidekicks while serializing.
                 o.Destroyed += OnObjectDestroy;
                 bridge = CreateBridge( monitor, device );
@@ -155,27 +155,29 @@ namespace CK.Observable.Device
 
         /// <summary>
         /// Handles the command if it is a <see cref="DeviceCommand"/> that the <see cref="Host"/> agrees to
-        /// handle (see <see cref="IDeviceHost.Handle(IActivityMonitor, DeviceCommand)"/>) by executing it
-        /// directly if it is a <see cref="SyncDeviceCommand"/> or defer its execution to the <see cref="SidekickCommand.PostActions"/>
-        /// if it is a <see cref="AsyncDeviceCommand"/>.
+        /// send it (see <see cref="IDeviceHost.SendCommand(IActivityMonitor, BaseDeviceCommand, bool, System.Threading.CancellationToken)"/>.
         /// </summary>
         /// <remarks>
         /// There is few reason to override this method but it could be done if needed.
         /// </remarks>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="command">The sidekick command to handle.</param>
-        /// <returns>True if this device sidekick handles the command, false overwise.</returns>
+        /// <returns>True if this device sidekick handles the command, false otherwise.</returns>
         protected override bool ExecuteCommand( IActivityMonitor monitor, in SidekickCommand command )
         {
-            if( command.Command is DeviceCommand c )
+            if( command.Command is BaseDeviceCommand c )
             {
-                var e = Host.Handle( monitor, c );
-                if( e.Success )
+                var e = Host.SendCommand( monitor, c );
+                if( e != DeviceHostCommandResult.Success )
                 {
-                    if( e.IsAsync == false ) e.Execute( monitor );
-                    else command.PostActions.Add( c => e.ExecuteAsync( c.Monitor ) );
-                    return true;
+                    if( e == DeviceHostCommandResult.InvalidHostType )
+                    {
+                        // This is not a command for this Host.
+                        return false;
+                    }
+                    monitor.Warn( $"Command '{c.GetType().Name}' has not been sent: {e}." );
                 }
+                return true;
             }
             return false;
         }

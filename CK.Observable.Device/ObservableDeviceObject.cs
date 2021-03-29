@@ -47,13 +47,19 @@ namespace CK.Observable.Device
         {
             ObservableDomainSidekick Sidekick { get; }
 
-            BasicControlDeviceCommand CreateBasicCommand();
+            BaseStartDeviceCommand CreateStartCommand();
+
+            BaseStopDeviceCommand CreateStopCommand();
+
+            BaseDestroyDeviceCommand CreateDestroyCommand();
+
+            BaseSetControllerKeyDeviceCommand CreateSetControllerKeyCommand();
 
             IEnumerable<string> CurrentlyAvailableDeviceNames { get; }
 
             string? ControllerKey { get; }
 
-            T CreateCommand<T>( Action<T>? configuration ) where T : DeviceCommand, new();
+            T CreateCommand<T>( Action<T>? configuration ) where T : BaseDeviceCommand, new();
         }
 
         /// <summary>
@@ -132,56 +138,60 @@ namespace CK.Observable.Device
         /// Sends a start command to the device.
         /// Caution: <see cref="ThrowOnUnboundedDevice"/> is called, <see cref="IsBoundDevice"/> must be true before calling this.
         /// </summary>
-        /// <param name="autoEnsureControl">Set to true to call <see cref="CmdEnsureDeviceControl"/> first.</param>
-        public void CmdStart( bool autoEnsureControl = false )
+        public void SendStartDeviceCommand()
         {
             ThrowOnUnboundedDevice();
-            if( autoEnsureControl ) CmdEnsureDeviceControl();
-            SendBasicCommand( BasicControlDeviceOperation.Start );
+            var cmd = _bridge.CreateStartCommand();
+            cmd.ControllerKey = Domain.DomainName;
+            cmd.DeviceName = DeviceName;
+            Domain.SendCommand( cmd, _bridge.Sidekick );
         }
 
         /// <summary>
         /// Sends a stop command to the device.
         /// Caution: <see cref="ThrowOnUnboundedDevice"/> is called, <see cref="IsBoundDevice"/> must be true before calling this.
         /// </summary>
-        /// <param name="autoEnsureControl">Set to true to call <see cref="CmdEnsureDeviceControl"/> first.</param>
-        public void CmdStop( bool autoEnsureControl = false )
+        public void SendStopDeviceCommand()
         {
             ThrowOnUnboundedDevice();
-            if( autoEnsureControl ) CmdEnsureDeviceControl();
-            SendBasicCommand( BasicControlDeviceOperation.Stop );
+            var cmd = _bridge.CreateStopCommand();
+            cmd.ControllerKey = Domain.DomainName;
+            cmd.DeviceName = DeviceName;
+            Domain.SendCommand( cmd, _bridge.Sidekick );
         }
 
         /// <summary>
-        /// Sends a command to take the control of the device if <see cref="HasDeviceControl"/> is false.
-        /// This command and <see cref="CmdReleaseDeviceControl"/> are the only commands that don't require <see cref="HasDeviceControl"/> to be true.
+        /// Sends a command to take the control of the device if <see cref="HasDeviceExclusiveControl"/> is false.
         /// Caution: <see cref="ThrowOnUnboundedDevice"/> is called, <see cref="IsBoundDevice"/> must be true before calling this.
         /// </summary>
-        public void CmdEnsureDeviceControl()
+        public void SendEnsureExclusiveControlCommand()
         {
             ThrowOnUnboundedDevice();
-            if( !HasDeviceControl ) SendBasicCommand( BasicControlDeviceOperation.ResetControllerKey );
+            if( !HasDeviceControl )
+            {
+                var cmd = _bridge.CreateSetControllerKeyCommand();
+                cmd.ControllerKey = _bridge.ControllerKey;
+                cmd.NewControllerKey = Domain.DomainName;
+                cmd.DeviceName = DeviceName;
+                Domain.SendCommand( cmd, _bridge.Sidekick );
+            }
         }
 
         /// <summary>
-        /// Sends a command to release the control of the device.
-        /// This is the only command with <see cref="CmdEnsureDeviceControl"/> that doesn't require <see cref="HasDeviceControl"/> to be true: nothing is done
-        /// if HasDeviceControl is false.
+        /// Sends a command to release the control of the device if <see cref="HasExclusiveDeviceControl"/> is true.
         /// Caution: <see cref="ThrowOnUnboundedDevice"/> is called, <see cref="IsBoundDevice"/> must be true before calling this.
         /// </summary>
-        public void CmdReleaseDeviceControl()
+        public void SendReleaseExclusiveControlCommand()
         {
             ThrowOnUnboundedDevice();
-            if( HasDeviceControl ) SendBasicCommand( BasicControlDeviceOperation.ResetControllerKey, true );
-        }
-
-        void SendBasicCommand( BasicControlDeviceOperation operation, bool nullControllerKey = false )
-        {
-            var c = _bridge.CreateBasicCommand();
-            c.DeviceName = DeviceName;
-            c.Operation = operation;
-            c.ControllerKey = nullControllerKey ? null : _bridge.ControllerKey;
-            Domain.SendCommand( c, _bridge.Sidekick );
+            if( HasExclusiveDeviceControl )
+            {
+                var cmd = _bridge.CreateSetControllerKeyCommand();
+                cmd.ControllerKey = Domain.DomainName;
+                cmd.NewControllerKey = null;
+                cmd.DeviceName = DeviceName;
+                Domain.SendCommand( cmd, _bridge.Sidekick );
+            }
         }
 
         /// <summary>
@@ -192,16 +202,16 @@ namespace CK.Observable.Device
         /// <typeparam name="T">The type of the command to create.</typeparam>
         /// <param name="configuration">Optional configurator of the command.</param>
         /// <returns>A ready to use command.</returns>
-        protected T CreateCommand<T>( Action<T>? configuration = null ) where T : DeviceCommand, new() => _bridge.CreateCommand<T>( configuration );
+        protected T CreateDeviceCommand<T>( Action<T>? configuration = null ) where T : BaseDeviceCommand, new() => _bridge.CreateCommand<T>( configuration );
 
         /// <summary>
-        /// Simple helper that calls <see cref="CreateCommand{T}(Action{T}?)"/> and <see cref="DomainView.SendCommand(in ObservableDomainCommand)"/>.
+        /// Simple helper that calls <see cref="CreateDeviceCommand{T}(Action{T}?)"/> and <see cref="DomainView.SendCommand(in ObservableDomainCommand)"/>.
         /// </summary>
         /// <typeparam name="T">The type of the command to create.</typeparam>
         /// <param name="configuration">Optional configurator of the command.</param>
-        protected void CmdSend<T>( Action<T>? configuration = null ) where T : DeviceCommand, new()
+        protected void SendDeviceCommand<T>( Action<T>? configuration = null ) where T : BaseDeviceCommand, new()
         {
-            Domain.SendCommand( CreateCommand( configuration ), _bridge.Sidekick );
+            Domain.SendCommand( CreateDeviceCommand( configuration ), _bridge.Sidekick );
         }
 
     }
