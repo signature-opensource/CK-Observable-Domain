@@ -20,7 +20,7 @@ namespace CK.Observable.Device.Tests
         [Test]
         public async Task sample_obervable()
         {
-            var host = new SampleDeviceHost( new DefaultDeviceAlwaysRunningPolicy() );
+            var host = new SampleDeviceHost();
             var sp = new SimpleServiceContainer();
             sp.Add( host );
 
@@ -117,7 +117,7 @@ namespace CK.Observable.Device.Tests
         {
             DeviceStatusChanged = false;
 
-            var host = new SampleDeviceHost( new DefaultDeviceAlwaysRunningPolicy() );
+            var host = new SampleDeviceHost();
             var sp = new SimpleServiceContainer();
             sp.Add( host );
             var config = new SampleDeviceConfiguration()
@@ -192,7 +192,7 @@ namespace CK.Observable.Device.Tests
         [Test]
         public async Task commands_are_easy_to_send()
         {
-            var host = new SampleDeviceHost( new DefaultDeviceAlwaysRunningPolicy() );
+            var host = new SampleDeviceHost();
             var sp = new SimpleServiceContainer();
             sp.Add( host );
             var config = new SampleDeviceConfiguration()
@@ -242,7 +242,7 @@ namespace CK.Observable.Device.Tests
         public async Task bridges_rebind_to_their_Device_when_reloaded()
         {
             // The device is available and running.
-            var host = new SampleDeviceHost( new DefaultDeviceAlwaysRunningPolicy() );
+            var host = new SampleDeviceHost();
             var sp = new SimpleServiceContainer();
             sp.Add( host );
             var config = new SampleDeviceConfiguration()
