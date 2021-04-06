@@ -23,8 +23,7 @@ namespace CK.Observable.Device.Tests
         int _period;
         int _count;
         PerfectEventSender<SampleDevice, string> _messageChanged;
-        int _syncCommandCount;
-        int _asyncCommandCount;
+        int _commandCount;
 
         public SampleDevice( IActivityMonitor monitor, CreateInfo c )
             : base( monitor, c )
@@ -65,7 +64,7 @@ namespace CK.Observable.Device.Tests
             {
                 DangerousCurrentMessage = message;
                 DangerousCurrentCount = d._count;
-                SyncCommandCount = d._syncCommandCount;
+                SyncCommandCount = d._commandCount;
             }
 
             public string DangerousCurrentMessage { get; }
@@ -153,7 +152,7 @@ namespace CK.Observable.Device.Tests
         {
             if( command is SampleCommand c )
             {
-                Interlocked.Increment( ref _syncCommandCount );
+                Interlocked.Increment( ref _commandCount );
                 _messagePrefixFromCommand = c.MessagePrefix;
                 c.Completion.SetResult();
                 return Task.CompletedTask;
