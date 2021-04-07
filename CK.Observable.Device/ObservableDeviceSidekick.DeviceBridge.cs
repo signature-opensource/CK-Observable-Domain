@@ -190,17 +190,19 @@ namespace CK.Observable.Device
             /// <summary>
             /// Called whenever the <see cref="Device"/> is no more available in the host: it is
             /// still not null here and events unregistering should be done.
-            /// The <see cref="Object"/> (and any other objects of the domain) can be safely modified
-            /// since the domain's write lock is held.
+            /// The observable <see cref="Object"/> (and any other objects of the domain) can
+            /// be safely modified since the domain's write lock is held.
             /// </summary>
             /// <param name="monitor">The monitor to use.</param>
             protected abstract void OnDeviceDisappearing( IActivityMonitor monitor );
 
             /// <summary>
             /// Called whenever the <see cref="ObservableDeviceObject"/> is unloaded or destroyed.
-            /// Note that the <see cref="Device"/> may continue to exist in its host: this
-            /// method may destroy the device in the Device world (if <paramref name="isObjectDestroyed"/> is true
-            /// and the observable <see cref="Object"/> must drive the life cycle of the device).
+            /// This method does nothing by default.
+            /// <para>
+            /// Note that the Device may continue to exist in its host, but this method may destroy the device in the Device world
+            /// (if the observable <see cref="Object"/> must drive the life cycle of the device and <paramref name="isObjectDestroyed"/> is true).
+            /// </para>
             /// </summary>
             /// <param name="monitor">The monitor to use.</param>
             /// <param name="isObjectDestroyed">True when the object has been destroyed, false when it is only unloaded.</param>
