@@ -50,8 +50,8 @@ namespace CK.Observable.Device.Tests
         public string? Message { get; internal set; }
 
         /// <summary>
-        /// The CmdSend helper enables easy command sending.
+        /// The SendDeviceCommand helper enables easy command sending.
         /// </summary>
-        public void SendSimpleCommand( string? messagePrefix = null ) => CmdSend<SampleCommand>( c => c.MessagePrefix = messagePrefix );
+        public void SendSimpleCommand( string? messagePrefix = null ) => SendDeviceCommand<SampleCommand>( c => c.MessagePrefix = messagePrefix );
     }
 }

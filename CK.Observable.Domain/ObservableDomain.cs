@@ -234,7 +234,6 @@ namespace CK.Observable
             // A new list is allocated each time since commands can be appended to it after the commit, during the
             // OnSuccessfulTransaction raising.
             List<ObservableDomainCommand> _commands;
-            bool _hasDomainPostActions;
 
             public ChangeTracker()
             {
@@ -287,7 +286,6 @@ namespace CK.Observable
                 _newObjects.Clear();
                 _propChanged.Clear();
                 _commands = new List<ObservableDomainCommand>();
-                _hasDomainPostActions = false;
             }
 
             /// <summary>
@@ -685,8 +683,8 @@ namespace CK.Observable
         private protected class InitializationTransaction : IObservableTransaction
         {
             readonly ObservableDomain _d;
-            readonly ObservableDomain _previousThreadDomain;
-            readonly IObservableTransaction _previousTran;
+            readonly ObservableDomain? _previousThreadDomain;
+            readonly IObservableTransaction? _previousTran;
             readonly DateTime _startTime;
             readonly IActivityMonitor _monitor;
             readonly bool _enterWriteLock;

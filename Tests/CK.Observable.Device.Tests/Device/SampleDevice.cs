@@ -23,8 +23,7 @@ namespace CK.Observable.Device.Tests
         int _period;
         int _count;
         PerfectEventSender<SampleDevice, string> _messageChanged;
-        int _syncCommandCount;
-        int _asyncCommandCount;
+        int _commandCount;
 
         public SampleDevice( IActivityMonitor monitor, CreateInfo c )
             : base( monitor, c )
@@ -65,7 +64,7 @@ namespace CK.Observable.Device.Tests
             {
                 DangerousCurrentMessage = message;
                 DangerousCurrentCount = d._count;
-                SyncCommandCount = d._syncCommandCount;
+                SyncCommandCount = d._commandCount;
             }
 
             public string DangerousCurrentMessage { get; }
@@ -148,21 +147,18 @@ namespace CK.Observable.Device.Tests
             return Task.FromResult( DeviceReconfiguredResult.None );
         }
 
-        /// <summary>
-        /// Caution: Handling command is done out of any lock: this may be called concurrently.
-        /// </summary>
-        /// <param name="monitor">The monitor to use.</param>
-        /// <param name="command">The command to handle.</param>
-        protected override void DoHandleCommand( IActivityMonitor monitor, SyncDeviceCommand command )
+        /// <inheritdoc />
+        protected override Task DoHandleCommandAsync( IActivityMonitor monitor, BaseDeviceCommand command, CancellationToken token )
         {
             if( command is SampleCommand c )
             {
-                Interlocked.Increment( ref _syncCommandCount );
+                Interlocked.Increment( ref _commandCount );
                 _messagePrefixFromCommand = c.MessagePrefix;
-                return;
+                c.Completion.SetResult();
+                return Task.CompletedTask;
             }
-            // The base implementation throws.
-            base.DoHandleCommand( monitor, command );
+            base.DoHandleCommandAsync( monitor, command, token );
+            return Task.CompletedTask;
         }
 
         /// <summary>

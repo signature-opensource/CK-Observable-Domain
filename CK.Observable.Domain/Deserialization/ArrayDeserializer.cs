@@ -23,16 +23,16 @@ namespace CK.Observable
         /// <param name="r">The deserializer.</param>
         /// <param name="readInfo">The read info (unused).</param>
         /// <returns>The array of items.</returns>
-        public T[] ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  ) => DoReadArray( r, _item );
+        public T[]? ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  ) => DoReadArray( r, _item );
 
-        public static T[] ReadArray( IBinaryDeserializer r, IDeserializationDriver<T> itemDeserialization )
+        public static T[]? ReadArray( IBinaryDeserializer r, IDeserializationDriver<T> itemDeserialization )
         {
             if( r == null ) throw new ArgumentNullException( nameof( r ) );
             if( itemDeserialization == null ) throw new ArgumentNullException( nameof( itemDeserialization ) );
             return DoReadArray( r, itemDeserialization );
         }
 
-        private static T[] DoReadArray( IBinaryDeserializer r, IDeserializationDriver<T> itemDeserialization )
+        private static T[]? DoReadArray( IBinaryDeserializer r, IDeserializationDriver<T> itemDeserialization )
         {
             int len = r.ReadSmallInt32();
             if( len == -1 ) return null;
