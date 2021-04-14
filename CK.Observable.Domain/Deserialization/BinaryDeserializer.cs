@@ -145,7 +145,7 @@ namespace CK.Observable
         /// Reads an object previously written by <see cref="BinarySerializer.WriteObject(object)"/>.
         /// </summary>
         /// <returns>The object read, possibly in an intermediate state.</returns>
-        public object ReadObject()
+        public object? ReadObject()
         {
             try
             {
@@ -316,7 +316,7 @@ namespace CK.Observable
             return leaf;
         }
 
-        string DoReadOneTypeName( out bool newType )
+        string? DoReadOneTypeName( out bool newType )
         {
             newType = false;
             switch( ReadByte() )

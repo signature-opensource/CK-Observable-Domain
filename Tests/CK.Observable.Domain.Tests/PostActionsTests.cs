@@ -360,7 +360,7 @@ namespace CK.Observable.Domain.Tests
                 {
                     await d.ModifyAsync( monitor, () => RunLoop( d ) );
                 }
-                catch( Exception ex )
+                catch( Exception )
                 {
                 }
             }

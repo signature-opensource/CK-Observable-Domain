@@ -7,7 +7,7 @@ using System.ComponentModel;
 namespace CK.Observable
 {
     /// <summary>
-    /// Registers deserialization drivers. This can be instanciated if needed but most often,
+    /// Registers deserialization drivers. This can be instantiated if needed but most often,
     /// the <see cref="Default"/> registry is enough.
     /// </summary>
     public class DeserializerRegistry : IDeserializerResolver
@@ -87,7 +87,7 @@ namespace CK.Observable
         /// </summary>
         /// <typeparam name="T">Type for which a deserialization driver must be found.</typeparam>
         /// <returns>Null or the deserialization driver to use.</returns>
-        public IDeserializationDriver<T> FindDriver<T>() => (IDeserializationDriver<T>)FindDriver( typeof( T ) );
+        public IDeserializationDriver<T>? FindDriver<T>() => (IDeserializationDriver<T>)FindDriver( typeof( T ) );
 
         /// <summary>
         /// Tries to find a deserialization driver for a local type.
@@ -95,7 +95,7 @@ namespace CK.Observable
         /// </summary>
         /// <param name="t">Type for which a deserialization driver must be found.</param>
         /// <returns>Null or the deserialization driver to use.</returns>
-        public IDeserializationDriver FindDriver( Type t )
+        public IDeserializationDriver? FindDriver( Type t )
         {
             return FindDriver( t.AssemblyQualifiedName, () => t );
         }
@@ -108,10 +108,10 @@ namespace CK.Observable
         /// <param name="name">Name to resolve.</param>
         /// <param name="lastResort">
         /// Optional function that may provide a locally available Type.
-        /// If this function resturns null, the returned deserialization driver will be null.
+        /// If this function returns null, the returned deserialization driver will be null.
         /// </param>
         /// <returns>Null or the deserialization driver to use.</returns>
-        public IDeserializationDriver FindDriver( string name, Func<Type> lastResort = null )
+        public IDeserializationDriver? FindDriver( string name, Func<Type>? lastResort = null )
         {
             if( _drivers.TryGetValue( name, out var d ) )
             {
@@ -123,13 +123,13 @@ namespace CK.Observable
             {
                 return d;
             }
-            Type t = lastResort?.Invoke();
+            Type? t = lastResort?.Invoke();
             return t == null
                     ? null
-                    : _drivers.GetOrAdd( name, n => TryAutoCreate( t ) );
+                    : _drivers.GetOrAdd( name, n => TryAutoCreate( t )! );
         }
 
-        IDeserializationDriver TryAutoCreate( Type type )
+        IDeserializationDriver? TryAutoCreate( Type type )
         {
             if( type.IsEnum )
             {

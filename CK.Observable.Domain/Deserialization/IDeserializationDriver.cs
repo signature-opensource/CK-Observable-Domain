@@ -4,12 +4,12 @@ namespace CK.Observable
     /// Handles deserialization from a type's assembly qualified name.
     /// Just like <see cref="ITypeSerializationDriver"/> is not bound to a Type, a deserializer
     /// is not bound to a <see cref="System.Type.AssemblyQualifiedName"/>: it is the <see cref="DeserializerRegistry"/>
-    /// that is in charge of the mapping from the "name" to the desrializer to use.
+    /// that is in charge of the mapping from the "name" to the deserializer to use.
     /// </summary>
     public interface IDeserializationDriver
     {
         /// <summary>
-        /// Reads the data and instanciates a new object.
+        /// Reads the data and instantiates a new object.
         /// </summary>
         /// <param name="r">The deserializer.</param>
         /// <param name="readInfo">

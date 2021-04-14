@@ -288,7 +288,7 @@ namespace CK.Observable.Device.Tests
                 device.Message.Should().StartWith( "NEXT" );
                 device.SendSimpleCommand( "NEXT again" );
             } );
-            System.Threading.Thread.Sleep( 20 );
+            System.Threading.Thread.Sleep( 40 );
             using( obs.AcquireReadLock() )
             {
                 device.Message.Should().StartWith( "NEXT again" );
