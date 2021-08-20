@@ -221,6 +221,7 @@ namespace CK.Observable
                 try
                 {
                     var type = SimpleTypeFinder.WeakResolver( typeName, throwOnError: true );
+                    Debug.Assert( type != null );
                     result = RegisterType( monitor, type, optional, errorCollector );
                     if( !result.Value )
                     {

@@ -32,7 +32,7 @@ namespace CK.Observable.Device.Tests
                 device1 = new OSampleDevice( "n°1" );
 
                 device1.HasDeviceControl.Should().BeFalse();
-                device1.ConfigurationStatus.Should().BeNull();
+                device1.Configuration.Should().BeNull();
                 device1.Message.Should().BeNull();
                 device1.Status.Should().BeNull();
             } );
@@ -48,7 +48,8 @@ namespace CK.Observable.Device.Tests
 
             using( obs.AcquireReadLock() )
             {
-                device1.ConfigurationStatus.Should().Be( DeviceConfigurationStatus.Disabled );
+                Debug.Assert( device1.Configuration != null );
+                device1.Configuration.Status.Should().Be( DeviceConfigurationStatus.Disabled );
                 device1.HasDeviceControl.Should().BeTrue( "Since there is no ControllerKey on the device, anybody can control it." );
                 device1.HasExclusiveDeviceControl.Should().BeFalse();
                 device1.Message.Should().BeNull();
@@ -69,7 +70,7 @@ namespace CK.Observable.Device.Tests
 
             using( obs.AcquireReadLock() )
             {
-                device1.ConfigurationStatus.Should().Be( DeviceConfigurationStatus.AlwaysRunning );
+                device1.Configuration.Status.Should().Be( DeviceConfigurationStatus.AlwaysRunning );
                 device1.HasDeviceControl.Should().BeTrue();
                 device1.HasExclusiveDeviceControl.Should().BeFalse();
                 device1.Status.Value.IsRunning.Should().BeTrue();
@@ -97,6 +98,7 @@ namespace CK.Observable.Device.Tests
 
             using( obs.AcquireReadLock() )
             {
+                device1.Configuration.Should().BeNull();
                 device1.Status.Should().BeNull();
                 device1.HasDeviceControl.Should().BeFalse();
                 device1.HasExclusiveDeviceControl.Should().BeFalse();

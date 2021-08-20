@@ -16,7 +16,7 @@ namespace CK.Observable.Device
     /// <typeparam name="THost">Type of the device host.</typeparam>
     /// <typeparam name="TDeviceObject">Type of the observable object device.</typeparam>
     /// <typeparam name="TDeviceHostObject">Type of the observable device host.</typeparam>
-    public abstract partial class ObservableDeviceSidekick<THost,TDeviceObject,TDeviceHostObject> : ObservableDomainSidekick
+    public abstract partial class ObservableDeviceSidekick<THost,TDeviceObject,TDeviceHostObject> : ObservableDomainSidekick, IInternalObservableDeviceSidekick
         where THost : IDeviceHost
         where TDeviceObject : ObservableDeviceObject
         where TDeviceHostObject: ObservableDeviceHostObject
@@ -62,8 +62,11 @@ namespace CK.Observable.Device
                     {
                         Debug.Assert( f.Device == null );
                         var d = Host.Find( f.Object.DeviceName );
-                        var next = f._nextUnbound; 
-                        if( d != null ) f.SetDevice( monitor, d );
+                        var next = f._nextUnbound;
+                        if( d != null )
+                        {
+                            f.SetDevice( monitor, d );
+                        }
                         if( next == null ) break;
                         f = next;
                     }
@@ -78,15 +81,14 @@ namespace CK.Observable.Device
         /// <param name="o">The object that just appeared.</param>
         protected override void RegisterClientObject( IActivityMonitor monitor, IDestroyable o )
         {
+            // Note: We don't subscribe to the Destroyed event of the ObservableDeviceObject or ObservableDeviceHostObject:
+            // their OnDestroy directly call our internal OnObject(Host)Destroy methods.
             if( o is TDeviceObject device )
             {
                 if( _bridges.TryGetValue( device.DeviceName, out var bridge ) )
                 {
-                    throw new Exception( $"Duplicate device error: A device named '{device.DeviceName}' already in the domain (index {bridge.Object.OId.Index})." );
+                    throw new Exception( $"Duplicate device error: A device named '{device.DeviceName}' already exists in the domain (index {bridge.Object.OId.Index})." );
                 }
-                // We don't unsubscribe to the Disposed event since a sidekick lives longer (and
-                // ObservableDelegate skips sidekicks while serializing.
-                o.Destroyed += OnObjectDestroy;
                 bridge = CreateBridge( monitor, device );
                 _bridges.Add( device.DeviceName, bridge );
                 bridge.Initialize( monitor, this, Host.Find( device.DeviceName ) );
@@ -98,24 +100,22 @@ namespace CK.Observable.Device
                     throw new Exception( $"There must be at most one device host object in a ObservableDomain. Object at index {_objectHost.OId.Index} is already registered." );
                 }
                 _objectHost = host;
-                _objectHost.Destroyed += OnObjectHostDisposed;
                 UpdateObjectHost();
                 OnObjectHostAppeared( monitor );
             }
         }
 
-        void OnObjectHostDisposed( object sender, ObservableDomainEventArgs e )
+        void IInternalObservableDeviceSidekick.OnObjectHostDestroyed( IActivityMonitor monitor )
         {
             _objectHost = null;
-            OnObjectHostDisappeared( e.Monitor );
+            OnObjectHostDisappeared( monitor );
         }
 
-        void OnObjectDestroy( object sender, ObservableDomainEventArgs e )
+        void IInternalObservableDeviceSidekick.OnObjectDestroyed( IActivityMonitor monitor, ObservableDeviceObject o )
         {
-            var o = (TDeviceObject)sender;
             _bridges.Remove( o.DeviceName, out var bridge );
             Debug.Assert( bridge != null );
-            bridge.OnDispose( e.Monitor, isObjectDestroyed: true );
+            bridge.OnDispose( monitor, isObjectDestroyed: true );
         }
 
         void AddUnbound( DeviceBridge b )
@@ -124,6 +124,10 @@ namespace CK.Observable.Device
             _firstUnbound = b;
         }
 
+        /// <summary>
+        /// Removes a bridge that is not bound to a IDevice.
+        /// </summary>
+        /// <param name="b">The unbound bridge to remove.</param>
         void RemoveUnbound( DeviceBridge b )
         {
             Debug.Assert( _firstUnbound != null );
@@ -146,15 +150,13 @@ namespace CK.Observable.Device
         void UpdateObjectHost()
         {
             Debug.Assert( _objectHost != null );
-            // Takes a snapshot: the hosted devices list may change concurrently (when called from RegisterClientObject).
-            // This can be optimized: here the intermediate list is concretized for nothing.
-            Dictionary<string, DeviceConfiguration>? configs = Host.GetConfiguredDevices().Select( x => x.Item2 ).ToDictionary( c => c.Name );
+            // provides the new snapshot to the object host.
             // This also initializes the _objectHost._sidekick field on the first call.
-            _objectHost.ApplyDevicesChanged( this, configs );
+            _objectHost.ApplyDevicesChanged( this, Host.GetDevices() );
         }
 
         /// <summary>
-        /// Handles the command if it is a <see cref="DeviceCommand"/> that the <see cref="Host"/> agrees to
+        /// Handles the command if it is a <see cref="BaseDeviceCommand"/> that the <see cref="Host"/> agrees to
         /// send it (see <see cref="IDeviceHost.SendCommand(IActivityMonitor, BaseDeviceCommand, bool, System.Threading.CancellationToken)"/>.
         /// </summary>
         /// <remarks>

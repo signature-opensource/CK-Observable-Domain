@@ -447,7 +447,11 @@ namespace CK.Observable
                 }
                 finally
                 {
-                    if( needFakeTran ) _currentTran.Dispose();
+                    if( needFakeTran )
+                    {
+                        Debug.Assert( _currentTran != null );
+                        _currentTran.Dispose();
+                    }
                     if( !isWrite && !isRead ) _lock.ExitReadLock();
                     Monitor.Exit( _saveLock );
                 }
@@ -514,7 +518,7 @@ namespace CK.Observable
                     for( int i = 0; i < count; ++i )
                     {
                         _objects[i] = (ObservableObject?)r.ReadObject();
-                        Debug.Assert( _objects[i] == null || !_objects[i].IsDestroyed );
+                        Debug.Assert( _objects[i] == null || !_objects[i]!.IsDestroyed );
                     }
 
                     // Fill roots array.
@@ -522,7 +526,7 @@ namespace CK.Observable
                     count = r.ReadNonNegativeSmallInt32();
                     while( --count >= 0 )
                     {
-                        _roots.Add( _objects[r.ReadNonNegativeSmallInt32()] as ObservableRootObject );
+                        _roots.Add( (ObservableRootObject)_objects[r.ReadNonNegativeSmallInt32()]! );
                     }
                 }
                 else

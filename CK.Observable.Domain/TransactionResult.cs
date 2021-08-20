@@ -20,11 +20,11 @@ namespace CK.Observable
         internal ActionRegistrar<PostActionContext>? _domainPostActions;
 
         string _domainName;
-        TaskCompletionSource<ActionRegistrar<PostActionContext>?> _forDomainPostActionsExecutor;
-        TaskCompletionSource<Exception?> _domainPostActionsErrorSource;
+        TaskCompletionSource<ActionRegistrar<PostActionContext>?>? _forDomainPostActionsExecutor;
+        TaskCompletionSource<Exception?>? _domainPostActionsErrorSource;
 
         Exception? _postActionsError;
-        Task<Exception?> _domainPostActionsError;
+        Task<Exception?>? _domainPostActionsError;
 
         /// <summary>
         /// The empty transaction result is used when absolutely nothing happened. It has no events and no commands,
@@ -110,7 +110,7 @@ namespace CK.Observable
 
         /// <summary>
         /// Gets the transaction number.
-        /// This is 0 if if the transaction is on error.
+        /// This is 0 if the transaction is on error.
         /// </summary>
         public int TransactionNumber { get; }
 
@@ -134,19 +134,19 @@ namespace CK.Observable
         public IReadOnlyList<CKExceptionData> Errors { get; }
 
         /// <summary>
-        /// Gets the error that occured during the call to <see cref="IObservableDomainClient.OnTransactionCommit"/> (when <see cref="Errors"/>
+        /// Gets the error that occurred during the call to <see cref="IObservableDomainClient.OnTransactionCommit"/> (when <see cref="Errors"/>
         /// is empty) or <see cref="IObservableDomainClient.OnTransactionFailure"/> (when <see cref="Errors"/> is not empty).
         /// </summary>
-        public CKExceptionData ClientError { get; private set; }
+        public CKExceptionData? ClientError { get; private set; }
 
         /// <summary>
-        /// Gets the errors that occured during the handling of <see cref="ObservableDomain.OnSuccessfulTransaction"/> event
+        /// Gets the errors that occurred during the handling of <see cref="ObservableDomain.OnSuccessfulTransaction"/> event
         /// or when calling <see cref="ObservableDomainSidekick.OnSuccessfulTransaction"/>.
         /// </summary>
         public IReadOnlyList<CKExceptionData> SuccessfulTransactionErrors { get; private set; }
 
         /// <summary>
-        /// Gets the errors that occured during the call to <see cref="ObservableDomainSidekick.ExecuteCommand"/>.
+        /// Gets the errors that occurred during the call to <see cref="ObservableDomainSidekick.ExecuteCommand"/>.
         /// Each value tuple contains the faulty command and the exception data.
         /// </summary>
         public IReadOnlyList<(object, CKExceptionData)> CommandHandlingErrors { get; private set; }
@@ -188,6 +188,7 @@ namespace CK.Observable
                 m.Warn( $"Skipping execution of {l.ActionCount} post actions and {d.ActionCount} Domain post actions because of a previous error." );
                 if( _forDomainPostActionsExecutor != null )
                 {
+                    Debug.Assert( _domainPostActionsErrorSource != null );
                     _forDomainPostActionsExecutor.SetResult( null );
                     _domainPostActionsErrorSource.SetResult( null );
                 }
@@ -243,14 +244,16 @@ namespace CK.Observable
                 }
                 _forDomainPostActionsExecutor.SetResult( null );
                 // No execution leads to non error.
+                Debug.Assert( _domainPostActionsErrorSource != null );
                 _domainPostActionsErrorSource.SetResult( null );
             }
         }
 
-        internal Task<ActionRegistrar<PostActionContext>?> DomainActions => _forDomainPostActionsExecutor.Task;
+        internal Task<ActionRegistrar<PostActionContext>?> DomainActions => _forDomainPostActionsExecutor!.Task;
 
         internal void SetDomainPostActionsResult( Exception? result )
         {
+            Debug.Assert( _domainPostActionsErrorSource != null );
             _domainPostActionsErrorSource.SetResult( result );
         }
 

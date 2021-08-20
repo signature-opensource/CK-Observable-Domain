@@ -1,3 +1,4 @@
+using CK.Core;
 using CK.DeviceModel;
 using System;
 using System.Collections.Generic;
@@ -12,11 +13,20 @@ namespace CK.Observable.Device.Tests
             Message = "Hello!";
         }
 
-        public SampleDeviceConfiguration( SampleDeviceConfiguration other )
-            : base( other )
+        public SampleDeviceConfiguration( ICKBinaryReader r )
+            : base( r )
         {
-            PeriodMilliseconds = other.PeriodMilliseconds;
-            Message = other.Message;
+            r.ReadByte(); // version.
+            PeriodMilliseconds = r.ReadInt32();
+            Message = r.ReadString();
+        }
+
+        public override void Write( ICKBinaryWriter w )
+        {
+            base.Write( w );
+            w.Write( (byte)0 );
+            w.Write( PeriodMilliseconds );
+            w.Write( Message );
         }
 
         public int PeriodMilliseconds { get; set; }

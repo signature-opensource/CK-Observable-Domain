@@ -11,41 +11,48 @@ namespace CK.Observable.Device
     /// Non generic abstract base class for device. It is not intended to be specialized directly: use the
     /// generic <see cref="ObservableDeviceObject{TSidekick}"/> as the object device base.
     /// </summary>
-    [SerializationVersion( 0 )]
+    [SerializationVersion( 1 )]
     public abstract class ObservableDeviceObject : ObservableObject, ISidekickLocator
     {
         DeviceStatus? _status;
         ObservableEventHandler _statusChanged;
+        ObservableEventHandler _configurationChanged;
         internal IDeviceBridge _bridge;
 
 #pragma warning disable CS8618 // Non-nullable _bridge uninitialized. Consider declaring as nullable.
 
         private protected ObservableDeviceObject( string deviceName )
         {
-            if( deviceName == null ) throw new ArgumentNullException( nameof( deviceName ) );
-            DeviceName = deviceName;
+            DeviceName = deviceName ?? throw new ArgumentNullException( nameof( deviceName ) );
         }
 
         protected ObservableDeviceObject( RevertSerialization _ ) : base( _ ) { }
 
-        ObservableDeviceObject( IBinaryDeserializer r, TypeReadInfo? info )
+        ObservableDeviceObject( IBinaryDeserializer r, TypeReadInfo info )
                 : base( RevertSerialization.Default )
         {
-            DeviceName = r.ReadNullableString();
+            DeviceName = info.Version == 0 ? r.ReadNullableString()! : r.ReadString();
             _statusChanged = new ObservableEventHandler( r );
+            if( info.Version == 1 )
+            {
+                _configurationChanged = new ObservableEventHandler( r );
+            }
         }
 
 #pragma warning restore CS8618
 
         void Write( BinarySerializer w )
         {
-            w.WriteNullableString( DeviceName );
+            w.Write( DeviceName );
             _statusChanged.Write( w );
+            _configurationChanged.Write( w );
         }
 
         internal interface IDeviceBridge
         {
             ObservableDomainSidekick Sidekick { get; }
+
+            BaseConfigureDeviceCommand CreateConfigureCommand( DeviceConfiguration? configuration );
 
             BaseStartDeviceCommand CreateStartCommand();
 
@@ -94,10 +101,41 @@ namespace CK.Observable.Device
         }
 
         /// <summary>
-        /// Gets the current configuration status of this device.
+        /// Gets the last successfully applied configuration of this device.
         /// This is null when no device named <see cref="DeviceName"/> exist in the device host.
+        /// <para>
+        /// A DeviceConfiguration is mutable by design and this is a clone of the last applied configuration:
+        /// it can be updated, but this has no effect on the actual device's configuration: to apply
+        /// the configuration, <see cref="ApplyDeviceConfiguration"/> must be used.
+        /// </para>
         /// </summary>
-        public DeviceConfigurationStatus? ConfigurationStatus { get; internal set; }
+        [NotExportable]
+        public DeviceConfiguration? Configuration { get; internal set; }
+
+        /// <summary>
+        /// Raised whenever <see cref="Configuration"/> has changed.
+        /// </summary>
+        public event SafeEventHandler ConfigurationChanged
+        {
+            add => _configurationChanged.Add( value, nameof( ConfigurationChanged ) );
+            remove => _configurationChanged.Remove( value );
+        }
+
+        /// <summary>
+        /// Sends a <see cref="BaseConfigureDeviceCommand"/> command to the device with the wanted configuration.
+        /// <para>
+        /// Caution: <see cref="ThrowOnUnboundedDevice"/> is called, <see cref="IsBoundDevice"/> must be true before calling this.
+        /// </para>
+        /// </summary>
+        public void ApplyDeviceConfiguration( DeviceConfiguration configuration )
+        {
+            if( configuration == null ) throw new ArgumentNullException( nameof( configuration ) );
+            ThrowOnUnboundedDevice();
+            var cmd = _bridge.CreateConfigureCommand( configuration );
+            cmd.ControllerKey = Domain.DomainName;
+            cmd.DeviceName = DeviceName;
+            Domain.SendCommand( cmd, _bridge.Sidekick );
+        }
 
         /// <summary>
         /// Gets whether the device is under control of this object or the <see cref="IDevice.ControllerKey"/> is null: the device
@@ -107,12 +145,16 @@ namespace CK.Observable.Device
 
         /// <summary>
         /// Gets whether the device is under control of this object, excluding the other ones.
+        /// <para>
+        /// A device is under exclusive control of this observable device if and only if its <see cref="IDevice.ControllerKey"/>
+        /// is this <see cref="DomainView.DomainName"/>.
+        /// </para>
         /// </summary>
         public bool HasExclusiveDeviceControl { get; internal set; }
 
         /// <summary>
         /// Gets whether this observable object device is bound to a <see cref="IDevice"/>.
-        /// Note that <see cref="Status"/> and <see cref="ConfigurationStatus"/> are both null if this device is unbound and
+        /// Note that <see cref="Status"/> and <see cref="Configuration"/> are both null if this device is unbound and
         /// that this flag is [NotExportable].
         /// </summary>
         [NotExportable]
@@ -123,7 +165,7 @@ namespace CK.Observable.Device
         /// <summary>
         /// Throws an <see cref="InvalidOperationException"/> if this observable object device is not bound
         /// to a <see cref="IDevice"/>.
-        /// Note that <see cref="Status"/> and <see cref="ConfigurationStatus"/> are both null if this device is unbound.
+        /// Note that <see cref="Status"/> and <see cref="Configuration"/> are both null if this device is unbound.
         /// </summary>
         public void ThrowOnUnboundedDevice()
         {
@@ -136,7 +178,9 @@ namespace CK.Observable.Device
 
         /// <summary>
         /// Sends a start command to the device.
+        /// <para>
         /// Caution: <see cref="ThrowOnUnboundedDevice"/> is called, <see cref="IsBoundDevice"/> must be true before calling this.
+        /// </para>
         /// </summary>
         public void SendStartDeviceCommand()
         {
@@ -149,7 +193,9 @@ namespace CK.Observable.Device
 
         /// <summary>
         /// Sends a stop command to the device.
+        /// <para>
         /// Caution: <see cref="ThrowOnUnboundedDevice"/> is called, <see cref="IsBoundDevice"/> must be true before calling this.
+        /// </para>
         /// </summary>
         public void SendStopDeviceCommand()
         {
@@ -161,13 +207,16 @@ namespace CK.Observable.Device
         }
 
         /// <summary>
-        /// Sends a command to take the control of the device if <see cref="HasDeviceExclusiveControl"/> is false.
+        /// Sends a command to take the control of the device if <see cref="HasExclusiveDeviceControl"/> is false.
+        /// The <see cref="IDevice.ControllerKey"/> is set to this <see cref="DomainView.DomainName"/>.
+        /// <para>
         /// Caution: <see cref="ThrowOnUnboundedDevice"/> is called, <see cref="IsBoundDevice"/> must be true before calling this.
+        /// </para>
         /// </summary>
         public void SendEnsureExclusiveControlCommand()
         {
             ThrowOnUnboundedDevice();
-            if( !HasDeviceControl )
+            if( !HasExclusiveDeviceControl )
             {
                 var cmd = _bridge.CreateSetControllerKeyCommand();
                 cmd.ControllerKey = _bridge.ControllerKey;
@@ -179,7 +228,9 @@ namespace CK.Observable.Device
 
         /// <summary>
         /// Sends a command to release the control of the device if <see cref="HasExclusiveDeviceControl"/> is true.
+        /// <para>
         /// Caution: <see cref="ThrowOnUnboundedDevice"/> is called, <see cref="IsBoundDevice"/> must be true before calling this.
+        /// </para>
         /// </summary>
         public void SendReleaseExclusiveControlCommand()
         {
@@ -214,5 +265,13 @@ namespace CK.Observable.Device
             Domain.SendCommand( CreateDeviceCommand( configuration ), _bridge.Sidekick );
         }
 
+        protected override void OnDestroy()
+        {
+            _configurationChanged.RemoveAll();
+            _statusChanged.RemoveAll();
+            // Using nullable just in case EnsureDomainSidekick has not been called.
+            ((IInternalObservableDeviceSidekick?)_bridge?.Sidekick)?.OnObjectDestroyed( Domain.Monitor, this );
+            base.OnDestroy();
+        }
     }
 }

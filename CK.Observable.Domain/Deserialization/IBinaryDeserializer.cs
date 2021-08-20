@@ -57,7 +57,7 @@ namespace CK.Observable
         bool IsDebugMode { get; }
 
         /// <summary>
-        /// Gets the current debug mode that must have been written by <see cref="BinarySerializer.DebugWriteMode(bool?)"/>.
+        /// Updates the current debug mode that must have been written by <see cref="BinarySerializer.DebugWriteMode(bool?)"/>.
         /// </summary>
         /// <returns>Whether the debug mode is currently active or not.</returns>
         bool DebugReadMode();
@@ -68,7 +68,7 @@ namespace CK.Observable
         /// </summary>
         /// <param name="fileName">Current file name used to build the <see cref="InvalidDataException"/> message if sentinel cannot be read back.</param>
         /// <param name="line">Current line number used to build the <see cref="InvalidDataException"/> message if sentinel cannot be read back.</param>
-        void DebugCheckSentinel( [CallerFilePath]string fileName = null, [CallerLineNumber] int line = 0 );
+        void DebugCheckSentinel( [CallerFilePath]string? fileName = null, [CallerLineNumber] int line = 0 );
 
         /// <summary>
         /// When <see cref="IsDebugMode"/> is true, records the <paramref name="ctx"/> in a stack

@@ -1,6 +1,7 @@
 using CK.Core;
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace CK.Observable
@@ -38,7 +39,7 @@ namespace CK.Observable
         /// </summary>
         /// <param name="h">The handler must be non null and be a static method or a method on a <see cref="ObservableObject"/>.</param>
         /// <param name="eventName">The event name (used for error messages).</param>
-        public void Add( SafeEventHandler<TEventArgs> h, string eventName ) => _handler.Add( h, eventName );
+        public void Add( SafeEventHandler<TEventArgs> h, [CallerMemberName] string? eventName = null ) => _handler.Add( h, eventName );
 
         /// <summary>
         /// Removes a handler and returns true if it has been removed.
