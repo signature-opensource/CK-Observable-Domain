@@ -30,8 +30,6 @@ namespace CK.Observable.Device.Tests
         {
         }
 
-        internal OSampleDeviceSidekick.IBridge _bridgeAccess;
-
         /// <summary>
         /// An observable device object should, if possible, not directly interact with its device.
         /// However, if it must be done, the bridge can set a direct reference to itself through a
@@ -42,6 +40,8 @@ namespace CK.Observable.Device.Tests
         /// </summary>
         /// <returns>The state or null if <see cref="ObservableDeviceObject.IsBoundDevice"/> is false.</returns>
         public SampleDevice.SafeDeviceState? GetSafeState() => _bridgeAccess.GetDeviceState();
+
+        internal OSampleDeviceSidekick.IBridge _bridgeAccess;
 
         /// <summary>
         /// The message starts with the <see cref="SampleDeviceConfiguration.Message"/> and ends with the
