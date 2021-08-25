@@ -286,7 +286,7 @@ namespace CK.Observable
             if( domainExecutorEnqueud )
             {
                 Debug.Assert( _postActions != null, "This result was initially successful." );
-                _forDomainPostActionsExecutor = new TaskCompletionSource<ActionRegistrar<PostActionContext>?>();
+                _forDomainPostActionsExecutor = new TaskCompletionSource<ActionRegistrar<PostActionContext>?>( TaskCreationOptions.RunContinuationsAsynchronously );
                 _domainPostActionsErrorSource = new TaskCompletionSource<Exception?>( TaskCreationOptions.RunContinuationsAsynchronously );
                 _domainPostActionsError = _domainPostActionsErrorSource.Task;
             }
