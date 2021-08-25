@@ -120,7 +120,7 @@ namespace CK.Observable.Device.Tests
         }
 
         [Test]
-        [Timeout( 10 * 1000 )]
+        [Timeout( 2 * 1000 )]
         public async Task Start_and_Stop_commands()
         {
             using var gLog = TestHelper.Monitor.OpenInfo( nameof( Start_and_Stop_commands ) );
@@ -195,19 +195,11 @@ namespace CK.Observable.Device.Tests
             DeviceStatusChanged.Should().BeTrue();
             DeviceStatusChanged = false;
 
-            bool disposeDone = false;
-            _ = Task.Delay( 500 ).ContinueWith( _ =>
-            {
-                if( !disposeDone ) Debugger.Launch();
-                return Task.CompletedTask;
-            } );
-
             TestHelper.Monitor.Info( "Disposing Domain..." );
             obs.Dispose( TestHelper.Monitor );
             TestHelper.Monitor.Info( "...Domain disposed, clearing host..." );
             await host.ClearAsync( TestHelper.Monitor );
             TestHelper.Monitor.Info( "Host cleared." );
-            disposeDone = true;
         }
 
         [Test]
