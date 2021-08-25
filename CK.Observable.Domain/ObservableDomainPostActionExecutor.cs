@@ -35,7 +35,7 @@ namespace CK.Observable
         {
             if( _runSignal != null )
             {
-                Enqueue( TransactionResult.Empty );
+                _queue.Writer.TryWrite( TransactionResult.Empty );
                 return true;
             }
             return false;
@@ -71,7 +71,8 @@ namespace CK.Observable
                     var ctx = new PostActionContext( monitor, actions, t );
                     try
                     {
-                        var result = await ctx.ExecuteAsync( throwException: false, name: $"domain '{_domain.DomainName}' transaction n°{t.TransactionNumber} DomainPostActions" );
+                        var result = await ctx.ExecuteAsync( throwException: false, name: $"domain '{_domain.DomainName}' transaction n°{t.TransactionNumber} DomainPostActions" )
+                                              .ConfigureAwait( false );
                         t.SetDomainPostActionsResult( result );
                     }
                     finally
