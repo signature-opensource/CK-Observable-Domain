@@ -18,7 +18,7 @@ namespace CK.Observable
         public ObservableDomainPostActionExecutor( ObservableDomain d )
         {
             _domain = d;
-            _queue = Channel.CreateUnbounded<TransactionResult>( new UnboundedChannelOptions() { SingleReader = true, SingleWriter = true } );
+            _queue = Channel.CreateUnbounded<TransactionResult>( new UnboundedChannelOptions() { SingleReader = true } );
         }
 
         internal void Enqueue( TransactionResult r )
@@ -54,37 +54,44 @@ namespace CK.Observable
             Debug.Assert( _runSignal != null );
             IActivityMonitor monitor = new ActivityMonitor( $"DomainPostAction executor for '{_domain.DomainName}'." ); ;
             var r = _queue.Reader;
-            for( ; ; )
+            try
             {
-                TransactionResult? t = await r.ReadAsync();
-                if( t == TransactionResult.Empty )
+                for(; ; )
                 {
-                    break;
-                }
-                var actions = await t.DomainActions;
-                if( actions == null )
-                {
-                    monitor.Debug( $"Skipped domain '{_domain.DomainName}' transaction n°{t.TransactionNumber} DomainPostActions." );
-                }
-                else 
-                {
-                    var ctx = new PostActionContext( monitor, actions, t );
-                    try
+                    TransactionResult t = await r.ReadAsync().ConfigureAwait( false );
+                    if( t == TransactionResult.Empty )
                     {
-                        var result = await ctx.ExecuteAsync( throwException: false, name: $"domain '{_domain.DomainName}' transaction n°{t.TransactionNumber} DomainPostActions" )
-                                              .ConfigureAwait( false );
-                        t.SetDomainPostActionsResult( result );
+                        break;
                     }
-                    finally
+                    var actions = await t.DomainActions.ConfigureAwait( false );
+                    if( actions == null )
                     {
-                        await ctx.DisposeAsync();
+                        monitor.Debug( $"Skipped domain '{_domain.DomainName}' transaction n°{t.TransactionNumber} DomainPostActions." );
                     }
+                    else
+                    {
+                        var ctx = new PostActionContext( monitor, actions, t );
+                        try
+                        {
+                            var result = await ctx.ExecuteAsync( throwException: false, name: $"domain '{_domain.DomainName}' transaction n°{t.TransactionNumber} DomainPostActions" )
+                                                  .ConfigureAwait( false );
+                            t.SetDomainPostActionsResult( result );
+                        }
+                        finally
+                        {
+                            await ctx.DisposeAsync().ConfigureAwait( false );
+                        }
+                    }
+                }
+                lock( _runSignal )
+                {
+                    _stopped = true;
+                    System.Threading.Monitor.PulseAll( _runSignal );
                 }
             }
-            lock( _runSignal )
+            catch( Exception ex )
             {
-                _stopped = true;
-                System.Threading.Monitor.PulseAll( _runSignal );
+                monitor.Fatal( "Unexpected error in DomainPostAction executor.", ex );
             }
             monitor.MonitorEnd( $"Stopping DomainPostAction executor for '{_domain.DomainName}'." );
         }
