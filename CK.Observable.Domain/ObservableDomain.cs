@@ -1619,10 +1619,16 @@ namespace CK.Observable
 
                 if( monitor != _domainMonitor && _domainMonitorLock.Wait( 0 ) )
                 {
-                    if( _domainMonitor != null ) _domainMonitor.MonitorEnd( "Domain disposed." );
+                    if( _domainMonitor != null ) _domainMonitor.MonitorEnd( "Disposing domain." );
                     _domainMonitorLock.Release();
                 }
-                if( executorRun ) _domainPostActionExecutor.WaitStopped();
+                if( executorRun )
+                {
+                    monitor.Debug( "Waiting for DomainPostActionExecutor stopped..." );
+                    _domainPostActionExecutor.WaitStopped();
+                    monitor.Debug( "...DomainPostActionExecutor stopped." );
+                }
+                monitor.Debug( "Exiting write lock. Domain disposed." );
                 _lock.ExitWriteLock();
                 // There is a race condition here. AcquireReadLock, BeginTransaction (and others)
                 // may have also seen a false _disposed and then try to acquire the lock.

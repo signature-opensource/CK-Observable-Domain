@@ -74,7 +74,7 @@ namespace CK.Core
         public ActionRegistrar<TThis> Registrar { get; }
 
         /// <summary>
-        /// Executes the currently enlisted actions, optionaly in reverse order.
+        /// Executes the currently enlisted actions, optionally in reverse order.
         /// On the first exception thrown by any action, all the error handlers are called (their own exceptions,
         /// if any, are logged but ignored).
         /// </summary>

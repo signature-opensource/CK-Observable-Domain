@@ -18,8 +18,10 @@ namespace CK.Observable.Device.Tests
     public class DeviceBridgeTests
     {
         [Test]
+        [Timeout( 2 * 1000 )]
         public async Task sample_obervable()
         {
+            using var gLog = TestHelper.Monitor.OpenInfo( nameof( sample_obervable ) );
             var host = new SampleDeviceHost();
             var sp = new SimpleServiceContainer();
             sp.Add( host );
@@ -104,6 +106,11 @@ namespace CK.Observable.Device.Tests
                 device1.HasExclusiveDeviceControl.Should().BeFalse();
             }
 
+            TestHelper.Monitor.Info( "Disposing Domain..." );
+            obs.Dispose( TestHelper.Monitor );
+            TestHelper.Monitor.Info( "...Domain disposed, clearing host..." );
+            await host.ClearAsync( TestHelper.Monitor );
+            TestHelper.Monitor.Info( "Host cleared." );
         }
 
 
@@ -115,8 +122,10 @@ namespace CK.Observable.Device.Tests
         }
 
         [Test]
+        [Timeout( 2 * 1000 )]
         public async Task Start_and_Stop_commands()
         {
+            using var gLog = TestHelper.Monitor.OpenInfo( nameof( Start_and_Stop_commands ) );
             DeviceStatusChanged = false;
 
             var host = new SampleDeviceHost();
@@ -188,12 +197,18 @@ namespace CK.Observable.Device.Tests
             DeviceStatusChanged.Should().BeTrue();
             DeviceStatusChanged = false;
 
+            TestHelper.Monitor.Info( "Disposing Domain..." );
+            obs.Dispose( TestHelper.Monitor );
+            TestHelper.Monitor.Info( "...Domain disposed, clearing host..." );
             await host.ClearAsync( TestHelper.Monitor );
+            TestHelper.Monitor.Info( "Host cleared." );
         }
 
         [Test]
+        [Timeout( 2*1000 )]
         public async Task commands_are_easy_to_send()
         {
+            using var gLog = TestHelper.Monitor.OpenInfo( nameof( commands_are_easy_to_send ) );
             var host = new SampleDeviceHost();
             var sp = new SimpleServiceContainer();
             sp.Add( host );
@@ -236,13 +251,19 @@ namespace CK.Observable.Device.Tests
                 directState.SyncCommandCount.Should().Be( 2 );
             } );
 
+            TestHelper.Monitor.Info( "Disposing Domain..." );
+            obs.Dispose( TestHelper.Monitor );
+            TestHelper.Monitor.Info( "...Domain disposed, clearing host..." );
             await host.ClearAsync( TestHelper.Monitor );
+            TestHelper.Monitor.Info( "Host cleared." );
         }
 
 
         [Test]
+        [Timeout( 2 * 1000 )]
         public async Task bridges_rebind_to_their_Device_when_reloaded()
         {
+            using var gLog = TestHelper.Monitor.OpenInfo( nameof( bridges_rebind_to_their_Device_when_reloaded ) );
             // The device is available and running.
             var host = new SampleDeviceHost();
             var sp = new SimpleServiceContainer();
@@ -296,7 +317,11 @@ namespace CK.Observable.Device.Tests
                 device.Message.Should().StartWith( "NEXT again" );
             }
 
+            TestHelper.Monitor.Info( "Disposing Domain..." );
+            obs.Dispose( TestHelper.Monitor );
+            TestHelper.Monitor.Info( "...Domain disposed, clearing host..." );
             await host.ClearAsync( TestHelper.Monitor );
+            TestHelper.Monitor.Info( "Host cleared." );
         }
 
     }

@@ -207,7 +207,7 @@ namespace CK.Observable
                 var ctx = new PostActionContext( m, l, this );
                 try
                 {
-                    _postActionsError = await ctx.ExecuteAsync( throwException, name: $"domain '{_domainName}' (PostActions)" );
+                    _postActionsError = await ctx.ExecuteAsync( throwException, name: $"domain '{_domainName}' (PostActions)" ).ConfigureAwait( false );
                     if( !parallelDomainPostActions )
                     {
                         if( _postActionsError != null )
@@ -227,7 +227,7 @@ namespace CK.Observable
                 }
                 finally
                 {
-                    await ctx.DisposeAsync();
+                    await ctx.DisposeAsync().ConfigureAwait( false );
                 }
             }
             else
@@ -289,8 +289,8 @@ namespace CK.Observable
             if( domainExecutorEnqueud )
             {
                 Debug.Assert( _postActions != null, "This result was initially successful." );
-                _forDomainPostActionsExecutor = new TaskCompletionSource<ActionRegistrar<PostActionContext>?>();
-                _domainPostActionsErrorSource = new TaskCompletionSource<Exception?>();
+                _forDomainPostActionsExecutor = new TaskCompletionSource<ActionRegistrar<PostActionContext>?>( TaskCreationOptions.RunContinuationsAsynchronously );
+                _domainPostActionsErrorSource = new TaskCompletionSource<Exception?>( TaskCreationOptions.RunContinuationsAsynchronously );
                 _domainPostActionsError = _domainPostActionsErrorSource.Task;
             }
             else

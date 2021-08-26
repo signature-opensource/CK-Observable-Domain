@@ -227,7 +227,9 @@ namespace CK.Observable.Domain.Tests
         {
             ResetContext();
 
-            using var d = new ObservableDomain<SimpleRoot>( TestHelper.Monitor, "local_are_executed_before_domain_ones", startTimer: true );
+            using var d = new ObservableDomain<SimpleRoot>( TestHelper.Monitor,
+                                                            "local_are_executed_before_domain_ones_when_parallelDomainPostActions_is_false",
+                                                            startTimer: true );
 
             await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
@@ -258,26 +260,35 @@ namespace CK.Observable.Domain.Tests
 
         [TestCase( 20, false )]
         [TestCase( 20, true )]
-        [Timeout(20*1000)]
+        [Timeout(30*1000)]
         public async Task parrallel_operations_respect_the_Domain_PostActions_ordering_guaranty( int nb, bool useAsync )
         {
             ResetContext();
 
-            using var d = new ObservableDomain<SimpleRoot>( TestHelper.Monitor, "parrallel_operations_respect_the_Domain_PostActions_ordering_guaranty", startTimer: true );
+            using var d = new ObservableDomain<SimpleRoot>( TestHelper.Monitor, $"parrallel_operations_respect_the_Domain_PostActions_ordering_guaranty-{nb}-{useAsync}", startTimer: true );
 
             Barrier b = new Barrier( nb );
             var tasks = Enumerable.Range( 0, nb ).Select( i => Task.Run( () => Run( i, i == 0 ? TestHelper.Monitor : new ActivityMonitor(), d, b ) ) ).ToArray();
             await Task.WhenAll( tasks );
+            TestHelper.Monitor.Info( $"{nb} tasks done! Disposing Domain." );
+            d.Dispose( TestHelper.Monitor );
 
+
+            LocalNumbers.Count.Should().Be( 3 * nb );
             LocalNumbers.Select( x => x.Number ).Should().NotBeInAscendingOrder();
+
+            DomainNumbers.Count.Should().Be( 3 * nb );
             DomainNumbers.Select( x => x.Number ).Should().BeInAscendingOrder();
 
             async Task Run( int num, IActivityMonitor monitor, ObservableDomain<SimpleRoot> d, Barrier b )
             {
+                monitor.Info( $"Run {num}: Waiting for Barrier..." );
                 b.SignalAndWait();
+                monitor.Info( $"Running {num}!" );
                 var tr = await d.ModifyThrowAsync( monitor, () =>
                 {
-                    if( (num % 2) == 0 ) d.Root.SendWait( 500, WaitTarget.PostActions );
+                    d.Root.SendWait( num, WaitTarget.PostActions );
+                    d.Root.SendWait( num, WaitTarget.DomainPostActions );
                     d.Root.SendNumber( HandlerTarget.Local, useAsync );
                     d.Root.SendNumber( HandlerTarget.Domain, useAsync );
                     d.Root.SendNumber( HandlerTarget.Local, useAsync );
@@ -285,7 +296,9 @@ namespace CK.Observable.Domain.Tests
                     d.Root.SendNumber( HandlerTarget.Local, useAsync );
                     d.Root.SendNumber( HandlerTarget.Domain, useAsync );
                 } );
+                monitor.Info( $"Run {num}: Waiting for DomainPostActionsError..." );
                 await tr.DomainPostActionsError;
+                monitor.Info( $"Awaited DomainPostActionsError! (Run {num})" );
             }
         }
 
