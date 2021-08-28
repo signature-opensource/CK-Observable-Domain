@@ -154,7 +154,7 @@ namespace CK.Observable.Device
         }
 
         /// <summary>
-        /// Handles the command if it is a <see cref="DeviceCommand"/> that the <see cref="Host"/> agrees to
+        /// Handles the command if it is a <see cref="BaseDeviceCommand"/> that the <see cref="Host"/> agrees to
         /// send it (see <see cref="IDeviceHost.SendCommand(IActivityMonitor, BaseDeviceCommand, bool, System.Threading.CancellationToken)"/>.
         /// </summary>
         /// <remarks>
@@ -167,15 +167,15 @@ namespace CK.Observable.Device
         {
             if( command.Command is BaseDeviceCommand c )
             {
-                var e = Host.SendCommand( monitor, c );
-                if( e != DeviceHostCommandResult.Success )
+                var result = Host.SendCommand( monitor, c );
+                if( result != DeviceHostCommandResult.Success )
                 {
-                    if( e == DeviceHostCommandResult.InvalidHostType )
+                    if( result == DeviceHostCommandResult.InvalidHostType )
                     {
                         // This is not a command for this Host.
                         return false;
                     }
-                    monitor.Warn( $"Command '{c.GetType().Name}' has not been sent: {e}." );
+                    monitor.Warn( $"Command '{c}' has not been sent: {result}." );
                 }
                 return true;
             }
