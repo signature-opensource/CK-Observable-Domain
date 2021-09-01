@@ -507,8 +507,8 @@ namespace CK.Observable
                 // Since no post actions will be executed if an error occurs, we skip this.
                 if( _result.Success && _fromModifyAsync )
                 {
-                    _domain._domainPostActionExecutor.Enqueue( _result );
                     _result.Initialize( true );
+                    _domain._domainPostActionExecutor.Enqueue( _result );
                 }
                 else
                 {
