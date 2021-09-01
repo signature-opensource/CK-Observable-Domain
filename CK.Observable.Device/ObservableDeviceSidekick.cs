@@ -217,7 +217,7 @@ namespace CK.Observable.Device
 
         /// <summary>
         /// Called when the domain is unloaded or destroyed.
-        /// All the brides have been 
+        /// All the bridges have already been disposed.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         protected virtual void OnDispose( IActivityMonitor monitor )
