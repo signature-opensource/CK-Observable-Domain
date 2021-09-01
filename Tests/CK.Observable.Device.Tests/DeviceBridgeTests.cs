@@ -109,7 +109,7 @@ namespace CK.Observable.Device.Tests
             TestHelper.Monitor.Info( "Disposing Domain..." );
             obs.Dispose( TestHelper.Monitor );
             TestHelper.Monitor.Info( "...Domain disposed, clearing host..." );
-            await host.ClearAsync( TestHelper.Monitor );
+            await host.ClearAsync( TestHelper.Monitor, waitForDeviceDestroyed: true );
             TestHelper.Monitor.Info( "Host cleared." );
         }
 
@@ -200,7 +200,7 @@ namespace CK.Observable.Device.Tests
             TestHelper.Monitor.Info( "Disposing Domain..." );
             obs.Dispose( TestHelper.Monitor );
             TestHelper.Monitor.Info( "...Domain disposed, clearing host..." );
-            await host.ClearAsync( TestHelper.Monitor );
+            await host.ClearAsync( TestHelper.Monitor, waitForDeviceDestroyed: true );
             TestHelper.Monitor.Info( "Host cleared." );
         }
 
@@ -254,7 +254,7 @@ namespace CK.Observable.Device.Tests
             TestHelper.Monitor.Info( "Disposing Domain..." );
             obs.Dispose( TestHelper.Monitor );
             TestHelper.Monitor.Info( "...Domain disposed, clearing host..." );
-            await host.ClearAsync( TestHelper.Monitor );
+            await host.ClearAsync( TestHelper.Monitor, waitForDeviceDestroyed: true );
             TestHelper.Monitor.Info( "Host cleared." );
         }
 
@@ -320,7 +320,7 @@ namespace CK.Observable.Device.Tests
             TestHelper.Monitor.Info( "Disposing Domain..." );
             obs.Dispose( TestHelper.Monitor );
             TestHelper.Monitor.Info( "...Domain disposed, clearing host..." );
-            await host.ClearAsync( TestHelper.Monitor );
+            await host.ClearAsync( TestHelper.Monitor, waitForDeviceDestroyed: true );
             TestHelper.Monitor.Info( "Host cleared." );
         }
 
