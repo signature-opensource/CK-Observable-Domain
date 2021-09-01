@@ -208,7 +208,7 @@ namespace CK.Observable
 
         /// <summary>
         /// The change tracker handles the transformation of actual changes into events that are
-        /// optimized and serialized by the <see cref="Commit(ObservableDomain, Func{string, ObservablePropertyChangedEventArgs}, DateTime)"/> method.
+        /// optimized and serialized by the <see cref="Commit"/> method.
         /// </summary>
         class ChangeTracker
         {
