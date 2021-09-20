@@ -1,15 +1,15 @@
 <Project>
   <ItemGroup>
-    <PackageReference Update="CK.DeviceModel" Version="0.0.0--03haexl-vnext" />
-    <PackageReference Update="CK.StObj.Model" Version="16.1.0" />
-    <PackageReference Update="Microsoft.Extensions.DependencyInjection" Version="3.1.10" />
+    <PackageReference Update="CK.DeviceModel" Version="0.0.0--03i9na3-vnext" />
+    <PackageReference Update="CK.StObj.Model" Version="17.0.0" />
+    <PackageReference Update="Microsoft.Extensions.DependencyInjection" Version="3.1.19" />
     <PackageReference Update="System.Threading.Channels" Version="4.7.1" />
-    <PackageReference Update="CK.Testing.Monitoring" Version="2.1.0" />
+    <PackageReference Update="CK.Testing.Monitoring" Version="2.2.0" />
     <PackageReference Update="FluentAssertions" Version="5.10.3" />
     <PackageReference Update="Microsoft.NET.Test.Sdk" Version="16.8.3" />
     <PackageReference Update="NUnit" Version="3.13.1" />
     <PackageReference Update="NUnit3TestAdapter" Version="3.17.0" />
-    <PackageReference Update="Fody" Version="6.5.1" />
-    <PackageReference Update="PropertyChanged.Fody" Version="3.3.3" />
+    <PackageReference Update="Fody" Version="6.5.3" />
+    <PackageReference Update="PropertyChanged.Fody" Version="3.4.0" />
   </ItemGroup>
 </Project>

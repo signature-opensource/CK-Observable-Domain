@@ -169,15 +169,15 @@ namespace CK.Observable.Device
         {
             if( command.Command is BaseDeviceCommand c )
             {
-                var e = Host.SendCommand( monitor, c );
-                if( e != DeviceHostCommandResult.Success )
+                var result = Host.SendCommand( monitor, c );
+                if( result != DeviceHostCommandResult.Success )
                 {
-                    if( e == DeviceHostCommandResult.InvalidHostType )
+                    if( result == DeviceHostCommandResult.InvalidHostType )
                     {
                         // This is not a command for this Host.
                         return false;
                     }
-                    monitor.Warn( $"Command '{c.GetType().Name}' has not been sent: {e}." );
+                    monitor.Warn( $"Command '{c}' has not been sent: {result}." );
                 }
                 return true;
             }
@@ -219,7 +219,7 @@ namespace CK.Observable.Device
 
         /// <summary>
         /// Called when the domain is unloaded or destroyed.
-        /// All the brides have been 
+        /// All the bridges have already been disposed.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         protected virtual void OnDispose( IActivityMonitor monitor )
