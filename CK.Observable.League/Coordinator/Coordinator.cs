@@ -43,20 +43,22 @@ namespace CK.Observable.League
         public IObservableReadOnlyDictionary<string, Domain> Domains => _domains;
 
         /// <summary>
-        /// Attemps to create a new domain.
-        /// Tests whether the domain type can be resolved: the root types must be available (this triggers any required assembly load).
-        /// If the domain type cannot be resolved, this method returns null.
+        /// Creates a new domain with a unique name.
+        /// <para>
+        /// This throws an <see cref="InvalidOperationException"/> if the domain name already exists,
+        /// and can throw any exception if root type names cannot be resolved or instantiation fails.
+        /// </para>
         /// </summary>
         /// <param name="domainName">The new domain name.</param>
-        /// <param name="rootTypes">The root types.</param>
+        /// <param name="rootTypes">The root types (can be empty: a basic <see cref="ObservableDomain"/> is created).</param>
         /// <param name="initialOptions">The optional initial <see cref="Domain.Options"/>.</param>
-        /// <returns>The new domain or null on error.</returns>
+        /// <returns>The new domain.</returns>
         public Domain CreateDomain(string domainName, IEnumerable<string>? rootTypes, ManagedDomainOptions? initialOptions = null)
         {
             if( String.IsNullOrWhiteSpace( domainName ) ) throw new ArgumentOutOfRangeException( nameof( domainName ) );
             Debug.Assert( _league != null );
             var roots = rootTypes?.ToArray() ?? Array.Empty<string>();
-            IManagedDomain shell = _league!.CreateDomain( Domain.Monitor, domainName, roots );
+            IManagedDomain shell = _league.CreateDomain( Domain.Monitor, domainName, roots );
             // Default options are provided by the shell: their default values are provided by the
             // Client and JsonEventCollector code.
             var d = new Domain( this, shell, roots, initialOptions ); 
@@ -65,13 +67,15 @@ namespace CK.Observable.League
         }
 
         /// <summary>
-        /// Attemps to create a new domain.
-        /// Tests whether the domain type can be resolved: the root types must be available (this triggers any required assembly load).
-        /// If the domain type cannot be resolved, this method returns null.
+        /// Creates a new domain with a unique name.
+        /// <para>
+        /// This throws an <see cref="InvalidOperationException"/> if the domain name already exists,
+        /// and can throw any exception if root type names cannot be resolved or instantiation fails.
+        /// </para>
         /// </summary>
         /// <param name="domainName">The new domain name.</param>
-        /// <param name="rootTypes">The root types.</param>
-        /// <returns>The new domain or null on error.</returns>
+        /// <param name="rootTypes">The root types (can be empty: a basic <see cref="ObservableDomain"/> is created).</param>
+        /// <returns>The new domain.</returns>
         public Domain CreateDomain( string domainName, params string[] rootTypes ) => CreateDomain(domainName, (IEnumerable<string>)rootTypes);
 
 

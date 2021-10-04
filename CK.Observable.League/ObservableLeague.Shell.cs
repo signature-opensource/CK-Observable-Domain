@@ -123,7 +123,6 @@ namespace CK.Observable.League
             /// <param name="domainName">The name of the domain.</param>
             /// <param name="store">The persistent store.</param>
             /// <param name="initializer">The optional domain initializer.</param>
-            /// <param name="postActionsMarshaller">Optional <see cref="IPostActionContextMarshaller"/>.</param>
             /// <param name="serviceProvider">The service provider used to instantiate <see cref="ObservableDomainSidekick"/> objects.</param>
             /// <param name="rootTypeNames">The root types.</param>
             internal static Shell Create(

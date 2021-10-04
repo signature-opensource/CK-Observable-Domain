@@ -2,8 +2,10 @@
   <ItemGroup>
     <PackageReference Update="CK.DeviceModel" Version="1.0.0-r09" />
     <PackageReference Update="CK.StObj.Model" Version="17.0.1" />
-    <PackageReference Update="Microsoft.Extensions.DependencyInjection" Version="3.1.19" />
     <PackageReference Update="System.Threading.Channels" Version="4.7.1" />
+    <PackageReference Update="Microsoft.Extensions.DependencyInjection" Version="3.1.19" />
+    <PackageReference Update="Microsoft.Extensions.Hosting" Version="3.1.19" />
+
     <PackageReference Update="CK.Testing.Monitoring" Version="2.2.0" />
     <PackageReference Update="FluentAssertions" Version="5.10.3" />
     <PackageReference Update="Microsoft.NET.Test.Sdk" Version="16.8.3" />

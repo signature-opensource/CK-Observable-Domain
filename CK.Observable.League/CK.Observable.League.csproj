@@ -6,15 +6,11 @@
   
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
-    <Nullable>annotations</Nullable>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
+
   <ItemGroup>
-    <Compile Remove="Connection\**" />
-    <EmbeddedResource Remove="Connection\**" />
-    <None Remove="Connection\**" />
-  </ItemGroup>
-  
-  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
     <PackageReference Include="Fody" PrivateAssets="all" />
     <PackageReference Include="PropertyChanged.Fody" PrivateAssets="all" />
     <ProjectReference Include="..\CK.Observable.Domain\CK.Observable.Domain.csproj" />

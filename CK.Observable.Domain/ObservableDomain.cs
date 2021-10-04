@@ -1346,7 +1346,7 @@ namespace CK.Observable
             }
         }
 
-        void DoLoad( IActivityMonitor monitor, Stream stream, string expectedLoadedName, bool leaveOpen, Encoding? encoding, bool? startTimer, Func<bool,bool> beforeTimer = null )
+        void DoLoad( IActivityMonitor monitor, Stream stream, string expectedLoadedName, bool leaveOpen, Encoding? encoding, bool? startTimer, Func<bool,bool>? beforeTimer = null )
         {
             try
             {
