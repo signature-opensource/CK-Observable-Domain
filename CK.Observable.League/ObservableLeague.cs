@@ -61,7 +61,7 @@ namespace CK.Observable.League
                 var client = new CoordinatorClient( monitor, store, serviceProvider );
                 // Async initialization here, just like other managed domains.
                 // Contrary to other domains, it is created with an active timer (that may be stopped later if needed).
-                client.Domain = (ObservableDomain<Coordinator>)await client.InitializeAsync( monitor, startTimer: true, createOnLoadError: false, (m,startTimer) => new ObservableDomain<Coordinator>(m, String.Empty, startTimer, client, serviceProvider));
+                client.Domain = (ObservableDomain<Coordinator>)await client.InitializeAsync( monitor, startTimer: true, createOnLoadError: false, ( m, startTimer ) => new ObservableDomain<Coordinator>( m, String.Empty, startTimer, client, serviceProvider ) );
                 // No need to acquire a read lock here.
                 var domains = new ConcurrentDictionary<string, Shell>( StringComparer.OrdinalIgnoreCase );
                 IEnumerable<Domain> observableDomains = client.Domain.Root.Domains.Values;
@@ -133,7 +133,7 @@ namespace CK.Observable.League
             Debug.Assert( !_coordinator.Domain.IsDisposed );
             return _domains.AddOrUpdate( name,
                                          Shell.Create( monitor, _coordinator, name, _streamStore, _initializer, _serviceProvider, rootTypes ),
-                                         ( n, s ) => throw new Exception( $"Internal error: domain name '{n}' already exists." ) );
+                                         ( n, s ) => throw new InvalidOperationException( $"Internal error: domain name '{n}' already exists." ) );
         }
 
         IManagedDomain IManagedLeague.RebindDomain( IActivityMonitor monitor, string name, IReadOnlyList<string> rootTypes )
