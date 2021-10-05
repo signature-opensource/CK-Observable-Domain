@@ -34,13 +34,13 @@ namespace CK.Observable.League
         }
 
         /// <inheritdoc cref="ObservableLeague.this[string]"/>
-        IObservableDomainLoader? this[string domainName] => _default!.Find( domainName );
+        public IObservableDomainLoader? this[string domainName] => _default!.Find( domainName );
 
         /// <inheritdoc cref="ObservableLeague.Coordinator"/>
-        IObservableDomainAccess<Coordinator> Coordinator => _default!.Coordinator;
+        public IObservableDomainAccess<Coordinator> Coordinator => _default!.Coordinator;
 
         /// <inheritdoc cref="ObservableLeague.Find(string)"/>
-        IObservableDomainLoader? Find( string domainName ) => _default!.Find( domainName );
+        public IObservableDomainLoader? Find( string domainName ) => _default!.Find( domainName );
 
         async Task IHostedService.StartAsync( CancellationToken cancellationToken )
         {
