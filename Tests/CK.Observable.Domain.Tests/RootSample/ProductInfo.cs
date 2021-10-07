@@ -19,7 +19,7 @@ namespace CK.Observable.Domain.Tests.RootSample
             ExtraData = (IDictionary<string, string>)r.ReadObject();
         }
 
-        void Write( BinarySerializer b )
+        void Write( IBinarySerializer b )
         {
             b.WriteNullableString( Name );
             b.Write( Power );

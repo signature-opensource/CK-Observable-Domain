@@ -19,7 +19,8 @@ namespace CK.Observable
         static readonly ConcurrentDictionary<Type, IUnifiedTypeDriver> _drivers;
         static readonly Type[] _ctorDeserializationParameters = new Type[] { typeof( IBinaryDeserializer ), typeof( TypeReadInfo ) };
         static readonly Type[] _ctorRevertParameters = new Type[] { typeof( RevertSerialization ) };
-        static readonly Type[] _writeParameters = new Type[] { typeof( BinarySerializer ) };
+        static readonly Type[] _writeParametersLegacy = new Type[] { typeof( BinarySerializer ) };
+        static readonly Type[] _writeParameters = new Type[] { typeof( IBinarySerializer ) };
         static readonly Type[] _exportParameters = new Type[] { typeof( int ), typeof( ObjectExporter ) };
         static readonly Type[] _exportBaseParameters = new Type[] { typeof( int ), typeof( ObjectExporter ), typeof( IReadOnlyList<ExportableProperty> ) };
 
@@ -418,10 +419,22 @@ namespace CK.Observable
 
             // void Write( BinarySerializer w ) can be a regular method. We check its 'Private' if we have a Version or a Ctor.
             var writeMethod = t.GetMethod( "Write",
-                                 BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-                                 null,
-                                 _writeParameters,
-                                 null );
+                                           BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+                                           null,
+                                           _writeParameters,
+                                           null );
+            if( writeMethod == null )
+            {
+                writeMethod = t.GetMethod( "Write",
+                                     BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+                                     null,
+                                     _writeParametersLegacy,
+                                     null );
+                if( writeMethod != null )
+                {
+                    // We should emit a warning here... and then throw an exception.
+                }
+            }
 
             if( v != null || ctor != null )
             {
