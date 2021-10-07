@@ -138,6 +138,7 @@ namespace CK.Observable.Device
                     b._nextUnbound = null;
                     break;
                 }
+                p = f;
                 Debug.Assert( f._nextUnbound != null );
                 f = f._nextUnbound;
             }

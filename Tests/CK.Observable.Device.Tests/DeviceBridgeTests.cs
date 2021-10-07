@@ -322,5 +322,34 @@ namespace CK.Observable.Device.Tests
             TestHelper.Monitor.Info( "Host cleared." );
         }
 
+
+        [Test]
+        public async Task unbound_devices_serialization()
+        {
+            using var gLog = TestHelper.Monitor.OpenInfo( nameof( unbound_devices_serialization ) );
+            bool error = false;
+            using( TestHelper.Monitor.OnError( () => error = true ) )
+            {
+                // There is no device.
+                var host = new SampleDeviceHost();
+                var sp = new SimpleServiceContainer();
+                sp.Add( host );
+
+                using var obs = new ObservableDomain( TestHelper.Monitor, nameof( unbound_devices_serialization ), false, serviceProvider: sp );
+
+                await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
+                {
+                    var d1 = new OSampleDevice( "n°1" );
+                    d1.Status.Should().BeNull();
+                    d1.IsBoundDevice.Should().BeFalse();
+                    var d2 = new OSampleDevice( "n°2" );
+                    d2.Status.Should().BeNull();
+                    d2.IsBoundDevice.Should().BeFalse();
+                } );
+                ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, obs );
+            }
+            error.Should().BeFalse( "There should be no error." );
+        }
+
     }
 }
