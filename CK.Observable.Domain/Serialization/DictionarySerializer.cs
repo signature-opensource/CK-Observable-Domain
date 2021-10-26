@@ -64,9 +64,18 @@ namespace CK.Observable
 
                 foreach( var kv in items )
                 {
-                    if( monoTypeKey ) keySerialization!.WriteData( w, kv.Key );
+                    if( monoTypeKey )
+                    {
+                        if( keySerialization == null ) throw new InvalidOperationException( $"Cannot find an {nameof( ITypeSerializationDriver )} for Dictionary Key type: {tKey.FullName}." );
+                        keySerialization.WriteData( w, kv.Key );
+                    }
                     else w.WriteObject( kv.Key );
-                    if( monoTypeVal ) valueSerialization!.WriteData( w, kv.Value );
+
+                    if( monoTypeVal )
+                    {
+                        if( valueSerialization == null ) throw new InvalidOperationException( $"Cannot find an {nameof( ITypeSerializationDriver )} for Dictionary Value type: {tVal.FullName}." );
+                        valueSerialization.WriteData( w, kv.Value );
+                    }
                     else w.WriteObject( kv.Value );
                     if( --count == 0 ) break;
                 }
