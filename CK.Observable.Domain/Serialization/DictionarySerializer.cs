@@ -54,9 +54,9 @@ namespace CK.Observable
                 var tKey = typeof(TKey);
                 var tVal = typeof(TValue);
                 bool monoTypeKey = tKey.IsValueType;
-                if( monoTypeKey && keySerialization == null ) keySerialization = w.Drivers.FindDriver<TKey>();
+                if( monoTypeKey && keySerialization == null ) keySerialization = w.ImplementationServices.Drivers.FindDriver<TKey>();
                 bool monoTypeVal = tVal.IsValueType;
-                if( monoTypeVal && valueSerialization == null ) valueSerialization = w.Drivers.FindDriver<TValue>();
+                if( monoTypeVal && valueSerialization == null ) valueSerialization = w.ImplementationServices.Drivers.FindDriver<TValue>();
 
                 int dicType = monoTypeKey ? 1 : 0;
                 dicType |= monoTypeVal ? 2 : 0;

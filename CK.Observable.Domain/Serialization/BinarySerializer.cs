@@ -12,13 +12,14 @@ namespace CK.Observable
     /// <summary>
     /// Specializes <see cref="CKBinaryWriter"/> to be able to serialize objects graph.
     /// </summary>
-    public class BinarySerializer : CKBinaryWriter, IBinarySerializer
+    public class BinarySerializer : CKBinaryWriter, IBinarySerializer, IBinarySerializerImpl
     {
         public const int MaxRecurse = 50;
 
         readonly Dictionary<Type, TypeInfo> _types;
         readonly Dictionary<object, int> _seen;
         readonly ISerializerResolver _drivers;
+        readonly Action<IDestroyable>? _disposedTracker;
         int _recurseCount;
         Stack<(object, ITypeSerializationDriver)>? _deferred;
         BinaryFormatter? _binaryFormatter;
@@ -45,7 +46,7 @@ namespace CK.Observable
         /// <param name="drivers">Optional driver resolver to use. Uses <see cref="SerializerRegistry.Default"/> by default.</param>
         /// <param name="leaveOpen">True to leave the stream opened when disposing. False to close it.</param>
         /// <param name="encoding">Optional encoding for texts. Defaults to UTF-8.</param>
-        /// <param name="disposedTracker">Optional collector of disposed instance. See <see cref="DisposedTracker"/>.</param>
+        /// <param name="disposedTracker">Optional collector of disposed instance. See <see cref="_disposedTracker"/>.</param>
         public BinarySerializer(
             Stream output,
             ISerializerResolver? drivers = null,
@@ -57,11 +58,41 @@ namespace CK.Observable
             _types = new Dictionary<Type, TypeInfo>();
             _seen = new Dictionary<object, int>( PureObjectRefEqualityComparer<object>.Default );
             _drivers = drivers ?? SerializerRegistry.Default;
-            DisposedTracker = disposedTracker;
+            _disposedTracker = disposedTracker;
         }
 
-        /// <inheritdoc />
-        public ISerializerResolver Drivers => _drivers;
+        public IBinarySerializerImpl ImplementationServices => this;
+
+        ISerializerResolver IBinarySerializerImpl.Drivers => _drivers;
+
+        // Awful trick.
+        // Reference management SHOULD be fully handled by drivers...
+        object? _currentWriteData;
+
+        bool IBinarySerializerImpl.WriteNewObject<T>( T o )
+        {
+            if( _currentWriteData == o ) return true;
+            if( TrackObject( o ) )
+            {
+                Write( (byte)SerializationMarker.Object );
+                return true;
+            }
+            return false;
+        }
+
+        Action<IDestroyable>? IBinarySerializerImpl.DisposedTracker => _disposedTracker;
+
+        bool TrackObject<T>( T o ) where T : class
+        {
+            if( _seen.TryGetValue( o, out var num ) )
+            {
+                Write( (byte)SerializationMarker.Reference );
+                Write( num );
+                return false;
+            }
+            _seen.Add( o, _seen.Count );
+            return true;
+        }
 
         /// <inheritdoc />
         public bool WriteObject( object? o )
@@ -150,13 +181,7 @@ namespace CK.Observable
             Type t = o.GetType();
             if( t.IsClass )
             {
-                if( _seen.TryGetValue( o, out var num ) )
-                {
-                    Write( (byte)SerializationMarker.Reference );
-                    Write( num );
-                    return false;
-                }
-                _seen.Add( o, _seen.Count );
+                if( !TrackObject( o ) ) return false;
                 if( t == typeof( object ) )
                 {
                     Write( (byte)SerializationMarker.EmptyObject );
@@ -190,7 +215,10 @@ namespace CK.Observable
                     ++_recurseCount;
                     Write( (byte)marker );
                     driver.WriteTypeInformation( this );
+                    object? prev = _currentWriteData;
+                    _currentWriteData = o;
                     driver.WriteData( this, o );
+                    _currentWriteData = prev;
                     --_recurseCount;
                 }
                 if( _recurseCount == 0 && _deferred != null )
@@ -198,7 +226,10 @@ namespace CK.Observable
                     while( _deferred.TryPop( out var d ) )
                     {
                         ++_recurseCount;
+                        object? prev = _currentWriteData;
+                        _currentWriteData = o;
                         d.Item2.WriteData( this, d.Item1 );
+                        _currentWriteData = prev;
                         --_recurseCount;
                     }
                 }
@@ -288,10 +319,6 @@ namespace CK.Observable
             }
             return false;
         }
-
-        /// <inheritdoc />
-        public Action<IDestroyable>? DisposedTracker { get; }
-
 
         internal class CheckedWriteStream : Stream
         {

@@ -6,7 +6,7 @@ namespace CK.Observable
     public interface IDeserializationDriver<T> : IDeserializationDriver
     {
         /// <summary>
-        /// Reads the data and instanciates a new object.
+        /// Reads the data and instantiates a new object.
         /// </summary>
         /// <param name="r">The deserializer.</param>
         /// <param name="readInfo">
@@ -14,7 +14,7 @@ namespace CK.Observable
         /// type as it has been written. Null when type is known by design.
         /// </param>
         /// <returns>The new instance.</returns>
-        new T ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  );
+        new T ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead );
 
     }
 }

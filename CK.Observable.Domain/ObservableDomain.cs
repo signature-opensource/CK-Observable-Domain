@@ -48,7 +48,7 @@ namespace CK.Observable
         /// <summary>
         /// Current serialization version.
         /// </summary>
-        public const int CurrentSerializationVersion = 6;
+        public const int CurrentSerializationVersion = 7;
 
         /// <summary>
         /// The length in bytes of the <see cref="SecretKey"/>.

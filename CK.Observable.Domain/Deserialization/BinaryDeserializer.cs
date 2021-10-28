@@ -2,6 +2,7 @@ using CK.Core;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.Serialization.Formatters.Binary;
@@ -77,6 +78,19 @@ namespace CK.Observable
             var o = System.Runtime.Serialization.FormatterServices.GetUninitializedObject( t );
             if( isTrackedObject ) _objects.Add( o );
             return o;
+        }
+
+        bool IBinaryDeserializerImpl.ReadNewObject<T>( [MaybeNullWhen( true )]out T already ) where T : class
+        {
+            var b = (SerializationMarker)ReadByte();
+            if( b == SerializationMarker.Reference )
+            {
+                already = (T)ReadReference();
+                return false;
+            }
+            Debug.Assert( b == SerializationMarker.Object );
+            already = null;
+            return true;
         }
 
         T IBinaryDeserializerImpl.TrackObject<T>( T o )
@@ -215,7 +229,7 @@ namespace CK.Observable
                         using( IsDebugMode ? OpenDebugPushContext( $"Reading '{info.SimpleTypeName}' instance" ) : null )
                         {
                             ++_recurseCount;
-                            result = d.ReadInstance( this, info );
+                            result = d.ReadInstance( this, info, true );
                             --_recurseCount;
                         }
                     }

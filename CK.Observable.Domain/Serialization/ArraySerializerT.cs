@@ -5,7 +5,7 @@ using System.Diagnostics;
 
 namespace CK.Observable
 {
-    public class ArraySerializer<T> : ArraySerializer, ITypeSerializationDriver<T[]>
+    public class ArraySerializer<T> : ITypeSerializationDriver<T[]>
     {
         readonly ITypeSerializationDriver<T> _itemSerializer;
 
@@ -32,37 +32,41 @@ namespace CK.Observable
         /// </summary>
         /// <param name="w">The binary serializer to use. Must not be null.</param>
         /// <param name="count">The number of items. Must be 0 zero or positive.</param>
-        /// <param name="items">The items. Can be null (in such case, <paramref name="count"/> must be zero).</param>
+        /// <param name="items">The items. Must not be null.</param>
         /// <param name="itemSerializer">Available item serializer if known.</param>
-        public static void WriteObjects( BinarySerializer w, int count, IEnumerable<T> items, ITypeSerializationDriver<T> itemSerializer = null )
+        public static void WriteObjects( BinarySerializer w, int count, IEnumerable<T> items, ITypeSerializationDriver<T>? itemSerializer = null )
         {
             if( w == null ) throw new ArgumentNullException( nameof( w ) );
             if( count < 0 ) throw new ArgumentException( "Must be greater or equal to 0.", nameof( count ) );
-            if( items == null )
-            {
-                if( count != 0 ) throw new ArgumentNullException( nameof( items ) );
-                w.WriteSmallInt32( -1 );
-                return;
-            }
+
+            if( !w.ImplementationServices.WriteNewObject( items ) ) return;
             w.WriteSmallInt32( count );
             if( count > 0 )
             {
-                if( itemSerializer == null ) itemSerializer = w.Drivers.FindDriver<T>();
+                if( itemSerializer == null )
+                {
+                    itemSerializer = w.ImplementationServices.Drivers.FindDriver<T>();
+                }
                 bool monoType = itemSerializer?.IsFinalType ?? false;
                 w.Write( monoType );
                 if( monoType )
                 {
+                    Debug.Assert( itemSerializer != null );
                     foreach( var i in items )
                     {
                         itemSerializer.WriteData( w, i );
                         if( --count == 0 ) break;
                     }
-                    if( count > 0 ) throw new ArgumentException( $"Not enough items: missing {count} items.", nameof( count ) );
                 }
                 else
                 {
-                    DoWriteObjects( w, count, items );
+                    foreach( var o in items )
+                    {
+                        w.WriteObject( o );
+                        if( --count == 0 ) break;
+                    }
                 }
+                if( count > 0 ) throw new ArgumentException( $"Not enough objects: missing {count} objects.", nameof( count ) );
             }
         }
 

@@ -7,16 +7,11 @@ namespace CK.Observable
     public interface IBinarySerializer : ICKBinaryWriter
     {
         /// <summary>
-        /// Gets the serialization drivers.
-        /// </summary>
-        ISerializerResolver Drivers { get; }
-
-        /// <summary>
         /// Writes an object that can be null and of any type.
         /// </summary>
         /// <param name="o">The object to write.</param>
         /// <returns>
-        /// True if write, false if the object has already been
+        /// True if it has been written, false if the object has already been
         /// written and only a reference has been written.
         /// </returns>
         bool WriteObject( object? o );
@@ -26,6 +21,11 @@ namespace CK.Observable
         /// </summary>
         /// <param name="t">The type to write. Can be null.</param>
         void Write( Type? t );
+
+        /// <summary>
+        /// Gets a set of low level methods and helpers.
+        /// </summary>
+        IBinarySerializerImpl ImplementationServices { get; }
 
         /// <summary>
         /// Gets whether this serializer is currently in debug mode.
@@ -48,18 +48,6 @@ namespace CK.Observable
         /// <param name="fileName">Current file name that wrote the data. Used to build the <see cref="InvalidDataException"/> message if sentinel cannot be read back.</param>
         /// <param name="line">Current line number that wrote the data. Used to build the <see cref="InvalidDataException"/> message if sentinel cannot be read back.</param>
         void DebugWriteSentinel( [CallerFilePath] string? fileName = null, [CallerLineNumber] int line = 0 );
-
-        /// <summary>
-        /// Called by <see cref="AutoTypeRegistry"/> serialization drivers when a disposed <see cref="IDestroyable"/> has been
-        /// written.
-        /// <para>
-        /// This should clearly be on "ImplementationServices" or any other of this writer extensions. But currently, the
-        /// serialization is embedded inside the Observable library, so we don't care.
-        /// Note that if a IDestroyableObject { bool IsDestroyed { get; } } basic interface (without Destroyed event) in the "generic" serialization library
-        /// (or deeper? "System.ComponentModel.IDestroyableObject, CK.Core"?), then this could remain this way. 
-        /// </para>
-        /// </summary>
-        Action<IDestroyable>? DisposedTracker { get; }
 
     }
 }

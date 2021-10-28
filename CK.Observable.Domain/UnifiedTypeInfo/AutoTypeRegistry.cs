@@ -109,9 +109,9 @@ namespace CK.Observable
                 return r.ImplementationServices.CreateUninitializedInstance( Type, readInfo.IsTrackedObject );
             }
 
-            object IDeserializationDriver.ReadInstance( IBinaryDeserializer r, TypeReadInfo? readInfo )
+            object IDeserializationDriver.ReadInstance( IBinaryDeserializer r, TypeReadInfo? readInfo, bool mustRead )
             {
-                return DoReadInstance( r, readInfo );
+                return DoReadInstance( r, readInfo, mustRead );
             }
 
             string? InvokeCtor( IBinaryDeserializer r, object o, object?[] callParams, TypeReadInfo readInfo )
@@ -149,7 +149,7 @@ namespace CK.Observable
                 return null;
             }
 
-            protected object DoReadInstance( IBinaryDeserializer r, TypeReadInfo? readInfo )
+            protected object DoReadInstance( IBinaryDeserializer r, TypeReadInfo? readInfo, bool mustRead )
             {
                 var o = r.ImplementationServices.CreateUninitializedInstance( Type, readInfo?.IsTrackedObject ?? false );
                 return DoReadInstance( r, readInfo, o );
@@ -217,7 +217,7 @@ namespace CK.Observable
                 if( o is IDestroyable d && d.IsDestroyed )
                 {
                     _typePath[0]._writer?.Invoke( o, w );
-                    w.DisposedTracker?.Invoke( d );
+                    w.ImplementationServices.DisposedTracker?.Invoke( d );
                 }
                 else
                 {
@@ -362,9 +362,9 @@ namespace CK.Observable
                 DoExport( o, num, exporter );
             }
 
-            public T ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo )
+            public T ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead )
             {
-                return (T)DoReadInstance( r, readInfo );
+                return (T)DoReadInstance( r, readInfo, mustRead );
             }
 
             void ITypeSerializationDriver<T>.WriteData( BinarySerializer w, T o ) => DoWriteData( w, o );

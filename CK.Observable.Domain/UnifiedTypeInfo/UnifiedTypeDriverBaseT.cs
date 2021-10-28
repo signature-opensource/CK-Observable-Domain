@@ -57,7 +57,7 @@ namespace CK.Observable
 
         void ITypeSerializationDriver.WriteData( BinarySerializer w, object o ) => WriteData( w, (T)o );
 
-        object? IDeserializationDriver.ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  ) => ReadInstance( r, readInfo );
+        object? IDeserializationDriver.ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => ReadInstance( r, readInfo, mustRead );
 
         void IObjectExportTypeDriver.Export( object o, int num, ObjectExporter exporter ) => Export( (T)o, num, exporter );
 
@@ -79,7 +79,7 @@ namespace CK.Observable
         public abstract void WriteData( BinarySerializer w, T o );
 
         /// <summary>
-        /// Reads the data and returns the value or instanciates a new object.
+        /// Reads the data and returns the value or instantiates a new object.
         /// </summary>
         /// <param name="r">The reader.</param>
         /// <param name="readInfo">
@@ -88,7 +88,7 @@ namespace CK.Observable
         /// Null if the type has been previously written by an external driver.
         /// </param>
         /// <returns>The value or new instance.</returns>
-        public abstract T ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  );
+        public abstract T ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead );
 
     }
 }
