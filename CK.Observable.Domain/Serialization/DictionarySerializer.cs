@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 namespace CK.Observable
@@ -21,7 +22,6 @@ namespace CK.Observable
 
         void ITypeSerializationDriver<Dictionary<TKey, TValue>>.WriteData( BinarySerializer w, Dictionary<TKey, TValue> o )
         {
-            if( w == null ) throw new ArgumentNullException( nameof( w ) );
             DoWrite( w, o, _key, _value );
         }
 
@@ -30,34 +30,36 @@ namespace CK.Observable
         /// </summary>
         /// <param name="w">The binary serializer to use. Must not be null.</param>
         /// <param name="count">Number of items. Must be zero or positive.</param>
-        /// <param name="items">The items. Can be null (in such case, <paramref name="count"/> must be 0).</param>
+        /// <param name="items">The items. Cannot be null.</param>
         /// <param name="keySerialization">Available key serialization driver if available.</param>
         /// <param name="valueSerialization">Available value serialization driver if available.</param>
-        public static void WriteDictionaryContent(
-            BinarySerializer w,
-            int count,
-            IEnumerable<KeyValuePair<TKey, TValue>> items,
-            ITypeSerializationDriver<TKey>? keySerialization = null,
-            ITypeSerializationDriver<TValue>? valueSerialization = null )
+        public static void WriteDictionaryContent( BinarySerializer w,
+                                                   int count,
+                                                   IEnumerable<KeyValuePair<TKey, TValue>> items,
+                                                   ITypeSerializationDriver<TKey>? keySerialization = null,
+                                                   ITypeSerializationDriver<TValue>? valueSerialization = null )
         {
             if( w == null ) throw new ArgumentNullException( nameof( w ) );
-            if( count < 0 ) throw new ArgumentException( "Must be greater or equal to 0.", nameof( count ) );
-            if( items == null )
-            {
-                if( count != 0 ) throw new ArgumentNullException( nameof( items ) );
-                w.WriteSmallInt32( -1 );
-                return;
-            }
+            if( count < 0 ) throw new ArgumentOutOfRangeException( nameof( count ) );
+            if( items == null ) throw new ArgumentNullException( nameof( items ) );
+
             w.WriteSmallInt32( count );
             if( count > 0 )
             {
                 var tKey = typeof(TKey);
                 var tVal = typeof(TValue);
-                bool monoTypeKey = tKey.IsValueType;
-                if( monoTypeKey && keySerialization == null ) keySerialization = w.ImplementationServices.Drivers.FindDriver<TKey>();
-                bool monoTypeVal = tVal.IsValueType;
-                if( monoTypeVal && valueSerialization == null ) valueSerialization = w.ImplementationServices.Drivers.FindDriver<TValue>();
-
+                bool monoTypeKey = tKey.IsValueType || (keySerialization != null && keySerialization.IsFinalType);
+                if( monoTypeKey && keySerialization == null )
+                {
+                    keySerialization = w.ImplementationServices.Drivers.FindDriver<TKey>();
+                    if( keySerialization == null ) throw new InvalidOperationException( $"Cannot find an {nameof( ITypeSerializationDriver )} for Dictionary Key type: {tKey.FullName}." );
+                }
+                bool monoTypeVal = tVal.IsValueType || (valueSerialization != null && valueSerialization.IsFinalType);
+                if( monoTypeVal && valueSerialization == null )
+                {
+                    valueSerialization = w.ImplementationServices.Drivers.FindDriver<TValue>();
+                    if( valueSerialization == null ) throw new InvalidOperationException( $"Cannot find an {nameof( ITypeSerializationDriver )} for Dictionary Value type: {tVal.FullName}." );
+                }
                 int dicType = monoTypeKey ? 1 : 0;
                 dicType |= monoTypeVal ? 2 : 0;
                 w.Write( (byte)dicType );
@@ -66,14 +68,14 @@ namespace CK.Observable
                 {
                     if( monoTypeKey )
                     {
-                        if( keySerialization == null ) throw new InvalidOperationException( $"Cannot find an {nameof( ITypeSerializationDriver )} for Dictionary Key type: {tKey.FullName}." );
+                        Debug.Assert( keySerialization != null );
                         keySerialization.WriteData( w, kv.Key );
                     }
                     else w.WriteObject( kv.Key );
 
                     if( monoTypeVal )
                     {
-                        if( valueSerialization == null ) throw new InvalidOperationException( $"Cannot find an {nameof( ITypeSerializationDriver )} for Dictionary Value type: {tVal.FullName}." );
+                        Debug.Assert( valueSerialization != null );
                         valueSerialization.WriteData( w, kv.Value );
                     }
                     else w.WriteObject( kv.Value );
@@ -85,14 +87,11 @@ namespace CK.Observable
 
         static void DoWrite( BinarySerializer w, Dictionary<TKey, TValue> o, ITypeSerializationDriver<TKey> key, ITypeSerializationDriver<TValue> value )
         {
-            if( o == null ) w.WriteSmallInt32( -1 );
-            else
-            {
-                // Version
-                w.WriteSmallInt32( 0 );
-                w.WriteObject( o.Comparer );
-                WriteDictionaryContent( w, o.Count, o, key, value );
-            }
+            if( !w.ImplementationServices.WriteNewObject( o ) ) return;
+            // Version
+            w.WriteSmallInt32( 0 );
+            w.WriteObject( o.Comparer );
+            WriteDictionaryContent( w, o.Count, o, key, value );
         }
 
         public void WriteData( BinarySerializer w, object o ) => DoWrite( w, (Dictionary<TKey,TValue>)o, _key, _value );
