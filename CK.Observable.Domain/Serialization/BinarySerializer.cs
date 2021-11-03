@@ -393,6 +393,7 @@ namespace CK.Observable
                     s.Position = 0;
                     using( var r = new BinaryDeserializer( s, services, null ) )
                     {
+                        r.SerializationVersion = ObservableDomain.CurrentSerializationVersion;
                         var o2 = r.ReadObject();
                         r.ImplementationServices.ExecutePostDeserializationActions();
                         using( var checker = new CheckedWriteStream( originalBytes ) )

@@ -14,12 +14,15 @@ namespace CK.Observable.Domain.Tests.Serialization
         [Test]
         public void struct_types_array_serialization()
         {
-            var positions = new Observable.Domain.Tests.Sample.Position[] { new Observable.Domain.Tests.Sample.Position( 12.2, 78.8 ), new Observable.Domain.Tests.Sample.Position( 44.7, 1214.777 ) };
+            var positions = new Sample.Position[] { new Sample.Position( 12.2, 78.8 ), new Sample.Position( 44.7, 1214.777 ) };
 
             object back = TestHelper.SaveAndLoadObject( positions );
             back.Should().BeAssignableTo<Observable.Domain.Tests.Sample.Position[]>();
             var b = (Observable.Domain.Tests.Sample.Position[])back;
             b.Should().BeEquivalentTo( positions, options => options.WithStrictOrdering() );
+
+            //
+            BinarySerializer.IdempotenceCheck( positions, new SimpleServiceContainer() );
         }
 
         [Test]
@@ -35,6 +38,9 @@ namespace CK.Observable.Domain.Tests.Serialization
             back.Should().BeAssignableTo<Sample.Position[][]>();
             var b = (Sample.Position[][])back;
             b.Should().BeEquivalentTo( positions, options => options.WithStrictOrdering() );
+
+            //
+            BinarySerializer.IdempotenceCheck( positions, new SimpleServiceContainer() );
         }
 
         [Test]
@@ -46,6 +52,9 @@ namespace CK.Observable.Domain.Tests.Serialization
             back.Should().BeAssignableTo<object[]>();
             object[] b = (object[])back;
             b.Should().BeEquivalentTo( objects, options => options.WithStrictOrdering() );
+
+            //
+            BinarySerializer.IdempotenceCheck( objects, new SimpleServiceContainer() );
         }
 
         [Test]
@@ -63,7 +72,8 @@ namespace CK.Observable.Domain.Tests.Serialization
                                                       r => ArrayDeserializer<Type>.ReadArray( r, BasicTypeDrivers.DType.Default, false ) );
                 back.Should().BeEquivalentTo( types, options => options.WithStrictOrdering() );
             }
-
+            //
+            BinarySerializer.IdempotenceCheck( types, new SimpleServiceContainer() );
         }
 
     }
