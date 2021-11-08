@@ -18,10 +18,14 @@ public class MyApplicationRoot : ObservableRootObject
 {
     public string MyStateProperty { get; set; }
 
-    MyApplicationRoot( IBinaryDeserializerContext d )
-      : base( d )
+    public MyApplicationRoot()
     {
-        var r = d.StartReading();
+      MyStateProperty = "I'm new!";
+    }
+
+    MyApplicationRoot( IBinaryDeserializer r, TypeReadInfo? info )
+       : base( RevertSerialization.Default )
+    {
         // Deserialize your properties here. Mind the order!
         MyStateProperty = r.ReadNullableString();
     }
@@ -162,9 +166,9 @@ Defining the event is enough: it will be automatically fired whenever TestSpeed 
 - Don't forget the serialization support of the event!
 
 ```csharp
-    protected Car( IBinaryDeserializerContext d ) : base( d )
+    Car( IBinaryDeserializer r, TypeReadInfo? info )
+            : base( RevertSerialization.Default )
     {
-        var r = d.StartReading();
         Name = r.ReadNullableString();
         TestSpeed = r.ReadInt32();
         _testSpeedChanged = new ObservableEventHandler<ObservableDomainEventArgs>( r );
@@ -175,8 +179,7 @@ Defining the event is enough: it will be automatically fired whenever TestSpeed 
         w.WriteNullableString( Name );
         w.Write( TestSpeed );
         _testSpeedChanged.Write( w );
-    }
-}
+    }}
 ```
 
 

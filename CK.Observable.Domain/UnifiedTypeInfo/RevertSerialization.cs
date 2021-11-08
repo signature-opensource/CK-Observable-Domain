@@ -17,7 +17,7 @@ namespace CK.Observable
         static Stack<object>? _deserialized;
 
         /// <summary>
-        /// This method be called by the root objects deserialization constructor
+        /// This method must be called by the root objects deserialization constructor
         /// when this "empty reversed deserializer constructor" pattern is used.
         /// <para>
         /// Specialized classes doesn't have to call this.
