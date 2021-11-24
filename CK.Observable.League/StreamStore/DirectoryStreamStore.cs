@@ -1,6 +1,7 @@
 using CK.Core;
 using CK.Text;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -11,7 +12,7 @@ namespace CK.Observable
     /// <summary>
     /// Implements a <see cref="IStreamStore"/> with files in a directory.
     /// </summary>
-    public sealed class DirectoryStreamStore : IStreamStore
+    public sealed class DirectoryStreamStore : IBackupStreamStore
     {
         readonly string _path;
 
@@ -56,7 +57,7 @@ namespace CK.Observable
             var path = GetFullWritePath( ref name );
             try
             {
-                using( var output = new FileStream( path, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.SequentialScan|FileOptions.Asynchronous ) )
+                using( var output = new FileStream( path, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.SequentialScan | FileOptions.Asynchronous ) )
                 {
                     await writer( output );
                 }
@@ -148,6 +149,78 @@ namespace CK.Observable
                 }
             }
             return Task.FromResult( count );
+        }
+
+        /// <inheritdoc />
+        public void CleanBackups( IActivityMonitor m, string name, TimeSpan maximumKeepDuration, long maximumTotalBytes )
+        {
+            if( maximumKeepDuration <= TimeSpan.Zero && maximumTotalBytes <= 0 )
+            {
+                return; // All means of cleanup are disabled. Don't do anything.
+            }
+
+            var candidates = new List<KeyValuePair<DateTime, FileInfo>>();
+
+            int preservedByDateCount = 0;
+            long byteLengthOfPreservedByDate = 0;
+            long totalByteLength = 0;
+
+            // Consider all backups for deletion when zero (as long as another criteria is enabled, see return above)
+            DateTime minDate = maximumKeepDuration > TimeSpan.Zero ? DateTime.UtcNow - maximumKeepDuration : DateTime.UtcNow;
+            DirectoryInfo backupDirectory = new DirectoryInfo( GetBackupFolder( name ) );
+
+            if( !backupDirectory.Exists ) return; // Directory doesn't even exist.
+
+            foreach( FileInfo file in backupDirectory.EnumerateFiles() )
+            {
+                if( FileUtil.TryParseFileNameUniqueTimeUtcFormat( file.Name, out DateTime d, allowSuffix: true ) )
+                {
+                    if( d >= minDate )
+                    {
+                        ++preservedByDateCount;
+                        byteLengthOfPreservedByDate += file.Length;
+                    }
+                    totalByteLength += file.Length;
+                    candidates.Add( new KeyValuePair<DateTime, FileInfo>( d, file ) );
+                }
+            }
+
+            int canBeDeletedCount = candidates.Count - preservedByDateCount;
+
+            bool canDeleteByBytes = totalByteLength > 0;
+
+            if( canBeDeletedCount > 0 )
+            {
+                // Note: The comparer is a reverse comparer. The most RECENT log file is the FIRST.
+                candidates.Sort( ( a, b ) => DateTime.Compare( b.Key, a.Key ) );
+                candidates.RemoveRange( 0, preservedByDateCount );
+                m.UnfilteredLog( ActivityMonitor.Tags.Empty, LogLevel.Debug, $"Considering {candidates.Count} log files to delete.", m.NextLogTime(), null );
+
+                long totalFileSize = byteLengthOfPreservedByDate;
+                int i = 0;
+                foreach( var kvp in candidates )
+                {
+                    var file = kvp.Value;
+                    totalFileSize += file.Length;
+
+                    if(
+                        (!canDeleteByBytes) // Both count and bytes are disabled: Delete all older files
+                        || (canDeleteByBytes && totalFileSize > maximumTotalBytes) // Size enabled: Delete when size matches
+                        )
+                    {
+                        try
+                        {
+                            file.Delete();
+                        }
+                        catch( Exception ex )
+                        {
+                            m.UnfilteredLog( ActivityMonitor.Tags.Empty, LogLevel.Warn, $"Failed to delete file {file.FullName} (housekeeping).", m.NextLogTime(), ex );
+                        }
+                    }
+
+                    ++i;
+                }
+            }
         }
     }
 }
