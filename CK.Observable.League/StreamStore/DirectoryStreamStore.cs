@@ -222,5 +222,14 @@ namespace CK.Observable
                 }
             }
         }
+
+        /// <inheritdoc />
+        public IReadOnlyCollection<string> GetBackupNames( string name )
+        {
+            DirectoryInfo backupDirectory = new DirectoryInfo( GetBackupFolder( name ) );
+            if( !backupDirectory.Exists ) return Array.Empty<string>(); // Directory doesn't even exist.
+            return backupDirectory.EnumerateFiles( "*", SearchOption.TopDirectoryOnly ).Select( f => f.Name ).ToArray();
+
+        }
     }
 }

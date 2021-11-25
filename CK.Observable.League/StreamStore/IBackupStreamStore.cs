@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using CK.Core;
 
 namespace CK.Observable
@@ -24,5 +25,13 @@ namespace CK.Observable
         ///     A value of 0 disables deletion by total size.
         /// </param>
         public void CleanBackups( IActivityMonitor m, string name, TimeSpan maximumKeepDuration, long maximumTotalBytes );
+
+        /// <summary>
+        /// Gets the names of existing automatic backups performed
+        /// for the given resource by this <see cref="IBackupStreamStore"/>.
+        /// </summary>
+        /// <param name="name">The name of the resource.</param>
+        /// <returns>A collection of existing backup names.</returns>
+        IReadOnlyCollection<string> GetBackupNames( string name );
     }
 }
