@@ -22,6 +22,7 @@ namespace CK.Observable.League
         readonly string _storeName;
         readonly JsonEventCollector _eventCollector;
         int _savedTransactionNumber;
+        int _savesBeforeNextHousekeeping;
         DateTime _nextSave;
         int _snapshotSaveDelay;
 
@@ -77,6 +78,11 @@ namespace CK.Observable.League
         /// See <see cref="ManagedDomainOptions.SnapshotMaximalTotalKiB"/>.
         /// </summary>
         public int SnapshotMaximalTotalKiB { get; set; } = 10 * 1024;
+
+        /// <summary>
+        /// See <see cref="ManagedDomainOptions.HousekeepingRate"/>.
+        /// </summary>
+        public int HousekeepingRate { get; set; } = 0;
 
         /// <summary>
         /// Overridden to FIRST create a snapshot and THEN call the next client.
@@ -199,6 +205,18 @@ namespace CK.Observable.League
                         monitor.Info( $"Domain '{_storeName}' saved and sent to archives." );
                     }
                     else monitor.Trace( $"Domain '{_storeName}' saved." );
+
+                    if( HousekeepingRate > 0 && _streamStore is IBackupStreamStore backupStreamStore )
+                    {
+                        --_savesBeforeNextHousekeeping;
+                        if( _savesBeforeNextHousekeeping <= 0 )
+                        {
+                            monitor.Trace( "Executing housekeeping for snapshot backups." );
+                            _savesBeforeNextHousekeeping = HousekeepingRate;
+                            backupStreamStore.CleanBackups( monitor, _storeName, SnapshotKeepDuration, SnapshotMaximalTotalKiB * 1000L );
+                        }
+                    }
+
                 }
                 catch( Exception ex )
                 {
