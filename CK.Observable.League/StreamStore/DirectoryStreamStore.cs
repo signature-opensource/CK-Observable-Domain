@@ -152,14 +152,13 @@ namespace CK.Observable
         }
 
         /// <inheritdoc />
-        public void CleanBackups( IActivityMonitor m, string name, TimeSpan maximumKeepDuration, long maximumTotalBytes )
+        public void CleanBackups( IActivityMonitor monitor, string name, TimeSpan maximumKeepDuration, long maximumTotalBytes )
         {
-            if( maximumKeepDuration <= TimeSpan.Zero && maximumTotalBytes <= 0 )
+            if( maximumKeepDuration <= TimeSpan.Zero )
             {
+                monitor.Warn( $"No backup done: no maximal keep duration nor total bytes." );
                 return; // All means of cleanup are disabled. Don't do anything.
             }
-
-            var candidates = new List<KeyValuePair<DateTime, FileInfo>>();
 
             int preservedByDateCount = 0;
             long byteLengthOfPreservedByDate = 0;
@@ -170,6 +169,8 @@ namespace CK.Observable
             DirectoryInfo backupDirectory = new DirectoryInfo( GetBackupFolder( name ) );
 
             if( !backupDirectory.Exists ) return; // Directory doesn't even exist.
+
+            var candidates = new List<KeyValuePair<DateTime, FileInfo>>();
 
             foreach( FileInfo file in backupDirectory.EnumerateFiles() )
             {
@@ -186,7 +187,6 @@ namespace CK.Observable
             }
 
             int canBeDeletedCount = candidates.Count - preservedByDateCount;
-
             bool canDeleteByBytes = totalByteLength > 0;
 
             if( canBeDeletedCount > 0 )
@@ -194,7 +194,7 @@ namespace CK.Observable
                 // Note: The comparer is a reverse comparer. The most RECENT log file is the FIRST.
                 candidates.Sort( ( a, b ) => DateTime.Compare( b.Key, a.Key ) );
                 candidates.RemoveRange( 0, preservedByDateCount );
-                m.UnfilteredLog( ActivityMonitor.Tags.Empty, LogLevel.Debug, $"Considering {candidates.Count} log files to delete.", m.NextLogTime(), null );
+                monitor.Debug( $"Considering {candidates.Count} log files to delete." );
 
                 long totalFileSize = byteLengthOfPreservedByDate;
                 int i = 0;
@@ -203,10 +203,8 @@ namespace CK.Observable
                     var file = kvp.Value;
                     totalFileSize += file.Length;
 
-                    if(
-                        (!canDeleteByBytes) // Both count and bytes are disabled: Delete all older files
-                        || (canDeleteByBytes && totalFileSize > maximumTotalBytes) // Size enabled: Delete when size matches
-                        )
+                    if( !canDeleteByBytes // Both count and bytes are disabled: Delete all older files
+                        || (canDeleteByBytes && totalFileSize > maximumTotalBytes) ) // Size enabled: Delete when size matches
                     {
                         try
                         {
@@ -214,10 +212,9 @@ namespace CK.Observable
                         }
                         catch( Exception ex )
                         {
-                            m.UnfilteredLog( ActivityMonitor.Tags.Empty, LogLevel.Warn, $"Failed to delete file {file.FullName} (housekeeping).", m.NextLogTime(), ex );
+                            monitor.Warn( $"Failed to delete file {file.FullName} (housekeeping).", ex );
                         }
                     }
-
                     ++i;
                 }
             }

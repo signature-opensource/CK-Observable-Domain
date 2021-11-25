@@ -14,7 +14,7 @@ namespace CK.Observable
         /// <summary>
         /// Cleans backups of the given resource, matching all of the valid given criteria.
         /// </summary>
-        /// <param name="m">The monitor to use to log deleted files.</param>
+        /// <param name="monitor">The monitor to use to log deleted files.</param>
         /// <param name="name">The name of the resource for which backups should be cleaned up (case insensitive).</param>
         /// <param name="maximumKeepDuration">
         ///     The maximum age that backups can have. Backups older than the given value are deleted.
@@ -24,7 +24,7 @@ namespace CK.Observable
         ///     The maximum file size that the sum of all backups can have. Backups exceeding this size are deleted, oldest first.
         ///     A value of 0 disables deletion by total size.
         /// </param>
-        public void CleanBackups( IActivityMonitor m, string name, TimeSpan maximumKeepDuration, long maximumTotalBytes );
+        public void CleanBackups( IActivityMonitor monitor, string name, TimeSpan maximumKeepDuration, long maximumTotalBytes );
 
         /// <summary>
         /// Gets the names of existing automatic backups performed

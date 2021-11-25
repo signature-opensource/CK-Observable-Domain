@@ -209,11 +209,14 @@ namespace CK.Observable.League
                     if( HousekeepingRate > 0 && _streamStore is IBackupStreamStore backupStreamStore )
                     {
                         --_savesBeforeNextHousekeeping;
-                        if( _savesBeforeNextHousekeeping <= 0 )
+                        if( _savesBeforeNextHousekeeping <= 0
+                            && (SnapshotKeepDuration > TimeSpan.Zero || SnapshotMaximalTotalKiB > 0) )
                         {
-                            monitor.Trace( "Executing housekeeping for snapshot backups." );
-                            _savesBeforeNextHousekeeping = HousekeepingRate;
-                            backupStreamStore.CleanBackups( monitor, _storeName, SnapshotKeepDuration, SnapshotMaximalTotalKiB * 1000L );
+                            using( monitor.OpenTrace( "Executing housekeeping for snapshot backups." ) )
+                            {
+                                _savesBeforeNextHousekeeping = HousekeepingRate;
+                                backupStreamStore.CleanBackups( monitor, _storeName, SnapshotKeepDuration, SnapshotMaximalTotalKiB * 1024L );
+                            }
                         }
                     }
 
