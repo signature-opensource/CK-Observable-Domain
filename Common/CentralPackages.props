@@ -12,5 +12,6 @@
     <PackageReference Update="NUnit3TestAdapter" Version="3.17.0" />
     <PackageReference Update="Fody" Version="6.5.3" />
     <PackageReference Update="PropertyChanged.Fody" Version="3.4.0" />
+    <PackageReference Update="Microsoft.VisualStudio.Threading.Analyzers" Version="17.0.64" />
   </ItemGroup>
 </Project>
