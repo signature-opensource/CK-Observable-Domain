@@ -35,6 +35,7 @@ namespace CK.Observable
             name = name.ToLowerInvariant();
             return _path + name;
         }
+
         string GetFullWritePath( ref string name )
         {
             var p = GetFullPath( ref name );
@@ -82,7 +83,8 @@ namespace CK.Observable
                     return Util.UtcMaxValue;
                 }
             }
-            string tempFilePath = Path.GetTempFileName();
+            var now = DateTime.UtcNow;
+            string tempFilePath = FileUtil.EnsureUniqueTimedFile( path, ".tmp", now );
             using( var output = File.Open( tempFilePath, FileMode.Create ) )
             {
                 await writer( output ).ConfigureAwait( false );
@@ -92,7 +94,7 @@ namespace CK.Observable
             {
                 string backupPath = GetBackupFolder( name );
                 Directory.CreateDirectory( backupPath );
-                File.Replace( tempFilePath, path, FileUtil.EnsureUniqueTimedFile( backupPath + Path.DirectorySeparatorChar, String.Empty, DateTime.UtcNow ), true );
+                File.Replace( tempFilePath, path, FileUtil.EnsureUniqueTimedFile( backupPath + Path.DirectorySeparatorChar, String.Empty, now ), true );
             }
             else File.Move( tempFilePath, path );
             return File.GetLastWriteTimeUtc( path );
