@@ -98,6 +98,7 @@ namespace CK.Observable.League.Tests
             int filesize = 1000;
             string resourceName = "domain";
 
+            // Create 10 files of 1000 bytes each
             for( int i = 0; i < backupCount; i++ )
             {
                 using( var ms = CreateDataStream( filesize ) )
@@ -106,6 +107,7 @@ namespace CK.Observable.League.Tests
                 }
             }
 
+            // Keep 5000 bytes
             streamStore.CleanBackups( TestHelper.Monitor, resourceName, TimeSpan.Zero, filesize * (backupCount / 2) );
 
             var backupNames = streamStore.GetBackupNames( resourceName );

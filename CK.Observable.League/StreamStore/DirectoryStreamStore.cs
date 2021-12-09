@@ -156,9 +156,9 @@ namespace CK.Observable
         /// <inheritdoc />
         public void CleanBackups( IActivityMonitor monitor, string name, TimeSpan maximumKeepDuration, long maximumTotalBytes )
         {
-            if( maximumKeepDuration <= TimeSpan.Zero )
+            if( maximumKeepDuration <= TimeSpan.Zero && maximumTotalBytes <= 0 )
             {
-                monitor.Warn( $"No backup done: no maximal keep duration nor total bytes." );
+                monitor.Warn( $"Cleanup is disabled in the ObservableLeague store: maximumKeepDuration and maximumTotalBytes are not set." );
                 return; // All means of cleanup are disabled. Don't do anything.
             }
 
