@@ -1,7 +1,5 @@
-
-<RepositoryInfo>
-
-  <SimpleGitVersion StartingVersion="v0.6.0">
+﻿<RepositoryInfo>
+  <SimpleGitVersion StartingVersion="2.0.0-alpha">
     <IgnoreModifiedFiles>
       <Add>js/.npmrc</Add>
       <Add>js/package.json</Add>
