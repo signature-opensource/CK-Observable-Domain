@@ -1,6 +1,6 @@
 <Project>
   <ItemGroup>
-    <PackageReference Update="CK.DeviceModel" Version="1.0.0-r09-00-0003-develop" />
+    <PackageReference Update="CK.DeviceModel" Version="1.0.0-r09" />
     <PackageReference Update="CK.StObj.Model" Version="18.0.0" />
     <PackageReference Update="System.Threading.Channels" Version="4.7.1" />
     <PackageReference Update="Microsoft.Extensions.DependencyInjection" Version="3.1.19" />
