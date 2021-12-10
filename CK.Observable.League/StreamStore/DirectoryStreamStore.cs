@@ -170,10 +170,12 @@ namespace CK.Observable
             DateTime minDate = maximumKeepDuration > TimeSpan.Zero ? DateTime.UtcNow - maximumKeepDuration : DateTime.UtcNow;
             DirectoryInfo backupDirectory = new DirectoryInfo( GetBackupFolder( name ) );
 
-            if( !backupDirectory.Exists ) return; // Directory doesn't even exist.
-
+            if( !backupDirectory.Exists )
+            {
+                monitor.Warn( $"Backup directory '{backupDirectory.FullName}' doesn't exist." );
+                return; 
+            }
             var candidates = new List<KeyValuePair<DateTime, FileInfo>>();
-
             foreach( FileInfo file in backupDirectory.EnumerateFiles() )
             {
                 if( FileUtil.TryParseFileNameUniqueTimeUtcFormat( file.Name, out DateTime d, allowSuffix: true ) )

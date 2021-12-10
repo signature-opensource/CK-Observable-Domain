@@ -57,9 +57,9 @@ namespace CK.Observable
 
         /// <summary>
         /// Gets an opaque object that is a command (can be send to <see cref="DomainView.SendCommand(object, bool)"/>) that
-        /// triggers a save of the domain (if a <see cref="IObservableDomainClient"/> can honor it).
+        /// triggers a snapshot of the domain (if a <see cref="IObservableDomainClient"/> can honor it).
         /// </summary>
-        public static readonly object SaveCommand = DBNull.Value;
+        public static readonly object SnapshotDomainCommand = DBNull.Value;
 
         [ThreadStatic]
         internal static ObservableDomain? CurrentThreadDomain;
@@ -1679,13 +1679,13 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Sends a <see cref="SaveCommand"/>.
+        /// Sends a <see cref="SnapshotDomainCommand"/>.
         /// This must be called from inside a transaction.
         /// </summary>
-        public void SendSaveCommand()
+        public void SendSnapshotCommand()
         {
             CheckWriteLock( null );
-            _changeTracker.OnSendCommand( new ObservableDomainCommand( SaveCommand ) );
+            _changeTracker.OnSendCommand( new ObservableDomainCommand( SnapshotDomainCommand ) );
         }
 
         internal bool EnsureSidekicks( IDestroyable o )
