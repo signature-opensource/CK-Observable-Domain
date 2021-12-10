@@ -22,6 +22,7 @@ namespace CK.Observable.League
         readonly string _storeName;
         readonly JsonEventCollector _eventCollector;
         int _savedTransactionNumber;
+        int _savesBeforeNextHousekeeping;
         DateTime _nextSave;
         int _snapshotSaveDelay;
 
@@ -79,6 +80,11 @@ namespace CK.Observable.League
         public int SnapshotMaximalTotalKiB { get; set; } = 10 * 1024;
 
         /// <summary>
+        /// See <see cref="ManagedDomainOptions.HousekeepingRate"/>.
+        /// </summary>
+        public int HousekeepingRate { get; set; } = 0;
+
+        /// <summary>
         /// Overridden to FIRST create a snapshot and THEN call the next client.
         /// </summary>
         /// <param name="c"></param>
@@ -86,7 +92,7 @@ namespace CK.Observable.League
         {
             CreateSnapshot( c.Monitor, c.Domain, false, c.HasSaveCommand );
             // We save the snapshot if we must (and there is no compensation for this of course).
-            if( c.CommitTimeUtc >= _nextSave ) c.PostActions.Add( ctx => SaveAsync( ctx.Monitor ) );
+            if( c.CommitTimeUtc >= _nextSave ) c.PostActions.Add( ctx => SaveSnapshotAsync( ctx.Monitor ) );
             Next?.OnTransactionCommit( c );
         }
 
@@ -121,7 +127,7 @@ namespace CK.Observable.League
         /// <returns>The awaitable.</returns>
         public async Task<ObservableDomain> InitializeAsync( IActivityMonitor monitor, bool? startTimer, bool createOnLoadError, Func<IActivityMonitor,bool,ObservableDomain> factory )
         {
-            ObservableDomain result = null;
+            ObservableDomain? result = null;
             using( var s = await _streamStore.OpenReadAsync( _storeName ) )
             {
                 if( s != null )
@@ -135,7 +141,7 @@ namespace CK.Observable.League
                     {
                         if( createOnLoadError )
                         {
-                            monitor.Error( $"Error while loading domain. Automatically recreating a new one and initializing it.", ex );
+                            monitor.Error( $"Error while loading domain from '{_storeName}'. Automatically recreating a new one and initializing it.", ex );
                             result = await Create( monitor, startTimer, factory );
                         }
                         else
@@ -159,7 +165,7 @@ namespace CK.Observable.League
                 // the initial snapshot can be saved to the Store: this initializes
                 // the Store for this domain. From now on, it will be reloaded.
                 CreateSnapshot( monitor, result, true, true );
-                if( !await SaveAsync( monitor ) )
+                if( !await SaveSnapshotAsync( monitor ) )
                 {
                     throw new Exception( $"Unable to initialize the store for '{_storeName}'." );
                 }
@@ -170,18 +176,19 @@ namespace CK.Observable.League
         /// <summary>
         /// Saves the current snapshot if the <see cref="MemoryTransactionProviderClient.CurrentSerialNumber"/> has changed
         /// since the last save.
+        /// This never throws.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <returns>True on success, false if an error occurred.</returns>
-        public Task<bool> SaveAsync( IActivityMonitor monitor ) => DoSaveAsync( monitor, false );
+        public Task<bool> SaveSnapshotAsync( IActivityMonitor monitor ) => DoSaveSnapshotAsync( monitor, false );
 
         /// <summary>
         /// Archives the persistent file in the store: the domain's file is no more available.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
-        public Task ArchiveAsync( IActivityMonitor monitor ) => DoSaveAsync( monitor, true );
+        public Task ArchiveSnapshotAsync( IActivityMonitor monitor ) => DoSaveSnapshotAsync( monitor, true );
 
-        async Task<bool> DoSaveAsync( IActivityMonitor monitor, bool sendToArchive )
+        async Task<bool> DoSaveSnapshotAsync( IActivityMonitor monitor, bool sendToArchive )
         {
             if( _savedTransactionNumber != CurrentSerialNumber || sendToArchive )
             {
@@ -198,11 +205,26 @@ namespace CK.Observable.League
                         await _streamStore.DeleteAsync( _storeName, true ).ConfigureAwait( false );
                         monitor.Info( $"Domain '{_storeName}' saved and sent to archives." );
                     }
-                    else monitor.Trace( $"Domain '{_storeName}' saved." );
+                    else monitor.Trace( $"Domain '{_storeName}' successfully saved (TransactionNumber={_savedTransactionNumber})." );
+
+                    if( HousekeepingRate > 0 && _streamStore is IBackupStreamStore backupStreamStore )
+                    {
+                        --_savesBeforeNextHousekeeping;
+                        if( _savesBeforeNextHousekeeping <= 0
+                            && (SnapshotKeepDuration > TimeSpan.Zero || SnapshotMaximalTotalKiB > 0) )
+                        {
+                            using( monitor.OpenTrace( $"Executing housekeeping for '{_storeName}' backups." ) )
+                            {
+                                _savesBeforeNextHousekeeping = HousekeepingRate;
+                                backupStreamStore.CleanBackups( monitor, _storeName, SnapshotKeepDuration, SnapshotMaximalTotalKiB * 1024L );
+                            }
+                        }
+                    }
+
                 }
                 catch( Exception ex )
                 {
-                    monitor.Error( $"While saving domain '{_storeName}'.", ex );
+                    monitor.Error( $"While {(sendToArchive ? "archiv" : "sav")}ing domain '{_storeName}' snapshot.", ex );
                     return false;
                 }
             }

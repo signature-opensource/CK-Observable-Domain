@@ -31,7 +31,7 @@ namespace CK.Observable.Domain.Tests.RootSample
             ProductInfos = (ObservableList<ProductInfo>)r.ReadObject();
         }
 
-        void Write( BinarySerializer s )
+        void Write( IBinarySerializer s )
         {
             s.WriteObject( ToDoNumbers );
             s.WriteObject( Products );

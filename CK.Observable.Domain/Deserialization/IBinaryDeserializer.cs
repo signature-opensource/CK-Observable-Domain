@@ -11,13 +11,6 @@ namespace CK.Observable
     public interface IBinaryDeserializer : ICKBinaryReader
     {
         /// <summary>
-        /// Gets a global serialization version.
-        /// This version is handled by the concrete serializer and deserializer and applies
-        /// to all "intrinsic" objects that are handled by the code base.
-        /// </summary>
-        int SerializationVersion { get; }
-
-        /// <summary>
         /// Gets a configurable container of services available for constructor
         /// injection in the deserialized instances.
         /// </summary>
@@ -57,7 +50,7 @@ namespace CK.Observable
         bool IsDebugMode { get; }
 
         /// <summary>
-        /// Gets the current debug mode that must have been written by <see cref="BinarySerializer.DebugWriteMode(bool?)"/>.
+        /// Updates the current debug mode that must have been written by <see cref="BinarySerializer.DebugWriteMode(bool?)"/>.
         /// </summary>
         /// <returns>Whether the debug mode is currently active or not.</returns>
         bool DebugReadMode();
@@ -68,7 +61,7 @@ namespace CK.Observable
         /// </summary>
         /// <param name="fileName">Current file name used to build the <see cref="InvalidDataException"/> message if sentinel cannot be read back.</param>
         /// <param name="line">Current line number used to build the <see cref="InvalidDataException"/> message if sentinel cannot be read back.</param>
-        void DebugCheckSentinel( [CallerFilePath]string fileName = null, [CallerLineNumber] int line = 0 );
+        void DebugCheckSentinel( [CallerFilePath]string? fileName = null, [CallerLineNumber] int line = 0 );
 
         /// <summary>
         /// When <see cref="IsDebugMode"/> is true, records the <paramref name="ctx"/> in a stack

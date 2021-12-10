@@ -9,7 +9,7 @@ namespace CK.Observable.League
     /// <summary>
     /// Provides a tracking reference and a isolation shell on a loaded <see cref="IObservableDomain"/>
     /// in a <see cref="ObservableLeague"/>. This is a base interface: <see cref="IObservableDomainShell"/>,
-    /// <see cref="IObservableDomainShell{T}"/> and the the others provide clean type handling.
+    /// <see cref="IObservableDomainShell{T}"/> and the others provide clean type handling.
     /// <para>
     /// The <see cref="DisposeAsync(IActivityMonitor)"/> must be called once this domain is no more required.
     /// </para>
@@ -32,7 +32,7 @@ namespace CK.Observable.League
 
         /// <summary>
         /// Saves this domain (only if it needs to be saved because the effect of last transaction has not been saved yet).
-        /// This sends the <see cref="ObservableDomain.SaveCommand"/> command from inside a ModifyAsync so that an updated
+        /// This sends the <see cref="ObservableDomain.SnapshotDomainCommand"/> command from inside a ModifyAsync so that an updated
         /// memory snapshot is made if needed and calls the internal <see cref="IObservableDomainClient"/> to save it into
         /// the store.
         /// </summary>

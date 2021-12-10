@@ -16,7 +16,7 @@ namespace CK.Observable.Domain.Tests.RootSample
             ProductInfo = (ProductInfo)r.ReadObject();
         }
 
-        void Write( BinarySerializer s )
+        void Write( IBinarySerializer s )
         {
             s.Write( ProductNumber );
             s.WriteNullableString( Name );

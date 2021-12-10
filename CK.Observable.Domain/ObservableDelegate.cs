@@ -74,9 +74,8 @@ namespace CK.Observable
                     if( o != null )
                     {
                         string methodName = r.ReadSharedString();
-                        // Use local DoReadArray since ArrayDeserializer<Type>.ReadArray track the array (and ArraySerializer<Type>.WriteObjects don't):
-                        // sharing this array makes no sense.
-                        Type[] paramTypes = DoReadArray( r );
+                        // Use local DoReadArray (sharing this array makes no sense).
+                        Type[] paramTypes = DoReadTypeArray( r );
                         if( o is Type t )
                         {
                             var m = t.GetMethod( methodName, BindingFlags.Static | BindingFlags.FlattenHierarchy | BindingFlags.Public | BindingFlags.NonPublic, null, paramTypes, null );
@@ -107,7 +106,7 @@ namespace CK.Observable
                 r.DebugCheckSentinel();
             }
 
-            static Type[] DoReadArray( IBinaryDeserializer r )
+            static Type[] DoReadTypeArray( IBinaryDeserializer r )
             {
                 int len = r.ReadNonNegativeSmallInt32();
                 if( len == 0 ) return Array.Empty<Type>();
@@ -141,6 +140,7 @@ namespace CK.Observable
                         w.WriteObject( d.Target ?? d.Method.DeclaringType );
                         w.WriteSharedString( d.Method.Name );
                         var paramInfos = d.Method.GetParameters();
+                        // Writes the type array directly.
                         w.WriteNonNegativeSmallInt32( paramInfos.Length );
                         foreach( var p in paramInfos ) w.Write( p.ParameterType );
                     }

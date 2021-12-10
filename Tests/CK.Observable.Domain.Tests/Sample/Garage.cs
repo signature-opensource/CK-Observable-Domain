@@ -23,7 +23,7 @@ namespace CK.Observable.Domain.Tests.Sample
             _replacementCars = (ObservableDictionary<Car, Car>)r.ReadObject();
         }
 
-        void Write( BinarySerializer s )
+        void Write( IBinarySerializer s )
         {
             s.WriteNullableString( CompanyName );
             s.WriteObject( Employees );

@@ -32,23 +32,23 @@ namespace CK.Observable
         public readonly int Version;
 
         /// <summary>
-        /// Gets the base type infromation.
+        /// Gets the base type information.
         /// Not null only if this type information has been serialized by the type itself and if the
         /// type was a specialized class.
         /// </summary>
-        public TypeReadInfo BaseType => _baseType;
+        public TypeReadInfo? BaseType => _baseType;
 
         /// <summary>
         /// Gets the types from the root inherited type (excluding Object) down to this one.
         /// Not null only if this type information has been serialized by the type itself.
         /// When not null, the list ends with this <see cref="TypeReadInfo"/> itself.
         /// </summary>
-        public IReadOnlyList<TypeReadInfo> TypePath => _typePath;
+        public IReadOnlyList<TypeReadInfo>? TypePath => _typePath;
 
         /// <summary>
         /// Gets the Type if it can be resolved locally, null otherwise.
         /// </summary>
-        public Type LocalType
+        public Type? LocalType
         {
             get
             {
@@ -65,7 +65,7 @@ namespace CK.Observable
         /// Gets the deserialization driver if it can be resolved, null otherwise.
         /// </summary>
         /// <param name="r">The deserializer.</param>
-        public IDeserializationDriver GetDeserializationDriver( IDeserializerResolver r )
+        public IDeserializationDriver? GetDeserializationDriver( IDeserializerResolver r )
         {
             if( !_driverLookupDone )
             {
@@ -75,10 +75,10 @@ namespace CK.Observable
             return _driver;
         }
 
-        TypeReadInfo _baseType;
-        TypeReadInfo[] _typePath;
-        Type _localType;
-        IDeserializationDriver _driver;
+        TypeReadInfo? _baseType;
+        TypeReadInfo[]? _typePath;
+        Type? _localType;
+        IDeserializationDriver? _driver;
         bool _localTypeLookupDone;
         bool _driverLookupDone;
 

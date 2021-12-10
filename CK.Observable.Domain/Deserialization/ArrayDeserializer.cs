@@ -23,33 +23,53 @@ namespace CK.Observable
         /// <param name="r">The deserializer.</param>
         /// <param name="readInfo">The read info (unused).</param>
         /// <returns>The array of items.</returns>
-        public T[] ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  ) => DoReadArray( r, _item );
+        public T[]? ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead  ) => DoReadArray( r, _item, mustRead );
 
-        public static T[] ReadArray( IBinaryDeserializer r, IDeserializationDriver<T> itemDeserialization )
+        public static T[]? ReadArray( IBinaryDeserializer r, IDeserializationDriver<T> itemDeserialization, bool mustRead )
         {
             if( r == null ) throw new ArgumentNullException( nameof( r ) );
             if( itemDeserialization == null ) throw new ArgumentNullException( nameof( itemDeserialization ) );
-            return DoReadArray( r, itemDeserialization );
+            return DoReadArray( r, itemDeserialization, mustRead );
         }
 
-        private static T[] DoReadArray( IBinaryDeserializer r, IDeserializationDriver<T> itemDeserialization )
+        private static T[]? DoReadArray( IBinaryDeserializer r, IDeserializationDriver<T> itemDeserialization, bool mustRead )
         {
-            int len = r.ReadSmallInt32();
-            if( len == -1 ) return null;
-            if( len == 0 ) return r.ImplementationServices.TrackObject( Array.Empty<T>() );
-
-            var result = r.ImplementationServices.TrackObject( new T[len] );
-            if( r.ReadBoolean() )
+            if( r.ImplementationServices.SerializationVersion >= 7 )
             {
-                for( int i = 0; i < len; ++i ) result[i] = itemDeserialization.ReadInstance( r, null );
+                if( !mustRead && !r.ImplementationServices.ReadNewObject<T[]>( out var already ) ) return already;
+                int len = r.ReadSmallInt32();
+                if( len == 0 ) return r.ImplementationServices.TrackObject( Array.Empty<T>() );
+
+                var result = r.ImplementationServices.TrackObject( new T[len] );
+                if( r.ReadBoolean() )
+                {
+                    for( int i = 0; i < len; ++i ) result[i] = itemDeserialization.ReadInstance( r, null, false );
+                }
+                else
+                {
+                    for( int i = 0; i < len; ++i ) result[i] = (T)r.ReadObject();
+                }
+                return result;
             }
             else
             {
-                for( int i = 0; i < len; ++i ) result[i] = (T)r.ReadObject();
+                int len = r.ReadSmallInt32();
+                if( len == -1 ) return null;
+                if( len == 0 ) return r.ImplementationServices.TrackObject( Array.Empty<T>() );
+
+                var result = r.ImplementationServices.TrackObject( new T[len] );
+                if( r.ReadBoolean() )
+                {
+                    for( int i = 0; i < len; ++i ) result[i] = itemDeserialization.ReadInstance( r, null, false );
+                }
+                else
+                {
+                    for( int i = 0; i < len; ++i ) result[i] = (T)r.ReadObject();
+                }
+                return result;
             }
-            return result;
         }
 
-        object IDeserializationDriver.ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  ) => ReadInstance( r, readInfo );
+        object IDeserializationDriver.ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => ReadInstance( r, readInfo, mustRead );
     }
 }

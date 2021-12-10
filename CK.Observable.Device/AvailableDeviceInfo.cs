@@ -3,7 +3,7 @@ using CK.DeviceModel;
 namespace CK.Observable.Device
 {
     /// <summary>
-    /// Captures a simplied configuration of devices: see <see cref="ObservableDeviceHostObject.Devices"/>.
+    /// Captures a simplified configuration of devices: see <see cref="ObservableDeviceHostObject.Devices"/>.
     /// This is not a serializable object since this list is under control of the device host and sidekick.
     /// </summary>
     public class AvailableDeviceInfo : ObservableObject

@@ -48,7 +48,7 @@ namespace CK.Observable
         /// <summary>
         /// Current serialization version.
         /// </summary>
-        public const int CurrentSerializationVersion = 6;
+        public const int CurrentSerializationVersion = 8;
 
         /// <summary>
         /// The length in bytes of the <see cref="SecretKey"/>.
@@ -57,9 +57,9 @@ namespace CK.Observable
 
         /// <summary>
         /// Gets an opaque object that is a command (can be send to <see cref="DomainView.SendCommand(object, bool)"/>) that
-        /// triggers a save of the domain (if a <see cref="IObservableDomainClient"/> can honor it).
+        /// triggers a snapshot of the domain (if a <see cref="IObservableDomainClient"/> can honor it).
         /// </summary>
-        public static readonly object SaveCommand = DBNull.Value;
+        public static readonly object SnapshotDomainCommand = DBNull.Value;
 
         [ThreadStatic]
         internal static ObservableDomain? CurrentThreadDomain;
@@ -234,7 +234,6 @@ namespace CK.Observable
             // A new list is allocated each time since commands can be appended to it after the commit, during the
             // OnSuccessfulTransaction raising.
             List<ObservableDomainCommand> _commands;
-            bool _hasDomainPostActions;
 
             public ChangeTracker()
             {
@@ -287,7 +286,6 @@ namespace CK.Observable
                 _newObjects.Clear();
                 _propChanged.Clear();
                 _commands = new List<ObservableDomainCommand>();
-                _hasDomainPostActions = false;
             }
 
             /// <summary>
@@ -512,8 +510,8 @@ namespace CK.Observable
                 // Since no post actions will be executed if an error occurs, we skip this.
                 if( _result.Success && _fromModifyAsync )
                 {
-                    _domain._domainPostActionExecutor.Enqueue( _result );
                     _result.Initialize( true );
+                    _domain._domainPostActionExecutor.Enqueue( _result );
                 }
                 else
                 {
@@ -685,8 +683,8 @@ namespace CK.Observable
         private protected class InitializationTransaction : IObservableTransaction
         {
             readonly ObservableDomain _d;
-            readonly ObservableDomain _previousThreadDomain;
-            readonly IObservableTransaction _previousTran;
+            readonly ObservableDomain? _previousThreadDomain;
+            readonly IObservableTransaction? _previousTran;
             readonly DateTime _startTime;
             readonly IActivityMonitor _monitor;
             readonly bool _enterWriteLock;
@@ -1348,7 +1346,7 @@ namespace CK.Observable
             }
         }
 
-        void DoLoad( IActivityMonitor monitor, Stream stream, string expectedLoadedName, bool leaveOpen, Encoding? encoding, bool? startTimer, Func<bool,bool> beforeTimer = null )
+        void DoLoad( IActivityMonitor monitor, Stream stream, string expectedLoadedName, bool leaveOpen, Encoding? encoding, bool? startTimer, Func<bool,bool>? beforeTimer = null )
         {
             try
             {
@@ -1618,10 +1616,16 @@ namespace CK.Observable
 
                 if( monitor != _domainMonitor && _domainMonitorLock.Wait( 0 ) )
                 {
-                    if( _domainMonitor != null ) _domainMonitor.MonitorEnd( "Domain disposed." );
+                    if( _domainMonitor != null ) _domainMonitor.MonitorEnd( "Disposing domain." );
                     _domainMonitorLock.Release();
                 }
-                if( executorRun ) _domainPostActionExecutor.WaitStopped();
+                if( executorRun )
+                {
+                    monitor.Debug( "Waiting for DomainPostActionExecutor stopped..." );
+                    _domainPostActionExecutor.WaitStopped();
+                    monitor.Debug( "...DomainPostActionExecutor stopped." );
+                }
+                monitor.Debug( "Exiting write lock. Domain disposed." );
                 _lock.ExitWriteLock();
                 // There is a race condition here. AcquireReadLock, BeginTransaction (and others)
                 // may have also seen a false _disposed and then try to acquire the lock.
@@ -1675,13 +1679,13 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Sends a <see cref="SaveCommand"/>.
+        /// Sends a <see cref="SnapshotDomainCommand"/>.
         /// This must be called from inside a transaction.
         /// </summary>
-        public void SendSaveCommand()
+        public void SendSnapshotCommand()
         {
             CheckWriteLock( null );
-            _changeTracker.OnSendCommand( new ObservableDomainCommand( SaveCommand ) );
+            _changeTracker.OnSendCommand( new ObservableDomainCommand( SnapshotDomainCommand ) );
         }
 
         internal bool EnsureSidekicks( IDestroyable o )

@@ -8,7 +8,6 @@
     </IgnoreModifiedFiles>
     <Branches>
       <Branch Name="develop" CIVersionMode="LastReleaseBased" VersionName="develop" />
-      <Branch Name="garbage-collector" CIVersionMode="ZeroTimed" VersionName="gc" />
       <Branch Name="develop-NetCore3" CIVersionMode="LastReleaseBased" VersionName="develop" />
     </Branches>
   </SimpleGitVersion>

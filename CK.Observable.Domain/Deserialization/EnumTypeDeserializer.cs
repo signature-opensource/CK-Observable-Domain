@@ -15,8 +15,8 @@ namespace CK.Observable
             _underlyingType = underlyingType;
         }
 
-        public object ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo ) => _underlyingType.ReadInstance( r, readInfo );
+        public object ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => _underlyingType.ReadInstance( r, readInfo, mustRead );
 
-        T IDeserializationDriver<T>.ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo ) => (T)ReadInstance( r, readInfo );
+        T IDeserializationDriver<T>.ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => (T)ReadInstance( r, readInfo, mustRead );
     }
 }

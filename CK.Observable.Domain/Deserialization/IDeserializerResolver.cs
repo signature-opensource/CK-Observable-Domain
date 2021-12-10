@@ -18,7 +18,7 @@ namespace CK.Observable
         /// If this function returns null, the returned deserialization driver will be null.
         /// </param>
         /// <returns>Null or the deserialization driver to use.</returns>
-        IDeserializationDriver FindDriver( string name, Func<Type> lastResort = null );
+        IDeserializationDriver? FindDriver( string name, Func<Type?>? lastResort = null );
 
         /// <summary>
         /// Tries to find a deserialization driver for a local type.
@@ -26,6 +26,6 @@ namespace CK.Observable
         /// </summary>
         /// <typeparam name="T">Type for which a deserialization driver must be found.</typeparam>
         /// <returns>Null or the deserialization driver to use.</returns>
-        IDeserializationDriver<T> FindDriver<T>();
+        IDeserializationDriver<T>? FindDriver<T>();
     }
 }

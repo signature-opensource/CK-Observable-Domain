@@ -69,7 +69,7 @@ namespace CK.Observable
             if( !_alreadyHandled.TryGetValue( t, out var previouslyHandled ) )
             {
                 // We have not seen this ObservableObject's type before.
-                // 1 - We analyse its Sidekick attributes and populates _toInstantiate tuples.
+                // 1 - We analyze its Sidekick attributes and populates _toInstantiate tuples.
                 foreach( var attr in t.GetCustomAttributesData().Where( a => a.AttributeType == typeof( UseSidekickAttribute ) ) )
                 {
                     object typeOrTypeName = attr.ConstructorArguments[0].Value;
@@ -78,7 +78,7 @@ namespace CK.Observable
                     monitor.Trace( $"Domain object '{t.Name}' wants to use {(optional ? "optional" : "required")} sidekick '{typeOrTypeName}'." );
                     _toInstantiate.Add( (typeOrTypeName, optional) );
                 }
-                // 2 - We analyse its ISidekickClientObject<> generic interfaces and populates _toInstantiate tuples.
+                // 2 - We analyze its ISidekickClientObject<> generic interfaces and populates _toInstantiate tuples.
                 //     The list is of object because the array must be object[] since the types will be replaced
                 //     with sidekick instances on the first registration (to avoid subsequent lookups).
                 List<object>? sidekickTypes = null;
@@ -159,7 +159,10 @@ namespace CK.Observable
                 {
                     if( tOrS is ObservableDomainSidekick s )
                     {
-                        s.RegisterClientObject( monitor, r.Item1 );
+                        if( !r.Item1.IsDestroyed )
+                        {
+                            s.RegisterClientObject( monitor, r.Item1 );
+                        }
                     }
                     else
                     {
@@ -178,7 +181,10 @@ namespace CK.Observable
                             var h = (ObservableDomainSidekick)mapped;
                             // Changes the Type to the direct object: no more _alreadyHandled lookups.
                             r.Item2[i] = h;
-                            h.RegisterClientObject( monitor, r.Item1 );
+                            if( !r.Item1.IsDestroyed )
+                            {
+                                h.RegisterClientObject( monitor, r.Item1 );
+                            }
                         }
                     }
                 }
@@ -325,7 +331,7 @@ namespace CK.Observable
             List<(object, CKExceptionData)>? results = null;
             foreach( var c in r.Commands )
             {
-                if( c.Command == ObservableDomain.SaveCommand ) continue;
+                if( c.Command == ObservableDomain.SnapshotDomainCommand ) continue;
                 SidekickCommand cmd = new SidekickCommand( r.StartTimeUtc, r.CommitTimeUtc, c.Command, localPostActions, domainPostActions );
                 bool errorTarget = false;
                 bool foundHandler = false;

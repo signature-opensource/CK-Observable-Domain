@@ -1,4 +1,5 @@
 using CK.Core;
+using CK.Observable.Domain.Tests.Sample;
 using FluentAssertions;
 using NUnit.Framework;
 using System;
@@ -77,6 +78,54 @@ namespace CK.Observable.Domain.Tests
                 TestHelper.Monitor.Info( "Test 3" );
                 d.Modify( TestHelper.Monitor, () => new Sample.Car( "Zoé is back!" ) );
                 ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
+            }
+        }
+
+
+        [SerializationVersion(0)]
+        class ObservableWithJaggedArrays : ObservableObject
+        {
+            public ObservableWithJaggedArrays()
+            {
+            }
+
+            ObservableWithJaggedArrays( IBinaryDeserializer r, TypeReadInfo info )
+                : base( RevertSerialization.Default )
+            {
+                Cars = (Car[][])r.ReadObject()!;
+            }
+
+            void Write( BinarySerializer w )
+            {
+                w.WriteObject( Cars );
+            }
+
+            public Car[][] Cars { get; set; }
+        }
+
+        [Test]
+        public void jagged_arrays_of_ObservableObjects_idempotence_checks()
+        {
+            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( jagged_arrays_of_ObservableObjects_idempotence_checks ), startTimer: false ) )
+            {
+                d.Modify( TestHelper.Monitor, () =>
+                {
+                    var ketru = new ObservableWithJaggedArrays();
+                    ketru.Cars = new[]
+                    {
+                        new[] { new Car( "Zoé" ), new Car( "Xrq" ) },
+                        new[] { new Car( "O1" ), new Car( "O2" ), new Car( "O3" ) }
+                    };
+                } );
+                ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
+                d.Modify( TestHelper.Monitor, () =>
+                {
+                    var ketru = (ObservableWithJaggedArrays)d.AllObjects[0];
+                    ketru.Cars[0].Should().HaveCount( 2 );
+                    ketru.Cars[1].Should().HaveCount( 3 );
+                    ketru.Cars[1][2].Name.Should().Be( "O3" );
+                } );
+
             }
         }
 

@@ -61,7 +61,7 @@ namespace CK.Observable.League
                 var client = new CoordinatorClient( monitor, store, serviceProvider );
                 // Async initialization here, just like other managed domains.
                 // Contrary to other domains, it is created with an active timer (that may be stopped later if needed).
-                client.Domain = (ObservableDomain<Coordinator>)await client.InitializeAsync( monitor, startTimer: true, createOnLoadError: false, (m,startTimer) => new ObservableDomain<Coordinator>(m, String.Empty, startTimer, client, serviceProvider));
+                client.Domain = (ObservableDomain<Coordinator>)await client.InitializeAsync( monitor, startTimer: true, createOnLoadError: false, ( m, startTimer ) => new ObservableDomain<Coordinator>( m, String.Empty, startTimer, client, serviceProvider ) );
                 // No need to acquire a read lock here.
                 var domains = new ConcurrentDictionary<string, Shell>( StringComparer.OrdinalIgnoreCase );
                 IEnumerable<Domain> observableDomains = client.Domain.Root.Domains.Values;
@@ -73,6 +73,7 @@ namespace CK.Observable.League
                 }
                 // Shells have been created: we can create the whole structure.
                 var o = new ObservableLeague( store, initializer, serviceProvider, client, domains );
+                monitor.Info( $"Created ObservableLeague #{o.GetHashCode()}." );
                 // And immediately loads the domains that need to be.
                 foreach( Domain d in observableDomains )
                 {
@@ -115,16 +116,40 @@ namespace CK.Observable.League
         {
             if( !_coordinator.Domain.IsDisposed )
             {
-                // No risk here: Dispose can be called multiple times.
-                _coordinator.Domain.Dispose();
-                // Since this saves the snapshot, there is no risk here.
-                await _coordinator.SaveAsync( monitor );
-                // Setting the flag is safe as well as clearing the concurrent dictionary.
-                foreach( var shell in _domains.Values )
+                using( monitor.OpenTrace( $"Closing ObservableLeague #{GetHashCode()}." ) )
                 {
-                    await shell.OnClosingLeagueAsync( monitor );
+                    // No risk here: Dispose can be called multiple times.
+                    _coordinator.Domain.Dispose();
+                    // Since this saves the snapshot, there is no risk here.
+                    int retryCount = 0;
+                    for( ; ; )
+                    {
+                        if( !await _coordinator.SaveSnapshotAsync( monitor ) )
+                        {
+                            if( retryCount++ <= 3 )
+                            {
+                                monitor.Warn( $"Unable to save Coordinator snapshot. Retrying in {retryCount * 100} ms." );
+                                await Task.Delay( retryCount * 100 );
+                            }
+                            else
+                            {
+                                monitor.Fatal( $"Unable to save Coordinator snapshot after 3 tries." );
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            monitor.Info( "Coordinator domain snapshot saved." );
+                            break;
+                        }
+                    }
+                    // Setting the flag is safe as well as clearing the concurrent dictionary.
+                    foreach( var shell in _domains.Values )
+                    {
+                        await shell.OnClosingLeagueAsync( monitor );
+                    }
+                    _domains.Clear();
                 }
-                _domains.Clear();
             }
         }
 
@@ -133,7 +158,7 @@ namespace CK.Observable.League
             Debug.Assert( !_coordinator.Domain.IsDisposed );
             return _domains.AddOrUpdate( name,
                                          Shell.Create( monitor, _coordinator, name, _streamStore, _initializer, _serviceProvider, rootTypes ),
-                                         ( n, s ) => throw new Exception( $"Internal error: domain name '{n}' already exists." ) );
+                                         ( n, s ) => throw new InvalidOperationException( $"Internal error: domain name '{n}' already exists." ) );
         }
 
         IManagedDomain IManagedLeague.RebindDomain( IActivityMonitor monitor, string name, IReadOnlyList<string> rootTypes )
@@ -153,7 +178,7 @@ namespace CK.Observable.League
         /// <summary>
         /// Called from the coordinator: the domain's name is no more associated to the Shell.
         /// The <see cref="Shell.IsDestroyed"/> has been set to true: when the domain will no more be used,
-        /// the <see cref="StreamStoreClient.ArchiveAsync(IActivityMonitor)"/> will be called instead of <see cref="StreamStoreClient.SaveAsync(IActivityMonitor)"/>.
+        /// the <see cref="StreamStoreClient.ArchiveSnapshotAsync(IActivityMonitor)"/> will be called instead of <see cref="StreamStoreClient.SaveSnapshotAsync(IActivityMonitor)"/>.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="d">The managed domain (ie. the Shell: we only need here its DomainName).</param>

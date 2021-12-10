@@ -26,8 +26,8 @@ namespace CK.Observable
         readonly TimedEventCollection _exposedTimedEvents;
         readonly TimerCollection _exposedTimers;
         readonly ReminderCollection _exposedReminders;
-        ObservableTimedEventBase _first;
-        ObservableTimedEventBase _last;
+        ObservableTimedEventBase? _first;
+        ObservableTimedEventBase? _last;
         AutoTimer _autoTimer;
         int _totalEventRaised;
 

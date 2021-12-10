@@ -8,7 +8,7 @@ namespace CK.Observable.League
 
     /// <summary>
     /// Optional long-lived object that a league created by <see cref="ObservableLeague.LoadAsync(IActivityMonitor, IStreamStore, IObservableDomainInitializer, IServiceProvider?)"/>
-    /// will use to initialize new <see cref="ObservableDomain"/>.
+    /// will use to initialize brand new <see cref="ObservableDomain"/>.
     /// </summary>
     public interface IObservableDomainInitializer
     {

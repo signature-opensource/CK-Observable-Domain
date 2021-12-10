@@ -7,7 +7,7 @@ namespace CK.Observable
     {
         /// <summary>
         /// Gets the object identifier.
-        /// This can safely be persisted or marshalled to desynchronized processes.
+        /// This can safely be persisted or marshaled to desynchronized processes.
         /// </summary>
         public ObservableObjectId ObjectId { get; }
 
@@ -29,7 +29,7 @@ namespace CK.Observable
         /// <summary>
         /// Gets the value that changed.
         /// </summary>
-        public object Value { get; }
+        public object? Value { get; }
 
         /// <summary>
         /// INitializes a new <see cref="PropertyChangedEvent"/>.
@@ -38,7 +38,7 @@ namespace CK.Observable
         /// <param name="propertyId">The property identifier.</param>
         /// <param name="propertyName">The property name.</param>
         /// <param name="value">The new value.</param>
-        public PropertyChangedEvent( ObservableObject o, int propertyId, string propertyName, object value )
+        public PropertyChangedEvent( ObservableObject o, int propertyId, string propertyName, object? value )
             : base( ObservableEventType.PropertyChanged )
         {
             ObjectId = o.OId;

@@ -17,8 +17,8 @@ namespace CK.Observable
     public abstract class InternalObject : IDestroyableObject
     {
         internal ObservableDomain ActualDomain;
-        internal InternalObject Next;
-        internal InternalObject Prev;
+        internal InternalObject? Next;
+        internal InternalObject? Prev;
         ObservableEventHandler<ObservableDomainEventArgs> _destroyed;
 
         /// <summary>

@@ -513,7 +513,7 @@ namespace CK.Observable
                     // Reads objects. This can read Internal and Timed objects.
                     for( int i = 0; i < count; ++i )
                     {
-                        _objects[i] = (ObservableObject)r.ReadObject();
+                        _objects[i] = (ObservableObject?)r.ReadObject();
                         Debug.Assert( _objects[i] == null || !_objects[i].IsDestroyed );
                     }
 
@@ -531,13 +531,13 @@ namespace CK.Observable
                     int rootCount = r.ReadNonNegativeSmallInt32();
                     for( int i = 0; i < rootCount; ++i )
                     {
-                        _roots.Add( (ObservableRootObject)r.ReadObject() );
+                        _roots.Add( (ObservableRootObject)r.ReadObject()! );
                     }
                     // Reads all the objects. 
                     for( int i = 0; i < count; ++i )
                     {
-                        _objects[i] = (ObservableObject)r.ReadObject();
-                        Debug.Assert( _objects[i] == null || !_objects[i].IsDestroyed );
+                        _objects[i] = (ObservableObject?)r.ReadObject();
+                        Debug.Assert( _objects[i] == null || !_objects[i]!.IsDestroyed );
                     }
                 }
 
@@ -546,11 +546,10 @@ namespace CK.Observable
                 count = r.ReadNonNegativeSmallInt32();
                 while( --count >= 0 )
                 {
-                    var o = (InternalObject)r.ReadObject();
+                    var o = (InternalObject)r.ReadObject()!;
                     Debug.Assert( !o.IsDestroyed );
                     Register( o );
                 }
-
                 // Reading Timed events.
                 r.DebugCheckSentinel();
                 bool timerRunning = _timeManager.Load( monitor, r );
