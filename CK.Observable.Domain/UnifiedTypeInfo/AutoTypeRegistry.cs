@@ -19,7 +19,8 @@ namespace CK.Observable
         static readonly ConcurrentDictionary<Type, IUnifiedTypeDriver> _drivers;
         static readonly Type[] _ctorDeserializationParameters = new Type[] { typeof( IBinaryDeserializer ), typeof( TypeReadInfo ) };
         static readonly Type[] _ctorRevertParameters = new Type[] { typeof( RevertSerialization ) };
-        static readonly Type[] _writeParameters = new Type[] { typeof( BinarySerializer ) };
+        static readonly Type[] _writeParametersLegacy = new Type[] { typeof( BinarySerializer ) };
+        static readonly Type[] _writeParameters = new Type[] { typeof( IBinarySerializer ) };
         static readonly Type[] _exportParameters = new Type[] { typeof( int ), typeof( ObjectExporter ) };
         static readonly Type[] _exportBaseParameters = new Type[] { typeof( int ), typeof( ObjectExporter ), typeof( IReadOnlyList<ExportableProperty> ) };
 
@@ -108,9 +109,9 @@ namespace CK.Observable
                 return r.ImplementationServices.CreateUninitializedInstance( Type, readInfo.IsTrackedObject );
             }
 
-            object IDeserializationDriver.ReadInstance( IBinaryDeserializer r, TypeReadInfo? readInfo )
+            object IDeserializationDriver.ReadInstance( IBinaryDeserializer r, TypeReadInfo? readInfo, bool mustRead )
             {
-                return DoReadInstance( r, readInfo );
+                return DoReadInstance( r, readInfo, mustRead );
             }
 
             string? InvokeCtor( IBinaryDeserializer r, object o, object?[] callParams, TypeReadInfo readInfo )
@@ -148,7 +149,7 @@ namespace CK.Observable
                 return null;
             }
 
-            protected object DoReadInstance( IBinaryDeserializer r, TypeReadInfo? readInfo )
+            protected object DoReadInstance( IBinaryDeserializer r, TypeReadInfo? readInfo, bool mustRead )
             {
                 var o = r.ImplementationServices.CreateUninitializedInstance( Type, readInfo?.IsTrackedObject ?? false );
                 return DoReadInstance( r, readInfo, o );
@@ -216,7 +217,7 @@ namespace CK.Observable
                 if( o is IDestroyable d && d.IsDestroyed )
                 {
                     _typePath[0]._writer?.Invoke( o, w );
-                    w.DisposedTracker?.Invoke( d );
+                    w.ImplementationServices.DisposedTracker?.Invoke( d );
                 }
                 else
                 {
@@ -361,9 +362,9 @@ namespace CK.Observable
                 DoExport( o, num, exporter );
             }
 
-            public T ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo )
+            public T ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead )
             {
-                return (T)DoReadInstance( r, readInfo );
+                return (T)DoReadInstance( r, readInfo, mustRead );
             }
 
             void ITypeSerializationDriver<T>.WriteData( BinarySerializer w, T o ) => DoWriteData( w, o );
@@ -418,10 +419,22 @@ namespace CK.Observable
 
             // void Write( BinarySerializer w ) can be a regular method. We check its 'Private' if we have a Version or a Ctor.
             var writeMethod = t.GetMethod( "Write",
-                                 BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-                                 null,
-                                 _writeParameters,
-                                 null );
+                                           BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+                                           null,
+                                           _writeParameters,
+                                           null );
+            if( writeMethod == null )
+            {
+                writeMethod = t.GetMethod( "Write",
+                                     BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+                                     null,
+                                     _writeParametersLegacy,
+                                     null );
+                if( writeMethod != null )
+                {
+                    // We should emit a warning here... and then throw an exception.
+                }
+            }
 
             if( v != null || ctor != null )
             {

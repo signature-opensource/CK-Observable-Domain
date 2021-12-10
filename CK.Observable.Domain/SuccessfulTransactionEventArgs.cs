@@ -136,10 +136,10 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Gets whether a <see cref="ObservableDomain.SaveCommand"/> has been sent and
+        /// Gets whether a <see cref="ObservableDomain.SnapshotDomainCommand"/> has been sent and
         /// should be honored if possible.
         /// </summary>
-        public bool HasSaveCommand => _commands.Any( x => x.Command == ObservableDomain.SaveCommand );
+        public bool HasSaveCommand => _commands.Any( x => x.Command == ObservableDomain.SnapshotDomainCommand );
 
         /// <summary>
         /// Registrar for actions (that can be synchronous as well as asynchronous) that must be executed after

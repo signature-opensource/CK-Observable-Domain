@@ -28,6 +28,7 @@ namespace CK.Core
                 s.Position = 0;
                 using( var reader = new BinaryDeserializer( s, null, deserializers ) )
                 {
+                    reader.SerializationVersion = ObservableDomain.CurrentSerializationVersion;
                     reader.DebugCheckSentinel();
                     T result = r( reader );
                     reader.DebugCheckSentinel();

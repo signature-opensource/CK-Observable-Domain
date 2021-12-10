@@ -1,4 +1,6 @@
-using Cake.Npm;
+
+using Cake.Npm.RunScript;
+
 using Cake.Npm.RunScript;
 using Cake.Common.IO;
 using Cake.Common.Solution;
@@ -12,7 +14,7 @@ namespace CodeCake
     /// <summary>
     /// Standard build "script".
     /// </summary>
-    [AddPath( "%UserProfile%/.nuget/packages/**/tools*" )]
+    
     public partial class Build : CodeCakeHost
     {
         public Build()
@@ -70,9 +72,9 @@ namespace CodeCake
             Task( "Push-Packages" )
                 .WithCriteria( () => globalInfo.IsValid )
                 .IsDependentOn( "Create-Packages" )
-                .Does( () =>
+                .Does( async () =>
                 {
-                    globalInfo.PushArtifacts();
+                    await globalInfo.PushArtifactsAsync();
                 } );
 
             // The Default task for this script can be set here.

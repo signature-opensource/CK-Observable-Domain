@@ -21,40 +21,71 @@ namespace CK.Observable
 
         public string AssemblyQualifiedName => typeof( Dictionary<TKey, TValue> ).AssemblyQualifiedName;
 
-        public Dictionary<TKey, TValue> ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  ) => DoRead( r, _key, _value );
+        public Dictionary<TKey, TValue> ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => DoRead( r, _key, _value, mustRead );
 
-        /// <summary>
-        /// Reads a dictionary previously written by <see cref="DictionarySerializer{TKey, TValue}.WriteDictionaryContent(BinarySerializer, int, IEnumerable{KeyValuePair{TKey, TValue}}, ITypeSerializationDriver{TKey}, ITypeSerializationDriver{TValue})"/>.
-        /// </summary>
-        /// <param name="r">The binary serializer. Must not be null.</param>
-        /// <param name="key">Already available key deserializer if known.</param>
-        /// <param name="value">Already available value deserializer if known.</param>
-        /// <returns>The dictionary.</returns>
-        public static Dictionary<TKey, TValue>? Read( IBinaryDeserializer r, IDeserializationDriver<TKey> key = null, IDeserializationDriver<TValue> value = null )
-        {
-            if( r == null ) throw new ArgumentNullException( nameof( r ) );
-            return DoRead( r, key, value );
-        }
 
-        static Dictionary<TKey, TValue>? DoRead( IBinaryDeserializer r, IDeserializationDriver<TKey> key, IDeserializationDriver<TValue> value )
+        static Dictionary<TKey, TValue> DoRead( IBinaryDeserializer r, IDeserializationDriver<TKey> keyDeserialization, IDeserializationDriver<TValue> valueDeserialization, bool mustRead )
         {
-            int version = r.ReadSmallInt32();
-            if( version == -1 ) return null;
-            if( version != 0 ) throw new InvalidDataException();
-            int num = r.ImplementationServices.PreTrackObject();
-            var comparer = (IEqualityComparer<TKey>?)r.ReadObject();
-            var c = ReadDictionaryContent( r, key, value );
-            Debug.Assert( c != null );
-            var result = new Dictionary<TKey, TValue>( c.Length, comparer );
-            r.ImplementationServices.TrackPreTrackedObject( result, num );
-            if( c.Length > 0 )
+            if( r.ImplementationServices.SerializationVersion >= 8 )
             {
-                r.ImplementationServices.OnPostDeserialization( () =>
+                if( !mustRead && !r.ImplementationServices.ReadNewObject<Dictionary<TKey, TValue>>( out var already ) ) return already;
+                int version = r.ReadSmallInt32();
+                if( version != 0 ) throw new InvalidDataException();
+
+                int num = r.ImplementationServices.PreTrackObject();
+                var comparer = (IEqualityComparer<TKey>?)r.ReadObject();
+                int len = r.ReadSmallInt32();
+                KeyValuePair<TKey, TValue>[] items;
+                if( len == 0 )
                 {
-                    foreach( var kv in c ) result.Add( kv.Key, kv.Value );
-                } );
+                    items = Array.Empty<KeyValuePair<TKey, TValue>>();
+                }
+                else
+                {
+                    items = new KeyValuePair<TKey, TValue>[len];
+                    byte b = r.ReadByte();
+                    bool monoTypeKey = (b & 1) != 0;
+                    if( monoTypeKey && keyDeserialization == null ) keyDeserialization = r.ImplementationServices.Drivers.FindDriver<TKey>();
+                    bool monoTypeVal = (b & 2) != 0;
+                    if( monoTypeVal && valueDeserialization == null ) valueDeserialization = r.ImplementationServices.Drivers.FindDriver<TValue>();
+                    for( int i = 0; i < len; ++i )
+                    {
+                        TKey k = monoTypeKey ? keyDeserialization.ReadInstance( r, null, false ) : (TKey)r.ReadObject()!;
+                        TValue v = monoTypeVal ? valueDeserialization.ReadInstance( r, null, false ) : (TValue?)r.ReadObject();
+                        items[i] = new KeyValuePair<TKey, TValue>( k, v );
+                    }
+                }
+                var result = new Dictionary<TKey, TValue>( items.Length, comparer );
+                r.ImplementationServices.TrackPreTrackedObject( result, num );
+                if( items.Length > 0 )
+                {
+                    r.ImplementationServices.OnPostDeserialization( () =>
+                    {
+                        foreach( var kv in items ) result.Add( kv.Key, kv.Value );
+                    } );
+                }
+                return result;
             }
-            return result;
+            else
+            {
+                int version = r.ReadSmallInt32();
+                if( version == -1 ) return null!;
+                if( version != 0 ) throw new InvalidDataException();
+                int num = r.ImplementationServices.PreTrackObject();
+                var comparer = (IEqualityComparer<TKey>?)r.ReadObject();
+                var c = ReadDictionaryContent( r, keyDeserialization, valueDeserialization );
+                Debug.Assert( c != null );
+                var result = new Dictionary<TKey, TValue>( c.Length, comparer );
+                r.ImplementationServices.TrackPreTrackedObject( result, num );
+                if( c.Length > 0 )
+                {
+                    r.ImplementationServices.OnPostDeserialization( () =>
+                    {
+                        foreach( var kv in c ) result.Add( kv.Key, kv.Value );
+                    } );
+                }
+                return result;
+            }
         }
 
 
@@ -81,13 +112,13 @@ namespace CK.Observable
             var result = new KeyValuePair<TKey, TValue>[len];
             for( int i = 0; i < len; ++i )
             {
-                TKey k = monoTypeKey ? keyDeserialization.ReadInstance( r, null ) : (TKey)r.ReadObject()!;
-                TValue v = monoTypeVal ? valueDeserialization.ReadInstance( r, null ) : (TValue?)r.ReadObject();
+                TKey k = monoTypeKey ? keyDeserialization.ReadInstance( r, null, false ) : (TKey)r.ReadObject()!;
+                TValue v = monoTypeVal ? valueDeserialization.ReadInstance( r, null, false ) : (TValue?)r.ReadObject();
                 result[i] = new KeyValuePair<TKey, TValue>( k, v );
             }
             return result;
         }
 
-        object? IDeserializationDriver.ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  ) => DoRead( r, _key, _value );
+        object? IDeserializationDriver.ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => DoRead( r, _key, _value, mustRead );
     }
 }

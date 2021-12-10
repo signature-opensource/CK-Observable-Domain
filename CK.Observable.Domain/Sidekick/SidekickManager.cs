@@ -332,7 +332,7 @@ namespace CK.Observable
             List<(object, CKExceptionData)>? results = null;
             foreach( var c in r.Commands )
             {
-                if( c.Command == ObservableDomain.SaveCommand ) continue;
+                if( c.Command == ObservableDomain.SnapshotDomainCommand ) continue;
                 SidekickCommand cmd = new SidekickCommand( r.StartTimeUtc, r.CommitTimeUtc, c.Command, localPostActions, domainPostActions );
                 bool errorTarget = false;
                 bool foundHandler = false;

@@ -17,7 +17,7 @@ namespace CK.Observable
         /// If type based serialization has been used (with versions and ancestors). 
         /// </param>
         /// <returns>Must return the new instance.</returns>
-        object? ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  );
+        object? ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead );
 
     }
 }

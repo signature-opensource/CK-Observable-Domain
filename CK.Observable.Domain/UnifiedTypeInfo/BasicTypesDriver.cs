@@ -17,7 +17,7 @@ namespace CK.Observable
 
             public static readonly DObject Default = new DObject();
 
-            public override object ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo ) =>  r.ReadObject();
+            public override object ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) =>  r.ReadObject();
 
             public override void WriteData( BinarySerializer w, object o ) => w.WriteObject( o );
 
@@ -31,7 +31,7 @@ namespace CK.Observable
 
             public static readonly DType Default = new DType();
 
-            public override Type ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo ) => r.ReadType();
+            public override Type ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => r.ReadType();
 
             public override void WriteData( BinarySerializer w, Type t ) => w.Write( t );
 
@@ -51,7 +51,7 @@ namespace CK.Observable
 
             public static readonly DBool Default = new DBool();
 
-            public override bool ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo ) => r.ReadBoolean();
+            public override bool ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => r.ReadBoolean();
 
             public override void WriteData( BinarySerializer w, bool o ) => w.Write( o );
 
@@ -64,7 +64,7 @@ namespace CK.Observable
 
             public static readonly DChar Default = new DChar();
 
-            public override char ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  ) => r.ReadChar();
+            public override char ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => r.ReadChar();
             
             public override void WriteData( BinarySerializer w, char o ) => w.Write( o );
 
@@ -77,7 +77,7 @@ namespace CK.Observable
 
             public static readonly DDouble Default = new DDouble();
 
-            public override double ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  ) => r.ReadDouble();
+            public override double ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => r.ReadDouble();
 
             public override void WriteData( BinarySerializer w, double o ) => w.Write( o );
 
@@ -90,7 +90,7 @@ namespace CK.Observable
 
             public static readonly DSingle Default = new DSingle();
 
-            public override float ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  ) => r.ReadSingle();
+            public override float ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => r.ReadSingle();
 
             public override void WriteData( BinarySerializer w, float o ) => w.Write( o );
 
@@ -103,7 +103,7 @@ namespace CK.Observable
 
             public static readonly DDecimal Default = new DDecimal();
 
-            public override decimal ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  ) => r.ReadDecimal();
+            public override decimal ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => r.ReadDecimal();
 
             public override void WriteData( BinarySerializer w, decimal o ) => w.Write( o );
 
@@ -116,7 +116,7 @@ namespace CK.Observable
 
             public static readonly DSByte Default = new DSByte();
 
-            public override sbyte ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  ) => r.ReadSByte();
+            public override sbyte ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => r.ReadSByte();
             
             public override void WriteData( BinarySerializer w, sbyte o ) => w.Write( o );
             
@@ -129,7 +129,7 @@ namespace CK.Observable
 
             public static readonly DByte Default = new DByte();
 
-            public override byte ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  ) => r.ReadByte();
+            public override byte ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => r.ReadByte();
 
             public override void WriteData( BinarySerializer w, byte o ) => w.Write( o );
             
@@ -142,7 +142,7 @@ namespace CK.Observable
 
             public static readonly DInt16 Default = new DInt16();
 
-            public override short ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  ) => r.ReadInt16();
+            public override short ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => r.ReadInt16();
             
             public override void WriteData( BinarySerializer w, short o ) => w.Write( o );
 
@@ -155,7 +155,7 @@ namespace CK.Observable
 
             public static readonly DUInt16 Default = new DUInt16();
 
-            public override ushort ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  ) => r.ReadUInt16();
+            public override ushort ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => r.ReadUInt16();
 
             public override void WriteData( BinarySerializer w, ushort o ) => w.Write( o );
             
@@ -168,7 +168,7 @@ namespace CK.Observable
 
             public static readonly DInt32 Default = new DInt32();
 
-            public override int ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  ) => r.ReadInt32();
+            public override int ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => r.ReadInt32();
 
             public override void WriteData( BinarySerializer w, int o ) =>  w.Write( o );
 
@@ -181,7 +181,7 @@ namespace CK.Observable
 
             public static readonly DUInt32 Default = new DUInt32();
 
-            public override uint ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  ) => r.ReadUInt32();
+            public override uint ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => r.ReadUInt32();
 
             public override void WriteData( BinarySerializer w, uint o ) => w.Write( o );
 
@@ -194,7 +194,7 @@ namespace CK.Observable
 
             public static readonly DInt64 Default = new DInt64();
 
-            public override long ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  ) => r.ReadInt64();
+            public override long ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => r.ReadInt64();
 
             public override void WriteData( BinarySerializer w, long o ) => w.Write( o );
 
@@ -207,7 +207,7 @@ namespace CK.Observable
 
             public static readonly DUInt64 Default = new DUInt64();
 
-            public override ulong ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  ) => r.ReadUInt64();
+            public override ulong ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => r.ReadUInt64();
 
             public override void WriteData( BinarySerializer w, ulong o ) => w.Write( o );
 
@@ -220,7 +220,7 @@ namespace CK.Observable
 
             public static readonly DString Default = new DString();
 
-            public override string ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  ) => r.ReadNullableString();
+            public override string ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => r.ReadNullableString();
 
             public override void WriteData( BinarySerializer w, string o ) => w.WriteNullableString( o );
 
@@ -233,7 +233,7 @@ namespace CK.Observable
 
             public static readonly DGuid Default = new DGuid();
 
-            public override Guid ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  ) => r.ReadGuid();
+            public override Guid ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => r.ReadGuid();
 
             public override void WriteData( BinarySerializer w, Guid o ) => w.Write( o );
 
@@ -246,7 +246,7 @@ namespace CK.Observable
 
             public static readonly DDateTime Default = new DDateTime();
 
-            public override DateTime ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  ) => r.ReadDateTime();
+            public override DateTime ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => r.ReadDateTime();
 
             public override void WriteData( BinarySerializer w, DateTime o ) => w.Write( o );
 
@@ -259,7 +259,7 @@ namespace CK.Observable
 
             public static readonly DTimeSpan Default = new DTimeSpan();
 
-            public override TimeSpan ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  ) => r.ReadTimeSpan();
+            public override TimeSpan ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => r.ReadTimeSpan();
 
             public override void WriteData( BinarySerializer w, TimeSpan o ) => w.Write( o );
 
@@ -272,7 +272,7 @@ namespace CK.Observable
 
             public static readonly DDateTimeOffset Default = new DDateTimeOffset();
 
-            public override DateTimeOffset ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo  ) => r.ReadDateTimeOffset();
+            public override DateTimeOffset ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => r.ReadDateTimeOffset();
 
             public override void WriteData( BinarySerializer w, DateTimeOffset o ) => w.Write( o );
 

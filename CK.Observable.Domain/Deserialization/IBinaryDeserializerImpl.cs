@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace CK.Observable
 {
@@ -10,6 +11,13 @@ namespace CK.Observable
     /// </summary>
     public interface IBinaryDeserializerImpl 
     {
+        /// <summary>
+        /// Gets a global serialization version.
+        /// This version is handled by the concrete serializer and deserializer and applies
+        /// to all "intrinsic" objects that are handled by the code base.
+        /// </summary>
+        int SerializationVersion { get; }
+
         /// <summary>
         /// Gets the <see cref="IDeserializerResolver"/>.
         /// </summary>
@@ -28,6 +36,14 @@ namespace CK.Observable
         /// <param name="isTrackedObject">True if the object must be tracked (reference type).</param>
         /// <returns>An uninitialized instance of the type.</returns>
         object CreateUninitializedInstance( Type t, bool isTrackedObject );
+
+        /// <summary>
+        /// Symmetric of <see cref="IBinarySerializerImpl.WriteNewObject{T}(T)"/>.
+        /// </summary>
+        /// <typeparam name="T">The reference type.</typeparam>
+        /// <param name="already">Non null when the reference has already been read.</param>
+        /// <returns>True if the object must be read. False if the reference has already been read (<paramref name="already"/> is the non null reference).</returns>
+        bool ReadNewObject<T>( [MaybeNullWhen( true )] out T already ) where T : class;
 
         /// <summary>
         /// Registers a newly created reference.

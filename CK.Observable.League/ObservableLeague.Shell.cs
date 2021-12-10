@@ -213,7 +213,8 @@ namespace CK.Observable.League
                             snapshotKeepDuration: Client.SnapshotKeepDuration,
                             snapshotMaximalTotalKiB: Client.SnapshotMaximalTotalKiB,
                             eventKeepDuration: Client.JsonEventCollector.KeepDuration,
-                            eventKeepLimit: Client.JsonEventCollector.KeepLimit );
+                            eventKeepLimit: Client.JsonEventCollector.KeepLimit,
+                            housekeepingRate: Client.HousekeepingRate );
             }
 
             void IManagedDomain.Destroy( IActivityMonitor monitor, IManagedLeague league )
@@ -235,6 +236,7 @@ namespace CK.Observable.League
                     Client.SnapshotSaveDelay = (int)options.SnapshotSaveDelay.TotalMilliseconds;
                     Client.SnapshotKeepDuration = options.SnapshotKeepDuration;
                     Client.SnapshotMaximalTotalKiB = options.SnapshotMaximalTotalKiB;
+                    Client.HousekeepingRate = options.HousekeepingRate;
                     Client.JsonEventCollector.KeepDuration = options.ExportedEventKeepDuration;
                     Client.JsonEventCollector.KeepLimit = options.ExportedEventKeepLimit;
                 }
@@ -261,44 +263,47 @@ namespace CK.Observable.League
 
             async Task<bool> IObservableDomainShellBase.SaveAsync( IActivityMonitor m )
             {
-                return await ExplicitSaveDomain( m ) && await Client.SaveAsync( m );
+                return await ExplicitSnapshotDomainAsync( m ).ConfigureAwait( false )
+                       && await Client.SaveSnapshotAsync( m ).ConfigureAwait( false );
             }
 
-            async Task<bool> ExplicitSaveDomain( IActivityMonitor m )
+            async Task<bool> ExplicitSnapshotDomainAsync( IActivityMonitor m )
             {
-                m.Trace( $"Saving ObservableDomain {DomainName} manually." );
-                var d = _domain;
-                if( d == null )
+                using( m.OpenTrace( $"Snapshotting ObservableDomain {DomainName} manually." ) )
                 {
-                    m.Error( $"ObservableDomain {DomainName} was not loaded, and cannot be saved." );
-                    return false;
-                }
-                if( d.IsDisposed )
-                {
-                    m.Error( $"ObservableDomain {DomainName} was Disposed, and cannot be saved." );
-                    return false;
-                }
-                if( Client.SkipTransactionCount == 0 )
-                {
-                    m.Error( $"ObservableDomain {DomainName} uses a {nameof( Client.SkipTransactionCount )} of 0, and does not need to be saved manually. It is already saved on every transaction." );
-                    return false;
-                }
+                    var d = _domain;
+                    if( d == null )
+                    {
+                        m.Error( $"ObservableDomain {DomainName} is not loaded." );
+                        return false;
+                    }
+                    if( d.IsDisposed )
+                    {
+                        m.Error( $"ObservableDomain {DomainName} is disposed." );
+                        return false;
+                    }
+                    if( Client.SkipTransactionCount == 0 )
+                    {
+                        m.Warn( $"ObservableDomain {DomainName} uses a {nameof( Client.SkipTransactionCount )} of 0. A snapshot is made on every transaction." );
+                        return true;
+                    }
 
-                var r = await d.ModifyNoThrowAsync( m, () => d.SendSaveCommand() );
-                if( r.OnStartTransactionError != null || !r.Transaction.Success )
-                {
-                    if( r.OnStartTransactionError != null )
+                    var (onStartTransactionError, transaction) = await d.ModifyNoThrowAsync( m, () => d.SendSnapshotCommand() );
+                    if( onStartTransactionError != null || !transaction.Success )
                     {
-                        m.Error( $"An error occurred while saving the ObservableDomain {DomainName}.", r.OnStartTransactionError );
+                        if( onStartTransactionError != null )
+                        {
+                            m.Error( $"An error occurred while snapshotting the ObservableDomain {DomainName}.", onStartTransactionError );
+                        }
+                        else
+                        {
+                            m.Error( $"An unspecified error occurred while snapshotting the ObservableDomain {DomainName}." );
+                        }
+                        return false;
                     }
-                    else
-                    {
-                        m.Error( $"An unspecified error occurred while saving the ObservableDomain {DomainName}." );
-                    }
-                    return false;
+                    m.Trace( $"ObservableDomain {DomainName}: snapshot taken." );
+                    return true;
                 }
-                m.Trace( $"ObservableDomain {DomainName} saved successfully." );
-                return true;
             }
 
             ValueTask<bool> IObservableDomainShellBase.DisposeAsync( IActivityMonitor monitor ) => DoShellDisposeAsync( monitor );
@@ -308,9 +313,10 @@ namespace CK.Observable.League
             async ValueTask<bool> DoShellDisposeAsync( IActivityMonitor monitor )
             {
                 if( !IsLoadable ) return false;
-                await _loadLock!.WaitAsync();
+                await _loadLock!.WaitAsync().ConfigureAwait( false );
                 if( --_refCount < 0 )
                 {
+                    monitor.Warn( "Disposing an already disposed ObservableLeague.Shell." );
                     _loadLock.Release();
                     return false;
                 }
@@ -321,8 +327,15 @@ namespace CK.Observable.League
                     {
                         if( _domain != null )
                         {
-                            await ExplicitSaveDomain( monitor );
-                            await (IsDestroyed ? Client.ArchiveAsync( monitor ) : Client.SaveAsync( monitor ));
+                            await ExplicitSnapshotDomainAsync( monitor ).ConfigureAwait( false );
+                            if( IsDestroyed )
+                            {
+                                await Client.ArchiveSnapshotAsync( monitor ).ConfigureAwait( false );
+                            }
+                            else
+                            {
+                                await Client.SaveSnapshotAsync( monitor ).ConfigureAwait( false );
+                            }
                             if( !IsDestroyed && !ClosingLeague )
                             {
                                 await _coordinator.ModifyThrowAsync( monitor, ( m, d ) =>
@@ -393,6 +406,7 @@ namespace CK.Observable.League
                     }
                 }
                 _loadLock.Release();
+
                 return updateDone;
             }
 

@@ -12,13 +12,14 @@ namespace CK.Observable
     /// <summary>
     /// Specializes <see cref="CKBinaryWriter"/> to be able to serialize objects graph.
     /// </summary>
-    public class BinarySerializer : CKBinaryWriter
+    public class BinarySerializer : CKBinaryWriter, IBinarySerializer, IBinarySerializerImpl
     {
         public const int MaxRecurse = 50;
 
         readonly Dictionary<Type, TypeInfo> _types;
         readonly Dictionary<object, int> _seen;
         readonly ISerializerResolver _drivers;
+        readonly Action<IDestroyable>? _disposedTracker;
         int _recurseCount;
         Stack<(object, ITypeSerializationDriver)>? _deferred;
         BinaryFormatter? _binaryFormatter;
@@ -45,7 +46,7 @@ namespace CK.Observable
         /// <param name="drivers">Optional driver resolver to use. Uses <see cref="SerializerRegistry.Default"/> by default.</param>
         /// <param name="leaveOpen">True to leave the stream opened when disposing. False to close it.</param>
         /// <param name="encoding">Optional encoding for texts. Defaults to UTF-8.</param>
-        /// <param name="disposedTracker">Optional collector of disposed instance. See <see cref="DisposedTracker"/>.</param>
+        /// <param name="disposedTracker">Optional collector of disposed instance. See <see cref="_disposedTracker"/>.</param>
         public BinarySerializer(
             Stream output,
             ISerializerResolver? drivers = null,
@@ -57,22 +58,43 @@ namespace CK.Observable
             _types = new Dictionary<Type, TypeInfo>();
             _seen = new Dictionary<object, int>( PureObjectRefEqualityComparer<object>.Default );
             _drivers = drivers ?? SerializerRegistry.Default;
-            DisposedTracker = disposedTracker;
+            _disposedTracker = disposedTracker;
         }
 
-        /// <summary>
-        /// Gets the serialization drivers.
-        /// </summary>
-        public ISerializerResolver Drivers => _drivers;
+        public IBinarySerializerImpl ImplementationServices => this;
 
-        /// <summary>
-        /// Writes an object that can be null and of any type.
-        /// </summary>
-        /// <param name="o">The object to write.</param>
-        /// <returns>
-        /// True if write, false if the object has already been
-        /// written and only a reference has been written.
-        /// </returns>
+        ISerializerResolver IBinarySerializerImpl.Drivers => _drivers;
+
+        // Awful trick.
+        // Reference management SHOULD be fully handled by drivers...
+        object? _currentWriteData;
+
+        bool IBinarySerializerImpl.WriteNewObject<T>( T o )
+        {
+            if( _currentWriteData == o ) return true;
+            if( TrackObject( o ) )
+            {
+                Write( (byte)SerializationMarker.Object );
+                return true;
+            }
+            return false;
+        }
+
+        Action<IDestroyable>? IBinarySerializerImpl.DisposedTracker => _disposedTracker;
+
+        bool TrackObject<T>( T o ) where T : class
+        {
+            if( _seen.TryGetValue( o, out var num ) )
+            {
+                Write( (byte)SerializationMarker.Reference );
+                Write( num );
+                return false;
+            }
+            _seen.Add( o, _seen.Count );
+            return true;
+        }
+
+        /// <inheritdoc />
         public bool WriteObject( object? o )
         {
             switch( o )
@@ -159,13 +181,7 @@ namespace CK.Observable
             Type t = o.GetType();
             if( t.IsClass )
             {
-                if( _seen.TryGetValue( o, out var num ) )
-                {
-                    Write( (byte)SerializationMarker.Reference );
-                    Write( num );
-                    return false;
-                }
-                _seen.Add( o, _seen.Count );
+                if( !TrackObject( o ) ) return false;
                 if( t == typeof( object ) )
                 {
                     Write( (byte)SerializationMarker.EmptyObject );
@@ -199,7 +215,10 @@ namespace CK.Observable
                     ++_recurseCount;
                     Write( (byte)marker );
                     driver.WriteTypeInformation( this );
+                    object? prev = _currentWriteData;
+                    _currentWriteData = o;
                     driver.WriteData( this, o );
+                    _currentWriteData = prev;
                     --_recurseCount;
                 }
                 if( _recurseCount == 0 && _deferred != null )
@@ -207,7 +226,10 @@ namespace CK.Observable
                     while( _deferred.TryPop( out var d ) )
                     {
                         ++_recurseCount;
+                        object? prev = _currentWriteData;
+                        _currentWriteData = o;
                         d.Item2.WriteData( this, d.Item1 );
+                        _currentWriteData = prev;
                         --_recurseCount;
                     }
                 }
@@ -215,18 +237,10 @@ namespace CK.Observable
             return true;
         }
 
-        /// <summary>
-        /// Gets whether this serializer is currently in debug mode.
-        /// Initially defaults to false.
-        /// </summary>
+        /// <inheritdoc />
         public bool IsDebugMode => _debugModeCounter > 0;
 
-        /// <summary>
-        /// Activates or deactivates the debug mode. This is cumulative so that scoped activations are handled:
-        /// activation/deactivation should be paired and <see cref="IsDebugMode"/> must be used to
-        /// know whether debug mode is actually active.
-        /// </summary>
-        /// <param name="active">Whether the debug mode should be activated, deactivated or (when null) be left as it is.</param>
+        /// <inheritdoc />
         public void DebugWriteMode( bool? active )
         {
             if( active.HasValue )
@@ -245,13 +259,8 @@ namespace CK.Observable
             else Write( (byte)180 );
         }
 
-        /// <summary>
-        /// Writes a sentinel that must be read back by <see cref="IBinaryDeserializer.DebugCheckSentinel"/>.
-        /// If <see cref="IsDebugMode"/> is false, nothing is written.
-        /// </summary>
-        /// <param name="fileName">Current file name that wrote the data. Used to build the <see cref="InvalidDataException"/> message if sentinel cannot be read back.</param>
-        /// <param name="line">Current line number that wrote the data. Used to build the <see cref="InvalidDataException"/> message if sentinel cannot be read back.</param>
-        public void DebugWriteSentinel( [CallerFilePath]string? fileName = null, [CallerLineNumber] int line = 0 )
+        /// <inheritdoc />
+        public void DebugWriteSentinel( [CallerFilePath] string? fileName = null, [CallerLineNumber] int line = 0 )
         {
             if( IsDebugMode )
             {
@@ -261,10 +270,7 @@ namespace CK.Observable
             }
         }
 
-        /// <summary>
-        /// Writes a type.
-        /// </summary>
-        /// <param name="t">The type to write. Can be null.</param>
+        /// <inheritdoc />
         public void Write( Type? t )
         {
             ITypeSerializationDriver? driver = _drivers.FindDriver( t );
@@ -313,19 +319,6 @@ namespace CK.Observable
             }
             return false;
         }
-
-        /// <summary>
-        /// Called by <see cref="AutoTypeRegistry"/> serialization drivers when a disposed <see cref="IDestroyable"/> has been
-        /// written.
-        /// <para>
-        /// This should clearly be on "ImplementationServices" or any other of this writer extensions. But currently, the
-        /// serialization is embedded inside the Observable library, so we don't care.
-        /// Note that if a IDestroyableObject { bool IsDestroyed { get; } } basic interface (without Destroyed event) in the "generic" serialization library
-        /// (or deeper? "System.ComponentModel.IDestroyableObject, CK.Core"?), then this could remain this way. 
-        /// </para>
-        /// </summary>
-        public Action<IDestroyable>? DisposedTracker { get; }
-
 
         internal class CheckedWriteStream : Stream
         {
@@ -400,6 +393,7 @@ namespace CK.Observable
                     s.Position = 0;
                     using( var r = new BinaryDeserializer( s, services, null ) )
                     {
+                        r.SerializationVersion = ObservableDomain.CurrentSerializationVersion;
                         var o2 = r.ReadObject();
                         r.ImplementationServices.ExecutePostDeserializationActions();
                         using( var checker = new CheckedWriteStream( originalBytes ) )

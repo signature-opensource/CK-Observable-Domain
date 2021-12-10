@@ -8,7 +8,7 @@ namespace CK.Observable.League
     /// <summary>
     /// Immutable definition of options for domains managed in a <see cref="ObservableLeague"/>.
     /// </summary>
-    [SerializationVersion( 2 )]
+    [SerializationVersion( 3 )]
     public sealed class ManagedDomainOptions : IEquatable<ManagedDomainOptions>
     {
         /// <summary>
@@ -40,7 +40,7 @@ namespace CK.Observable.League
         /// <summary>
         /// Minimum time between each save, checked on every transaction commit.
         /// When negative, the file will not be saved automatically (manual save must be done by <see cref="IObservableDomainShellBase.SaveAsync(IActivityMonitor)"/>
-        /// or by sending the <see cref="ObservableDomain.SaveCommand"/> from a transaction).
+        /// or by sending the <see cref="ObservableDomain.SnapshotDomainCommand"/> from a transaction).
         /// When 0, every transaction will be saved.
         /// </summary>
         public readonly TimeSpan SnapshotSaveDelay;
@@ -61,6 +61,13 @@ namespace CK.Observable.League
         /// Defaults to 10 Mebibyte.
         /// </summary>
         public readonly int SnapshotMaximalTotalKiB;
+
+        /// <summary>
+        /// <para>The rate at which housekeeping is executed, in Modify cycles (ie. how many transactions between housekeeping).</para>
+        /// <para>Defaults to 50.</para>
+        /// </summary>
+        /// <remarks>Housekeeping is always executed on domain load, and on manual save.</remarks>
+        public readonly int HousekeepingRate;
 
         /// <summary>
         /// Gets the maximum time during which events are kept.
@@ -88,7 +95,8 @@ namespace CK.Observable.League
                 SnapshotKeepDuration,
                 SnapshotMaximalTotalKiB,
                 ExportedEventKeepDuration,
-                ExportedEventKeepLimit
+                ExportedEventKeepLimit,
+                HousekeepingRate
             );
 
         /// <summary>
@@ -105,7 +113,8 @@ namespace CK.Observable.League
                 SnapshotKeepDuration,
                 SnapshotMaximalTotalKiB,
                 ExportedEventKeepDuration,
-                ExportedEventKeepLimit
+                ExportedEventKeepLimit,
+                HousekeepingRate
             );
 
 
@@ -120,7 +129,8 @@ namespace CK.Observable.League
             TimeSpan snapshotKeepDuration,
             int snapshotMaximalTotalKiB,
             TimeSpan eventKeepDuration,
-            int eventKeepLimit )
+            int eventKeepLimit,
+            int housekeepingRate )
         {
             LifeCycleOption = loadOption;
             CompressionKind = c;
@@ -130,9 +140,10 @@ namespace CK.Observable.League
             SnapshotMaximalTotalKiB = snapshotMaximalTotalKiB;
             ExportedEventKeepDuration = eventKeepDuration;
             ExportedEventKeepLimit = eventKeepLimit;
+            HousekeepingRate = housekeepingRate;
         }
 
-        ManagedDomainOptions( IBinaryDeserializer r, TypeReadInfo? info )
+        ManagedDomainOptions( IBinaryDeserializer r, TypeReadInfo info )
         {
             LifeCycleOption = r.ReadEnum<DomainLifeCycleOption>();
             CompressionKind = r.ReadEnum<CompressionKind>();
@@ -149,6 +160,10 @@ namespace CK.Observable.League
             if( info.Version >= 1 )
             {
                 SkipTransactionCount = r.ReadInt32();
+            }
+            if( info.Version >= 3 )
+            {
+                HousekeepingRate = r.ReadInt32();
             }
         }
 
@@ -167,6 +182,9 @@ namespace CK.Observable.League
 
             // v1
             w.Write( SkipTransactionCount );
+
+            // v3
+            w.Write( HousekeepingRate );
         }
 
         /// <summary>
@@ -194,6 +212,7 @@ namespace CK.Observable.League
                                                             && SnapshotKeepDuration == other.SnapshotKeepDuration
                                                             && SnapshotMaximalTotalKiB == other.SnapshotMaximalTotalKiB
                                                             && ExportedEventKeepDuration == other.ExportedEventKeepDuration
-                                                            && ExportedEventKeepLimit == other.ExportedEventKeepLimit;
+                                                            && ExportedEventKeepLimit == other.ExportedEventKeepLimit
+                                                            && HousekeepingRate == other.HousekeepingRate;
     }
 }
