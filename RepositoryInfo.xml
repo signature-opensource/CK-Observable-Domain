@@ -1,13 +1,12 @@
 ﻿<RepositoryInfo>
 
-  <SimpleGitVersion StartingVersion="v0.6.0">
+  <SimpleGitVersion SingleMajor="1">
     <IgnoreModifiedFiles>
       <Add>js/.npmrc</Add>
       <Add>js/package.json</Add>
       <Add>js/package-lock.json</Add>
     </IgnoreModifiedFiles>
     <Branches>
-      <Branch Name="develop" CIVersionMode="LastReleaseBased" VersionName="develop" />
       <Branch Name="develop-NetCore3" CIVersionMode="LastReleaseBased" VersionName="develop" />
     </Branches>
   </SimpleGitVersion>
