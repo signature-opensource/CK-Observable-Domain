@@ -525,7 +525,7 @@ namespace CK.Observable
                         if( errors != null ) _result.SetCommandHandlingErrors( errors );
                     }
                 }
-                Monitor.Debug( () => "Committed: " + _result.ToString() );
+                Monitor.Debug( $"Committed: {_result}" );
                 return _result;
             }
 

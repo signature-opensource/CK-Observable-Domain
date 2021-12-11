@@ -241,8 +241,8 @@ namespace CK.Observable.Domain.Tests
                 d.Root.SendNumber( HandlerTarget.Domain );
             }, parallelDomainPostActions: false );
 
-            LocalNumbers.Should().BeEquivalentTo( (0, 1000), (1, 1001), (2, 1002) );
-            DomainNumbers.Should().BeEquivalentTo( (3, 0), (4, 1), (5, 2) );
+            LocalNumbers.Should().BeEquivalentTo( new[] { (0, 1000), (1, 1001), (2, 1002) } );
+            DomainNumbers.Should().BeEquivalentTo( new[] { (3, 0), (4, 1), (5, 2) } );
 
             await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
@@ -254,14 +254,14 @@ namespace CK.Observable.Domain.Tests
                 d.Root.SendNumber( HandlerTarget.Domain );
             }, parallelDomainPostActions: false );
 
-            LocalNumbers.Should().BeEquivalentTo( (0, 1000), (1, 1001), (2, 1002), (6, 1003), (7, 1004), (8, 1005) );
-            DomainNumbers.Should().BeEquivalentTo( (3, 0), (4, 1), (5, 2), (9, 3), (10, 4), (11, 5) );
+            LocalNumbers.Should().BeEquivalentTo( new[] { (0, 1000), (1, 1001), (2, 1002), (6, 1003), (7, 1004), (8, 1005) } );
+            DomainNumbers.Should().BeEquivalentTo( new[] { (3, 0), (4, 1), (5, 2), (9, 3), (10, 4), (11, 5) } );
         }
 
         [TestCase( 20, false )]
         [TestCase( 20, true )]
         [Timeout(30*1000)]
-        public async Task parrallel_operations_respect_the_Domain_PostActions_ordering_guaranty( int nb, bool useAsync )
+        public async Task parrallel_operations_respect_the_Domain_PostActions_ordering_guaranty_Async( int nb, bool useAsync )
         {
             ResetContext();
 

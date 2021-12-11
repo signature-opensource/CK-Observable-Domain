@@ -3,7 +3,6 @@ using System.IO;
 using System.Threading;
 using CK.Core;
 using CK.Testing;
-using CK.Text;
 using FluentAssertions;
 using NUnit.Framework;
 using static CK.Testing.MonitorTestHelper;

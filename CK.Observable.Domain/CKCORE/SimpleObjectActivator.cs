@@ -1,5 +1,4 @@
 using CK.Core;
-using CK.Text;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -24,12 +23,11 @@ namespace CK.Core
         /// <param name="parametersAreRequired">True to restrict constructors to the ones that use all the <paramref name="parameters"/>.</param>
         /// <param name="parameters">Optional parameters.</param>
         /// <returns>The object instance or null on error.</returns>
-        public static object? Create(
-            IActivityMonitor monitor,
-            Type t,
-            IServiceProvider services,
-            bool parametersAreRequired,
-            IEnumerable<object>? parameters = null )
+        public static object? Create( IActivityMonitor monitor,
+                                      Type t,
+                                      IServiceProvider services,
+                                      bool parametersAreRequired,
+                                      IEnumerable<object>? parameters = null )
         {
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
             if( t == null ) throw new ArgumentNullException( nameof( t ) );

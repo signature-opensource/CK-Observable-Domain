@@ -116,7 +116,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 }
                 else
                 {
-                    r.DueTimeUtc.Should().BeCloseTo( minUpdated, enoughMilliseconds / 6 );
+                    r.DueTimeUtc.Should().BeCloseTo( minUpdated, TimeSpan.FromMilliseconds( enoughMilliseconds / 6 ) );
                 }
             } ).Success.Should().BeTrue();
         }
