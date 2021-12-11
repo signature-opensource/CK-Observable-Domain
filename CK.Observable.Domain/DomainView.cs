@@ -167,7 +167,7 @@ namespace CK.Observable
         /// <summary>
         /// Ensures that required sidekicks are instantiated and that any required <see cref="ObservableDomainSidekick.RegisterClientObject(IActivityMonitor, IDestroyable)"/>
         /// have been called.
-        /// When this method returns false, it means that an error occurred and that the current transaction cannot be commited.
+        /// When this method returns false, it means that an error occurred and that the current transaction cannot be committed.
         /// <para>
         /// This should typically called at the end of a final constructor code of a <see cref="ISidekickClientObject{TSidekick}"/> object.
         /// </para>

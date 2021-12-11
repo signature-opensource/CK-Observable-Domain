@@ -85,7 +85,7 @@ namespace CK.Observable
         readonly AllCollection _exposedObjects;
         readonly ReaderWriterLockSlim _lock;
         readonly List<int> _freeList;
-        byte[] _domainSecret;
+        byte[]? _domainSecret;
 
         class InternalObjectCollection : IReadOnlyCollection<InternalObject>
         {
@@ -146,7 +146,7 @@ namespace CK.Observable
         internal readonly ObservableDomainEventArgs DefaultEventArgs;
 
         // A reusable domain monitor is created on-demand and is protected by an exclusive lock.
-        DomainActivityMonitor _domainMonitor;
+        DomainActivityMonitor? _domainMonitor;
         readonly SemaphoreSlim _domainMonitorLock;
 
         // This lock is used to allow one and only one Save at a time: this is to protect
@@ -208,7 +208,7 @@ namespace CK.Observable
 
         /// <summary>
         /// The change tracker handles the transformation of actual changes into events that are
-        /// optimized and serialized by the <see cref="Commit(ObservableDomain, Func{string, ObservablePropertyChangedEventArgs}, DateTime)"/> method.
+        /// optimized and serialized by the <see cref="Commit"/> method.
         /// </summary>
         class ChangeTracker
         {
@@ -408,8 +408,7 @@ namespace CK.Observable
             readonly IDisposableGroup _monitorGroup;
             readonly DateTime _startTime;
             CKExceptionData[] _errors;
-            TransactionResult _result;
-            bool _resultInitialized;
+            TransactionResult? _result;
             bool _fromModifyAsync;
 
             public Transaction( ObservableDomain d, IActivityMonitor monitor, DateTime startTime, IDisposableGroup g, bool fromModifyAsync )
@@ -440,9 +439,7 @@ namespace CK.Observable
             public TransactionResult Commit()
             {
                 // If result has already been initialized, we exit immediately.
-                if( _resultInitialized ) return _result;
-
-                _resultInitialized = true;
+                if( _result != null ) return _result;
 
                 Debug.Assert( _domain._currentTran == this );
                 Debug.Assert( _domain._lock.IsWriteLockHeld );
@@ -473,14 +470,14 @@ namespace CK.Observable
                     {
                         ctx = _domain._changeTracker.Commit( _domain, _domain.EnsurePropertyInfo, _startTime, ++_domain._transactionSerialNumber );
                         _domain._transactionCommitTimeUtc = ctx.CommitTimeUtc;
+                        _result = new TransactionResult( ctx );
                         try
                         {
-                            _result = new TransactionResult( ctx );
                             _domain.DomainClient?.OnTransactionCommit( ctx );
                         }
                         catch( Exception ex )
                         {
-                            Monitor.Fatal( "Error in IObservableTransactionManager.OnTransactionCommit. This is a Critical error since the Domain state integrity may be compromised.", ex );
+                            Monitor.Fatal( "Error in IObservableDomainClient.OnTransactionCommit. This is a Critical error since the Domain state integrity may be compromised.", ex );
                             _result.SetClientError( ex );
                             ctx = null;
                         }
@@ -855,7 +852,7 @@ namespace CK.Observable
         /// Exceptions raised by this method are collected in <see cref="TransactionResult.SuccessfulTransactionErrors"/>.
         /// </para>
         /// </summary>
-        public event EventHandler<SuccessfulTransactionEventArgs> OnSuccessfulTransaction;
+        public event EventHandler<SuccessfulTransactionEventArgs>? OnSuccessfulTransaction;
 
         List<CKExceptionData>? RaiseOnSuccessfulTransaction( in SuccessfulTransactionEventArgs result )
         {
@@ -971,7 +968,7 @@ namespace CK.Observable
             }
             catch( Exception ex )
             {
-                m.Error( "While calling IObservableTransactionManager.OnTransactionStart().", ex );
+                m.Error( "While calling IObservableDomainClient.OnTransactionStart().", ex );
                 group.Dispose();
                 _lock.ExitWriteLock();
                 if( throwException ) throw;
@@ -1340,7 +1337,11 @@ namespace CK.Observable
                 }
                 finally
                 {
-                    if( needFakeTran ) _currentTran.Dispose();
+                    if( needFakeTran )
+                    {
+                        Debug.Assert( _currentTran != null );
+                        _currentTran.Dispose();
+                    }
                     if( !hasWriteLock ) _lock.ExitWriteLock();
                 }
             }
@@ -1400,6 +1401,7 @@ namespace CK.Observable
         internal void StartOrStopTimeManager( bool start )
         {
             CheckWriteLock( null );
+            Debug.Assert( _currentTran != null );
             _timeManager.DoStartOrStop( _currentTran.Monitor, start );
         }
 
@@ -1424,7 +1426,7 @@ namespace CK.Observable
             Debug.Assert( o != null && o.ActualDomain == this && o.Prev == null && o.Next == null );
             CheckWriteLock( o );
             if( (o.Prev = _lastInternalObject) == null ) _firstInternalObject = o;
-            else _lastInternalObject.Next = o;
+            else _lastInternalObject!.Next = o;
             _lastInternalObject = o;
             ++_internalObjectCount;
             SideEffectsRegister( o );
@@ -1434,9 +1436,9 @@ namespace CK.Observable
         {
             Debug.Assert( o.ActualDomain == this );
             if( _firstInternalObject == o ) _firstInternalObject = o.Next;
-            else o.Prev.Next = o.Next;
+            else o.Prev!.Next = o.Next;
             if( _lastInternalObject == o ) _lastInternalObject = o.Prev;
-            else o.Next.Prev = o.Prev;
+            else o.Next!.Prev = o.Prev;
             --_internalObjectCount;
             SideEffectUnregister( o );
         }
@@ -1491,7 +1493,7 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// This is called from the "real" Dispose calls (Unregister observable/internal objects), not from
+        /// This is called from Destroy calls (Unregister observable/internal objects), not from
         /// the clear from DoLoad.
         /// </summary>
         /// <param name="o">The disposed object.</param>
@@ -1572,6 +1574,7 @@ namespace CK.Observable
                 {
                     using( var monitor = ObtainDomainMonitor() )
                     {
+                        Debug.Assert( monitor != null );
                         DoDispose( monitor );
                     }
                 }
@@ -1778,6 +1781,15 @@ namespace CK.Observable
             return _changeTracker.OnCollectionAddKey( o, key );
         }
 
+        /// <summary>
+        /// Checks that the writer lock is acquired.
+        /// If not, it can be because no transaction has been started: InvalidOperationException( "A transaction is required." ),
+        /// or because only a read lock is acquired: InvalidOperationException( "Concurrent access: only Read lock has been acquired." )
+        /// and finally: InvalidOperationException( "Concurrent access: write lock must be acquired." ).
+        /// <para>
+        /// On success, the _currentTran is necessary not null.
+        /// </para>
+        /// </summary>
         IDestroyable CheckWriteLock( [AllowNull]IDestroyable o )
         {
             if( !_lock.IsWriteLockHeld )
@@ -1786,7 +1798,8 @@ namespace CK.Observable
                 if( _lock.IsReadLockHeld ) throw new InvalidOperationException( "Concurrent access: only Read lock has been acquired." );
                 throw new InvalidOperationException( "Concurrent access: write lock must be acquired." );
             }
-            return o;
+            // Missing [NotNullWhenNotNull] in netstandard2.1.
+            return o!;
         }
 
         /// <summary>

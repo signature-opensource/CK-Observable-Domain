@@ -55,17 +55,18 @@ namespace CK.Observable.Device
                 Object = o;
                 o._bridge = this;
             }
-            #pragma warning restore CS8618
+#pragma warning restore CS8618
 
             ObservableDomainSidekick ObservableDeviceObject.IDeviceBridge.Sidekick => _sidekick;
 
             BaseStartDeviceCommand ObservableDeviceObject.IDeviceBridge.CreateStartCommand() => new StartDeviceCommand<THost>();
+            BaseConfigureDeviceCommand ObservableDeviceObject.IDeviceBridge.CreateConfigureCommand( DeviceConfiguration? configuration ) => _sidekick.Host.CreateConfigureCommand( configuration );
             BaseStopDeviceCommand ObservableDeviceObject.IDeviceBridge.CreateStopCommand() => new StopDeviceCommand<THost>();
             BaseDestroyDeviceCommand ObservableDeviceObject.IDeviceBridge.CreateDestroyCommand() => new DestroyDeviceCommand<THost>();
             BaseSetControllerKeyDeviceCommand ObservableDeviceObject.IDeviceBridge.CreateSetControllerKeyCommand() => new SetControllerKeyDeviceCommand<THost>();
 
-            IEnumerable<string> ObservableDeviceObject.IDeviceBridge.CurrentlyAvailableDeviceNames => _sidekick._objectHost?.Devices.Select( d => d.Name )
-                                                                                                        ?? _sidekick.Host.GetConfiguredDevices().Select( d => d.Item2.Name );
+            IEnumerable<string> ObservableDeviceObject.IDeviceBridge.CurrentlyAvailableDeviceNames => _sidekick._objectHost?.Devices
+                                                                                                        ?? _sidekick.Host.GetDevices().Values.Select( d => d.Name );
 
             string? ObservableDeviceObject.IDeviceBridge.ControllerKey => Device?.ControllerKey;
 
@@ -82,13 +83,12 @@ namespace CK.Observable.Device
             internal void SetDevice( IActivityMonitor monitor, IDevice d, bool initCall = false )
             {
                 Debug.Assert( Device == null, "This is called only if the current Device is null." );
+                d.LifetimeEvent.Async += OnDeviceLifetimeChangedAsync;
                 Device = d;
                 Object.Status = d.Status;
-                Object.ConfigurationStatus = d.ConfigurationStatus;
+                Object.Configuration = d.ExternalConfiguration;
                 SetObjectDeviceControlProperties( d.ControllerKey );
 
-                d.StatusChanged.Async += OnDeviceStatusChanged;
-                d.ControllerKeyChanged.Async += OnDeviceControllerKeyChanged;
                 if( !initCall ) _sidekick.RemoveUnbound( this );
                 OnDeviceAppeared( monitor );
             }
@@ -103,44 +103,39 @@ namespace CK.Observable.Device
             internal void DetachDevice( IActivityMonitor monitor )
             {
                 Debug.Assert( Device != null, "This is called only if a Device is bound." );
+                Device.LifetimeEvent.Async -= OnDeviceLifetimeChangedAsync;
                 OnDeviceDisappearing( monitor );
                 Object.Status = null;
-                Object.ConfigurationStatus = null;
+                Object.Configuration = null;
                 Object.HasDeviceControl = false;
                 Object.HasExclusiveDeviceControl = false;
-                Device.StatusChanged.Async -= OnDeviceStatusChanged;
-                Device.ControllerKeyChanged.Async -= OnDeviceControllerKeyChanged;
                 _sidekick.AddUnbound( this );
                 Device = null;
             }
 
-            Task OnDeviceControllerKeyChanged( IActivityMonitor monitor, IDevice sender, string? controllerKey )
-            {
-                return ModifyAsync( monitor, () => SetObjectDeviceControlProperties( controllerKey ) );
-            }
-
-            Task OnDeviceStatusChanged( IActivityMonitor monitor, IDevice sender )
+            Task OnDeviceLifetimeChangedAsync( IActivityMonitor monitor, DeviceLifetimeEvent e )
             {
                 Debug.Assert( Device != null );
                 return ModifyAsync( monitor, () =>
                 {
-                    if( sender.IsDestroyed )
+                    if( e.Device.IsDestroyed )
                     {
-                        Debug.Assert( sender.Status.IsDestroyed );
                         DetachDevice( monitor );
                     }
                     else
                     {
-                        Debug.Assert( !sender.Status.IsDestroyed );
-                        Object.Status = sender.Status;
-                        Object.ConfigurationStatus = sender.ConfigurationStatus;
-                        SetObjectDeviceControlProperties( sender.ControllerKey );
+                        Object.Status = e.Device.Status;
+                        SetObjectDeviceControlProperties( e.Device.ControllerKey );
+                        if( e is DeviceConfigurationChangedEvent c )
+                        {
+                            Object.Configuration = c.Configuration;
+                        }
                     }
                 } );
             }
 
             /// <summary>
-            /// Called when this bridge must be disposed because either the <see cref="Object"/>
+            /// Called when this bridge must be disposed because the observable <see cref="Object"/>
             /// is unloaded or destroyed.
             /// </summary>
             /// <param name="monitor">The monitor to use.</param>
@@ -150,8 +145,7 @@ namespace CK.Observable.Device
                 if( Device == null ) _sidekick.RemoveUnbound( this );
                 else
                 {
-                    Device.StatusChanged.Async -= OnDeviceStatusChanged;
-                    Device.ControllerKeyChanged.Async -= OnDeviceControllerKeyChanged;
+                    Device.LifetimeEvent.Async -= OnDeviceLifetimeChangedAsync;
                 }
                 OnObjectDisappeared( monitor, isObjectDestroyed );
             }
