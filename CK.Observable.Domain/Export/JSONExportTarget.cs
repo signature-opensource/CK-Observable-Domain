@@ -193,25 +193,6 @@ namespace CK.Observable
             return DoAppendJSONEscaped( @this, s, 0, s.Length, useEscapedUnicode );
         }
 
-        /// <summary>
-        /// Appends the sub string to this StringBuilder, applying JSON escaping.
-        /// This does not prepend/append enclosing double quotes.
-        /// </summary>
-        /// <param name="this">This StringBuilder.</param>
-        /// <param name="s">The string. Can not be null.</param>
-        /// <param name="startIndex">Start index in the string.</param>
-        /// <param name="count">Number of characters to consider.</param>
-        /// <param name="useEscapedUnicode">True to use Unicode hexadecimal code for non-ASCII characters.</param>
-        /// <returns>This string builder to enable fluent syntax.</returns>
-        static StringBuilder AppendJSONEscaped( StringBuilder @this, string s, int startIndex, int count, bool useEscapedUnicode = false )
-        {
-            if( s == null ) throw new ArgumentNullException( nameof( s ) );
-            if( startIndex < 0 ) throw new ArgumentException( "Must be greater or equal to 0.", nameof( startIndex ) );
-            if( count < 0 ) throw new ArgumentException( "Must be greater or equal to 0.", nameof( count ) );
-            if( startIndex + count >= s.Length ) throw new ArgumentException( "Invalid startIndex/count in string." );
-            return DoAppendJSONEscaped( @this, s, startIndex, count, useEscapedUnicode );
-        }
-
         static StringBuilder DoAppendJSONEscaped( StringBuilder @this, string s, int startIndex, int count, bool useEscapedUnicode )
         {
             int markIdx = -1;
