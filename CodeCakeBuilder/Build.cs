@@ -2,6 +2,12 @@
 using Cake.Npm.RunScript;
 
 using Cake.Npm.RunScript;
+
+using Cake.Npm.RunScript;
+
+using Cake.Npm.RunScript;
+
+using Cake.Npm.RunScript;
 using Cake.Common.IO;
 using Cake.Common.Solution;
 using Cake.Core;
