@@ -177,7 +177,8 @@ namespace CK.Observable
             var candidates = new List<KeyValuePair<DateTime, FileInfo>>();
             foreach( FileInfo file in backupDirectory.EnumerateFiles() )
             {
-                if( FileUtil.TryParseFileNameUniqueTimeUtcFormat( file.Name, out DateTime d, allowSuffix: true ) )
+                var n = file.Name.AsSpan();
+                if( FileUtil.TryMatchFileNameUniqueTimeUtcFormat( ref n, out DateTime d ) )
                 {
                     if( d >= minDate )
                     {
