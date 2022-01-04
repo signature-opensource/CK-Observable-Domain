@@ -42,10 +42,7 @@ namespace CK.Observable
             return p;
         }
 
-        string GetBackupFolder( string name )
-        {
-            return _path + name + ".bak";
-        }
+        string GetBackupFolder( string name ) => _path + name + ".bak";
 
         Task<bool> IStreamStore.ExistsAsync( string name )
         {
@@ -93,9 +90,9 @@ namespace CK.Observable
             {
                 string backupPath = GetBackupFolder( name );
                 Directory.CreateDirectory( backupPath );
-                File.Replace( tempFilePath, path, FileUtil.EnsureUniqueTimedFile( backupPath + Path.DirectorySeparatorChar, String.Empty, now ), true );
+                FileUtil.MoveToUniqueTimedFile( path, backupPath + Path.DirectorySeparatorChar, String.Empty, now );
             }
-            else File.Move( tempFilePath, path );
+            File.Move( tempFilePath, path, overwrite: true );
             return File.GetLastWriteTimeUtc( path );
         }
 
