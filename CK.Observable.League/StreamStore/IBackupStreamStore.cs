@@ -8,8 +8,7 @@ namespace CK.Observable
     /// An <see cref="IStreamStore"/> that backs up snapshots on save,
     /// and provides methods to manage those backups.
     /// </summary>
-    public interface IBackupStreamStore
-        : IStreamStore
+    public interface IBackupStreamStore : IStreamStore
     {
         /// <summary>
         /// Cleans backups of the given resource, matching all of the valid given criteria.
