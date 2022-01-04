@@ -93,7 +93,7 @@ namespace CK.Observable
                 Directory.CreateDirectory( backupPath );
                 FileUtil.MoveToUniqueTimedFile( path, backupPath + Path.DirectorySeparatorChar, String.Empty, now );
             }
-            File.Move( tempFilePath, path, overwrite: true );
+            File.Move( tempFilePath, path );
             return File.GetLastWriteTimeUtc( path );
         }
 
