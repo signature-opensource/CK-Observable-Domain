@@ -76,5 +76,6 @@ namespace CK.Observable
                    bool debugMode = false,
                    Encoding? encoding = null,
                    int millisecondsTimeout = -1 );
+
     }
 }

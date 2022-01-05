@@ -41,6 +41,13 @@ namespace CK.Observable.League
         Task<bool> SaveAsync( IActivityMonitor monitor );
 
         /// <summary>
+        /// Gets an inspector for the domain.
+        /// This inspector can be used only until <see cref="DisposeAsync(IActivityMonitor)"/> or <see cref="IAsyncDisposable.DisposeAsync()"/>
+        /// is called otherwise an <see cref="ObjectDisposedException"/> is raised.
+        /// </summary>
+        IObservableDomainInspector DomainInspector { get; }
+
+        /// <summary>
         /// Releases this shell.
         /// The domain is unloaded if this is the last released shell.
         /// </summary>

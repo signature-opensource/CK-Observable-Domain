@@ -190,7 +190,7 @@ namespace CK.Observable
         /// This is called by the <see cref="ObservableDomain.Load(IActivityMonitor, System.IO.Stream, bool, System.Text.Encoding?, int, bool?)"/>
         /// or <see cref="ObservableDomain.DoDispose(IActivityMonitor)"/> and by <see cref="ObservableDomain.GarbageCollectAsync"/>.
         /// </summary>
-        /// <param name="gc">True when called by the garbage collector: this object in unregistered.</param>
+        /// <param name="gc">True when called by the garbage collector: this object is unregistered.</param>
         internal void Unload( bool gc )
         {
             Debug.Assert( !IsDestroyed );
