@@ -14,9 +14,18 @@ namespace CK.Observable.League
         /// <summary>
         /// This is one of the top class to understand how ObservableLeague works.
         /// This shell manages its ObservableDomain: it is the IObservableDomainLoader (that can load or unload the
-        /// domain) and the primary IObservableDomainShell (when the domain is loaded that is wrapped in IndependentShell)
-        /// but also the IManagedDomain with which <see cref="Coordinator"/>'s <see cref="Domain"/> interact (like synchronizing the
+        /// domain) and also the IManagedDomain with which <see cref="Coordinator"/>'s <see cref="Domain"/> interact (like synchronizing the
         /// domain options).
+        /// <para>
+        /// This is the primary IObservableDomainShell: when the domain is loaded, IndependentShell that are the publicly exposed
+        /// objects relay their calls to it. Casting this base non generic Shell into Shell{T}, Shell{T1,T2}, etc. adapts the different calls
+        /// (MofifyAsync with Actions that take IObservableDomian{T}, IObservableDomian{T1,T2}, etc.) without further casts: this is why this
+        /// "hidden" Shell also implements IObservableDomainShell (and Shell{T} implements IObservableDomainShell{T}, etc.).
+        /// </para>
+        /// <para>
+        /// In the current implementation, the IndependentShell are not "strict" regarding their disposal: a disposed Shell continues to
+        /// relay its calls to this Shell. This may be changed in the future (calling any stuff on a disposed IndependentShell may 
+        /// </para>
         /// <para>
         /// This shell exists even when the domain is unloaded: its <see cref="Shell.Client"/> remains the same.
         /// </para>
@@ -37,15 +46,31 @@ namespace CK.Observable.League
             bool _preLoaded;
             DomainLifeCycleOption _lifeCycleOption;
 
-            private protected class IndependentShell : IObservableDomainShell
+            private protected class IndependentShell : IObservableDomainShell, IObservableDomainInspector
             {
+                // Exposes the Shell without disposed guard.
                 readonly protected IObservableDomainShell Shell;
                 readonly IActivityMonitor _monitor;
+                bool _isDisposed;
 
                 public IndependentShell( Shell s, IActivityMonitor m )
                 {
                     Shell = s;
                     _monitor = m;
+                }
+
+                internal IObservableDomainShell SafeShell
+                {
+                    get
+                    {
+                        ThrowOnDispose();
+                        return Shell;
+                    }
+                }
+
+                void ThrowOnDispose()
+                {
+                    if( _isDisposed ) throw new ObjectDisposedException( nameof( Shell ) );
                 }
 
                 string IObservableDomainShellBase.DomainName => Shell.DomainName;
@@ -54,7 +79,11 @@ namespace CK.Observable.League
 
                 Task<bool> IObservableDomainShellBase.SaveAsync( IActivityMonitor monitor ) => Shell.SaveAsync( monitor );
 
-                ValueTask<bool> IObservableDomainShellBase.DisposeAsync( IActivityMonitor monitor ) => Shell.DisposeAsync( monitor );
+                ValueTask<bool> IObservableDomainShellBase.DisposeAsync( IActivityMonitor monitor )
+                {
+                    _isDisposed = true;
+                    return Shell.DisposeAsync( monitor );
+                }
 
                 ValueTask IAsyncDisposable.DisposeAsync() => Shell.DisposeAsync( _monitor ).AsNonGenericValueTask();
 
@@ -89,18 +118,49 @@ namespace CK.Observable.League
                 {
                     return Shell.Read( monitor, reader, millisecondsTimeout );
                 }
+
+                #region Inspector guarded relays.
+                public IObservableDomainInspector DomainInspector
+                {
+                    get
+                    {
+                        ThrowOnDispose();
+                        return this;
+                    }
+                }
+
+                ObservableDomain.LostObjectTracker? IObservableDomainInspector.CurrentLostObjectTracker
+                {
+                    get
+                    {
+                        ThrowOnDispose();
+                        return DomainInspector.CurrentLostObjectTracker;
+                    }
+                }
+
+                ObservableDomain.LostObjectTracker? IObservableDomainInspector.EnsureLostObjectTracker( IActivityMonitor monitor, int millisecondsTimeout = -1 )
+                {
+                    ThrowOnDispose();
+                    return DomainInspector.EnsureLostObjectTracker( monitor, millisecondsTimeout );
+                }
+
+                Task<bool> IObservableDomainInspector.GarbageCollectAsync( IActivityMonitor monitor, int millisecondsTimeout = -1 )
+                {
+                    ThrowOnDispose();
+                    return DomainInspector.GarbageCollectAsync( monitor, millisecondsTimeout );
+                } 
+                #endregion
             }
 
-            private protected Shell(
-                   IActivityMonitor monitor,
-                   IObservableDomainAccess<Coordinator> coordinator,
-                   string domainName,
-                   IStreamStore store,
-                   IObservableDomainInitializer? initializer,
-                   IServiceProvider serviceProvider,
-                   IReadOnlyList<string> rootTypeNames,
-                   Type[] rootTypes,
-                   Type? domainType )
+            private protected Shell( IActivityMonitor monitor,
+                                     IObservableDomainAccess<Coordinator> coordinator,
+                                     string domainName,
+                                     IStreamStore store,
+                                     IObservableDomainInitializer? initializer,
+                                     IServiceProvider serviceProvider,
+                                     IReadOnlyList<string> rootTypeNames,
+                                     Type[] rootTypes,
+                                     Type? domainType )
             {
                 if( (_domainType = domainType) != null )
                 {
@@ -125,14 +185,13 @@ namespace CK.Observable.League
             /// <param name="initializer">The optional domain initializer.</param>
             /// <param name="serviceProvider">The service provider used to instantiate <see cref="ObservableDomainSidekick"/> objects.</param>
             /// <param name="rootTypeNames">The root types.</param>
-            internal static Shell Create(
-                IActivityMonitor monitor,
-                IObservableDomainAccess<Coordinator> coordinator,
-                string domainName,
-                IStreamStore store,
-                IObservableDomainInitializer? initializer,
-                IServiceProvider serviceProvider,
-                IReadOnlyList<string> rootTypeNames )
+            internal static Shell Create( IActivityMonitor monitor,
+                                          IObservableDomainAccess<Coordinator> coordinator,
+                                          string domainName,
+                                          IStreamStore store,
+                                          IObservableDomainInitializer? initializer,
+                                          IServiceProvider serviceProvider,
+                                          IReadOnlyList<string> rootTypeNames )
             {
                 Type? domainType = null;
                 Type[] rootTypes;
@@ -205,16 +264,15 @@ namespace CK.Observable.League
             /// </summary>
             public ManagedDomainOptions Options
             {
-                get => new ManagedDomainOptions(
-                            loadOption: _lifeCycleOption,
-                            c: Client.CompressionKind,
-                            skipTransactionCount: Client.SkipTransactionCount,
-                            snapshotSaveDelay: TimeSpan.FromMilliseconds( Client.SnapshotSaveDelay ),
-                            snapshotKeepDuration: Client.SnapshotKeepDuration,
-                            snapshotMaximalTotalKiB: Client.SnapshotMaximalTotalKiB,
-                            eventKeepDuration: Client.JsonEventCollector.KeepDuration,
-                            eventKeepLimit: Client.JsonEventCollector.KeepLimit,
-                            housekeepingRate: Client.HousekeepingRate );
+                get => new ManagedDomainOptions( loadOption: _lifeCycleOption,
+                                                 c: Client.CompressionKind,
+                                                 skipTransactionCount: Client.SkipTransactionCount,
+                                                 snapshotSaveDelay: TimeSpan.FromMilliseconds( Client.SnapshotSaveDelay ),
+                                                 snapshotKeepDuration: Client.SnapshotKeepDuration,
+                                                 snapshotMaximalTotalKiB: Client.SnapshotMaximalTotalKiB,
+                                                 eventKeepDuration: Client.JsonEventCollector.KeepDuration,
+                                                 eventKeepLimit: Client.JsonEventCollector.KeepLimit,
+                                                 housekeepingRate: Client.HousekeepingRate );
             }
 
             void IManagedDomain.Destroy( IActivityMonitor monitor, IManagedLeague league )
@@ -498,6 +556,8 @@ namespace CK.Observable.League
             }
 
             #region IObservableDomainShell (non generic) implementation
+
+            IObservableDomainInspector IObservableDomainShellBase.DomainInspector => LoadedDomain;
 
             string? IObservableDomainShell.ExportToString( int millisecondsTimeout )
             {

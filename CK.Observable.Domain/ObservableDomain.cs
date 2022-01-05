@@ -30,7 +30,7 @@ namespace CK.Observable
     /// protected property <see cref="ObservableObject.Domain"/>.
     /// </remarks>
     [NotExportable( Error = "No interaction with the ObservableDomain must be made from the observable objects." )]
-    public partial class ObservableDomain : IObservableDomain, IDisposable
+    public partial class ObservableDomain : IObservableDomain, IDisposable, IObservableDomainInspector
     {
         /// <summary>
         /// An artificial <see cref="CKExceptionData"/> that is added to
