@@ -15,7 +15,7 @@ namespace CK.Observable.League
     /// thanks to the <see cref="this[string]"/> accessor (or the more explicit <see cref="Find(string)"/> method).
     /// Creation and destruction of domains are under control of the <see cref="Coordinator"/> domain.
     /// </summary>
-    public partial class ObservableLeague : IManagedLeague
+    public partial class ObservableLeague : IObservableLeague, IManagedLeague
     {
         readonly ConcurrentDictionary<string, Shell> _domains;
         readonly IStreamStore _streamStore;
@@ -34,7 +34,7 @@ namespace CK.Observable.League
             _initializer = initializer;
             _coordinator = coordinator;
             _serviceProvider = serviceProvider;
-            // Associates the league to the coordinator. This finalizes the initialization of the league. 
+            // Associates the league to the coordinator. This finalizes the initialization of the league.
             _coordinator.FinalizeConstruct( this );
         }
 
@@ -88,27 +88,17 @@ namespace CK.Observable.League
             return null;
         }
 
-        /// <summary>
-        /// Finds an existing domain.
-        /// </summary>
-        /// <param name="domainName">The domain name to find.</param>
-        /// <returns>The managed domain or null if not found.</returns>
+        /// <inheritdoc />
         public IObservableDomainLoader? Find( string domainName ) => _domains.TryGetValue( domainName, out Shell shell ) ? shell : null;
 
-        /// <summary>
-        /// Shortcut of <see cref="Find(string)"/>.
-        /// </summary>
-        /// <param name="domainName">The domain name to find.</param>
-        /// <returns>The managed domain or null if not found.</returns>
+        /// <inheritdoc />
         public IObservableDomainLoader? this[string domainName] => Find( domainName );
 
-        /// <summary>
-        /// Gets the access to the Coordinator domain.
-        /// </summary>
+        /// <inheritdoc />
         public IObservableDomainAccess<Coordinator> Coordinator => _coordinator;
 
         /// <summary>
-        /// Closes this league. The coordinator's domain is saved and disposed and 
+        /// Closes this league. The coordinator's domain is saved and disposed and
         /// the map of the domain is cleared: existing <see cref="IObservableDomainLoader"/>
         /// can no more obtain new <see cref="IObservableDomainShell"/>.
         /// </summary>
