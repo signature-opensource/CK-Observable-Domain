@@ -10,7 +10,7 @@ namespace CK.Observable.League
     /// <summary>
     /// Default league service.
     /// </summary>
-    public class DefaultObservableLeague : IHostedService, ISingletonAutoService
+    public class DefaultObservableLeague : IObservableLeague, IHostedService, ISingletonAutoService
     {
         ObservableLeague? _default;
         readonly DirectoryStreamStore _store;
@@ -29,16 +29,16 @@ namespace CK.Observable.League
             NormalizedPath p = AppContext.BaseDirectory;
             p = p.Combine( new NormalizedPath( options.Value.StorePath ?? string.Empty ) ).ResolveDots().AppendPart( nameof( DefaultObservableLeague ) );
             _monitor.Info( $"DirectoryStreamStore path is '{p}'." );
-            _store = new DirectoryStreamStore( p ); 
+            _store = new DirectoryStreamStore( p );
         }
 
-        /// <inheritdoc cref="ObservableLeague.this[string]"/>
+        /// <inheritdoc />
         public IObservableDomainLoader? this[string domainName] => _default!.Find( domainName );
 
-        /// <inheritdoc cref="ObservableLeague.Coordinator"/>
+        /// <inheritdoc />
         public IObservableDomainAccess<Coordinator> Coordinator => _default!.Coordinator;
 
-        /// <inheritdoc cref="ObservableLeague.Find(string)"/>
+        /// <inheritdoc />
         public IObservableDomainLoader? Find( string domainName ) => _default!.Find( domainName );
 
         async Task IHostedService.StartAsync( CancellationToken cancellationToken )
