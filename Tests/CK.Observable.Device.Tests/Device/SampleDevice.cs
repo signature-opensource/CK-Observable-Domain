@@ -148,7 +148,7 @@ namespace CK.Observable.Device.Tests
         }
 
         /// <inheritdoc />
-        protected override Task DoHandleCommandAsync( IActivityMonitor monitor, BaseDeviceCommand command, CancellationToken token )
+        protected override Task DoHandleCommandAsync( IActivityMonitor monitor, BaseDeviceCommand command )
         {
             if( command is SampleCommand c )
             {
@@ -157,7 +157,7 @@ namespace CK.Observable.Device.Tests
                 c.Completion.SetResult();
                 return Task.CompletedTask;
             }
-            base.DoHandleCommandAsync( monitor, command, token );
+            base.DoHandleCommandAsync( monitor, command );
             return Task.CompletedTask;
         }
 
