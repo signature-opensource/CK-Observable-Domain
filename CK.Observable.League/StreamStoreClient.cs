@@ -122,13 +122,14 @@ namespace CK.Observable.League
         /// Initializes the domain from the store or initializes the store with a new domain.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
+        /// <param name="createOnLoadError">True to automatically re-create a new store when it cannot be loaded.</param>
         /// <param name="factory">The domain factory to use if no stream exists in the store.</param>
         /// <param name="startTimer">Whether to start the <see cref="TimeManager"/>.</param>
         /// <returns>The awaitable.</returns>
         public async Task<ObservableDomain> InitializeAsync( IActivityMonitor monitor, bool? startTimer, bool createOnLoadError, Func<IActivityMonitor,bool,ObservableDomain> factory )
         {
             ObservableDomain? result = null;
-            using( var s = await _streamStore.OpenReadAsync( _storeName ) )
+            await using( var s = await _streamStore.OpenReadAsync( _storeName ) )
             {
                 if( s != null )
                 {
@@ -141,8 +142,7 @@ namespace CK.Observable.League
                     {
                         if( createOnLoadError )
                         {
-                            monitor.Error( $"Error while loading domain from '{_storeName}'. Automatically recreating a new one and initializing it.", ex );
-                            result = await Create( monitor, startTimer, factory );
+                            monitor.Error( $"Error while loading domain from '{_storeName}'. Automatically recreating a new store and initializing it.", ex );
                         }
                         else
                         {
@@ -150,10 +150,12 @@ namespace CK.Observable.League
                         }
                     }
                 }
-                else
-                {
-                    result = await Create( monitor, startTimer, factory );
-                }
+            }
+
+            if( result == null )
+            {
+                monitor.Info( $"Creating store '{_storeName}'." );
+                result = await Create( monitor, startTimer, factory );
             }
             return result;
 
