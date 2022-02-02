@@ -1,11 +1,11 @@
 <Project>
   <ItemGroup>
     <PackageReference Update="CK.DeviceModel" Version="2.0.0-r00-00-0028-develop" />
-    <PackageReference Update="CK.StObj.Model" Version="19.0.0-r07-01" />
+    <PackageReference Update="CK.StObj.Model" Version="19.0.0-r07-02" />
     <PackageReference Update="System.Threading.Channels" Version="6.0.0" />
     <PackageReference Update="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
     <PackageReference Update="Microsoft.Extensions.Hosting" Version="6.0.0" />
-    <PackageReference Update="CK.Testing.Monitoring" Version="3.0.0-r06-01" />
+    <PackageReference Update="CK.Testing.Monitoring" Version="3.0.0-r06-02" />
     <PackageReference Update="FluentAssertions" Version="6.4.0" />
     <PackageReference Update="Microsoft.NET.Test.Sdk" Version="17.0.0" />
     <PackageReference Update="NUnit" Version="3.13.2" />
