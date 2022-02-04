@@ -1798,7 +1798,8 @@ namespace CK.Observable
         /// <param name="domain">The domain to check. Must not be null.</param>
         /// <param name="milliSecondsTimeout">Optional timeout to wait for read or write lock.</param>
         /// <param name="useDebugMode">False to not activate <see cref="BinarySerializer.IsDebugMode"/>.</param>
-        public static void IdempotenceSerializationCheck( IActivityMonitor monitor, ObservableDomain domain, int milliSecondsTimeout = -1, bool useDebugMode = true )
+        /// <returns>The current <see cref="LostObjectTracker"/>.</returns>
+        public static LostObjectTracker IdempotenceSerializationCheck( IActivityMonitor monitor, ObservableDomain domain, int milliSecondsTimeout = -1, bool useDebugMode = true )
         {
             using( monitor.OpenInfo( $"Idempotence check of '{domain.DomainName}'." ) )
             using( var s = new MemoryStream() )
@@ -1811,6 +1812,7 @@ namespace CK.Observable
 
                 using var checker = new BinarySerializer.CheckedWriteStream( originalBytes );
                 if( !domain.Save( monitor, checker, true, millisecondsTimeout: milliSecondsTimeout, debugMode: useDebugMode ) ) throw new Exception( "Second Save failed: Unable to acquire lock." );
+                return domain.CurrentLostObjectTracker!;
             }
         }
 

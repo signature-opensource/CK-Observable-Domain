@@ -5,7 +5,7 @@ using System.Collections.Generic;
 namespace CK.Observable
 {
     /// <summary>
-    /// Registers serialization drivers. This can be instanciated if needed but most often,
+    /// Registers serialization drivers. This can be instantiated if needed but most often,
     /// the <see cref="Default"/> registry is enough.
     /// used 
     /// </summary>
@@ -53,7 +53,7 @@ namespace CK.Observable
         /// Registers a driver.
         /// This replaces any existing export driver for the Type.
         /// </summary>
-        /// <param name="t">The type for wich the deserializer should be registered.</param>
+        /// <param name="t">The type for which the deserializer should be registered.</param>
         /// <param name="driver">The driver to register.</param>
         public void Register( Type t, ITypeSerializationDriver driver )
         {
@@ -65,14 +65,14 @@ namespace CK.Observable
         /// </summary>
         /// <typeparam name="T">The type for which a driver must be found.</typeparam>
         /// <returns>Null if the type is null, the driver otherwise.</returns>
-        public ITypeSerializationDriver<T> FindDriver<T>() => (ITypeSerializationDriver<T>)FindDriver( typeof( T ) );
+        public ITypeSerializationDriver<T>? FindDriver<T>() => (ITypeSerializationDriver<T>?)FindDriver( typeof( T ) );
 
         /// <summary>
         /// Finds a serialization driver for a Type.
         /// </summary>
         /// <param name="t">The type for which a driver must be found. Can be null: null is returned.</param>
         /// <returns>Null if the type is null, the driver otherwise.</returns>
-        public ITypeSerializationDriver FindDriver( Type t )
+        public ITypeSerializationDriver? FindDriver( Type? t )
         {
             if( t == null ) return null;
             if( t == typeof( object ) || t == typeof( ValueType ) ) return BasicTypeDrivers.DObject.Default;
