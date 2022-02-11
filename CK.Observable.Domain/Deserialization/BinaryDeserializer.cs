@@ -35,12 +35,11 @@ namespace CK.Observable
         /// <param name="drivers"></param>
         /// <param name="leaveOpen"></param>
         /// <param name="encoding"></param>
-        public BinaryDeserializer(
-            Stream stream,
-            IServiceProvider? services = null,
-            IDeserializerResolver? drivers = null,
-            bool leaveOpen = false,
-            Encoding? encoding = null )
+        public BinaryDeserializer( Stream stream,
+                                   IServiceProvider? services = null,
+                                   IDeserializerResolver? drivers = null,
+                                   bool leaveOpen = false,
+                                   Encoding? encoding = null )
             : base( stream, encoding ?? Encoding.UTF8, leaveOpen )
         {
             Services = new SimpleServiceContainer( services );

@@ -47,12 +47,11 @@ namespace CK.Observable
         /// <param name="leaveOpen">True to leave the stream opened when disposing. False to close it.</param>
         /// <param name="encoding">Optional encoding for texts. Defaults to UTF-8.</param>
         /// <param name="disposedTracker">Optional collector of disposed instance. See <see cref="_disposedTracker"/>.</param>
-        public BinarySerializer(
-            Stream output,
-            ISerializerResolver? drivers = null,
-            bool leaveOpen = false,
-            Encoding? encoding = null,
-            Action<IDestroyable>? disposedTracker = null )
+        public BinarySerializer( Stream output,
+                                 ISerializerResolver? drivers = null,
+                                 bool leaveOpen = false,
+                                 Encoding? encoding = null,
+                                Action<IDestroyable>? disposedTracker = null )
             : base( output, encoding ?? Encoding.UTF8, leaveOpen )
         {
             _types = new Dictionary<Type, TypeInfo>();

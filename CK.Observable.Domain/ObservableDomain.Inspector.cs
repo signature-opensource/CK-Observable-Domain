@@ -211,6 +211,7 @@ namespace CK.Observable
             }
         }
 
+        /// <inheritdoc />
         public async Task<bool> GarbageCollectAsync( IActivityMonitor monitor, int millisecondsTimeout = -1 )
         {
             CheckDisposed();
@@ -275,6 +276,7 @@ namespace CK.Observable
             }
         }
 
+        /// <inheritdoc />
         public LostObjectTracker? EnsureLostObjectTracker( IActivityMonitor monitor, int millisecondsTimeout = -1 )
         {
             // We don't need synchronization code here: the "CurrentLostObjectTracker" may have been

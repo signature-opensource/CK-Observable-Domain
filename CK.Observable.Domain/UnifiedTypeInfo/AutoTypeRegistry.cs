@@ -213,7 +213,6 @@ namespace CK.Observable
 
             protected void DoWriteData( BinarySerializer w, object o )
             {
-                var parameters = new object[] { w };
                 if( o is IDestroyable d && d.IsDestroyed )
                 {
                     _typePath[0]._writer?.Invoke( o, w );
