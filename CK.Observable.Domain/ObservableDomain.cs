@@ -71,6 +71,7 @@ namespace CK.Observable
         readonly SidekickManager _sidekickManager;
         readonly ObservableDomainPostActionExecutor _domainPostActionExecutor;
         internal readonly Random _random;
+        Action<ISuccessfulTransactionEvent>? _inspectorEvent;
 
         /// <summary>
         /// Maps property names to PropInfo that contains the property index.
@@ -860,6 +861,7 @@ namespace CK.Observable
         List<CKExceptionData>? RaiseOnSuccessfulTransaction( in SuccessfulTransactionEventArgs result )
         {
             List<CKExceptionData>? errors = null;
+            _inspectorEvent?.Invoke( result );
             var h = OnSuccessfulTransaction;
             if( h != null )
             {
@@ -879,6 +881,12 @@ namespace CK.Observable
             }
             _sidekickManager.OnSuccessfulTransaction( result, ref errors );
             return errors;
+        }
+
+        event Action<ISuccessfulTransactionEvent>? IObservableDomainInspector.OnSuccessfulTransaction
+        {
+            add => _inspectorEvent += value;
+            remove => _inspectorEvent -= value;
         }
 
         /// <summary>

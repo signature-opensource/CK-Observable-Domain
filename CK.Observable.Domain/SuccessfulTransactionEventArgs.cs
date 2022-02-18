@@ -10,9 +10,9 @@ namespace CK.Observable
     /// <summary>
     /// Encapsulates the result of a successful <see cref="ObservableDomain.Transaction.Commit"/>.
     /// This is available from <see cref="IObservableDomainClient.OnTransactionCommit(in SuccessfulTransactionEventArgs)"/>
-    /// and <see cref="ObservableDomain.OnSuccessfulTransaction"/>.
+    /// and <see cref="ObservableDomain.OnSuccessfulTransaction"/> event.
     /// </summary>
-    public class SuccessfulTransactionEventArgs : EventMonitoredArgs 
+    public class SuccessfulTransactionEventArgs : EventMonitoredArgs, ISuccessfulTransactionEvent
     {
         readonly ObservableDomain _domain;
         readonly Func<string, int?> _propertyId;
@@ -155,7 +155,7 @@ namespace CK.Observable
         public IActionRegistrar<PostActionContext> DomainPostActions => _domainPostActions;
 
         internal SuccessfulTransactionEventArgs( ObservableDomain d,
-                                                 Func<string,int?> propertyId,
+                                                 Func<string, int?> propertyId,
                                                  IReadOnlyList<ObservableEvent> e,
                                                  List<ObservableDomainCommand> c,
                                                  DateTime startTime,

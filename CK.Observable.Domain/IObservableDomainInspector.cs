@@ -1,4 +1,5 @@
 using CK.Core;
+using System;
 using System.Threading.Tasks;
 
 namespace CK.Observable
@@ -40,5 +41,10 @@ namespace CK.Observable
         /// </param>
         /// <returns>True on success, false if timeout or an error occurred.</returns>
         Task<bool> GarbageCollectAsync( IActivityMonitor monitor, int millisecondsTimeout = -1 );
+
+        /// <summary>
+        /// Called on each successful transaction on this domain: provides a way to inspect the <see cref="ObservableEvent"/> emitted by a transaction.
+        /// </summary>
+        event Action<ISuccessfulTransactionEvent>? OnSuccessfulTransaction;
     }
 }
