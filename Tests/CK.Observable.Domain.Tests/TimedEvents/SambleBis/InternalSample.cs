@@ -1,6 +1,6 @@
 namespace CK.Observable.Domain.Tests
 {
-    [SerializationVersion( 0 )]
+    [BinarySerialization.SerializationVersion( 0 )]
     class InternalSample : InternalObject
     {
         public InternalSample()
@@ -9,15 +9,15 @@ namespace CK.Observable.Domain.Tests
 
         public string? Name { get; set; }
 
-        InternalSample( IBinaryDeserializer r, TypeReadInfo info )
-            : base( RevertSerialization.Default )
+        InternalSample( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+            : base( BinarySerialization.Sliced.Instance )
         {
-            Name = r.ReadNullableString();
+            Name = r.Reader.ReadNullableString();
         }
 
-        void Write( BinarySerializer w )
+        public static void Write( BinarySerialization.IBinarySerializer w, in InternalSample o )
         {
-            w.WriteNullableString( Name );
+            w.Writer.WriteNullableString( o.Name );
         }
     }
 }

@@ -8,8 +8,8 @@ namespace CK.Observable.League
     /// <summary>
     /// Immutable definition of options for domains managed in a <see cref="ObservableLeague"/>.
     /// </summary>
-    [SerializationVersion( 3 )]
-    public sealed class ManagedDomainOptions : IEquatable<ManagedDomainOptions>
+    [BinarySerialization.SerializationVersion( 3 )]
+    public sealed class ManagedDomainOptions : IEquatable<ManagedDomainOptions>, BinarySerialization.ICKSlicedSerializable
     {
         /// <summary>
         /// Gets the <see cref="DomainLifeCycleOption"/> configuration.
@@ -121,16 +121,15 @@ namespace CK.Observable.League
         /// <summary>
         /// Initializes a new <see cref="ManagedDomainOptions"/>.
         /// </summary>
-        public ManagedDomainOptions(
-            DomainLifeCycleOption loadOption,
-            CompressionKind c,
-            int skipTransactionCount,
-            TimeSpan snapshotSaveDelay,
-            TimeSpan snapshotKeepDuration,
-            int snapshotMaximalTotalKiB,
-            TimeSpan eventKeepDuration,
-            int eventKeepLimit,
-            int housekeepingRate )
+        public ManagedDomainOptions( DomainLifeCycleOption loadOption,
+                                     CompressionKind c,
+                                     int skipTransactionCount,
+                                     TimeSpan snapshotSaveDelay,
+                                     TimeSpan snapshotKeepDuration,
+                                     int snapshotMaximalTotalKiB,
+                                     TimeSpan eventKeepDuration,
+                                     int eventKeepLimit,
+                                     int housekeepingRate )
         {
             LifeCycleOption = loadOption;
             CompressionKind = c;
@@ -167,24 +166,32 @@ namespace CK.Observable.League
             }
         }
 
-        void Write( BinarySerializer w )
+        ManagedDomainOptions( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
         {
-            w.WriteEnum( LifeCycleOption );
-            w.WriteEnum( CompressionKind );
-            w.Write( SnapshotSaveDelay );
-            w.Write( SnapshotKeepDuration );
-            w.Write( SnapshotMaximalTotalKiB );
-            w.Write( ExportedEventKeepDuration );
-            w.Write( ExportedEventKeepLimit );
+            var r = d.Reader;
+            LifeCycleOption = r.ReadEnum<DomainLifeCycleOption>();
+            CompressionKind = r.ReadEnum<CompressionKind>();
+            SnapshotSaveDelay = r.ReadTimeSpan();
+            SnapshotKeepDuration = r.ReadTimeSpan();
+            SnapshotMaximalTotalKiB = r.ReadInt32();
+            ExportedEventKeepDuration = r.ReadTimeSpan();
+            ExportedEventKeepLimit = r.ReadInt32();
+            SkipTransactionCount = r.ReadInt32();
+            HousekeepingRate = r.ReadInt32();
+        }
 
-            // v2: no more SaveDestroyedObjectBehavior.
-            // w.WriteEnum( SaveDestroyedObjectBehavior );
-
-            // v1
-            w.Write( SkipTransactionCount );
-
-            // v3
-            w.Write( HousekeepingRate );
+        public static void Write( BinarySerialization.IBinarySerializer s, in ManagedDomainOptions o )
+        {
+            var w = s.Writer;
+            w.WriteEnum( o.LifeCycleOption );
+            w.WriteEnum( o.CompressionKind );
+            w.Write( o.SnapshotSaveDelay );
+            w.Write( o.SnapshotKeepDuration );
+            w.Write( o.SnapshotMaximalTotalKiB );
+            w.Write( o.ExportedEventKeepDuration );
+            w.Write( o.ExportedEventKeepLimit );
+            w.Write( o.SkipTransactionCount );
+            w.Write( o.HousekeepingRate );
         }
 
         /// <summary>

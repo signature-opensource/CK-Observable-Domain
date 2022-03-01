@@ -45,24 +45,24 @@ namespace CK.Observable.Domain.Tests
 
         }
 
-        [SerializationVersion( 0 )]
+        [BinarySerialization.SerializationVersion( 0 )]
         public class ObjWithSKBase : ObservableObject
         {
             public ObjWithSKBase()
             {
             }
 
-            protected ObjWithSKBase(RevertSerialization _ ) : base( _ ) { }
+            protected ObjWithSKBase( BinarySerialization.Sliced _ ) : base( _ ) { }
 
-            ObjWithSKBase( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+            ObjWithSKBase( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+                : base( BinarySerialization.Sliced.Instance )
             {
-                Message = r.ReadString();
+                Message = r.Reader.ReadString();
             }
 
-            void Write( BinarySerializer s )
+            public static void Write( BinarySerialization.IBinarySerializer s, in ObjWithSKBase o )
             {
-                s.Write( Message );
+                s.Writer.Write( o.Message );
             }
 
             public string Message { get; set; }
@@ -82,19 +82,19 @@ namespace CK.Observable.Domain.Tests
         /// (typically through the <see cref="ObservableDomain.AllObjects"/>).
         /// </summary>
         [UseSidekick( typeof( SKSimple ) )]
-        [SerializationVersion( 0 )]
+        [BinarySerialization.SerializationVersion( 0 )]
         public class ObjWithSKSimple : ObjWithSKBase
         {
             public ObjWithSKSimple()
             {
             }
 
-            ObjWithSKSimple( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+            ObjWithSKSimple( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+                : base( BinarySerialization.Sliced.Instance )
             {
             }
 
-            void Write( BinarySerializer s )
+            public static void Write( BinarySerialization.IBinarySerializer s, in ObjWithSKSimple o )
             {
             }
         }
@@ -102,19 +102,19 @@ namespace CK.Observable.Domain.Tests
         /// <summary>
         /// When using the ISidekickClientObject<>, the object is automatically registered on the sidekick.
         /// </summary>
-        [SerializationVersion( 0 )]
+        [BinarySerialization.SerializationVersion( 0 )]
         public class ObjWithSKSimpleViaInterface : ObjWithSKBase, ISidekickClientObject<SKSimple>
         {
             public ObjWithSKSimpleViaInterface()
             {
             }
 
-            ObjWithSKSimpleViaInterface( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+            ObjWithSKSimpleViaInterface( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+                : base( BinarySerialization.Sliced.Instance )
             {
             }
 
-            void Write( BinarySerializer s )
+            public static void Write( BinarySerialization.IBinarySerializer s, in ObjWithSKSimpleViaInterface o )
             {
             }
         }
@@ -243,36 +243,36 @@ namespace CK.Observable.Domain.Tests
         }
 
         [UseSidekick( typeof( SKWithDependencies ) )]
-        [SerializationVersion( 0 )]
+        [BinarySerialization.SerializationVersion( 0 )]
         public sealed class ObjWithSKWithDependencies : ObjWithSKBase
         {
             public ObjWithSKWithDependencies()
             {
             }
 
-            ObjWithSKWithDependencies( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+            ObjWithSKWithDependencies( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+                : base( BinarySerialization.Sliced.Instance )
             {
             }
 
-            void Write( BinarySerializer s )
+            public static void Write( BinarySerialization.IBinarySerializer s, in ObjWithSKWithDependencies o )
             {
             }
         }
 
-        [SerializationVersion( 0 )]
+        [BinarySerialization.SerializationVersion( 0 )]
         public sealed class ObjWithSKWithDependenciesViaInterface : ObjWithSKBase, ISidekickClientObject<SKWithDependencies>
         {
             public ObjWithSKWithDependenciesViaInterface()
             {
             }
 
-            ObjWithSKWithDependenciesViaInterface( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+            ObjWithSKWithDependenciesViaInterface( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+                : base( BinarySerialization.Sliced.Instance )
             {
             }
 
-            void Write( BinarySerializer s )
+            public static void Write( BinarySerialization.IBinarySerializer s, in ObjWithSKWithDependenciesViaInterface o )
             {
             }
         }

@@ -4,7 +4,7 @@ using System;
 
 namespace CK.Observable.Domain.Tests.Sample
 {
-    [SerializationVersion(0)]
+    [BinarySerialization.SerializationVersion(0)]
     public sealed class Car : ObservableObject
     {
         ObservableEventHandler<ObservableDomainEventArgs> _testSpeedChanged;
@@ -19,22 +19,37 @@ namespace CK.Observable.Domain.Tests.Sample
             Name = name;
         }
 
+        #region Old Deserialization
         Car( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+                : base( BinarySerialization.Sliced.Instance )
         {
             Name = r.ReadNullableString();
             TestSpeed = r.ReadInt32();
             _position = (Position)r.ReadObject();
             _testSpeedChanged = new ObservableEventHandler<ObservableDomainEventArgs>( r );
         }
+        #endregion
 
-        void Write( BinarySerializer w )
+        #region New Deserialization
+
+        Car( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
+        : base( BinarySerialization.Sliced.Instance )
         {
-            w.WriteNullableString( Name );
-            w.Write( TestSpeed );
-            w.WriteObject( _position );
-            _testSpeedChanged.Write( w );
+            Name = d.Reader.ReadNullableString();
+            TestSpeed = d.Reader.ReadInt32();
+            _position = d.ReadValue<Position>();
+            _testSpeedChanged = new ObservableEventHandler<ObservableDomainEventArgs>( d );
         }
+
+        public static void Write( BinarySerialization.IBinarySerializer s, in Car o )
+        {
+            s.Writer.WriteNullableString( o.Name );
+            s.Writer.Write( o.TestSpeed );
+            s.WriteValue( o._position );
+            o._testSpeedChanged.Write( s );
+        }
+
+        #endregion
 
         public string Name { get; }
 

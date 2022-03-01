@@ -3,7 +3,7 @@ using System.Text;
 
 namespace CK.Observable.League.Tests.MicroMachine
 {
-    [SerializationVersion( 0 )]
+    [BinarySerialization.SerializationVersion( 0 )]
     public abstract class Machine : ObservableObject, ISidekickClientObject<MachineSideKick>
     {
         readonly SuspendableClock _clock;
@@ -16,10 +16,8 @@ namespace CK.Observable.League.Tests.MicroMachine
             _clock.IsActiveChanged += ClockIsActiveChanged;
         }
 
-        protected Machine( RevertSerialization _ ) : base( _ ) { }
-
         Machine( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+                : base( BinarySerialization.Sliced.Instance )
         {
             Debug.Assert( !IsDestroyed );
             Configuration = (MachineConfiguration)r.ReadObject()!;
@@ -28,12 +26,24 @@ namespace CK.Observable.League.Tests.MicroMachine
             r.ImplementationServices.OnPostDeserialization( () => IsRunning = _clock.IsActive );
         }
 
-        void Write( BinarySerializer w )
+        protected Machine( BinarySerialization.Sliced _ ) : base( _ ) { }
+
+        Machine( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
+                : base( BinarySerialization.Sliced.Instance )
         {
             Debug.Assert( !IsDestroyed );
-            w.WriteObject( Configuration );
-            w.WriteObject( _clock );
-            w.Write( Name );
+            Configuration = d.ReadObject<MachineConfiguration>();
+            _clock = d.ReadObject<SuspendableClock>()!;
+            Name = d.Reader.ReadString();
+            d.PostActions.Add( () => IsRunning = _clock.IsActive );
+        }
+
+        public static void Write( BinarySerialization.IBinarySerializer s, in Machine o )
+        {
+            Debug.Assert( !o.IsDestroyed );
+            s.WriteObject( o.Configuration );
+            s.WriteObject( o._clock );
+            s.Writer.Write( o.Name );
         }
 
         public string Name { get; }

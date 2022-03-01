@@ -8,7 +8,7 @@ namespace CK.Observable
     /// are inserted via <see cref="Send(T)"/>, <see cref="ItemSent"/> is raised, but items are not kept.
     /// </summary>
     /// <typeparam name="T">The item type.</typeparam>
-    [SerializationVersion(0)]
+    [BinarySerialization.SerializationVersion(0)]
     public class ObservableChannel<T> : ObservableObject
     {
         ObservableEventHandler<ListInsertEvent> _itemSent;
@@ -29,22 +29,31 @@ namespace CK.Observable
         {
         }
 
-        /// <summary>
-        /// Special no-op constructor for specializations.
-        /// </summary>
-        /// <param name="_">unused parameter.</param>
-        protected ObservableChannel( RevertSerialization _ ) : base( _ ) { }
-
+        #region Old Serialization
         ObservableChannel( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+                : base( BinarySerialization.Sliced.Instance )
         {
             _itemSent = new ObservableEventHandler<ListInsertEvent>( r );
         }
 
-       void Write( BinarySerializer s )
+        #endregion
+
+        #region New Serialization
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+        protected ObservableChannel( BinarySerialization.Sliced _ ) : base( _ ) { }
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+  
+        ObservableChannel( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
+                : base( BinarySerialization.Sliced.Instance )
         {
-            _itemSent.Write( s );
+            _itemSent = new ObservableEventHandler<ListInsertEvent>( d );
         }
+
+        public static void Write( BinarySerialization.IBinarySerializer s, in ObservableChannel<T> o )
+        {
+            o._itemSent.Write( s );
+        }
+        #endregion
 
         /// <summary>
         /// Define to export this channel as an empty list of items.

@@ -13,7 +13,7 @@ namespace CK.Observable
     /// The event time is based on the <see cref="DueTimeUtc"/>: we try to always raise the event based on a multiple
     /// of the <see cref="IntervalMilliSeconds"/> from <see cref="DueTimeUtc"/>.
     /// </summary>
-    [SerializationVersion(0)]
+    [BinarySerialization.SerializationVersion(0)]
     public sealed class ObservableTimer : ObservableTimedEventBase<ObservableTimerEventArgs>
     {
         int _milliSeconds;
@@ -47,8 +47,9 @@ namespace CK.Observable
             Name = name ?? throw new ArgumentNullException( nameof( name ) );
         }
 
+        #region Old Deserialization
         ObservableTimer( IBinaryDeserializer r, TypeReadInfo? info )
-            : base( RevertSerialization.Default )
+            : base( BinarySerialization.Sliced.Instance )
         {
             Debug.Assert( !IsDestroyed );
             _milliSeconds = r.ReadInt32();
@@ -60,13 +61,30 @@ namespace CK.Observable
             Name = r.ReadNullableString();
             ReusableArgs = new ObservableTimerEventArgs( this );
         }
+        #endregion
 
-        void Write( BinarySerializer w )
+        #region New Serialization
+        ObservableTimer( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
+            : base( BinarySerialization.Sliced.Instance )
         {
             Debug.Assert( !IsDestroyed );
-            w.Write( _isActive ? -_milliSeconds : _milliSeconds );
-            w.WriteNullableString( Name );
+            _milliSeconds = d.Reader.ReadInt32();
+            if( _milliSeconds < 0 )
+            {
+                _milliSeconds = -_milliSeconds;
+                _isActive = true;
+            }
+            Name = d.Reader.ReadNullableString();
+            ReusableArgs = new ObservableTimerEventArgs( this );
         }
+
+        public static void Write( BinarySerialization.IBinarySerializer s, in ObservableTimer o )
+        {
+            Debug.Assert( !o.IsDestroyed );
+            s.Writer.Write( o._isActive ? -o._milliSeconds : o._milliSeconds );
+            s.Writer.WriteNullableString( o.Name );
+        }
+        #endregion
 
         private protected override bool GetIsActiveFlag() => _isActive;
 
@@ -111,7 +129,7 @@ namespace CK.Observable
         /// Gets or sets an optional name for this timer.
         /// Default to null.
         /// </summary>
-        public string Name { get; set; }
+        public string? Name { get; set; }
 
         /// <summary>
         /// Gets or sets the interval, expressed in milliseconds, at which the <see cref="ObservableTimedEventBase{T}.Elapsed"/> event must repeatedly fire.

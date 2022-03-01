@@ -11,7 +11,7 @@ namespace CK.Observable.Device
     /// Non generic abstract base class for device. It is not intended to be specialized directly: use the
     /// generic <see cref="ObservableDeviceObject{TSidekick}"/> as the object device base.
     /// </summary>
-    [SerializationVersion( 0 )]
+    [BinarySerialization.SerializationVersion( 0 )]
     public abstract class ObservableDeviceObject : ObservableObject, ISidekickLocator
     {
         DeviceStatus? _status;
@@ -26,22 +26,34 @@ namespace CK.Observable.Device
             DeviceName = deviceName;
         }
 
-        protected ObservableDeviceObject( RevertSerialization _ ) : base( _ ) { }
-
+        #region Old Deserialization
         ObservableDeviceObject( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+                : base( BinarySerialization.Sliced.Instance )
         {
             DeviceName = r.ReadNullableString();
             _statusChanged = new ObservableEventHandler( r );
         }
+        #endregion
+
+        #region New serialization
+
+        protected ObservableDeviceObject( BinarySerialization.Sliced _ ) : base( _ ) { }
+
+        ObservableDeviceObject( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
+        : base( BinarySerialization.Sliced.Instance )
+        {
+            DeviceName = d.Reader.ReadNullableString();
+            _statusChanged = new ObservableEventHandler( d );
+        }
+
+        public static void Write( BinarySerialization.IBinarySerializer d, in ObservableDeviceObject o )
+        {
+            d.Writer.WriteNullableString( o.DeviceName );
+            o._statusChanged.Write( d );
+        }
+        #endregion
 
 #pragma warning restore CS8618
-
-        void Write( BinarySerializer w )
-        {
-            w.WriteNullableString( DeviceName );
-            _statusChanged.Write( w );
-        }
 
         internal interface IDeviceBridge
         {

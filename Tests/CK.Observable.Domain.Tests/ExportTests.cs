@@ -336,19 +336,19 @@ namespace CK.Observable.Domain.Tests
         }
 
 
-        [SerializationVersion(0)]
+        [BinarySerialization.SerializationVersion(0)]
         public class TryingToExportNotExportableProperties1 : ObservableObject
         {
             public TryingToExportNotExportableProperties1()
             {
             }
 
-            TryingToExportNotExportableProperties1( IBinaryDeserializer r, TypeReadInfo info )
-                : base( RevertSerialization.Default )
+            TryingToExportNotExportableProperties1( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+                : base( BinarySerialization.Sliced.Instance )
             {
             }
 
-            void Write( BinarySerializer w )
+            public static void Write( BinarySerialization.IBinarySerializer s, in TryingToExportNotExportableProperties1 o )
             {
             }
 
@@ -356,19 +356,19 @@ namespace CK.Observable.Domain.Tests
             public ObservableDomain ThisIsVeryBad { get; }
         }
 
-        [SerializationVersion(0)]
+        [BinarySerialization.SerializationVersion(0)]
         public class TryingToExportNotExportableProperties2 : ObservableObject
         {
             public TryingToExportNotExportableProperties2()
             {
             }
 
-            TryingToExportNotExportableProperties2( IBinaryDeserializer r, TypeReadInfo info )
-               : base( RevertSerialization.Default )
+            TryingToExportNotExportableProperties2( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
+               : base( BinarySerialization.Sliced.Instance )
             {
             }
 
-            void Write( BinarySerializer w )
+            public static void Write( BinarySerialization.IBinarySerializer s, in TryingToExportNotExportableProperties2 o )
             {
             }
 
@@ -378,19 +378,19 @@ namespace CK.Observable.Domain.Tests
             public DomainView ThisIsBad => Domain;
         }
 
-        [SerializationVersion(0)]
+        [BinarySerialization.SerializationVersion(0)]
         public class TryingToExportNotExportableProperties3 : ObservableObject
         {
             public TryingToExportNotExportableProperties3()
             {
             }
 
-            TryingToExportNotExportableProperties3( IBinaryDeserializer r, TypeReadInfo info )
-               : base( RevertSerialization.Default )
+            TryingToExportNotExportableProperties3( BinarySerialization.IBinaryDeserializer s, BinarySerialization.ITypeReadInfo info )
+               : base( BinarySerialization.Sliced.Instance )
             {
             }
 
-            void Write( BinarySerializer w )
+            public static void Write( BinarySerialization.IBinarySerializer s, in TryingToExportNotExportableProperties3 o )
             {
             }
 
@@ -437,7 +437,7 @@ namespace CK.Observable.Domain.Tests
                 .WithMessage( "Exporting 'TryingToExportNotExportableProperties3.NoWay' is forbidden: Missed..." );
         }
 
-        [SerializationVersion(0)]
+        [BinarySerialization.SerializationVersion(0)]
         public class TimerAndRemiderProperties : ObservableObject
         {
             public TimerAndRemiderProperties()
@@ -446,16 +446,16 @@ namespace CK.Observable.Domain.Tests
                 Reminder = new ObservableReminder( Timer.DueTimeUtc );
             }
 
-            TimerAndRemiderProperties( IBinaryDeserializer r, TypeReadInfo info )
+            TimerAndRemiderProperties( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
             {
-                Timer = (ObservableTimer)r.ReadObject();
-                Reminder = (ObservableReminder)r.ReadObject();
+                Timer = r.ReadObject<ObservableTimer>();
+                Reminder = r.ReadObject<ObservableReminder>();
             }
 
-            void Write( BinarySerializer w )
+            public static void Write( BinarySerialization.IBinarySerializer s, in TimerAndRemiderProperties o )
             {
-                w.WriteObject( Timer );
-                w.WriteObject( Reminder );
+                s.WriteObject( o.Timer );
+                s.WriteObject( o.Reminder );
             }
 
             public ObservableTimer Timer { get; }

@@ -10,7 +10,7 @@ namespace CK.Observable
     /// </summary>
     /// <typeparam name="TKey">The type of the keys in the dictionary.</typeparam>
     /// <typeparam name="TValue">The type of the values in the dictionary.</typeparam>
-    [SerializationVersion( 0 )]
+    [BinarySerialization.SerializationVersion( 0 )]
     public class ObservableDictionary<TKey, TValue> : ObservableObject, IDictionary<TKey, TValue>, IObservableReadOnlyDictionary<TKey, TValue> where TKey : notnull
     {
         readonly Dictionary<TKey, TValue> _map;
@@ -63,16 +63,10 @@ namespace CK.Observable
             _map = new Dictionary<TKey, TValue>();
         }
 
-        /// <summary>
-        /// Specialized deserialization constructor for specialized classes.
-        /// </summary>
-        /// <param name="_">Unused parameter.</param>
-#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-        protected ObservableDictionary( RevertSerialization _ ) : base( _ ) { }
-#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+        #region Old Serialization
 
         ObservableDictionary( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+                : base( BinarySerialization.Sliced.Instance )
         {
             _map = (Dictionary<TKey, TValue>)r.ReadObject()!;
             _itemSet = new ObservableEventHandler<CollectionMapSetEvent>( r );
@@ -80,15 +74,36 @@ namespace CK.Observable
             _collectionCleared = new ObservableEventHandler<CollectionClearEvent>( r );
             _itemRemoved = new ObservableEventHandler<CollectionRemoveKeyEvent>( r );
         }
+        #endregion
 
-        void Write( BinarySerializer s )
+        #region New Serialization
+        /// <summary>
+        /// Specialized deserialization constructor for specialized classes.
+        /// </summary>
+        /// <param name="_">Unused parameter.</param>
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+        protected ObservableDictionary( BinarySerialization.Sliced _ ) : base( _ ) { }
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+
+        ObservableDictionary( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
+            : base( BinarySerialization.Sliced.Instance )
         {
-            s.WriteObject( _map );
-            _itemSet.Write( s );
-            _itemAdded.Write( s );
-            _collectionCleared.Write( s );
-            _itemRemoved.Write( s );
+            _map = d.ReadObject<Dictionary<TKey, TValue>>()!;
+            _itemSet = new ObservableEventHandler<CollectionMapSetEvent>( d );
+            _itemAdded = new ObservableEventHandler<CollectionMapSetEvent>( d );
+            _collectionCleared = new ObservableEventHandler<CollectionClearEvent>( d );
+            _itemRemoved = new ObservableEventHandler<CollectionRemoveKeyEvent>( d );
         }
+
+        public static void Write( BinarySerialization.IBinarySerializer s, in ObservableDictionary<TKey, TValue> o )
+        {
+            s.WriteObject( o._map );
+            o._itemSet.Write( s );
+            o._itemAdded.Write( s );
+            o._collectionCleared.Write( s );
+            o._itemRemoved.Write( s );
+        }
+        #endregion
 
         internal override ObjectExportedKind ExportedKind => ObjectExportedKind.Map;
 

@@ -5,7 +5,7 @@ using System.Text;
 
 namespace CK.Observable.Domain.Tests.TimedEvents
 {
-    [SerializationVersion( 0 )]
+    [BinarySerialization.SerializationVersion( 0 )]
     class AutoCounter : ObservableObject
     {
         readonly ObservableTimer _timer;
@@ -32,19 +32,19 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             e.Monitor.Info( $"AutoCounter call n°{Count}." );
         }
 
-        AutoCounter( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+        AutoCounter( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
+                : base( BinarySerialization.Sliced.Instance )
         {
-            Count = r.ReadInt32();
-            _timer = (ObservableTimer)r.ReadObject();
-            _countChanged = new ObservableEventHandler( r );
+            Count = d.Reader.ReadInt32();
+            _timer = d.ReadObject<ObservableTimer>();
+            _countChanged = new ObservableEventHandler( d );
         }
 
-        void Write( BinarySerializer w )
+        public static void Write( BinarySerialization.IBinarySerializer s, in AutoCounter o )
         {
-            w.Write( Count );
-            w.WriteObject( _timer );
-            _countChanged.Write( w );
+            s.Writer.Write( o.Count );
+            s.WriteObject( o._timer );
+            o._countChanged.Write( s );
         }
 
         /// <summary>
