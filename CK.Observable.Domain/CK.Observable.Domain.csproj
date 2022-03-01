@@ -10,10 +10,7 @@
   <ItemGroup>
     <PackageReference Include="CK.StObj.Model" />
     <PackageReference Include="System.Threading.Channels" />
+    <PackageReference Include="CK.BinarySerialization.Sliced" />
   </ItemGroup>
   
-  <ItemGroup>
-    <ProjectReference Include="..\..\CK-BinarySerialization\CK.BinarySerialization.Sliced\CK.BinarySerialization.Sliced.csproj" />
-  </ItemGroup>
-
 </Project>
