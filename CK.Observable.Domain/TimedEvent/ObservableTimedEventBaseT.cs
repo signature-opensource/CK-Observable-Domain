@@ -12,7 +12,7 @@ namespace CK.Observable
     /// Base class for timed event management that implements the <see cref="Elapsed"/> event.
     /// <see cref="ObservableTimer"/> and <see cref="ObservableReminder"/> are concrete specializations of this base class.
     /// </summary>
-    [SerializationVersion( 0 )]
+    [BinarySerialization.SerializationVersion( 0 )]
     public abstract class ObservableTimedEventBase<TEventArgs> : ObservableTimedEventBase where TEventArgs : ObservableTimedEventArgs
     {
         ObservableEventHandler<TEventArgs> _handlers;
@@ -24,18 +24,31 @@ namespace CK.Observable
         {
         }
 
-        protected ObservableTimedEventBase( RevertSerialization _ ) : base( _ ) { }
 
+        #region Old Deserialization
         ObservableTimedEventBase( IBinaryDeserializer r, TypeReadInfo info )
-            : base( RevertSerialization.Default )
+            : base( BinarySerialization.Sliced.Instance )
         {
             _handlers = new ObservableEventHandler<TEventArgs>( r );
         }
+        #endregion
 
-        void Write( BinarySerializer w )
+        #region New Serialization
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+        protected ObservableTimedEventBase( BinarySerialization.Sliced _ ) : base( _ ) { }
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+
+        ObservableTimedEventBase( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
+            : base( BinarySerialization.Sliced.Instance )
         {
-            _handlers.Write( w );
+            _handlers = new ObservableEventHandler<TEventArgs>( d );
         }
+
+        public static void Write( BinarySerialization.IBinarySerializer s, in ObservableTimedEventBase<TEventArgs> o )
+        {
+            o._handlers.Write( s );
+        }
+        #endregion
 
         internal override bool HasHandlers => _handlers.HasHandlers;
 

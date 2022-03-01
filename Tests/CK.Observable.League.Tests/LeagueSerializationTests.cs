@@ -16,9 +16,9 @@ namespace CK.Observable.League.Tests
         public void coordinator_serialization()
         {
             using var d = new ObservableDomain<Coordinator>(TestHelper.Monitor, String.Empty, startTimer: true );
-            var services = new SimpleServiceContainer();
-            services.Add<ObservableDomain>( new ObservableDomain<Coordinator>(TestHelper.Monitor, String.Empty, startTimer: true ) );
-            BinarySerializer.IdempotenceCheck( d.Root, services );
+            var ctx = new BinarySerialization.BinaryDeserializerContext();
+            ctx.Services.Add<ObservableDomain>( new ObservableDomain<Coordinator>(TestHelper.Monitor, String.Empty, startTimer: true ) );
+            BinarySerialization.BinarySerializer.IdempotenceCheck( d.Root, deserializerContext: ctx );
         }
 
         [Test]
@@ -59,7 +59,7 @@ namespace CK.Observable.League.Tests
             await league2.CloseAsync( TestHelper.Monitor );
         }
 
-        [SerializationVersion( 0 )]
+        [BinarySerialization.SerializationVersion( 0 )]
         public sealed class InstantiationTracker : ObservableRootObject
         {
             public InstantiationTracker()
@@ -67,13 +67,13 @@ namespace CK.Observable.League.Tests
                 ++ContructorCount;
             }
 
-            InstantiationTracker( IBinaryDeserializer r, TypeReadInfo info )
-                : base( RevertSerialization.Default )
+            InstantiationTracker( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+                : base( BinarySerialization.Sliced.Instance )
             {
                 ++DeserializationCount;
             }
 
-            void Write( BinarySerializer w )
+            public static void Write( BinarySerialization.IBinarySerializer w, in InstantiationTracker o )
             {
                 ++WriteCount;
             }
@@ -134,22 +134,22 @@ namespace CK.Observable.League.Tests
         }
 
 
-        [SerializationVersion(0)]
+        [BinarySerialization.SerializationVersion(0)]
         public sealed class WriteCounter : ObservableRootObject
         {
             public WriteCounter()
             {
             }
 
-            WriteCounter( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+            WriteCounter( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+                : base( BinarySerialization.Sliced.Instance )
             {
-                WriteCount = r.ReadInt32();
+                WriteCount = r.Reader.ReadInt32();
             }
 
-            void Write( BinarySerializer w )
+            public static void Write( BinarySerialization.IBinarySerializer w, in WriteCounter o )
             {
-                w.Write( ++WriteCount );
+                w.Writer.Write( ++o.WriteCount );
             }
 
             public int WriteCount { get; private set; }

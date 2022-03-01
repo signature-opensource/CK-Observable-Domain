@@ -1,4 +1,5 @@
 ﻿using CK.BinarySerialization;
+using CK.Observable;
 using CK.Testing;
 using FluentAssertions;
 using System;
@@ -62,13 +63,13 @@ namespace CK.Core
         }
 
         public static T SaveAndLoad<T>( this IBasicTestHelper @this, in T o,
-                                                                     Action<T, IBinarySerializer> w,
-                                                                     Func<IBinaryDeserializer, T> r,
+                                                                     Action<T, BinarySerialization.IBinarySerializer> w,
+                                                                     Func<BinarySerialization.IBinaryDeserializer, T> r,
                                                                      BinarySerializerContext? serializerContext = null,
                                                                      BinaryDeserializerContext? deserializerContext = null )
         {
             using( var s = new MemoryStream() )
-            using( var writer = BinarySerializer.Create( s, true, serializerContext ?? new BinarySerializerContext() ) )
+            using( var writer = BinarySerialization.BinarySerializer.Create( s, true, serializerContext ?? new BinarySerializerContext() ) )
             {
                 writer.DebugWriteMode( true );
 
@@ -90,7 +91,7 @@ namespace CK.Core
                     writer.WriteAny( o2 );
                 }
                 s.Position = 0;
-                using( var reader = BinaryDeserializer.Create( s, true, deserializerContext ?? new BinaryDeserializerContext() ) )
+                using( var reader = BinarySerialization.BinaryDeserializer.Create( s, true, deserializerContext ?? new BinaryDeserializerContext() ) )
                 {
                     reader.DebugReadMode();
                     
@@ -116,19 +117,19 @@ namespace CK.Core
             }
         }
 
-        public static void SaveAndLoad( this IBasicTestHelper @this, Action<IBinarySerializer> w,
-                                                                     Action<IBinaryDeserializer> r,
+        public static void SaveAndLoad( this IBasicTestHelper @this, Action<BinarySerialization.IBinarySerializer> w,
+                                                                     Action<BinarySerialization.IBinaryDeserializer> r,
                                                                      BinarySerializerContext? serializerContext = null,
                                                                      BinaryDeserializerContext? deserializerContext = null )
         {
             using( var s = new MemoryStream() )
-            using( var writer = BinarySerializer.Create( s, true, serializerContext ?? new BinarySerializerContext() ) )
+            using( var writer = BinarySerialization.BinarySerializer.Create( s, true, serializerContext ?? new BinarySerializerContext() ) )
             {
                 writer.DebugWriteSentinel();
                 w( writer );
                 writer.DebugWriteSentinel();
                 s.Position = 0;
-                using( var reader = BinaryDeserializer.Create( s, true, deserializerContext ?? new BinaryDeserializerContext() ) )
+                using( var reader = BinarySerialization.BinaryDeserializer.Create( s, true, deserializerContext ?? new BinaryDeserializerContext() ) )
                 {
                     reader.DebugCheckSentinel();
                     r( reader );

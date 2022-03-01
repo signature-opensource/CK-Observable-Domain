@@ -6,12 +6,6 @@ namespace CK.Observable
     public interface IUnifiedTypeDriver
     {
         /// <summary>
-        /// Gets the serialization driver.
-        /// Null if no serialization driver is available.
-        /// </summary>
-        ITypeSerializationDriver? SerializationDriver { get; }
-
-        /// <summary>
         /// Gets the deserialization driver.
         /// Null if no deserialization driver is available.
         /// </summary>

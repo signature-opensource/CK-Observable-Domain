@@ -8,7 +8,7 @@ using System.Text;
 
 namespace CK.Observable.League.Tests.MicroMachine
 {
-    [SerializationVersion( 0 )]
+    [BinarySerialization.SerializationVersion( 0 )]
     public abstract class Machine<T> : Machine where T : MachineThing
     {
         readonly ObservableList<T> _all;
@@ -19,17 +19,23 @@ namespace CK.Observable.League.Tests.MicroMachine
             _all = new ObservableList<T>();
         }
 
-        protected Machine( RevertSerialization _ ) : base( _ ) { }
-
         Machine( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+                : base( BinarySerialization.Sliced.Instance )
         {
             _all = (ObservableList<T>)r.ReadObject()!;
         }
 
-        void Write( BinarySerializer s )
+        protected Machine( BinarySerialization.Sliced _ ) : base( _ ) { }
+
+        Machine( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+                : base( BinarySerialization.Sliced.Instance )
         {
-            s.WriteObject( _all );
+            _all = r.ReadObject<ObservableList<T>>();
+        }
+
+        public static void Write( BinarySerialization.IBinarySerializer s, in Machine<T> o )
+        {
+            s.WriteObject( o._all );
         }
 
         public IObservableReadOnlyList<T> Things => _all;

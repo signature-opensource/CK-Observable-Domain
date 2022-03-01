@@ -123,17 +123,20 @@ namespace CK.Observable
             int count = d.Reader.ReadNonNegativeSmallInt32();
             if( count > 0 )
             {
+                // Skips the delegate signature.
                 d.ReadTypeInfo();
-                object? o = d.ReadAnyNullable();
-                if( o != null )
+                do
                 {
-                    do
+                    // This is either the Target object instance or the Declaring type of the static method
+                    // or null if the target was a SideKick.
+                    object? o = d.ReadNullableObject<object>();
+                    if( o != null )
                     {
                         d.Reader.ReadSharedString();
                         SkipArray( d );
                     }
-                    while( --count > 0 );
                 }
+                while( --count > 0 );
                 d.DebugCheckSentinel();
             }
 
@@ -143,7 +146,6 @@ namespace CK.Observable
                 while( --len >= 0 ) d.ReadTypeInfo();
             }
         }
-
 
         /// <summary>
         /// Deserializes the delegate.

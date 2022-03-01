@@ -116,14 +116,14 @@ namespace CK.Observable.Domain.Tests
                 var h = new ObservableEventHandler<EventArgs>();
                 h.Add( StaticOnEvent, nameof( StaticOnEvent ) );
                 {
-                    var h2 = TestHelper.SaveAndLoadObject( h, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<EventArgs>( r ) );
+                    var h2 = TestHelper.SaveAndLoad( h, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<EventArgs>( r ) );
                     h2.HasHandlers.Should().BeTrue();
                     h2.Invoking( _ => _.Raise( this, EArgs ) )
                                             .Should().Throw<Exception>().WithMessage( "Such an ugly test...(EventArgs)" );
                 }
                 h.RemoveAll();
                 {
-                    var h2 = TestHelper.SaveAndLoadObject( h, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<EventArgs>( r ) );
+                    var h2 = TestHelper.SaveAndLoad( h, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<EventArgs>( r ) );
                     h2.HasHandlers.Should().BeFalse();
                     h2.Invoking( _ => _.Raise( this, EArgs ) )
                                             .Should().NotThrow();
@@ -133,14 +133,14 @@ namespace CK.Observable.Domain.Tests
                 var h = new ObservableEventHandler<EventMonitoredArgs>();
                 h.Add( StaticOnEvent, nameof( StaticOnEvent ) );
                 {
-                    var h2 = TestHelper.SaveAndLoadObject( h, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<EventMonitoredArgs>( r ) );
+                    var h2 = TestHelper.SaveAndLoad( h, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<EventMonitoredArgs>( r ) );
                     h2.HasHandlers.Should().BeTrue();
                     h2.Invoking( _ => _.Raise( this, MArgs ) )
                                             .Should().Throw<Exception>().WithMessage( "Such an ugly test...(EventMonitoredArgs)" );
                 }
                 h.RemoveAll();
                 {
-                    var h2 = TestHelper.SaveAndLoadObject( h, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<EventMonitoredArgs>( r ) );
+                    var h2 = TestHelper.SaveAndLoad( h, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<EventMonitoredArgs>( r ) );
                     h2.HasHandlers.Should().BeFalse();
                     h2.Invoking( _ => _.Raise( this, MArgs ) )
                                             .Should().NotThrow();
@@ -150,14 +150,14 @@ namespace CK.Observable.Domain.Tests
                 var h = new ObservableEventHandler<MoreSpecializedEventArgs>();
                 h.Add( StaticOnEvent, nameof( StaticOnEvent ) );
                 {
-                    var h2 = TestHelper.SaveAndLoadObject( h, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<MoreSpecializedEventArgs>( r ) );
+                    var h2 = TestHelper.SaveAndLoad( h, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<MoreSpecializedEventArgs>( r ) );
                     h2.HasHandlers.Should().BeTrue();
                     h2.Invoking( _ => _.Raise( this, OArgs ) )
                                             .Should().Throw<Exception>().WithMessage( "Such an ugly test...(MoreSpecializedEventArgs)" );
                 }
                 h.RemoveAll();
                 {
-                    var h2 = TestHelper.SaveAndLoadObject( h, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<MoreSpecializedEventArgs>( r ) );
+                    var h2 = TestHelper.SaveAndLoad( h, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<MoreSpecializedEventArgs>( r ) );
                     h2.HasHandlers.Should().BeFalse();
                     h2.Invoking( _ => _.Raise( this, OArgs ) )
                                             .Should().NotThrow();
@@ -205,14 +205,14 @@ namespace CK.Observable.Domain.Tests
 
             {
                 _typeCalled = 0;
-                var hM2 = TestHelper.SaveAndLoadObject( hM, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<EventMonitoredArgs>( r ) );
+                var hM2 = TestHelper.SaveAndLoad( hM, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<EventMonitoredArgs>( r ) );
                 hM2.HasHandlers.Should().BeTrue();
                 hM2.Raise( this, MArgs );
                 _typeCalled.Should().Be( 2 );
             }
             {
                 _typeCalled = 0;
-                var hO2 = TestHelper.SaveAndLoadObject( hO, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<MoreSpecializedEventArgs>( r ) );
+                var hO2 = TestHelper.SaveAndLoad( hO, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<MoreSpecializedEventArgs>( r ) );
                 hO2.HasHandlers.Should().BeTrue();
                 hO2.Raise( this, OArgs );
                 _typeCalled.Should().Be( 3 );
@@ -295,7 +295,7 @@ namespace CK.Observable.Domain.Tests
         }
 
 
-        [SerializationVersion( 0 )]
+        [BinarySerialization.SerializationVersion( 0 )]
         public class PrivateHandlerObject : ObservableObject
         {
             readonly ObservableTimer _timer;
@@ -325,38 +325,38 @@ namespace CK.Observable.Domain.Tests
 
             public bool IsActive { get; private set; }
 
-            protected PrivateHandlerObject( RevertSerialization _ ) : base( _ ) { }
+            protected PrivateHandlerObject( BinarySerialization.Sliced _ ) : base( _ ) { }
 
-            PrivateHandlerObject( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+            PrivateHandlerObject( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
+                : base( BinarySerialization.Sliced.Instance )
             {
-                FireCount = r.ReadNonNegativeSmallInt32();
-                _timer = (ObservableTimer)r.ReadObject()!;
-                _clock = (SuspendableClock)r.ReadObject()!;
+                FireCount = d.Reader.ReadNonNegativeSmallInt32();
+                _timer = d.ReadObject<ObservableTimer>();
+                _clock = d.ReadObject<SuspendableClock>();
             }
 
-            void Write( BinarySerializer w )
+            public static void Write( BinarySerialization.IBinarySerializer s, in PrivateHandlerObject o )
             {
-                w.WriteNonNegativeSmallInt32( FireCount );
-                w.WriteObject( _timer );
-                w.WriteObject( _clock );
+                s.Writer.WriteNonNegativeSmallInt32( o.FireCount );
+                s.WriteObject( o._timer );
+                s.WriteObject( o._clock );
             }
 
         }
 
-        [SerializationVersion( 0 )]
+        [BinarySerialization.SerializationVersion( 0 )]
         public class SpecializedPrivateHandlerObject : PrivateHandlerObject
         {
             public SpecializedPrivateHandlerObject()
             {
             }
 
-            SpecializedPrivateHandlerObject( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+            SpecializedPrivateHandlerObject( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+                : base( BinarySerialization.Sliced.Instance )
             {
             }
 
-            void Write( BinarySerializer w )
+            public static void Write( BinarySerialization.IBinarySerializer s, in SpecializedPrivateHandlerObject o )
             {
             }
 
@@ -386,14 +386,16 @@ namespace CK.Observable.Domain.Tests
             h.Add( StaticOnEvent, nameof( StaticOnEvent ) );
 
             using( var s = new MemoryStream() )
-            using( var writer = new BinarySerializer( s, drivers: null, true ) )
+            using( var writer = BinarySerialization.BinarySerializer.Create( s, false, new BinarySerialization.BinarySerializerContext() ) )
             {
+                writer.DebugWriteMode( true );
                 writer.DebugWriteSentinel();
                 h.Write( writer );
                 writer.DebugWriteSentinel();
                 s.Position = 0;
-                using( var reader = new BinaryDeserializer( s, null, drivers: null ) )
+                using( var reader = BinarySerialization.BinaryDeserializer.Create( s, false, new BinarySerialization.BinaryDeserializerContext() ) )
                 {
+                    reader.DebugReadMode();
                     reader.DebugCheckSentinel();
                     ObservableEventHandler.Skip( reader );
                     reader.DebugCheckSentinel();

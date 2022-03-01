@@ -2,38 +2,38 @@ using System.Diagnostics;
 
 namespace CK.Observable.Domain.Tests.Sample
 {
-    [SerializationVersion( 1 )]
+    [BinarySerialization.SerializationVersion( 1 )]
     public class Person : ObservableObject
     {
         public Person()
         {
         }
 
-        protected Person( RevertSerialization _ ) : base( _ ) { }
+        protected Person( BinarySerialization.Sliced _ ) : base( _ ) { }
 
-        Person( IBinaryDeserializer r, TypeReadInfo? info )
-            : base( RevertSerialization.Default )
+        Person( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+            : base( BinarySerialization.Sliced.Instance )
         {
             Debug.Assert( !IsDestroyed );
-            Friend = (Person)r.ReadObject();
-            FirstName = r.ReadNullableString();
-            LastName = r.ReadNullableString();
-            if( info.Version >= 1 )
+            Friend = r.ReadNullableObject<Person>();
+            FirstName = r.Reader.ReadNullableString();
+            LastName = r.Reader.ReadNullableString();
+            if( info.SerializationVersion >= 1 )
             {
-                Age = r.ReadNonNegativeSmallInt32();
+                Age = r.Reader.ReadNonNegativeSmallInt32();
             }
         }
 
-        void Write( BinarySerializer s )
+        public static void Write( BinarySerialization.IBinarySerializer s, in Person o )
         {
-            Debug.Assert( !IsDestroyed );
-            s.WriteObject( Friend );
-            s.WriteNullableString( FirstName );
-            s.WriteNullableString( LastName );
-            s.WriteNonNegativeSmallInt32( Age );
+            Debug.Assert( !o.IsDestroyed );
+            s.WriteNullableObject( o.Friend );
+            s.Writer.WriteNullableString( o.FirstName );
+            s.Writer.WriteNullableString( o.LastName );
+            s.Writer.WriteNonNegativeSmallInt32( o.Age );
         }
 
-        public Person Friend { get; set; }
+        public Person? Friend { get; set; }
 
         public string FirstName { get; set; }
 

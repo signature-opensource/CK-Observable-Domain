@@ -9,7 +9,7 @@ namespace CK.Observable.Device
     /// Non generic abstract base class for device that is not intended to be specialized directly.
     /// Use the generic <see cref="ObservableDeviceHostObject{TSidekick}"/> as the object device device base.
     /// </summary>
-    [SerializationVersion( 0 )]
+    [BinarySerialization.SerializationVersion( 0 )]
     public abstract class ObservableDeviceHostObject : ObservableObject, ISidekickLocator
     {
         /// <summary>
@@ -33,22 +33,34 @@ namespace CK.Observable.Device
             InternalDevices = new ObservableList<AvailableDeviceInfo>();
         }
 
-        /// <summary>
-        /// Specialized deserialization constructor for specialized classes.
-        /// </summary>
-        /// <param name="_">Unused parameter.</param>
-        protected ObservableDeviceHostObject( RevertSerialization _ ) : base( _ ) { }
+        #region Old Deserialization
 
         ObservableDeviceHostObject( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+                : base( BinarySerialization.Sliced.Instance )
         {
             InternalDevices = new ObservableList<AvailableDeviceInfo>();
         }
 #pragma warning restore CS8618 // Non-nullable field is uninitialized. Consider declaring as nullable.
+        #endregion
 
-        void Write( BinarySerializer w )
+        #region New serialization
+        /// <summary>
+        /// Specialized deserialization constructor for specialized classes.
+        /// </summary>
+        /// <param name="_">Unused parameter.</param>
+        protected ObservableDeviceHostObject( BinarySerialization.Sliced _ ) : base( _ ) { }
+
+        ObservableDeviceHostObject( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
+                : base( BinarySerialization.Sliced.Instance )
+        {
+            InternalDevices = new ObservableList<AvailableDeviceInfo>();
+        }
+
+        public static void Write( BinarySerialization.IBinarySerializer w, in ObservableDeviceHostObject o )
         {
         }
+
+        #endregion 
 
         /// <summary>
         /// Gets an observable list of devices that are managed by the device host.

@@ -12,7 +12,7 @@ namespace CK.Observable.League
     /// The coordinator is the root object that exposes the current <see cref="Domains"/> of
     /// a <see cref="ObservableLeague"/> and allows to manage them.
     /// </summary>
-    [SerializationVersion( 0 )]
+    [BinarySerialization.SerializationVersion( 0 )]
     public sealed class Coordinator : ObservableRootObject
     {
         readonly ObservableDictionary<string, Domain> _domains;
@@ -27,14 +27,20 @@ namespace CK.Observable.League
         }
 
         Coordinator( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+                : base( BinarySerialization.Sliced.Instance )
         {
             _domains = (ObservableDictionary<string, Domain>)r.ReadObject();
         }
 
-        void Write( BinarySerializer w )
+        Coordinator( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+                : base( BinarySerialization.Sliced.Instance )
         {
-            w.WriteObject( _domains );
+            _domains = r.ReadObject<ObservableDictionary<string, Domain>>();
+        }
+
+        public static void Write( BinarySerialization.IBinarySerializer w, in Coordinator o )
+        {
+            w.WriteObject( o._domains );
         }
 
         /// <summary>

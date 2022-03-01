@@ -7,7 +7,7 @@ namespace CK.Observable
     /// Defines a root <see cref="ObservableObject"/>.
     /// This object is not disposable and is initialized with its holding domain.
     /// </summary>
-    [SerializationVersion( 0 )]
+    [BinarySerialization.SerializationVersion( 0 )]
     public class ObservableRootObject : ObservableObject
     {
         /// <summary>
@@ -27,15 +27,24 @@ namespace CK.Observable
         {
         }
 
-        protected ObservableRootObject( RevertSerialization _ ) : base( _ ) { }
-
+        #region Old Deserialization
         ObservableRootObject( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+                : base( BinarySerialization.Sliced.Instance )
+        {
+        }
+        #endregion
+
+        #region New Deserialization
+        protected ObservableRootObject( BinarySerialization.Sliced _ ) : base( _ ) { }
+
+        ObservableRootObject( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
+        : base( BinarySerialization.Sliced.Instance )
         {
         }
 
-        void Write( BinarySerializer w )
+        public static void Write( BinarySerialization.IBinarySerializer s, in ObservableRootObject o )
         {
         }
+        #endregion
     }
 }

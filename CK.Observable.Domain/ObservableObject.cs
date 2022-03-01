@@ -13,8 +13,9 @@ namespace CK.Observable
     /// Observable objects are reference types that belong to a <see cref="ObservableDomain"/> and for
     /// which properties changes and <see cref="Destroy()"/> are tracked.
     /// </summary>
-    [SerializationVersion( 1 )]
-    public abstract partial class ObservableObject : INotifyPropertyChanged, IDestroyableObject, IKnowMyExportDriver
+    [BinarySerialization.SerializationVersion( 1 )]
+    public abstract partial class ObservableObject : INotifyPropertyChanged, IKnowMyExportDriver, BinarySerialization.IDestroyable, BinarySerialization.ICKSlicedSerializable
+                                                        , IDestroyableObject
     {
         ObservableObjectId _oid;
         internal readonly ObservableDomain ActualDomain;
@@ -83,20 +84,10 @@ namespace CK.Observable
             _oid = ActualDomain.Register( this );
         }
 
-        /// <summary>
-        /// Specialized deserialization constructor for specialized classes: it must be called
-        /// by deserialization constructors otherwise an <see cref="InvalidOperationException"/>
-        /// is thrown when loading a domain.
-        /// </summary>
-        /// <param name="_">Unused parameter.</param>
-        protected ObservableObject( RevertSerialization _ )
-        {
-            RevertSerialization.OnRootDeserialized( this );
-        }
+        #region Old Serialization
 
         ObservableObject( IBinaryDeserializer r, TypeReadInfo? info )
         {
-            RevertSerialization.OnRootDeserialized( this );
             _oid = new ObservableObjectId( r );
             if( !IsDestroyed )
             {
@@ -113,16 +104,44 @@ namespace CK.Observable
                 _propertyChanged = new ObservableEventHandler<PropertyChangedEventArgs>( r );
             }
         }
+        #endregion
 
-        void Write( BinarySerializer w )
+        #region New Serialization
+
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+        protected ObservableObject( BinarySerialization.Sliced _ ) { }
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+
+        ObservableObject( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
         {
-            _oid.Write( w );
+            _oid = new ObservableObjectId( d.Reader );
             if( !IsDestroyed )
             {
-                _destroyed.Write( w );
-                _propertyChanged.Write( w );
+                // This enables the Observable object to be serializable/deserializable outside a Domain
+                // (for instance to use BinarySerializer.IdempotenceCheck): we really register the deserialized object
+                // if and only if the available Domain service is the one being deserialized.
+                var domain = d.Context.Services.GetService<ObservableDomain>( throwOnNull: true );
+                if( (ActualDomain = domain) == ObservableDomain.CurrentThreadDomain )
+                {
+                    domain.SideEffectsRegister( this );
+                }
+                _exporter = domain._exporters.FindDriver( GetType() );
+                _destroyed = new ObservableEventHandler<ObservableDomainEventArgs>( d );
+                _propertyChanged = new ObservableEventHandler<PropertyChangedEventArgs>( d );
             }
         }
+
+
+        public static void Write( BinarySerialization.IBinarySerializer s, in ObservableObject o )
+        {
+            o._oid.Write( s.Writer );
+            if( !o.IsDestroyed )
+            {
+                o._destroyed.Write( s );
+                o._propertyChanged.Write( s );
+            }
+        }
+        #endregion
 
         /// <summary>
         /// Gets whether this object has been disposed.

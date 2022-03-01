@@ -46,11 +46,6 @@ namespace CK.Observable
         public const int LockedDomainMonitorTimeout = 1000;
 
         /// <summary>
-        /// Current serialization version.
-        /// </summary>
-        public const int CurrentSerializationVersion = 8;
-
-        /// <summary>
         /// The length in bytes of the <see cref="SecretKey"/>.
         /// </summary>
         public const int DomainSecretKeyLength = 512;
@@ -65,13 +60,13 @@ namespace CK.Observable
         internal static ObservableDomain? CurrentThreadDomain;
 
         internal readonly IExporterResolver _exporters;
-        readonly ISerializerResolver _serializers;
         readonly IDeserializerResolver _deserializers;
         readonly TimeManager _timeManager;
         readonly SidekickManager _sidekickManager;
         readonly ObservableDomainPostActionExecutor _domainPostActionExecutor;
         internal readonly Random _random;
         Action<ISuccessfulTransactionEvent>? _inspectorEvent;
+        BinarySerialization.BinarySerializerContext _serializerContext;
 
         /// <summary>
         /// Maps property names to PropInfo that contains the property index.
@@ -569,7 +564,7 @@ namespace CK.Observable
                                  bool startTimer,
                                  IObservableDomainClient? client,
                                  IServiceProvider? serviceProvider = null )
-            : this(monitor, domainName, startTimer, client, true, serviceProvider, exporters: null, serializers: null, deserializers: null)
+            : this(monitor, domainName, startTimer, client, true, serviceProvider, exporters: null, deserializers: null)
         {
         }
 
@@ -599,9 +594,8 @@ namespace CK.Observable
                                  IServiceProvider? serviceProvider = null,
                                  bool? startTimer = null,
                                  IExporterResolver? exporters = null,
-                                 ISerializerResolver? serializers = null,
                                  IDeserializerResolver? deserializers = null )
-            : this(monitor, domainName, false, client, false, serviceProvider, exporters, serializers, deserializers)
+            : this(monitor, domainName, false, client, false, serviceProvider, exporters, deserializers)
         {
             using( monitor.OpenInfo( $"Initializing new domain '{domainName}' from stream." ) )
             {
@@ -630,13 +624,11 @@ namespace CK.Observable
                           bool callClientOnCreate,
                           IServiceProvider? serviceProvider,
                           IExporterResolver? exporters,
-                          ISerializerResolver? serializers,
                           IDeserializerResolver? deserializers)
         {
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
             DomainName = domainName ?? throw new ArgumentNullException( nameof( domainName ) );
             _exporters = exporters ?? ExporterRegistry.Default;
-            _serializers = serializers ?? SerializerRegistry.Default;
             _deserializers = deserializers ?? DeserializerRegistry.Default;
             DomainClient = client;
             _objects = new ObservableObject?[512];
@@ -658,6 +650,7 @@ namespace CK.Observable
             _saveLock = new Object();
             _domainMonitorLock = new SemaphoreSlim( 1, 1 );
             _random = new Random();
+            _serializerContext = new BinarySerialization.BinarySerializerContext();
 
             if( callClientOnCreate )
             {
@@ -1358,14 +1351,31 @@ namespace CK.Observable
         {
             try
             {
-                using( var d = new BinaryDeserializer( stream, null, _deserializers, leaveOpen, encoding ) )
+                // Do not cache the BinaryDeserializerContext for the moment.
+                using( var d = BinarySerialization.BinaryDeserializer.TryCreate( stream, leaveOpen, new BinarySerialization.BinaryDeserializerContext() ) )
                 {
-                    d.Services.Add( this );
-                    var mustStartTimer = DoRealLoad( monitor, d, expectedLoadedName, startTimer );
-                    if( beforeTimer != null ) mustStartTimer = beforeTimer( mustStartTimer );
-                    if( mustStartTimer )
+                    if( d == null )
                     {
-                        _timeManager.DoStartOrStop( monitor, true );
+                        using( var dOld = new BinaryDeserializer( stream, null, _deserializers, leaveOpen, encoding ) )
+                        {
+                            dOld.Services.Add( this );
+                            var mustStartTimer = DoLegacyRealLoad( monitor, dOld, expectedLoadedName, startTimer );
+                            if( beforeTimer != null ) mustStartTimer = beforeTimer( mustStartTimer );
+                            if( mustStartTimer )
+                            {
+                                _timeManager.DoStartOrStop( monitor, true );
+                            }
+                        }
+                    }
+                    else
+                    {
+                        d.Context.Services.Add( this );
+                        var mustStartTimer = DoRealLoad( monitor, d, expectedLoadedName, startTimer );
+                        if( beforeTimer != null ) mustStartTimer = beforeTimer( mustStartTimer );
+                        if( mustStartTimer )
+                        {
+                            _timeManager.DoStartOrStop( monitor, true );
+                        }
                     }
                 }
             }
@@ -1374,6 +1384,10 @@ namespace CK.Observable
                 monitor.Error( ex );
                 throw;
             }
+        }
+
+        void ReadWithLegacySerialization( IActivityMonitor monitor, Stream stream, string expectedLoadedName, bool leaveOpen, Encoding? encoding, bool? startTimer, Func<bool, bool>? beforeTimer )
+        {
         }
 
         /// <summary>
@@ -1818,7 +1832,7 @@ namespace CK.Observable
                 s.Position = 0;
                 if( !domain.Load( monitor, s, true, millisecondsTimeout: milliSecondsTimeout, startTimer: null ) ) throw new Exception( "Reload failed: Unable to acquire lock." );
 
-                using var checker = new BinarySerializer.CheckedWriteStream( originalBytes );
+                using var checker = BinarySerialization.BinarySerializer.CreateCheckedWriteStream( originalBytes );
                 if( !domain.Save( monitor, checker, true, millisecondsTimeout: milliSecondsTimeout, debugMode: useDebugMode ) ) throw new Exception( "Second Save failed: Unable to acquire lock." );
                 return domain.CurrentLostObjectTracker!;
             }

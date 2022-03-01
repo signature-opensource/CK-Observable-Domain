@@ -13,7 +13,7 @@ namespace CK.Observable
     /// and <see cref="SafeEventHandler{TEventArgs}"/>).
     /// </summary>
     [NotExportable]
-    [SerializationVersion( 0 )]
+    [BinarySerialization.SerializationVersion( 0 )]
     public abstract class InternalObject : IDestroyableObject, BinarySerialization.IDestroyable, BinarySerialization.ICKSlicedSerializable
     {
         internal ObservableDomain ActualDomain;
@@ -56,14 +56,8 @@ namespace CK.Observable
         }
 
         #region Old deserialization
-        protected InternalObject( RevertSerialization _ )
-        {
-            RevertSerialization.OnRootDeserialized( this );
-        }
-
         InternalObject( IBinaryDeserializer r, TypeReadInfo? info )
         {
-            RevertSerialization.OnRootDeserialized( this );
             Debug.Assert( info != null && info.Version == 0 );
             if( r.ReadBoolean() )
             {
@@ -98,7 +92,7 @@ namespace CK.Observable
             }
         }
 
-        public static void Write( BinarySerialization.IBinarySerializer s, InternalObject o )
+        public static void Write( BinarySerialization.IBinarySerializer s, in InternalObject o )
         {
             if( o.IsDestroyed ) s.Writer.Write( false );
             else
