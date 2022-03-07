@@ -1356,19 +1356,36 @@ namespace CK.Observable
                 {
                     if( d == null )
                     {
-                        using( var dOld = new BinaryDeserializer( stream, null, _deserializers, leaveOpen, encoding ) )
+                        using( monitor.OpenWarn( $"The stream may be from a previous serialization implementation. Trying to read it with the legacy implementation." ) )
                         {
-                            dOld.Services.Add( this );
-                            var mustStartTimer = DoLegacyRealLoad( monitor, dOld, expectedLoadedName, startTimer );
-                            if( beforeTimer != null ) mustStartTimer = beforeTimer( mustStartTimer );
-                            if( mustStartTimer )
+                            // Legacy?
+                            // TryCreate eat the first byte.
+                            // Easiest path (for the moment and this should be enough): go backward!
+                            try
                             {
-                                _timeManager.DoStartOrStop( monitor, true );
+                                if( !stream.CanSeek ) throw new NotSupportedException( "Read stream must support Seek to be able to read legacy domains." );
+                                stream.Seek( -1, SeekOrigin.Current );
+                                using( var dOld = new BinaryDeserializer( stream, null, _deserializers, leaveOpen, encoding ) )
+                                {
+                                    dOld.Services.Add( this );
+                                    var mustStartTimer = DoLegacyRealLoad( monitor, dOld, expectedLoadedName, startTimer );
+                                    if( beforeTimer != null ) mustStartTimer = beforeTimer( mustStartTimer );
+                                    if( mustStartTimer )
+                                    {
+                                        _timeManager.DoStartOrStop( monitor, true );
+                                    }
+                                }
+                            }
+                            catch( Exception ex )
+                            { 
+                                monitor.Error( ex );
+                                throw;
                             }
                         }
                     }
                     else
                     {
+                        monitor.Trace( $"Stream's Serializer version is {d.SerializerVersion}." );
                         d.Context.Services.Add( this );
                         var mustStartTimer = DoRealLoad( monitor, d, expectedLoadedName, startTimer );
                         if( beforeTimer != null ) mustStartTimer = beforeTimer( mustStartTimer );

@@ -255,7 +255,7 @@ namespace CK.Observable
             {
                 UnloadDomain( monitor );
                 int version = r.ReadSmallInt32();
-                if( version < 5 || version >= 8 )
+                if( version < 5 || version > 8 )
                 {
                     throw new InvalidDataException( $"Version must be between 5 and 8. Version read: {version}." );
                 }
