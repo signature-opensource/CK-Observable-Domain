@@ -336,7 +336,7 @@ namespace CK.Observable.Domain.Tests
         }
 
 
-        [BinarySerialization.SerializationVersion(0)]
+        [SerializationVersion(0)]
         public class TryingToExportNotExportableProperties1 : ObservableObject
         {
             public TryingToExportNotExportableProperties1()
@@ -356,7 +356,7 @@ namespace CK.Observable.Domain.Tests
             public ObservableDomain ThisIsVeryBad { get; }
         }
 
-        [BinarySerialization.SerializationVersion(0)]
+        [SerializationVersion(0)]
         public class TryingToExportNotExportableProperties2 : ObservableObject
         {
             public TryingToExportNotExportableProperties2()
@@ -378,7 +378,7 @@ namespace CK.Observable.Domain.Tests
             public DomainView ThisIsBad => Domain;
         }
 
-        [BinarySerialization.SerializationVersion(0)]
+        [SerializationVersion(0)]
         public class TryingToExportNotExportableProperties3 : ObservableObject
         {
             public TryingToExportNotExportableProperties3()
@@ -437,7 +437,7 @@ namespace CK.Observable.Domain.Tests
                 .WithMessage( "Exporting 'TryingToExportNotExportableProperties3.NoWay' is forbidden: Missed..." );
         }
 
-        [BinarySerialization.SerializationVersion(0)]
+        [SerializationVersion(0)]
         public class TimerAndRemiderProperties : ObservableObject
         {
             public TimerAndRemiderProperties()

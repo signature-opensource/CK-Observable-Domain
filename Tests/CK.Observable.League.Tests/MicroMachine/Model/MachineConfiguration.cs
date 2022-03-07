@@ -1,3 +1,4 @@
+using CK.Core;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -10,7 +11,7 @@ namespace CK.Observable.League.Tests.MicroMachine
     /// values (like <see cref="IdentifyThingTimeout"/>) and/or strategies (like <see cref="GetErrorExit(ProductErrorStatus)"/>.
     /// This can be specialized.
     /// </summary>
-    [BinarySerialization.SerializationVersion( 0 )]
+    [SerializationVersion( 0 )]
     public class MachineConfiguration : ObservableObject
     {
         /// <summary>

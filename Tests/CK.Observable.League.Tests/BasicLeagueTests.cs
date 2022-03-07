@@ -1,3 +1,4 @@
+using CK.Core;
 using CK.Text;
 using FluentAssertions;
 using NUnit.Framework;
@@ -78,7 +79,7 @@ namespace CK.Observable.League.Tests
             }
         }
 
-        [BinarySerialization.SerializationVersion(0)]
+        [SerializationVersion(0)]
         class Root1 : ObservableRootObject
         {
             public Root1()
@@ -95,7 +96,7 @@ namespace CK.Observable.League.Tests
             }
         }
 
-        [BinarySerialization.SerializationVersion(0)]
+        [SerializationVersion(0)]
         class Root2 : ObservableRootObject
         {
             public Root2()
@@ -112,7 +113,7 @@ namespace CK.Observable.League.Tests
             }
         }
 
-        [BinarySerialization.SerializationVersion(0)]
+        [SerializationVersion(0)]
         class Root3 : ObservableRootObject
         {
             public Root3()
@@ -129,7 +130,7 @@ namespace CK.Observable.League.Tests
             }
         }
 
-        [BinarySerialization.SerializationVersion(0)]
+        [SerializationVersion(0)]
         class Root4 : ObservableRootObject
         {
             public Root4()

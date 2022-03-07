@@ -25,7 +25,7 @@ namespace CK.Observable
     /// <remarks>
     /// This is sealed <see cref="InternalObject"/>, it cannot be specialized and is not exported to remote clients.
     /// </remarks>
-    [BinarySerialization.SerializationVersion( 3 )]
+    [SerializationVersion( 3 )]
     public sealed class SuspendableClock : InternalObject
     {
         ObservableTimedEventBase? _firstInClock;

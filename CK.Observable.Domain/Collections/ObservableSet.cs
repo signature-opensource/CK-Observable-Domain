@@ -1,3 +1,4 @@
+using CK.Core;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -14,7 +15,7 @@ namespace CK.Observable
     /// class in order to be efficient (the added/removed items need to be tracked).
     /// </remarks>
     /// <typeparam name="T">Item type.</typeparam>
-    [BinarySerialization.SerializationVersion( 0 )]
+    [SerializationVersion( 0 )]
     public class ObservableSet<T> : ObservableObject, IObservableReadOnlySet<T> where T : notnull
     {
         readonly HashSet<T> _set;

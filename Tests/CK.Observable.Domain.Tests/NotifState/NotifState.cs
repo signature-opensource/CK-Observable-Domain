@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace Signature.Process.Dispatching
 {
-    [CK.BinarySerialization.SerializationVersion( 0 )]
+    [SerializationVersion( 0 )]
     [DebuggerDisplay( "NotificationState" )]
     public class NotificationState : ObservableRootObject
     {
@@ -29,7 +29,7 @@ namespace Signature.Process.Dispatching
         protected NotificationState( CK.BinarySerialization.IBinaryDeserializer d, CK.BinarySerialization.ITypeReadInfo info )
                 : base( CK.BinarySerialization.Sliced.Instance )
         {
-            if( info.SerializationVersion != 0 ) throw new NotSupportedException( $"Cannot deserialize {nameof( NotificationState )} version {info.SerializationVersion}" );
+            if( info.Version != 0 ) throw new NotSupportedException( $"Cannot deserialize {nameof( NotificationState )} version {info.Version}" );
 
             _productDispatchErrors = d.ReadObject<ObservableList<Notification<DispatchProductResult>>>();
             _exceptions = d.ReadObject<ObservableList<Notification<CKExceptionData>>>();
@@ -72,7 +72,7 @@ namespace Signature.Process.Dispatching
 
     }
 
-    [CK.BinarySerialization.SerializationVersion( 0)]
+    [SerializationVersion( 0 )]
     public class Notification<T> : ObservableObject where T : class
     {
         public Notification( T body )
@@ -104,7 +104,7 @@ namespace Signature.Process.Dispatching
         void UpdateOnScan( string productIdentifier, IReadOnlyDictionary<string, string> metadata );
     }
 
-    [CK.BinarySerialization.SerializationVersion( 0 )]
+    [SerializationVersion( 0 )]
     [DebuggerDisplay( "BarcodeScannerState" )]
     public class BarcodeScannerState : ObservableObject, IBarcodeScannerState
     {
@@ -183,7 +183,7 @@ namespace Signature.Process.Dispatching
 
     }
 
-    [CK.BinarySerialization.SerializationVersion( 0)]
+    [SerializationVersion( 0)]
     public class DispatchProductResult
     {
         public DispatchProductResultType DispatchProductResultType { get; }

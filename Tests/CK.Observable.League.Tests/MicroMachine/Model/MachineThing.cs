@@ -5,7 +5,7 @@ using System.Diagnostics;
 
 namespace CK.Observable.League.Tests.MicroMachine
 {
-    [BinarySerialization.SerializationVersion( 0 )]
+    [SerializationVersion( 0 )]
     public class MachineThing : ObservableObject
     {
         readonly DateTime _startRead;

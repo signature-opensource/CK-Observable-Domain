@@ -45,7 +45,7 @@ namespace CK.Observable.Domain.Tests
 
         }
 
-        [BinarySerialization.SerializationVersion( 0 )]
+        [SerializationVersion( 0 )]
         public class ObjWithSKBase : ObservableObject
         {
             public ObjWithSKBase()
@@ -82,7 +82,7 @@ namespace CK.Observable.Domain.Tests
         /// (typically through the <see cref="ObservableDomain.AllObjects"/>).
         /// </summary>
         [UseSidekick( typeof( SKSimple ) )]
-        [BinarySerialization.SerializationVersion( 0 )]
+        [SerializationVersion( 0 )]
         public class ObjWithSKSimple : ObjWithSKBase
         {
             public ObjWithSKSimple()
@@ -102,7 +102,7 @@ namespace CK.Observable.Domain.Tests
         /// <summary>
         /// When using the ISidekickClientObject<>, the object is automatically registered on the sidekick.
         /// </summary>
-        [BinarySerialization.SerializationVersion( 0 )]
+        [SerializationVersion( 0 )]
         public class ObjWithSKSimpleViaInterface : ObjWithSKBase, ISidekickClientObject<SKSimple>
         {
             public ObjWithSKSimpleViaInterface()
@@ -243,7 +243,7 @@ namespace CK.Observable.Domain.Tests
         }
 
         [UseSidekick( typeof( SKWithDependencies ) )]
-        [BinarySerialization.SerializationVersion( 0 )]
+        [SerializationVersion( 0 )]
         public sealed class ObjWithSKWithDependencies : ObjWithSKBase
         {
             public ObjWithSKWithDependencies()
@@ -260,7 +260,7 @@ namespace CK.Observable.Domain.Tests
             }
         }
 
-        [BinarySerialization.SerializationVersion( 0 )]
+        [SerializationVersion( 0 )]
         public sealed class ObjWithSKWithDependenciesViaInterface : ObjWithSKBase, ISidekickClientObject<SKWithDependencies>
         {
             public ObjWithSKWithDependenciesViaInterface()

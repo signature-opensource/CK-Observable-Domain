@@ -202,7 +202,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             }
         }
 
-        [BinarySerialization.SerializationVersion(0)]
+        [SerializationVersion(0)]
         sealed class SimpleValue : ObservableObject
         {
             public SimpleValue()
@@ -455,7 +455,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             }
         }
 
-        [BinarySerialization.SerializationVersion(0)]
+        [SerializationVersion(0)]
         class TestReminder : InternalObject
         {
             readonly TestCounter? _counter;

@@ -1,10 +1,11 @@
+using CK.Core;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace CK.Observable.League.Tests.MicroMachine
 {
-    [BinarySerialization.SerializationVersion( 0 )]
+    [SerializationVersion( 0 )]
     public class Root : ObservableRootObject
     {
         public Root()

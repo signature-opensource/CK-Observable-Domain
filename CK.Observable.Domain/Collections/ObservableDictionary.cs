@@ -1,3 +1,4 @@
+using CK.Core;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -10,7 +11,7 @@ namespace CK.Observable
     /// </summary>
     /// <typeparam name="TKey">The type of the keys in the dictionary.</typeparam>
     /// <typeparam name="TValue">The type of the values in the dictionary.</typeparam>
-    [BinarySerialization.SerializationVersion( 0 )]
+    [SerializationVersion( 0 )]
     public class ObservableDictionary<TKey, TValue> : ObservableObject, IDictionary<TKey, TValue>, IObservableReadOnlyDictionary<TKey, TValue> where TKey : notnull
     {
         readonly Dictionary<TKey, TValue> _map;

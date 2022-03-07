@@ -335,7 +335,7 @@ namespace CK.Observable
             out MethodInfo exporter,
             out MethodInfo exporterBase )
         {
-            int? v = t.GetCustomAttribute<BinarySerialization.SerializationVersionAttribute>()?.Version;
+            int? v = t.GetCustomAttribute<SerializationVersionAttribute>()?.Version;
             ctor = t.GetConstructor( BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
                                      null,
                                      _ctorDeserializationParameters,

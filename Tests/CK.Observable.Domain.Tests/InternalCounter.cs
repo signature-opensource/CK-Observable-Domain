@@ -10,7 +10,7 @@ namespace CK.Observable.Domain.Tests
     /// <summary>
     /// This is a sample <see cref="InternalObject"/>.
     /// </summary>
-    [BinarySerialization.SerializationVersion( 0 )]
+    [SerializationVersion( 0 )]
     public sealed class TestCounter : InternalObject
     {
         /// <summary>

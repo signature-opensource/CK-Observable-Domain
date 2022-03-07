@@ -1,3 +1,4 @@
+using CK.Core;
 using CK.DeviceModel;
 
 namespace CK.Observable.Device
@@ -5,7 +6,7 @@ namespace CK.Observable.Device
     /// <summary>
     /// Abstract base class for device.
     /// </summary>
-    [BinarySerialization.SerializationVersion( 0 )]
+    [SerializationVersion( 0 )]
     public abstract class ObservableDeviceObject<TSidekick> : ObservableDeviceObject, ISidekickClientObject<TSidekick> where TSidekick : ObservableDomainSidekick
     {
         /// <summary>

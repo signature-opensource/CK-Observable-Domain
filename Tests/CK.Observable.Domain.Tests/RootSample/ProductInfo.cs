@@ -1,8 +1,9 @@
+using CK.Core;
 using System.Collections.Generic;
 
 namespace CK.Observable.Domain.Tests.RootSample
 {
-    [BinarySerialization.SerializationVersion(0)]
+    [SerializationVersion(0)]
     public struct ProductInfo : BinarySerialization.ICKSlicedSerializable
     {
         public ProductInfo( string n, int p )

@@ -8,7 +8,7 @@ namespace CK.Observable.League
     /// <summary>
     /// Immutable definition of options for domains managed in a <see cref="ObservableLeague"/>.
     /// </summary>
-    [BinarySerialization.SerializationVersion( 3 )]
+    [SerializationVersion( 3 )]
     public sealed class ManagedDomainOptions : IEquatable<ManagedDomainOptions>, BinarySerialization.ICKSlicedSerializable
     {
         /// <summary>

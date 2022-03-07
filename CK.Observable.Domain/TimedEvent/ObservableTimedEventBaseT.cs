@@ -12,7 +12,7 @@ namespace CK.Observable
     /// Base class for timed event management that implements the <see cref="Elapsed"/> event.
     /// <see cref="ObservableTimer"/> and <see cref="ObservableReminder"/> are concrete specializations of this base class.
     /// </summary>
-    [BinarySerialization.SerializationVersion( 0 )]
+    [SerializationVersion( 0 )]
     public abstract class ObservableTimedEventBase<TEventArgs> : ObservableTimedEventBase where TEventArgs : ObservableTimedEventArgs
     {
         ObservableEventHandler<TEventArgs> _handlers;

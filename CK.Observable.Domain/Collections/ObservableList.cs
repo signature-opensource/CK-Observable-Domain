@@ -1,3 +1,4 @@
+using CK.Core;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -9,7 +10,7 @@ namespace CK.Observable
     /// Implements a simple observable <see cref="List{T}"/>.
     /// </summary>
     /// <typeparam name="T">Item type.</typeparam>
-    [BinarySerialization.SerializationVersion(0)]
+    [SerializationVersion(0)]
     public class ObservableList<T> : ObservableObject, IList<T>, IObservableReadOnlyList<T>
     {
         readonly List<T> _list;

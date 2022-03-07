@@ -1,3 +1,4 @@
+using CK.Core;
 using CK.DeviceModel;
 using System.Collections.Generic;
 
@@ -7,7 +8,7 @@ namespace CK.Observable.Device
     /// Base class for an observable host of devices.
     /// </summary>
     /// <typeparam name="TSidekick">The type of the sidekick.</typeparam>
-    [BinarySerialization.SerializationVersion( 0 )]
+    [SerializationVersion( 0 )]
     public abstract class ObservableDeviceHostObject<TSidekick> : ObservableDeviceHostObject, ISidekickClientObject<TSidekick>
         where TSidekick : ObservableDomainSidekick
     {

@@ -1,6 +1,8 @@
-﻿namespace CK.Observable.League.Tests.MicroMachine
+﻿using CK.Core;
+
+namespace CK.Observable.League.Tests.MicroMachine
 {
-    [BinarySerialization.SerializationVersion( 0 )]
+    [SerializationVersion( 0 )]
     public class Thing : MachineThing
     {
         public Thing( SpecializedMachine m, int tempId )

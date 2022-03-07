@@ -1,9 +1,10 @@
+using CK.Core;
 using System.Diagnostics;
 using System.Text;
 
 namespace CK.Observable.League.Tests.MicroMachine
 {
-    [BinarySerialization.SerializationVersion( 0 )]
+    [SerializationVersion( 0 )]
     public abstract class Machine : ObservableObject, ISidekickClientObject<MachineSideKick>
     {
         readonly SuspendableClock _clock;

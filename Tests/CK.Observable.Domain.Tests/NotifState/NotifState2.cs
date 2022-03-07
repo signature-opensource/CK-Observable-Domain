@@ -4,7 +4,7 @@ using System.Diagnostics;
 
 namespace Signature.Process.Dispatching
 {
-    [CK.BinarySerialization.SerializationVersion( 0 )]
+    [SerializationVersion( 0 )]
     [DebuggerDisplay( "NotificationState" )]
     public class NotificationState2 : ObservableRootObject
     {

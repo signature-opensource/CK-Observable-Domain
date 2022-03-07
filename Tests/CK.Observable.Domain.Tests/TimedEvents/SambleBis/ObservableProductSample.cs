@@ -3,7 +3,7 @@ using System;
 
 namespace CK.Observable.Domain.Tests
 {
-    [BinarySerialization.SerializationVersion( 0 )]
+    [SerializationVersion( 0 )]
     class ObservableProductSample : ObservableObject
     {
         ObservableReminder? _autoDestroyReminder;

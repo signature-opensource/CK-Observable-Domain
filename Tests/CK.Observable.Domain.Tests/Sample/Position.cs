@@ -1,3 +1,4 @@
+using CK.Core;
 using Microsoft.VisualBasic.CompilerServices;
 using System;
 using System.Diagnostics.CodeAnalysis;
@@ -6,7 +7,7 @@ using System.Runtime.CompilerServices;
 
 namespace CK.Observable.Domain.Tests.Sample
 {
-    [BinarySerialization.SerializationVersionAttribute( 0 )]
+    [SerializationVersion( 0 )]
     public struct Position : IEquatable<Position>, BinarySerialization.ICKSlicedSerializable
     {
         public readonly double Latitude;

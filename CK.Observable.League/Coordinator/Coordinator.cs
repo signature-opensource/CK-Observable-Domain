@@ -12,7 +12,7 @@ namespace CK.Observable.League
     /// The coordinator is the root object that exposes the current <see cref="Domains"/> of
     /// a <see cref="ObservableLeague"/> and allows to manage them.
     /// </summary>
-    [BinarySerialization.SerializationVersion( 0 )]
+    [SerializationVersion( 0 )]
     public sealed class Coordinator : ObservableRootObject
     {
         readonly ObservableDictionary<string, Domain> _domains;

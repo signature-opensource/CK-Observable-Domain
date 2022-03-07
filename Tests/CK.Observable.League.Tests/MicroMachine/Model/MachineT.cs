@@ -8,7 +8,7 @@ using System.Text;
 
 namespace CK.Observable.League.Tests.MicroMachine
 {
-    [BinarySerialization.SerializationVersion( 0 )]
+    [SerializationVersion( 0 )]
     public abstract class Machine<T> : Machine where T : MachineThing
     {
         readonly ObservableList<T> _all;

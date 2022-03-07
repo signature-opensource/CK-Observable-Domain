@@ -14,7 +14,7 @@ namespace CK.Observable
     /// This should not be used directly since <see cref="DomainView.Remind(DateTime, SafeEventHandler{ObservableReminderEventArgs}, object?)"/> method
     /// is easier to use.
     /// </summary>
-    [BinarySerialization.SerializationVersion(0)]
+    [SerializationVersion(0)]
     public sealed class ObservableReminder : ObservableTimedEventBase<ObservableReminderEventArgs>
     {
         // Link to the next free reminder. Can be not null if and only if this reminder

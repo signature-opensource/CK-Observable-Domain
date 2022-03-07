@@ -162,7 +162,7 @@ namespace CK.Observable.Domain.Tests
         }
 
 
-        [BinarySerialization.SerializationVersion( 0 )]
+        [SerializationVersion( 0 )]
         public class LoadHookTester : ObservableObject
         {
             public LoadHookTester()

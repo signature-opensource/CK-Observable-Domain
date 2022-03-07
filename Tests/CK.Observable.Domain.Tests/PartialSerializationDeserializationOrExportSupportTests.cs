@@ -13,7 +13,7 @@ namespace CK.Observable.Domain.Tests
     {
 
         [NotExportable]
-        [BinarySerialization.SerializationVersion( 0 )]
+        [SerializationVersion( 0 )]
         public class SerializableOnly : ObservableObject
         {
             public SerializableOnly()

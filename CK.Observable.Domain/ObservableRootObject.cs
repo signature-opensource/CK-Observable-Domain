@@ -7,7 +7,7 @@ namespace CK.Observable
     /// Defines a root <see cref="ObservableObject"/>.
     /// This object is not disposable and is initialized with its holding domain.
     /// </summary>
-    [BinarySerialization.SerializationVersion( 0 )]
+    [SerializationVersion( 0 )]
     public class ObservableRootObject : ObservableObject
     {
         /// <summary>

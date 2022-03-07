@@ -82,7 +82,7 @@ namespace CK.Observable.Domain.Tests
         }
 
 
-        [BinarySerialization.SerializationVersion(0)]
+        [SerializationVersion(0)]
         class ObservableWithJaggedArrays : ObservableObject
         {
             public ObservableWithJaggedArrays()
@@ -207,7 +207,7 @@ namespace CK.Observable.Domain.Tests
 
 
 
-        [BinarySerialization.SerializationVersion( 0 )]
+        [SerializationVersion( 0 )]
         public class CustomRoot : ObservableRootObject
         {
             public ObservableDictionary<string, CustomImmutable> ImmutablesById { get; set; }
@@ -232,7 +232,7 @@ namespace CK.Observable.Domain.Tests
             }
         }
 
-        [BinarySerialization.SerializationVersion( 0 )]
+        [SerializationVersion( 0 )]
         public class CustomImmutable : BinarySerialization.ICKSlicedSerializable
         {
             public string Id { get; }
@@ -259,7 +259,7 @@ namespace CK.Observable.Domain.Tests
 
         }
 
-        [BinarySerialization.SerializationVersion( 0 )]
+        [SerializationVersion( 0 )]
         public class CustomObservable : ObservableObject
         {
             public ObservableDictionary<string, CustomImmutable> ImmutablesById { get; }
@@ -283,7 +283,7 @@ namespace CK.Observable.Domain.Tests
 
         }
 
-        [BinarySerialization.SerializationVersion( 0 )]
+        [SerializationVersion( 0 )]
         public class TestDisposableObservableObject : ObservableObject
         {
             public bool AlwaysDisposeChild { get; }
@@ -324,7 +324,7 @@ namespace CK.Observable.Domain.Tests
         }
 
 
-        [BinarySerialization.SerializationVersion( 0 )]
+        [SerializationVersion( 0 )]
         public class ReminderAndTimerBag : InternalObject
         {
             readonly List<ObservableReminder> _reminders;

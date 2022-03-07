@@ -1,6 +1,8 @@
+using CK.Core;
+
 namespace CK.Observable.Domain.Tests.RootSample
 {
-    [BinarySerialization.SerializationVersion(0)]
+    [SerializationVersion(0)]
     public class ApplicationState : ObservableRootObject
     {
         public ApplicationState()

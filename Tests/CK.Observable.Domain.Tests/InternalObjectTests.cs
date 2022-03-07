@@ -14,7 +14,7 @@ namespace CK.Observable.Domain.Tests
     [TestFixture]
     public class InternalObjectTests
     {
-        [BinarySerialization.SerializationVersion( 0 )]
+        [SerializationVersion( 0 )]
         public sealed class Invisible : InternalObject
         {
             public Invisible( int noWay )
@@ -41,7 +41,7 @@ namespace CK.Observable.Domain.Tests
             public string Message { get; set; }
         }
 
-        [BinarySerialization.SerializationVersion( 0 )]
+        [SerializationVersion( 0 )]
         public sealed class Visible : ObservableObject
         {
             public Visible( int yes )

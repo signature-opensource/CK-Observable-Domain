@@ -1,8 +1,9 @@
+using CK.Core;
 using System.Collections.Generic;
 
 namespace CK.Observable.Domain.Tests.Sample
 {
-    [BinarySerialization.SerializationVersionAttribute(0)]
+    [SerializationVersion(0)]
     public sealed class Garage : ObservableObject
     {
         readonly ObservableDictionary<Car, Car> _replacementCars;

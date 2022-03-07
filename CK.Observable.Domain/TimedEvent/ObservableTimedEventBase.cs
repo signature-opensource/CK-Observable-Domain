@@ -14,7 +14,7 @@ namespace CK.Observable
     /// Concrete specializations are <see cref="ObservableTimer"/> and <see cref="ObservableReminder"/>.
     /// Note that <see cref="IsActive"/> can be false.
     /// </summary>
-    [BinarySerialization.SerializationVersion( 1 )]
+    [SerializationVersion( 1 )]
     [NotExportable]
     public abstract class ObservableTimedEventBase : IDestroyableObject, BinarySerialization.IDestroyable, BinarySerialization.ICKSlicedSerializable
     {

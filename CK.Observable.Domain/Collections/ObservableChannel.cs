@@ -1,3 +1,4 @@
+using CK.Core;
 using System;
 using System.Collections.Generic;
 
@@ -8,7 +9,7 @@ namespace CK.Observable
     /// are inserted via <see cref="Send(T)"/>, <see cref="ItemSent"/> is raised, but items are not kept.
     /// </summary>
     /// <typeparam name="T">The item type.</typeparam>
-    [BinarySerialization.SerializationVersion(0)]
+    [SerializationVersion(0)]
     public class ObservableChannel<T> : ObservableObject
     {
         ObservableEventHandler<ListInsertEvent> _itemSent;

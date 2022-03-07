@@ -13,7 +13,7 @@ namespace CK.Observable
     /// Observable objects are reference types that belong to a <see cref="ObservableDomain"/> and for
     /// which properties changes and <see cref="Destroy()"/> are tracked.
     /// </summary>
-    [BinarySerialization.SerializationVersion( 1 )]
+    [SerializationVersion( 1 )]
     public abstract partial class ObservableObject : INotifyPropertyChanged, IKnowMyExportDriver, BinarySerialization.IDestroyable, BinarySerialization.ICKSlicedSerializable
                                                         , IDestroyableObject
     {

@@ -1,8 +1,9 @@
+using CK.Core;
 using System;
 
 namespace CK.Observable.Domain.Tests
 {
-    [BinarySerialization.SerializationVersion( 0 )]
+    [SerializationVersion( 0 )]
     class Root : ObservableRootObject
     {
         public ObservableList<ObservableObject> Objects { get; }

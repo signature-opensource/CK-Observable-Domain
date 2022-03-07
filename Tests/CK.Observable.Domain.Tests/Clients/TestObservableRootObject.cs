@@ -1,8 +1,9 @@
+using CK.Core;
 using System;
 
 namespace CK.Observable.Domain.Tests.Clients
 {
-    [BinarySerialization.SerializationVersion( 0 )]
+    [SerializationVersion( 0 )]
     public sealed class TestObservableRootObject : ObservableRootObject
     {
         public string Prop1 { get; set; }

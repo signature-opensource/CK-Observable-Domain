@@ -1,8 +1,9 @@
+using CK.Core;
 using System.Diagnostics;
 
 namespace CK.Observable.Domain.Tests.Sample
 {
-    [BinarySerialization.SerializationVersion( 1 )]
+    [SerializationVersion( 1 )]
     public class Person : ObservableObject
     {
         public Person()
@@ -18,7 +19,7 @@ namespace CK.Observable.Domain.Tests.Sample
             Friend = r.ReadNullableObject<Person>();
             FirstName = r.Reader.ReadNullableString();
             LastName = r.Reader.ReadNullableString();
-            if( info.SerializationVersion >= 1 )
+            if( info.Version >= 1 )
             {
                 Age = r.Reader.ReadNonNegativeSmallInt32();
             }
@@ -35,9 +36,9 @@ namespace CK.Observable.Domain.Tests.Sample
 
         public Person? Friend { get; set; }
 
-        public string FirstName { get; set; }
+        public string? FirstName { get; set; }
 
-        public string LastName { get; set; }
+        public string? LastName { get; set; }
 
         /// <summary>
         /// Gets or sets the age. Defaults to 18.

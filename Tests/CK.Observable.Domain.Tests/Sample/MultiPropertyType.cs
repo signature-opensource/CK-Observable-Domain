@@ -4,7 +4,7 @@ using System.Diagnostics;
 
 namespace CK.Observable.Domain.Tests.Sample
 {
-    [BinarySerialization.SerializationVersion(0)]
+    [SerializationVersion(0)]
     public sealed class MultiPropertyType : ObservableObject, IEquatable<MultiPropertyType>
     {
         public static readonly string DefString = "MultiPropertyType";

@@ -148,7 +148,7 @@ namespace CK.Observable.Domain.Tests
         }
 
         [UseSidekick(typeof(SimpleSidekick))]
-        [BinarySerialization.SerializationVersion(0)]
+        [SerializationVersion(0)]
         public class SimpleRoot : ObservableRootObject
         {
             int _domainNumber;

@@ -1,6 +1,8 @@
+using CK.Core;
+
 namespace CK.Observable.Domain.Tests
 {
-    [BinarySerialization.SerializationVersion( 0 )]
+    [SerializationVersion( 0 )]
     class InternalSample : InternalObject
     {
         public InternalSample()

@@ -35,10 +35,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.Device", "CK.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.Device.Tests", "Tests\CK.Observable.Device.Tests\CK.Observable.Device.Tests.csproj", "{FAE59D3D-5DB5-48F1-93BB-85B3A05537F7}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.BinarySerialization", "..\CK-BinarySerialization\CK.BinarySerialization\CK.BinarySerialization.csproj", "{D76F936C-8BBC-426D-8C69-E1737FE96422}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.BinarySerialization.Sliced", "..\CK-BinarySerialization\CK.BinarySerialization.Sliced\CK.BinarySerialization.Sliced.csproj", "{B1D67697-F6A4-40C1-8870-88E3FF71B997}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -73,14 +69,6 @@ Global
 		{FAE59D3D-5DB5-48F1-93BB-85B3A05537F7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FAE59D3D-5DB5-48F1-93BB-85B3A05537F7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FAE59D3D-5DB5-48F1-93BB-85B3A05537F7}.Release|Any CPU.Build.0 = Release|Any CPU
-		{D76F936C-8BBC-426D-8C69-E1737FE96422}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{D76F936C-8BBC-426D-8C69-E1737FE96422}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{D76F936C-8BBC-426D-8C69-E1737FE96422}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{D76F936C-8BBC-426D-8C69-E1737FE96422}.Release|Any CPU.Build.0 = Release|Any CPU
-		{B1D67697-F6A4-40C1-8870-88E3FF71B997}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B1D67697-F6A4-40C1-8870-88E3FF71B997}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B1D67697-F6A4-40C1-8870-88E3FF71B997}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B1D67697-F6A4-40C1-8870-88E3FF71B997}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

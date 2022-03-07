@@ -13,7 +13,7 @@ namespace CK.Observable
     /// The event time is based on the <see cref="DueTimeUtc"/>: we try to always raise the event based on a multiple
     /// of the <see cref="IntervalMilliSeconds"/> from <see cref="DueTimeUtc"/>.
     /// </summary>
-    [BinarySerialization.SerializationVersion(0)]
+    [SerializationVersion(0)]
     public sealed class ObservableTimer : ObservableTimedEventBase<ObservableTimerEventArgs>
     {
         int _milliSeconds;

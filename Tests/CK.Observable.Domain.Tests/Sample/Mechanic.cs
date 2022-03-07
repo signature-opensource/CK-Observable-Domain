@@ -2,7 +2,7 @@ using CK.Core;
 
 namespace CK.Observable.Domain.Tests.Sample
 {
-    [BinarySerialization.SerializationVersion( 0 )]
+    [SerializationVersion( 0 )]
     public class Mechanic : Employee
     {
         public Mechanic( Garage garage )

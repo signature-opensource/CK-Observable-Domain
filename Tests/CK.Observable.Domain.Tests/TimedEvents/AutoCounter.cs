@@ -5,7 +5,7 @@ using System.Text;
 
 namespace CK.Observable.Domain.Tests.TimedEvents
 {
-    [BinarySerialization.SerializationVersion( 0 )]
+    [SerializationVersion( 0 )]
     class AutoCounter : ObservableObject
     {
         readonly ObservableTimer _timer;

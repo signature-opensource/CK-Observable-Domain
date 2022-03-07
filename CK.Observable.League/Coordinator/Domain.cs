@@ -10,7 +10,7 @@ namespace CK.Observable.League
     /// <summary>
     /// Describes a domain available in the <see cref="ObservableLeague"/>.
     /// </summary>
-    [BinarySerialization.SerializationVersion(1)]
+    [SerializationVersion(1)]
     public sealed class Domain : ObservableObject
     {
         IManagedDomain? _shell;

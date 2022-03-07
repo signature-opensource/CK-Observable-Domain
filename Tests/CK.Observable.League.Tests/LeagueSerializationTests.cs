@@ -59,7 +59,7 @@ namespace CK.Observable.League.Tests
             await league2.CloseAsync( TestHelper.Monitor );
         }
 
-        [BinarySerialization.SerializationVersion( 0 )]
+        [SerializationVersion( 0 )]
         public sealed class InstantiationTracker : ObservableRootObject
         {
             public InstantiationTracker()
@@ -134,7 +134,7 @@ namespace CK.Observable.League.Tests
         }
 
 
-        [BinarySerialization.SerializationVersion(0)]
+        [SerializationVersion(0)]
         public sealed class WriteCounter : ObservableRootObject
         {
             public WriteCounter()

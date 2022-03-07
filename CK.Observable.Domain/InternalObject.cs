@@ -13,7 +13,7 @@ namespace CK.Observable
     /// and <see cref="SafeEventHandler{TEventArgs}"/>).
     /// </summary>
     [NotExportable]
-    [BinarySerialization.SerializationVersion( 0 )]
+    [SerializationVersion( 0 )]
     public abstract class InternalObject : IDestroyableObject, BinarySerialization.IDestroyable, BinarySerialization.ICKSlicedSerializable
     {
         internal ObservableDomain ActualDomain;

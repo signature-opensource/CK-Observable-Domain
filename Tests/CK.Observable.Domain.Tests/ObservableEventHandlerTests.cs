@@ -295,7 +295,7 @@ namespace CK.Observable.Domain.Tests
         }
 
 
-        [BinarySerialization.SerializationVersion( 0 )]
+        [SerializationVersion( 0 )]
         public class PrivateHandlerObject : ObservableObject
         {
             readonly ObservableTimer _timer;
@@ -344,7 +344,7 @@ namespace CK.Observable.Domain.Tests
 
         }
 
-        [BinarySerialization.SerializationVersion( 0 )]
+        [SerializationVersion( 0 )]
         public class SpecializedPrivateHandlerObject : PrivateHandlerObject
         {
             public SpecializedPrivateHandlerObject()

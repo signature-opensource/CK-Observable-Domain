@@ -11,7 +11,7 @@ namespace CK.Observable.Device
     /// Non generic abstract base class for device. It is not intended to be specialized directly: use the
     /// generic <see cref="ObservableDeviceObject{TSidekick}"/> as the object device base.
     /// </summary>
-    [BinarySerialization.SerializationVersion( 0 )]
+    [SerializationVersion( 0 )]
     public abstract class ObservableDeviceObject : ObservableObject, ISidekickLocator
     {
         DeviceStatus? _status;
