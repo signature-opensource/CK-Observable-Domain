@@ -1,6 +1,6 @@
 <Project>
   <ItemGroup>
-    <PackageReference Update="CK.BinarySerialization.Sliced" Version="0.1.1-a01" />
+    <PackageReference Update="CK.BinarySerialization.Sliced" Version="0.1.1-a02" />
     <PackageReference Update="CK.DeviceModel" Version="1.0.0-r11" />
     <PackageReference Update="CK.StObj.Model" Version="18.1.1" />
     <PackageReference Update="System.Threading.Channels" Version="4.7.1" />
