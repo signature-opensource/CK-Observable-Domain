@@ -63,8 +63,8 @@ the new `Write` function that is now `public static`.
 Declaring the new CK.BinarySerialization namespace can be the first step:
 `using CK.BinarySerialization;`
 
-Then the `[SerializationVersion( 42 )]` attribute is now in CK.Core (namespace and will be in CK.Core
-assembly in Net6): make sure you are `using CK.Core;`.
+Then the `[SerializationVersion( 42 )]` attribute is now in CK.Core (namespace for the 
+moment, the type itself will be in CK.Core assembly in Net6): make sure you are `using CK.Core;`.
 
 It's time to implement the actual migration.
 
@@ -195,3 +195,18 @@ have the warnings).
 For the moment, the type parameter is a simple cast but the plan is to actually use it to support automatic mutations
 (for instance a `d.ReadObject<List<Person>>()` will be able to read back a previously saved `HashSet<Person>` automatically).
 
+Please try to follow these conventions:
+- Serializer is **s**: `IBinarySerializer s`
+- Writer is **w**: `ICKBinaryWriter w`
+- Deserializer is **d**: `IBinaryDeserializer d`
+- Reader is **r**: `ICKBinaryReader r`
+
+## Expected errors you'll have to deal with
+
+> System.InvalidOperationException : Type 'Artemis.App.CoreService.Root' requires a constructor with (IBinaryDeserializer d, ITypeReadInfo info) parameters.
+
+Check the constructor. Make sure you use `ITypeReadInfo`.
+```c#
+    Root( CK.BinarySerialization.IBinaryDeserializer r, ITypeReadInfo info )
+        : base( Sliced.Instance )
+```
