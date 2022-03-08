@@ -33,7 +33,27 @@ namespace CK.Observable
                 if( version != 0 ) throw new InvalidDataException();
 
                 int num = r.ImplementationServices.PreTrackObject();
+                // This uses the legacy .net serialization.
                 var comparer = (IEqualityComparer<TKey>?)r.ReadObject();
+                if( comparer != null )
+                {
+                    // The comparer that has been deserialized is a new instance, not one of the singletons :(.
+                    // To be able to serialize it back we need to "normalize" it... and we have almost no other way to do this 
+                    // than to challenge it!
+                    // We do this for strings basically and uses Ordinal or OrdinalIgnoreCase, for other type of keys, we remap it to the default one :(
+                    //
+                    // Note that there are more stuff in Net6 to handle this (like https://source.dot.net/#System.Private.CoreLib/StringComparer.cs,75).
+                    //
+                    if( typeof( TKey ) == typeof( string ) )
+                    {
+                        comparer = FindBestStringComparer( (IEqualityComparer<string>)comparer );
+                    }
+                    else
+                    {
+                        comparer = EqualityComparer<TKey>.Default;
+                    }
+                }
+
                 int len = r.ReadSmallInt32();
                 KeyValuePair<TKey, TValue>[] items;
                 if( len == 0 )
@@ -86,6 +106,17 @@ namespace CK.Observable
                 }
                 return result;
             }
+        }
+
+        static IEqualityComparer<TKey> FindBestStringComparer( IEqualityComparer<string> comparer )
+        {
+            if( comparer.Equals("A","a") )
+            {
+                // Ignore case: use OrdinalIgnoreCase
+                return (IEqualityComparer<TKey>)StringComparer.OrdinalIgnoreCase;
+            }
+            // Case sensitive: use Ordinal
+            return (IEqualityComparer<TKey>)StringComparer.Ordinal;
         }
 
 
