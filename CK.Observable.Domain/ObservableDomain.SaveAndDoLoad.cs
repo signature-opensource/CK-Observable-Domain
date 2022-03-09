@@ -247,14 +247,14 @@ namespace CK.Observable
             }
         }
 
-        bool DoLegacyRealLoad( IActivityMonitor monitor, BinaryDeserializer r, string expectedName, bool? startTimer )
+        bool DoLegacyRealLoad( IActivityMonitor monitor, BinaryDeserializer r, string expectedName, bool? startTimer, int version )
         {
             Debug.Assert( _lock.IsWriteLockHeld );
             _deserializeOrInitializing = true;
             try
             {
                 UnloadDomain( monitor );
-                int version = r.ReadSmallInt32();
+                //int version = r.ReadSmallInt32();
                 if( version < 5 || version > 8 )
                 {
                     throw new InvalidDataException( $"Version must be between 5 and 8. Version read: {version}." );

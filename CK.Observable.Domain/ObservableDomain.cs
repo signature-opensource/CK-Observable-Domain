@@ -1352,23 +1352,19 @@ namespace CK.Observable
             try
             {
                 // Do not cache the BinaryDeserializerContext for the moment.
-                using( var d = BinarySerialization.BinaryDeserializer.TryCreate( stream, leaveOpen, new BinarySerialization.BinaryDeserializerContext() ) )
+                using( var d = BinarySerialization.BinaryDeserializer.TryCreateFromPreviousVersion( stream, leaveOpen, new BinarySerialization.BinaryDeserializerContext(), out var version ) )
                 {
                     if( d == null )
                     {
                         using( monitor.OpenWarn( $"The stream may be from a previous serialization implementation. Trying to read it with the legacy implementation." ) )
                         {
-                            // Legacy?
-                            // TryCreate eat the first byte.
                             // Easiest path (for the moment and this should be enough): go backward!
                             try
                             {
-                                if( !stream.CanSeek ) throw new NotSupportedException( "Read stream must support Seek to be able to read legacy domains." );
-                                stream.Seek( -1, SeekOrigin.Current );
                                 using( var dOld = new BinaryDeserializer( stream, null, _deserializers, leaveOpen, encoding ) )
                                 {
                                     dOld.Services.Add( this );
-                                    var mustStartTimer = DoLegacyRealLoad( monitor, dOld, expectedLoadedName, startTimer );
+                                    var mustStartTimer = DoLegacyRealLoad( monitor, dOld, expectedLoadedName, startTimer, version );
                                     if( beforeTimer != null ) mustStartTimer = beforeTimer( mustStartTimer );
                                     if( mustStartTimer )
                                     {
