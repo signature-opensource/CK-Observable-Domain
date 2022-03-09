@@ -269,7 +269,7 @@ namespace CK.Observable
                 // Previous attempt failed.
                 if( cache is Exception ex )
                 {
-                    monitor.Error( "This sidekick instantiation previousy failed." );
+                    monitor.Error( "This sidekick instantiation previously failed." );
                     return HandleError( monitor, typeOrName, optional, errorCollector, ex );
                 }
                 monitor.Debug( "Already available." );
@@ -421,7 +421,7 @@ namespace CK.Observable
                 if( errors == null ) errors = new List<(object, CKExceptionData)>();
                 errors.Add( (c, CKExceptionData.CreateFrom( ex )) );
             }
-            // If an error occured, it's because, somehow it has been handled.
+            // If an error occurred, it's because, somehow it has been handled.
             return true;
         }
 
