@@ -102,7 +102,7 @@ There must be only one Write method: the new one. All Write methods must be rewr
 > without boxing.
 
 The serializer API has changed on 2 different aspects:
-- First for basic writes: before the serializer was extending the ``. 
+- First for basic writes: before the serializer was extending the `ICKBinaryWriter`. 
 This is now composed, the basic writer is exposed by the `Writer` property (you can see this above 
 on the writing of the `IsRunning` boolean).
 - Second for complex object support: nullable reference types and value types are now explicitly 
@@ -135,7 +135,7 @@ now offers:
 Notes: 
 - The `WriteObject` and `WriteAny` methods return true if the value/object has been written, 
 false if it has already been written and only a reference has been written.
-- The `WriteAny` is no that useful except in scenario where you actually handle object whose type
+- The `WriteAny` is not that useful except in scenario where you actually handle object whose type
 is unknown at runtime.
 
 ### The deserialization constructors
@@ -233,6 +233,84 @@ public class ObservableDataLogicScannerDeviceHost : ObservableDeviceHostObject<D
     }
 }
 ```
+
+## The most complex case: dedicated Drivers
+
+When a type is externally defined and one need to serialize it, de/serialization enter the game.
+
+It was possible before. Below is an example (from HBM scale):
+
+**Before:**
+```c#
+
+    class DAddress : UnifiedTypeDriverBase<Address>
+    {
+        public static readonly DAddress Default = new DAddress();
+
+        public override void Export( Address o, int num, ObjectExporter exporter ) => exporter.Target.EmitByte( o.Value );
+
+        public override Address ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool b ) => new Address( r.ReadByte() );
+
+        public override void WriteData( BinarySerializer w, Address o ) => w.Write( o.Value );
+    }
+
+    static ObservableHBMScaleDevice()
+    {
+        SerializerRegistry.Default.Register( typeof( Address ), DAddress.Default.SerializationDriver );
+        DeserializerRegistry.Default.Register( typeof( Address ), DAddress.Default.DeserializationDriver );
+        ExporterRegistry.Default.RegisterDriver( DAddress.Default.ExportDriver );
+    }
+```
+There is no more "Unified Drivers" but we need, for the moment, to keep it with deserialization (to handle
+old domains) and the Export capability (that will be rewritten one day).
+
+Note the static constructor (its real name is "Type initializer") registers the 3 "facets" of the "Unified Driver"
+into 3 thread-safe singletons.
+
+The migration of this beast is below:
+**After:**
+```c#
+
+    class DAddress : UnifiedTypeDriverBase<Address>
+    {
+        public static readonly DAddress Default = new DAddress();
+
+        public override void Export( Address o, int num, ObjectExporter exporter ) => exporter.Target.EmitByte( o.Value );
+
+        // Legacy
+        public override Address ReadInstance( CK.Observable.IBinaryDeserializer r, TypeReadInfo readInfo, bool b ) => new Address( r.ReadByte() );
+    }
+
+
+    sealed class DSAddress : StaticValueTypeSerializer<Address>
+    {
+        public override string DriverName => typeof(Address).FullName!;
+
+        public override int SerializationVersion => 0;
+
+        public static void Write( IBinarySerializer s, in Address o ) => s.Writer.Write( o.Value );
+    }
+
+
+    sealed class DDAddress : ValueTypeDeserializer<Address>
+    {
+        protected override Address ReadInstance( CK.BinarySerialization.IBinaryDeserializer d, ITypeReadInfo readInfo ) => new Address( d.Reader.ReadByte() );
+    }
+
+
+    static ObservableHBMScaleDevice()
+    {
+        // Legacy
+        DeserializerRegistry.Default.Register( typeof( Address ), DAddress.Default.DeserializationDriver );
+
+        // New
+        BinarySerializer.DefaultSharedContext.AddSerializationDriver( typeof(Address), new DSAddress() );
+        CK.BinarySerialization.BinaryDeserializer.DefaultSharedContext.AddLocalTypeDeserializer( new DDAddress() );
+        ExporterRegistry.Default.RegisterDriver( DAddress.Default.ExportDriver );
+    }
+```
+We keep the Unified driver but without its Write.
+The 2 mini drivers `DSAddress` and `DDAddress` are registered in their respective `DefaultSharedContext` and that's it.
 
 ## Expected errors you'll have to deal with
 
