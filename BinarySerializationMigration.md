@@ -201,6 +201,39 @@ Please try to follow these conventions:
 - Deserializer is **d**: `IBinaryDeserializer d`
 - Reader is **r**: `ICKBinaryReader r`
 
+## DeviceHost require empty serializers
+
+This is an unfortunate side-effect of the fundamental "everything can mute" goal of CK.BinarySerializer: there cannot
+be anymore no support at all for the serialization.
+
+Note that DeviceHost MAY be specialized (even if we don't do this much), so it's a good idea to add
+the special deserialization constructor for specialized classes.
+
+**Before**
+```c#
+[SerializationVersion( 0 )]
+public class ObservableDataLogicScannerDeviceHost : ObservableDeviceHostObject<DataLogicScannerSidekick>
+{
+}
+```
+**After**
+```c#
+[SerializationVersion( 0 )]
+public class ObservableDataLogicScannerDeviceHost : ObservableDeviceHostObject<DataLogicScannerSidekick>
+{
+    protected ObservableDataLogicScannerDeviceHost( Sliced _ ) : base( _ ) { }
+
+    ObservableDataLogicScannerDeviceHost( CK.BinarySerialization.IBinaryDeserializer s, ITypeReadInfo info )
+        : base( Sliced.Instance )
+    {
+    }
+
+    public static void Write( IBinarySerializer s, in ObservableDataLogicScannerDeviceHost o )
+    {
+    }
+}
+```
+
 ## Expected errors you'll have to deal with
 
 > System.InvalidOperationException : Type 'Artemis.App.CoreService.Root' requires a constructor with (IBinaryDeserializer d, ITypeReadInfo info) parameters.
