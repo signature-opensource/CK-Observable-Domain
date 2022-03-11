@@ -17,13 +17,6 @@ namespace CK.Observable.League.Tests
         private readonly static RandomNumberGenerator Random = RandomNumberGenerator.Create();
         readonly static NormalizedPath TestFolder = TestHelper.TestProjectFolder.AppendPart( "TestStores" );
 
-        public static DirectoryStreamStore CreateStore( string name )
-        {
-            var p = TestFolder.AppendPart( name );
-            TestHelper.CleanupFolder( p );
-            return new DirectoryStreamStore( p );
-        }
-
         public static MemoryStream CreateDataStream( int size = 1000 )
         {
             byte[] buffer = new byte[size];
@@ -32,9 +25,9 @@ namespace CK.Observable.League.Tests
         }
 
         [Test]
-        public async Task housekeeping_does_not_clean_when_disabled()
+        public async Task housekeeping_does_not_clean_when_disabled_Async()
         {
-            var store = CreateStore( nameof( housekeeping_does_not_clean_when_disabled ) );
+            var store = BasicLeagueTests.CreateStore( nameof( housekeeping_does_not_clean_when_disabled_Async ) );
             IBackupStreamStore streamStore = store;
             int backupCount = 100;
             string resourceName = "domain";
@@ -56,9 +49,9 @@ namespace CK.Observable.League.Tests
         }
 
         [Test]
-        public async Task housekeeping_can_clean_by_timespan()
+        public async Task housekeeping_can_clean_by_timespan_Async()
         {
-            var store = CreateStore( nameof( housekeeping_can_clean_by_timespan ) );
+            var store = BasicLeagueTests.CreateStore( nameof( housekeeping_can_clean_by_timespan_Async ) );
             IBackupStreamStore streamStore = store;
             int backupCount = 10;
             string resourceName = "domain";
@@ -90,9 +83,9 @@ namespace CK.Observable.League.Tests
         }
 
         [Test]
-        public async Task housekeeping_can_clean_by_total_size()
+        public async Task housekeeping_can_clean_by_total_size_Async()
         {
-            var store = CreateStore( nameof( housekeeping_can_clean_by_total_size ) );
+            var store = BasicLeagueTests.CreateStore( nameof( housekeeping_can_clean_by_total_size_Async ) );
             IBackupStreamStore streamStore = store;
             int backupCount = 10;
             int filesize = 1000;
@@ -117,9 +110,9 @@ namespace CK.Observable.League.Tests
         }
 
         [Test]
-        public async Task housekeeping_can_clean_by_total_size_and_timespan_with_size_matching()
+        public async Task housekeeping_can_clean_by_total_size_and_timespan_with_size_matching_Async()
         {
-            var store = CreateStore( nameof( housekeeping_can_clean_by_total_size_and_timespan_with_size_matching ) );
+            var store = BasicLeagueTests.CreateStore( nameof( housekeeping_can_clean_by_total_size_and_timespan_with_size_matching_Async ) );
             IBackupStreamStore streamStore = store;
             int backupCount = 10;
             int filesize = 1000;
@@ -152,9 +145,9 @@ namespace CK.Observable.League.Tests
         }
 
         [Test]
-        public async Task housekeeping_can_clean_by_total_size_and_timespan_with_timespan_matching()
+        public async Task housekeeping_can_clean_by_total_size_and_timespan_with_timespan_matching_Async()
         {
-            var store = CreateStore( nameof( housekeeping_can_clean_by_total_size_and_timespan_with_timespan_matching ) );
+            var store = BasicLeagueTests.CreateStore( nameof( housekeeping_can_clean_by_total_size_and_timespan_with_timespan_matching_Async ) );
             IBackupStreamStore streamStore = store;
             int backupCount = 10;
             int filesize = 1000;
@@ -187,55 +180,5 @@ namespace CK.Observable.League.Tests
                 $"{backupCount} snapshot backups should remain after cleanup." );
         }
 
-        [Test]
-        public async Task housekeeping_is_triggered_on_league_load()
-        {
-            string domainName = "domain";
-            string resourceName = $"d-{domainName.ToLowerInvariant()}";
-            var store = CreateStore( nameof( housekeeping_is_triggered_on_league_load ) );
-
-            var league = await ObservableLeague.LoadAsync( TestHelper.Monitor, store );
-            Debug.Assert( league != null, nameof( league ) + " != null" );
-
-            var rootTypes = new string[] { typeof( Model.School ).AssemblyQualifiedName! };
-            var options = new ManagedDomainOptions( DomainLifeCycleOption.Default, CompressionKind.None, 0,
-                TimeSpan.Zero, TimeSpan.FromMilliseconds( 300 ), 0, TimeSpan.FromDays( 1 ), 100000, 10 );
-
-            await league.Coordinator.ModifyAsync( TestHelper.Monitor, ( m, d ) =>
-                d.Root.CreateDomain( domainName, rootTypes, options ) );
-            var loader = league.Find( domainName );
-            Debug.Assert( loader != null, nameof( loader ) + " != null" );
-
-            // Create 10 backups
-            for( int i = 0; i < 10; i++ )
-            {
-                await using( var shell = await loader.LoadAsync<Model.School>( TestHelper.Monitor ) )
-                {
-                    Debug.Assert( shell != null, nameof( shell ) + " != null" );
-                    await shell.ModifyAsync( TestHelper.Monitor, ( m, d ) =>
-                    {
-                        d.Root.Persons.Add( new Model.Person() { FirstName = "X", LastName = "Y", Age = 22 } );
-                    } );
-                }
-            }
-
-            // Wait 300 ms
-            await Task.Delay( 300 );
-
-            // Create 10 backups
-            for( int i = 0; i < 10; i++ )
-            {
-                await using( var shell = await loader.LoadAsync<Model.School>( TestHelper.Monitor ) )
-                {
-                    Debug.Assert( shell != null, nameof( shell ) + " != null" );
-                    await shell.ModifyAsync( TestHelper.Monitor, ( m, d ) =>
-                    {
-                        d.Root.Persons.Add( new Model.Person() { FirstName = "X", LastName = "Y", Age = 22 } );
-                    } );
-                }
-            }
-
-            store.GetBackupNames( resourceName ).Should().HaveCountLessOrEqualTo( 10, "At least 10 backups should have been deleted with the time rule" );
-        }
     }
 }

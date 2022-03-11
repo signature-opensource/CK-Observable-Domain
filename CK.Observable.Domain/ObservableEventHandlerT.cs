@@ -6,9 +6,33 @@ using System.Text;
 namespace CK.Observable
 {
     /// <summary>
-    /// Serializable and safe event handler: only non null and static method or method on a <see cref="IDestroyable"/> (that must
-    /// be serializable) can be added.
+    /// Serializable and safe event handler: only static methods or methods on a <see cref="IDestroyable"/> (that must
+    /// be serializable) can be registered.
+    /// <para>
+    /// When suppressing the event, <see cref="ObservableEventHandler.Skip(BinarySerialization.IBinaryDeserializer)"/>
+    /// must be used when deserializing from a previous version that had the event.
+    /// </para>
+    /// <para>
     /// This is a helper class that implements <see cref="SafeEventHandler{TEventArgs}"/> events.
+    /// This field MUST not be readonly. The pattern is the following one:
+    /// <code>
+    /// // Declare a private non readonly field:
+    /// ObservableEventHandler&lt;MyEventArgs&gt; _event;
+    /// 
+    /// // In the Write method, saves it:
+    /// o._event.Write( s );
+    /// 
+    /// // In the Deserialization constructor, reads it back:
+    /// _event = new ObservableEventHandler&lt;MyEventArgs&gt;( d );
+    /// 
+    /// // Exposes the event:
+    /// public event SafeEventHandler&lt;MyEventArgs&gt; MyEvent
+    /// {
+    ///    add => _itemSent.Add( value, nameof( MyEvent ) );
+    ///    remove => _itemSent.Remove( value );
+    /// }
+    /// </code>
+    /// </para>
     /// </summary>
     /// <typeparam name="TEventArgs">The type of the event argument.</typeparam>
     public struct ObservableEventHandler<TEventArgs> where TEventArgs : EventArgs

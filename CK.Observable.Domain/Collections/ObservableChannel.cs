@@ -31,10 +31,10 @@ namespace CK.Observable
         }
 
         #region Old Serialization
-        ObservableChannel( IBinaryDeserializer r, TypeReadInfo? info )
+        ObservableChannel( IBinaryDeserializer d, TypeReadInfo? info )
                 : base( BinarySerialization.Sliced.Instance )
         {
-            _itemSent = new ObservableEventHandler<ListInsertEvent>( r );
+            _itemSent = new ObservableEventHandler<ListInsertEvent>( d );
         }
 
         #endregion

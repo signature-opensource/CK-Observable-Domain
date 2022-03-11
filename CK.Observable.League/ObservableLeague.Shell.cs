@@ -281,7 +281,7 @@ namespace CK.Observable.League
             }
 
             /// <summary>
-            /// Gets or sets the options. This is set directly when the <see cref="Coordinator"/>'s <see cref="Domain.Options"/>
+            /// Gets the options. This is set directly when the <see cref="Coordinator"/>'s <see cref="Domain.Options"/>
             /// value changes.
             /// The different values are hold by this Client or directly by this shell.
             /// </summary>
@@ -345,7 +345,7 @@ namespace CK.Observable.League
             async Task<bool> IObservableDomainShellBase.SaveAsync( IActivityMonitor m )
             {
                 return await ExplicitSnapshotDomainAsync( m ).ConfigureAwait( false )
-                       && await Client.SaveSnapshotAsync( m ).ConfigureAwait( false );
+                       && await Client.SaveSnapshotAsync( m, false ).ConfigureAwait( false );
             }
 
             async Task<bool> ExplicitSnapshotDomainAsync( IActivityMonitor m )
@@ -415,7 +415,7 @@ namespace CK.Observable.League
                             }
                             else
                             {
-                                await Client.SaveSnapshotAsync( monitor ).ConfigureAwait( false );
+                                await Client.SaveSnapshotAsync( monitor, doHouseKeeping: ClosingLeague ).ConfigureAwait( false );
                             }
                             if( !IsDestroyed && !ClosingLeague )
                             {
