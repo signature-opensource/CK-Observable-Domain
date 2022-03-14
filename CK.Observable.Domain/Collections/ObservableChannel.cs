@@ -35,10 +35,10 @@ namespace CK.Observable
         /// <param name="_">unused parameter.</param>
         protected ObservableChannel( RevertSerialization _ ) : base( _ ) { }
 
-        ObservableChannel( IBinaryDeserializer r, TypeReadInfo? info )
+        ObservableChannel( IBinaryDeserializer d, TypeReadInfo? info )
                 : base( RevertSerialization.Default )
         {
-            _itemSent = new ObservableEventHandler<ListInsertEvent>( r );
+            _itemSent = new ObservableEventHandler<ListInsertEvent>( d );
         }
 
        void Write( BinarySerializer s )

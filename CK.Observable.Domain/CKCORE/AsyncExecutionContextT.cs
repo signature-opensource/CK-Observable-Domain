@@ -111,7 +111,7 @@ namespace CK.Core
                         actions.RemoveRange( 0, roundCount );
                     }
                     var onSuccess = _reg._onSuccess;
-                    if( onSuccess == null ) _monitor.Trace( "There is no registered success handler." );
+                    if( onSuccess == null ) _monitor.Debug( "There is no registered success handler." );
                     else
                     {
                         using( _monitor.OpenTrace( $"Calling {onSuccess.Count} success handlers." ) )
@@ -144,7 +144,7 @@ namespace CK.Core
                 }
                 finally
                 {
-                    if( _reg._onFinally == null ) _monitor.Trace( "There is no registered final handler." );
+                    if( _reg._onFinally == null ) _monitor.Debug( "There is no registered final handler." );
                     else
                     {
                         using( _monitor.OpenInfo( $"Calling {_reg._onFinally.Count} final handlers." ) )

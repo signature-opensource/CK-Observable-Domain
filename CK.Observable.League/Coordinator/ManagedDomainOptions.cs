@@ -22,13 +22,12 @@ namespace CK.Observable.League
         public readonly CompressionKind CompressionKind;
 
         /// <summary>
-        /// Number of transactions to skip after every save.
+        /// Number of transactions to skip after every commit.
         /// <para>
-        /// Defaults to zero: transaction mode is on, unhandled errors trigger a rollback of the current state.
+        /// Defaults to zero: transaction mode is on, unhandled errors trigger a rollback to the previous state (before the commit).
         /// </para>
         /// <para>
-        /// When positive, the transaction mode is on, but in a very dangerous mode: whenever saves are skipped,
-        /// the domain rollbacks to an old version of itself.
+        /// When positive, the transaction mode is in a very dangerous mode since the domain may rollback to an old version of itself.
         /// </para>
         /// <para>
         /// When set to -1, transaction mode is off. Unhandled errors are logged (as <see cref="LogLevel.Error"/>) and
@@ -63,8 +62,10 @@ namespace CK.Observable.League
         public readonly int SnapshotMaximalTotalKiB;
 
         /// <summary>
-        /// <para>The rate at which housekeeping is executed, in Modify cycles (ie. how many transactions between housekeeping).</para>
-        /// <para>Defaults to 50.</para>
+        /// The rate at which housekeeping is executed, in Modify cycles (ie. how many transactions between housekeeping).
+        /// <para>
+        /// Defaults to 50.
+        /// </para>
         /// </summary>
         /// <remarks>Housekeeping is always executed on domain load, and on manual save.</remarks>
         public readonly int HousekeepingRate;
@@ -192,27 +193,34 @@ namespace CK.Observable.League
         /// </summary>
         /// <param name="obj">The other object.</param>
         /// <returns>True on equal, false otherwise.</returns>
-        public override bool Equals( object obj ) => obj is ManagedDomainOptions o && Equals( o );
+        public override bool Equals( object? obj ) => obj is ManagedDomainOptions o && Equals( o );
 
         /// <summary>
         /// Value semantic hash code.
         /// </summary>
         /// <returns>The hash code.</returns>
-        public override int GetHashCode() => HashCode.Combine( LifeCycleOption, CompressionKind, SnapshotSaveDelay, SnapshotKeepDuration, SnapshotMaximalTotalKiB, ExportedEventKeepDuration, ExportedEventKeepLimit + SkipTransactionCount );
+        public override int GetHashCode() => HashCode.Combine( LifeCycleOption,
+                                                               CompressionKind,
+                                                               SnapshotSaveDelay,
+                                                               SnapshotKeepDuration,
+                                                               SnapshotMaximalTotalKiB,
+                                                               ExportedEventKeepDuration,
+                                                               ExportedEventKeepLimit + SkipTransactionCount );
 
         /// <summary>
         /// Value semantic equality.
         /// </summary>
         /// <param name="other">The other object.</param>
         /// <returns>True on equal, false otherwise.</returns>
-        public bool Equals( ManagedDomainOptions other ) => LifeCycleOption == other.LifeCycleOption
-                                                            && CompressionKind == other.CompressionKind
-                                                            && SnapshotSaveDelay == other.SnapshotSaveDelay
-                                                            && SkipTransactionCount == other.SkipTransactionCount
-                                                            && SnapshotKeepDuration == other.SnapshotKeepDuration
-                                                            && SnapshotMaximalTotalKiB == other.SnapshotMaximalTotalKiB
-                                                            && ExportedEventKeepDuration == other.ExportedEventKeepDuration
-                                                            && ExportedEventKeepLimit == other.ExportedEventKeepLimit
-                                                            && HousekeepingRate == other.HousekeepingRate;
+        public bool Equals( ManagedDomainOptions? other ) => other != null
+                                                             && LifeCycleOption == other.LifeCycleOption
+                                                             && CompressionKind == other.CompressionKind
+                                                             && SnapshotSaveDelay == other.SnapshotSaveDelay
+                                                             && SkipTransactionCount == other.SkipTransactionCount
+                                                             && SnapshotKeepDuration == other.SnapshotKeepDuration
+                                                             && SnapshotMaximalTotalKiB == other.SnapshotMaximalTotalKiB
+                                                             && ExportedEventKeepDuration == other.ExportedEventKeepDuration
+                                                             && ExportedEventKeepLimit == other.ExportedEventKeepLimit
+                                                             && HousekeepingRate == other.HousekeepingRate;
     }
 }

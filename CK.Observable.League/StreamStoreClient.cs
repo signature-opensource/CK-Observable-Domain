@@ -82,7 +82,7 @@ namespace CK.Observable.League
         /// <summary>
         /// See <see cref="ManagedDomainOptions.HousekeepingRate"/>.
         /// </summary>
-        public int HousekeepingRate { get; set; } = 0;
+        public int HousekeepingRate { get; set; } = 50;
 
         /// <summary>
         /// Overridden to FIRST create a snapshot and THEN call the next client.
@@ -92,7 +92,7 @@ namespace CK.Observable.League
         {
             CreateSnapshot( c.Monitor, c.Domain, false, c.HasSaveCommand );
             // We save the snapshot if we must (and there is no compensation for this of course).
-            if( c.CommitTimeUtc >= _nextSave ) c.PostActions.Add( ctx => SaveSnapshotAsync( ctx.Monitor ) );
+            if( c.CommitTimeUtc >= _nextSave ) c.PostActions.Add( ctx => SaveSnapshotAsync( ctx.Monitor, false ) );
             Next?.OnTransactionCommit( c );
         }
 
@@ -103,12 +103,14 @@ namespace CK.Observable.League
         }
 
         /// <summary>
+        /// Overridden to call the protected <see cref="DoDeserializeDomain(IActivityMonitor, Stream, bool?)"/>
+        /// and initialize the <see cref="JsonEventCollector"/>.
         /// See base <see cref="MemoryTransactionProviderClient.LoadOrCreateAndInitializeSnapshot"/> comments.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="stream">The stream from which the domain must be deserialized.</param>
         /// <param name="startTimer">Whether to start the domain's <see cref="TimeManager"/>.</param>
-        /// <returns>Never: throws a <see cref="NotSupportedException"/>.</returns>
+        /// <returns>The deserialized domain.</returns>
         protected override sealed ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, bool? startTimer )
         {
             var d = DoDeserializeDomain( monitor, stream, startTimer );
@@ -167,7 +169,7 @@ namespace CK.Observable.League
                 // the initial snapshot can be saved to the Store: this initializes
                 // the Store for this domain. From now on, it will be reloaded.
                 CreateSnapshot( monitor, result, true, true );
-                if( !await SaveSnapshotAsync( monitor ) )
+                if( !await SaveSnapshotAsync( monitor, false ) )
                 {
                     throw new Exception( $"Unable to initialize the store for '{_storeName}'." );
                 }
@@ -181,16 +183,17 @@ namespace CK.Observable.League
         /// This never throws.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
+        /// <param name="doHouseKeeping">Do a cleanup of the backups now, regardless of the <see cref="ManagedDomainOptions.HousekeepingRate"/>.</param>
         /// <returns>True on success, false if an error occurred.</returns>
-        public Task<bool> SaveSnapshotAsync( IActivityMonitor monitor ) => DoSaveSnapshotAsync( monitor, false );
+        public Task<bool> SaveSnapshotAsync( IActivityMonitor monitor, bool doHouseKeeping ) => DoSaveSnapshotAsync( monitor, doHouseKeeping, false );
 
         /// <summary>
         /// Archives the persistent file in the store: the domain's file is no more available.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
-        public Task ArchiveSnapshotAsync( IActivityMonitor monitor ) => DoSaveSnapshotAsync( monitor, true );
+        public Task ArchiveSnapshotAsync( IActivityMonitor monitor ) => DoSaveSnapshotAsync( monitor, true, true );
 
-        async Task<bool> DoSaveSnapshotAsync( IActivityMonitor monitor, bool sendToArchive )
+        async Task<bool> DoSaveSnapshotAsync( IActivityMonitor monitor, bool doHouseKeeping, bool sendToArchive )
         {
             if( _savedTransactionNumber != CurrentSerialNumber || sendToArchive )
             {
@@ -209,20 +212,19 @@ namespace CK.Observable.League
                     }
                     else monitor.Trace( $"Domain '{_storeName}' successfully saved (TransactionNumber={_savedTransactionNumber})." );
 
-                    if( HousekeepingRate > 0 && _streamStore is IBackupStreamStore backupStreamStore )
+                    if( _streamStore is IBackupStreamStore backupStreamStore )
                     {
                         --_savesBeforeNextHousekeeping;
-                        if( _savesBeforeNextHousekeeping <= 0
+                        if( (doHouseKeeping || _savesBeforeNextHousekeeping <= 0)
                             && (SnapshotKeepDuration > TimeSpan.Zero || SnapshotMaximalTotalKiB > 0) )
                         {
+                            _savesBeforeNextHousekeeping = HousekeepingRate;
                             using( monitor.OpenTrace( $"Executing housekeeping for '{_storeName}' backups." ) )
                             {
-                                _savesBeforeNextHousekeeping = HousekeepingRate;
                                 backupStreamStore.CleanBackups( monitor, _storeName, SnapshotKeepDuration, SnapshotMaximalTotalKiB * 1024L );
                             }
                         }
                     }
-
                 }
                 catch( Exception ex )
                 {

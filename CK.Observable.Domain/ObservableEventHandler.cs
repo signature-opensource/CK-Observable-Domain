@@ -6,9 +6,12 @@ using System.Text;
 namespace CK.Observable
 {
     /// <summary>
-    /// Serializable and safe event handler: only non null and static method or method on a <see cref="IDestroyable"/> (that must
-    /// be serializable) can be added. 
+    /// Serializable and safe event handler with no argument: only static methods or methods on a <see cref="IDestroyable"/> (that must
+    /// be serializable) can be registered. 
+    /// <para>
     /// This is a helper class that implements <see cref="SafeEventHandler"/> events.
+    /// This field MUST not be readonly. See <see cref="ObservableEventHandler{TEventArgs}"/>
+    /// </para>
     /// </summary>
     public struct ObservableEventHandler
     {
