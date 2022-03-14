@@ -101,7 +101,7 @@ namespace CK.Observable.League
         {
             Debug.Assert( _domains.Values.All( d => d.Shell == null ) );
             _league = league;
-            List<Domain> failed = null;
+            List<Domain>? failed = null;
             foreach( var d in _domains.Values )
             {
                 try
@@ -115,7 +115,7 @@ namespace CK.Observable.League
                     failed.Add( d );
                 }
             }
-            if( failed.Count > 0 )
+            if( failed != null )
             {
                 monitor.Warn( $"Domains '{failed.Select( d => d.DomainName ).Concatenate("', '")}' must be removed." );
                 foreach( var d in failed ) d.Destroy();
