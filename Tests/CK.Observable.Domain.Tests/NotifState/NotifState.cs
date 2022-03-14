@@ -26,21 +26,21 @@ namespace Signature.Process.Dispatching
             BarcodeScanner = new BarcodeScannerState();
         }
 
-        protected NotificationState( CK.BinarySerialization.IBinaryDeserializer d, CK.BinarySerialization.ITypeReadInfo info )
-                : base( CK.BinarySerialization.Sliced.Instance )
+        protected NotificationState( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
         {
             if( info.Version != 0 ) throw new NotSupportedException( $"Cannot deserialize {nameof( NotificationState )} version {info.Version}" );
 
-            _productDispatchErrors = d.ReadObject<ObservableList<Notification<DispatchProductResult>>>();
-            _exceptions = d.ReadObject<ObservableList<Notification<CKExceptionData>>>();
-            BarcodeScanner = d.ReadObject<BarcodeScannerState>();
+            _productDispatchErrors = (ObservableList<Notification<DispatchProductResult>>)r.ReadObject();
+            _exceptions = (ObservableList<Notification<CKExceptionData>>)r.ReadObject();
+            BarcodeScanner = (BarcodeScannerState)r.ReadObject();
         }
 
-        public static void Write( CK.BinarySerialization.IBinarySerializer s, in NotificationState o )
+        void Write( BinarySerializer w )
         {
-            s.WriteObject( o._productDispatchErrors );
-            s.WriteObject( o._exceptions );
-            s.WriteObject( o.BarcodeScanner );
+            w.WriteObject( _productDispatchErrors );
+            w.WriteObject( _exceptions );
+            w.WriteObject( BarcodeScanner );
         }
 
         public void HandleDispatchResult( DispatchProductResult r )
@@ -72,23 +72,23 @@ namespace Signature.Process.Dispatching
 
     }
 
-    [SerializationVersion( 0 )]
-    public class Notification<T> : ObservableObject where T : class
+    [SerializationVersion(0)]
+    public class Notification<T> : ObservableObject
     {
         public Notification( T body )
         {
             Body = body;
         }
 
-        Notification( CK.BinarySerialization.IBinaryDeserializer r, CK.BinarySerialization.ITypeReadInfo info )
-            : base( CK.BinarySerialization.Sliced.Instance )
+        Notification( IBinaryDeserializer r, TypeReadInfo? info )
+            : base( RevertSerialization.Default )
         {
-            Body = r.ReadObject<T>();
+            Body = (T)r.ReadObject();
         }
 
-        public static void Write( CK.BinarySerialization.IBinarySerializer s, in Notification<T> o )
+        void Write( BinarySerializer w )
         {
-            s.WriteObject( o.Body );
+            w.WriteObject( Body );
         }
 
         public string Id { get; } = Guid.NewGuid().ToString( "N" );
@@ -119,19 +119,19 @@ namespace Signature.Process.Dispatching
             LastScanMetadata = new ObservableDictionary<string, string>();
         }
 
-        BarcodeScannerState( CK.BinarySerialization.IBinaryDeserializer r, CK.BinarySerialization.ITypeReadInfo info )
-                : base( CK.BinarySerialization.Sliced.Instance )
+        BarcodeScannerState( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
         {
-            LastSeen = r.Reader.ReadDateTime();
-            LastScanIdentifier = r.Reader.ReadNullableString();
-            LastScanMetadata = r.ReadObject<ObservableDictionary<string, string>>();
+            LastSeen = r.ReadDateTime();
+            LastScanIdentifier = r.ReadNullableString();
+            LastScanMetadata = (ObservableDictionary<string, string>)r.ReadObject();
         }
 
-        public static void Write( CK.BinarySerialization.IBinarySerializer s, in BarcodeScannerState o )
+        void Write( BinarySerializer w )
         {
-            s.Writer.Write( o.LastSeen );
-            s.Writer.WriteNullableString( o.LastScanIdentifier );
-            s.WriteObject( o.LastScanMetadata );
+            w.Write( LastSeen );
+            w.WriteNullableString( LastScanIdentifier );
+            w.WriteObject( LastScanMetadata );
         }
 
         private void UpdateLastSeen()
@@ -183,7 +183,7 @@ namespace Signature.Process.Dispatching
 
     }
 
-    [SerializationVersion( 0)]
+    [SerializationVersion(0)]
     public class DispatchProductResult
     {
         public DispatchProductResultType DispatchProductResultType { get; }
@@ -201,18 +201,18 @@ namespace Signature.Process.Dispatching
             }
         }
 
-        public DispatchProductResult( CK.BinarySerialization.IBinaryDeserializer r, CK.BinarySerialization.ITypeReadInfo info )
+        public DispatchProductResult( IBinaryDeserializer r, TypeReadInfo? info )
         {
-            DispatchProductResultType = r.ReadValue<DispatchProductResultType>();
-            ProductId = r.Reader.ReadNullableString();
-            OrdersWithProduct = r.ReadObject<ObservableList<string>>();
+            DispatchProductResultType = (DispatchProductResultType)r.ReadObject();
+            ProductId = r.ReadNullableString();
+            OrdersWithProduct = (ObservableList<string>)r.ReadObject();
         }
 
-        public static void Write( CK.BinarySerialization.IBinarySerializer w, in DispatchProductResult o )
+        void Write( BinarySerializer w )
         {
-            w.WriteValue( o.DispatchProductResultType );
-            w.Writer.WriteNullableString( o.ProductId );
-            w.WriteObject( o.OrdersWithProduct );
+            w.WriteObject( DispatchProductResultType );
+            w.WriteNullableString( ProductId );
+            w.WriteObject( OrdersWithProduct );
         }
 
         public bool Success

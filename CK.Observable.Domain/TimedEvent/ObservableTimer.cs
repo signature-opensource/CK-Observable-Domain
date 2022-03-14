@@ -47,9 +47,8 @@ namespace CK.Observable
             Name = name ?? throw new ArgumentNullException( nameof( name ) );
         }
 
-        #region Old Deserialization
         ObservableTimer( IBinaryDeserializer r, TypeReadInfo? info )
-            : base( BinarySerialization.Sliced.Instance )
+            : base( RevertSerialization.Default )
         {
             Debug.Assert( !IsDestroyed );
             _milliSeconds = r.ReadInt32();
@@ -61,30 +60,13 @@ namespace CK.Observable
             Name = r.ReadNullableString();
             ReusableArgs = new ObservableTimerEventArgs( this );
         }
-        #endregion
 
-        #region New Serialization
-        ObservableTimer( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
-            : base( BinarySerialization.Sliced.Instance )
+        void Write( BinarySerializer w )
         {
             Debug.Assert( !IsDestroyed );
-            _milliSeconds = d.Reader.ReadInt32();
-            if( _milliSeconds < 0 )
-            {
-                _milliSeconds = -_milliSeconds;
-                _isActive = true;
-            }
-            Name = d.Reader.ReadNullableString();
-            ReusableArgs = new ObservableTimerEventArgs( this );
+            w.Write( _isActive ? -_milliSeconds : _milliSeconds );
+            w.WriteNullableString( Name );
         }
-
-        public static void Write( BinarySerialization.IBinarySerializer s, in ObservableTimer o )
-        {
-            Debug.Assert( !o.IsDestroyed );
-            s.Writer.Write( o._isActive ? -o._milliSeconds : o._milliSeconds );
-            s.Writer.WriteNullableString( o.Name );
-        }
-        #endregion
 
         private protected override bool GetIsActiveFlag() => _isActive;
 
@@ -129,7 +111,7 @@ namespace CK.Observable
         /// Gets or sets an optional name for this timer.
         /// Default to null.
         /// </summary>
-        public string? Name { get; set; }
+        public string Name { get; set; }
 
         /// <summary>
         /// Gets or sets the interval, expressed in milliseconds, at which the <see cref="ObservableTimedEventBase{T}.Elapsed"/> event must repeatedly fire.

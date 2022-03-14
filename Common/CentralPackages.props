@@ -1,6 +1,5 @@
 <Project>
   <ItemGroup>
-    <PackageReference Update="CK.BinarySerialization.Sliced" Version="0.1.1-a05" />
     <PackageReference Update="CK.DeviceModel" Version="1.0.0-r11" />
     <PackageReference Update="CK.StObj.Model" Version="18.1.1" />
     <PackageReference Update="System.Threading.Channels" Version="4.7.1" />
@@ -14,10 +13,5 @@
     <PackageReference Update="Fody" Version="6.6.0" />
     <PackageReference Update="PropertyChanged.Fody" Version="3.4.0" />
     <PackageReference Update="Microsoft.VisualStudio.Threading.Analyzers" Version="17.0.64" />
-
-	<PackageReference Update="CK.Crs.Abstractions" Version="8.0.3" />
-	<PackageReference Update="CK.Crs.Dispatcher" Version="8.0.3" />
-	<PackageReference Update="CK.Crs.CommandDiscoverer" Version="8.0.3" />
-
   </ItemGroup>
 </Project>

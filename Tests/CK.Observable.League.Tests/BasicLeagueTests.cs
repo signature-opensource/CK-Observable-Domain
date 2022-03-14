@@ -1,4 +1,3 @@
-using CK.Core;
 using CK.Text;
 using FluentAssertions;
 using NUnit.Framework;
@@ -86,12 +85,12 @@ namespace CK.Observable.League.Tests
             {
             }
 
-            Root1( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
-                : base( BinarySerialization.Sliced.Instance )
+            Root1( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
             {
             }
 
-            public static void Write( BinarySerialization.IBinarySerializer w, in Root1 o )
+            void Write( BinarySerializer w )
             {
             }
         }
@@ -103,12 +102,12 @@ namespace CK.Observable.League.Tests
             {
             }
 
-            Root2( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
-                : base( BinarySerialization.Sliced.Instance )
+            Root2( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
             {
             }
 
-            public static void Write( BinarySerialization.IBinarySerializer w, in Root2 o )
+            void Write( BinarySerializer w )
             {
             }
         }
@@ -120,12 +119,12 @@ namespace CK.Observable.League.Tests
             {
             }
 
-            Root3( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
-                : base( BinarySerialization.Sliced.Instance )
+            Root3( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
             {
             }
 
-            public static void Write( BinarySerialization.IBinarySerializer w, in Root3 o )
+            void Write( BinarySerializer w )
             {
             }
         }
@@ -137,12 +136,12 @@ namespace CK.Observable.League.Tests
             {
             }
 
-            Root4( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
-                : base( BinarySerialization.Sliced.Instance )
+            Root4( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
             {
             }
 
-            public static void Write( BinarySerialization.IBinarySerializer w, in Root4 o )
+            void Write( BinarySerializer w )
             {
             }
         }

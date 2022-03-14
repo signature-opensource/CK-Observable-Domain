@@ -20,15 +20,15 @@ namespace CK.Observable.Domain.Tests
             {
             }
 
-            SerializableOnly( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
-                : base( BinarySerialization.Sliced.Instance )
+            SerializableOnly( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
             {
-                Name = r.Reader.ReadNullableString();
+                Name = r.ReadNullableString();
             }
 
-            public static void Write( BinarySerialization.IBinarySerializer s, in SerializableOnly o )
+            void Write( BinarySerializer s )
             {
-                s.Writer.WriteNullableString( o.Name );
+                s.WriteNullableString( Name );
             }
 
             public string Name { get; set; }

@@ -158,12 +158,12 @@ namespace CK.Observable.Domain.Tests
             {
             }
 
-            SimpleRoot( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
-                : base( BinarySerialization.Sliced.Instance )
+            SimpleRoot( IBinaryDeserializer r, TypeReadInfo info )
+                : base( RevertSerialization.Default )
             {
             }
 
-            public static void Write( BinarySerialization.IBinarySerializer w, in SimpleRoot o )
+            void Write( BinarySerializer w )
             {
             }
 

@@ -1,4 +1,3 @@
-using CK.Core;
 using System;
 
 namespace CK.Observable.Domain.Tests.Clients
@@ -15,19 +14,19 @@ namespace CK.Observable.Domain.Tests.Clients
         {
         }
 
-        TestObservableRootObject( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
-                : base( BinarySerialization.Sliced.Instance )
+        TestObservableRootObject( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
         {
-            Prop1 = d.Reader.ReadNullableString();
-            Prop2 = d.Reader.ReadNullableString();
+            Prop1 = r.ReadNullableString();
+            Prop2 = r.ReadNullableString();
         }
 
-        public static void Write( BinarySerialization.IBinarySerializer s, in TestObservableRootObject o )
+        void Write( BinarySerializer s )
         {
-            s.Writer.WriteNullableString( o.Prop1 );
-            s.Writer.WriteNullableString( o.Prop2 );
+            s.WriteNullableString( Prop1 );
+            s.WriteNullableString( Prop2 );
 
-            if( o.TestBehavior__ThrowOnWrite ) throw new Exception( $"{nameof( TestBehavior__ThrowOnWrite )} is set. This is a test exception." );
+            if( TestBehavior__ThrowOnWrite ) throw new Exception( $"{nameof( TestBehavior__ThrowOnWrite )} is set. This is a test exception." );
         }
     }
 }

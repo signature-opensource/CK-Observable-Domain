@@ -1,4 +1,3 @@
-using CK.Core;
 using CK.DeviceModel;
 
 namespace CK.Observable.Device
@@ -18,21 +17,14 @@ namespace CK.Observable.Device
         {
         }
 
-        #region Old Deserialization
+        protected ObservableDeviceObject( RevertSerialization _ ) : base( _ ) { }
+
         ObservableDeviceObject( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( BinarySerialization.Sliced.Instance )
-        {
-        }
-        #endregion
-
-        protected ObservableDeviceObject( BinarySerialization.Sliced _ ) : base( _ ) { }
-
-        ObservableDeviceObject( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
-                : base( BinarySerialization.Sliced.Instance )
+                : base( RevertSerialization.Default )
         {
         }
 
-        public static void Write( BinarySerialization.IBinarySerializer s, in ObservableDeviceObject<TSidekick> o )
+        void Write( BinarySerializer w )
         {
         }
 

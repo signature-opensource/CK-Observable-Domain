@@ -32,19 +32,19 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             e.Monitor.Info( $"AutoCounter call n°{Count}." );
         }
 
-        AutoCounter( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
-                : base( BinarySerialization.Sliced.Instance )
+        AutoCounter( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
         {
-            Count = d.Reader.ReadInt32();
-            _timer = d.ReadObject<ObservableTimer>();
-            _countChanged = new ObservableEventHandler( d );
+            Count = r.ReadInt32();
+            _timer = (ObservableTimer)r.ReadObject();
+            _countChanged = new ObservableEventHandler( r );
         }
 
-        public static void Write( BinarySerialization.IBinarySerializer s, in AutoCounter o )
+        void Write( BinarySerializer w )
         {
-            s.Writer.Write( o.Count );
-            s.WriteObject( o._timer );
-            o._countChanged.Write( s );
+            w.Write( Count );
+            w.WriteObject( _timer );
+            _countChanged.Write( w );
         }
 
         /// <summary>

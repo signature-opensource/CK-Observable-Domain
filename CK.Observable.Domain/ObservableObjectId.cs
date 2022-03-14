@@ -97,10 +97,10 @@ namespace CK.Observable
         /// <summary>
         /// Initializes a new Id from a binary stream.
         /// </summary>
-        /// <param name="r">The reader.</param>
-        public ObservableObjectId( ICKBinaryReader r )
+        /// <param name="reader">The reader.</param>
+        public ObservableObjectId( ICKBinaryReader reader )
         {
-            UniqueId = r.ReadInt64();
+            UniqueId = reader.ReadInt64();
         }
 
         void Export( int num, ObjectExporter exporter )

@@ -1,4 +1,3 @@
-using CK.Core;
 using CK.DeviceModel;
 using System.Collections.Generic;
 
@@ -19,36 +18,23 @@ namespace CK.Observable.Device
         {
         }
 
-        #region Old deserialization
+        /// <summary>
+        /// Specialized deserialization constructor for specialized classes.
+        /// </summary>
+        /// <param name="_">Unused parameter.</param>
+        protected ObservableDeviceHostObject( RevertSerialization _ ) : base( _ ) { }
+
         /// <summary>
         /// Deserialization constructor for specialized classes.
         /// </summary>
         /// <param name="r">The deserializer.</param>
         /// <param name="info">The information.</param>
         protected ObservableDeviceHostObject( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( BinarySerialization.Sliced.Instance )
+                : base( RevertSerialization.Default )
         {
         }
-        #endregion
 
-
-        /// <summary>
-        /// Specialized deserialization constructor for specialized classes.
-        /// </summary>
-        /// <param name="_">Unused parameter.</param>
-        protected ObservableDeviceHostObject( BinarySerialization.Sliced _ ) : base( _ ) { }
-
-        /// <summary>
-        /// Deserialization constructor for specialized classes.
-        /// </summary>
-        /// <param name="r">The deserializer.</param>
-        /// <param name="info">The information.</param>
-        protected ObservableDeviceHostObject( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
-                : base( BinarySerialization.Sliced.Instance )
-        {
-        }
-        
-        public static void Write( BinarySerialization.IBinarySerializer s, in ObservableDeviceHostObject<TSidekick> o )
+        void Write( BinarySerializer s )
         {
         }
 

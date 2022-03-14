@@ -1,4 +1,3 @@
-using CK.Core;
 using Microsoft.VisualBasic.CompilerServices;
 using System;
 using System.Diagnostics.CodeAnalysis;
@@ -7,8 +6,8 @@ using System.Runtime.CompilerServices;
 
 namespace CK.Observable.Domain.Tests.Sample
 {
-    [SerializationVersion( 0 )]
-    public struct Position : IEquatable<Position>, BinarySerialization.ICKSlicedSerializable
+    [SerializationVersionAttribute( 0 )]
+    public struct Position : IEquatable<Position>
     {
         public readonly double Latitude;
         public readonly double Longitude;
@@ -19,16 +18,16 @@ namespace CK.Observable.Domain.Tests.Sample
             Longitude = longitude;
         }
 
-        Position( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+        Position( IBinaryDeserializer r, TypeReadInfo? info )
         {
-            Latitude = r.Reader.ReadDouble();
-            Longitude = r.Reader.ReadDouble();
+            Latitude = r.ReadDouble();
+            Longitude = r.ReadDouble();
         }
 
-        public static void Write( BinarySerialization.IBinarySerializer s, in Position o )
+        void Write( BinarySerializer s )
         {
-            s.Writer.Write( o.Latitude );
-            s.Writer.Write( o.Longitude );
+            s.Write( Latitude );
+            s.Write( Longitude );
         }
 
         void Export( int num, ObjectExporter e )

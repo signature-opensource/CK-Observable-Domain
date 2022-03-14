@@ -1,4 +1,3 @@
-using CK.Core;
 using System.Diagnostics;
 
 namespace CK.Observable.Domain.Tests.Sample
@@ -10,35 +9,35 @@ namespace CK.Observable.Domain.Tests.Sample
         {
         }
 
-        protected Person( BinarySerialization.Sliced _ ) : base( _ ) { }
+        protected Person( RevertSerialization _ ) : base( _ ) { }
 
-        Person( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
-            : base( BinarySerialization.Sliced.Instance )
+        Person( IBinaryDeserializer r, TypeReadInfo? info )
+            : base( RevertSerialization.Default )
         {
             Debug.Assert( !IsDestroyed );
-            Friend = r.ReadNullableObject<Person>();
-            FirstName = r.Reader.ReadNullableString();
-            LastName = r.Reader.ReadNullableString();
+            Friend = (Person)r.ReadObject();
+            FirstName = r.ReadNullableString();
+            LastName = r.ReadNullableString();
             if( info.Version >= 1 )
             {
-                Age = r.Reader.ReadNonNegativeSmallInt32();
+                Age = r.ReadNonNegativeSmallInt32();
             }
         }
 
-        public static void Write( BinarySerialization.IBinarySerializer s, in Person o )
+        void Write( BinarySerializer s )
         {
-            Debug.Assert( !o.IsDestroyed );
-            s.WriteNullableObject( o.Friend );
-            s.Writer.WriteNullableString( o.FirstName );
-            s.Writer.WriteNullableString( o.LastName );
-            s.Writer.WriteNonNegativeSmallInt32( o.Age );
+            Debug.Assert( !IsDestroyed );
+            s.WriteObject( Friend );
+            s.WriteNullableString( FirstName );
+            s.WriteNullableString( LastName );
+            s.WriteNonNegativeSmallInt32( Age );
         }
 
-        public Person? Friend { get; set; }
+        public Person Friend { get; set; }
 
-        public string? FirstName { get; set; }
+        public string FirstName { get; set; }
 
-        public string? LastName { get; set; }
+        public string LastName { get; set; }
 
         /// <summary>
         /// Gets or sets the age. Defaults to 18.

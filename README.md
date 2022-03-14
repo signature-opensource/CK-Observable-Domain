@@ -1,8 +1,6 @@
 # CK-Observable-Domain
 
 Observable framework for application states.
-Observable now uses the new CK.BinarySerialization library for its serialization. Migrations
-steps are detailed here: [BinarySerializationMigration.md](BinarySerializationMigration.md).
 
 ## Quick start
 

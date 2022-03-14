@@ -1,5 +1,3 @@
-using CK.BinarySerialization;
-using CK.Core;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -8,11 +6,10 @@ using System.Linq;
 namespace CK.Observable
 {
     /// <summary>
-    /// This must not be used anymore: this doesn't bring much to the table. 
-    /// So this is NOT serializable anymore: OwningList must be reverted to simple ObservableList.
+    /// Specializes a <see cref="ObservableList{T}"/> (where T must be <see cref="IDestroyableObject"/>)
+    /// that destroys its items when destroyed.
     /// </summary>
     /// <typeparam name="T">Item type.</typeparam>
-    [Obsolete("This must not be used anymore: this doesn't bring much to the table. So this is NOT serializable anymore: OwningList must be reverted to simple ObservableList.")]
     [SerializationVersion(0)]
     public class OwningList<T> : ObservableList<T> where T : IDestroyableObject
     {
@@ -23,13 +20,30 @@ namespace CK.Observable
         {
         }
 
-        protected OwningList( Sliced _ ) : base( _ ) { }
+        /// <summary>
+        /// Specialized deserialization constructor for specialized classes.
+        /// </summary>
+        /// <param name="_">Unused parameter.</param>
+        protected OwningList( RevertSerialization _ ) : base( _ ) { }
 
-        /// Legacy only and read only, no more Write support.
-        OwningList( CK.Observable.IBinaryDeserializer r, TypeReadInfo info )
-            : base( Sliced.Instance )
+        /// <summary>
+        /// Deserialization constructor.
+        /// </summary>
+        /// <param name="r">The deserializer.</param>
+        /// <param name="info">The type info.</param>
+        OwningList( IBinaryDeserializer r, TypeReadInfo info )
+            : base( RevertSerialization.Default )
         {
             AutoDestroyItems = r.ReadBoolean();
+        }
+
+        /// <summary>
+        /// The serialization method.
+        /// </summary>
+        /// <param name="w">The target binary serializer.</param>
+        void Write( BinarySerializer w )
+        {
+            w.Write( AutoDestroyItems );
         }
 
         /// <summary>

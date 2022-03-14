@@ -1,6 +1,4 @@
-﻿using CK.Core;
-
-namespace CK.Observable.League.Tests.MicroMachine
+﻿namespace CK.Observable.League.Tests.MicroMachine
 {
     [SerializationVersion( 0 )]
     public class Thing : MachineThing
@@ -10,14 +8,14 @@ namespace CK.Observable.League.Tests.MicroMachine
         {
         }
 
-        protected Thing( BinarySerialization.Sliced _ ) : base( _ ) { }
+        protected Thing( RevertSerialization _ ) : base( _ ) { }
 
-        Thing( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
-            : base( BinarySerialization.Sliced.Instance )
+        Thing( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
         {
         }
 
-        public static void Write( BinarySerialization.IBinarySerializer s, in Thing o )
+        void Write( BinarySerializer w )
         {
         }
     }

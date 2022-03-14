@@ -14,7 +14,7 @@ namespace CK.Observable
     /// </summary>
     [NotExportable]
     [SerializationVersion( 0 )]
-    public abstract class InternalObject : IDestroyableObject, BinarySerialization.IDestroyable, BinarySerialization.ICKSlicedSerializable
+    public abstract class InternalObject : IDestroyableObject
     {
         internal ObservableDomain ActualDomain;
         internal InternalObject? Next;
@@ -55,9 +55,14 @@ namespace CK.Observable
             ActualDomain.Register( this );
         }
 
-        #region Old deserialization
+        protected InternalObject( RevertSerialization _ )
+        {
+            RevertSerialization.OnRootDeserialized( this );
+        }
+
         InternalObject( IBinaryDeserializer r, TypeReadInfo? info )
         {
+            RevertSerialization.OnRootDeserialized( this );
             Debug.Assert( info != null && info.Version == 0 );
             if( r.ReadBoolean() )
             {
@@ -72,38 +77,15 @@ namespace CK.Observable
             }
         }
 
-        #endregion
-
-        #region New Serialization
-        protected InternalObject( BinarySerialization.Sliced _ ) { }
-
-        InternalObject( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
+        void Write( BinarySerializer w )
         {
-            if( d.Reader.ReadBoolean() )
-            {
-                // This enables the Internal object to be serializable/deserializable outside a Domain
-                // (for instance to use BinarySerializer.IdempotenceCheck): the domain registers it.
-                ActualDomain = d.Context.Services.GetService<ObservableDomain>( throwOnNull: true );
-                _destroyed = new ObservableEventHandler<ObservableDomainEventArgs>( d );
-            }
+            if( IsDestroyed ) w.Write( false );
             else
             {
-                Debug.Assert( IsDestroyed );
+                w.Write( true );
+                _destroyed.Write( w );
             }
         }
-
-        public static void Write( BinarySerialization.IBinarySerializer s, in InternalObject o )
-        {
-            if( o.IsDestroyed ) s.Writer.Write( false );
-            else
-            {
-                s.Writer.Write( true );
-                o._destroyed.Write( s );
-            }
-        }
-
-        #endregion
-
 
         /// <summary>
         /// Gets a safe view on the domain to which this internal object belongs.

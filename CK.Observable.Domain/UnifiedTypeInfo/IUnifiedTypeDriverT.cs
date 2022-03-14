@@ -14,6 +14,12 @@ namespace CK.Observable
         Type Type { get; }
 
         /// <summary>
+        /// Gets the serialization driver.
+        /// Null if no serialization driver is available.
+        /// </summary>
+        new ITypeSerializationDriver<T>? SerializationDriver { get; }
+
+        /// <summary>
         /// Gets the deserialization driver.
         /// Null if no deserialization driver is available.
         /// </summary>

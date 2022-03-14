@@ -44,34 +44,20 @@ namespace CK.Observable
             ReusableArgs = new ObservableReminderEventArgs( this );
         }
 
-        #region Old Deserialization
         ObservableReminder( IBinaryDeserializer r, TypeReadInfo? info )
-            : base( BinarySerialization.Sliced.Instance )
+            : base( RevertSerialization.Default )
         {
             Debug.Assert( !IsDestroyed );
             IsPooled = r.ReadBoolean();
             ReusableArgs = new ObservableReminderEventArgs( this );
             if( IsPooled && ActiveIndex == 0 ) TimeManager.ReleaseToPool( this );
         }
-        #endregion
 
-        #region New Serialization
-
-        ObservableReminder( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
-            : base( BinarySerialization.Sliced.Instance )
+        void Write( BinarySerializer w )
         {
             Debug.Assert( !IsDestroyed );
-            IsPooled = d.Reader.ReadBoolean();
-            ReusableArgs = new ObservableReminderEventArgs( this );
-            if( IsPooled && ActiveIndex == 0 ) TimeManager.ReleaseToPool( this );
+            w.Write( IsPooled );
         }
-
-        public static void Write( BinarySerialization.IBinarySerializer s, in ObservableReminder o )
-        {
-            Debug.Assert( !o.IsDestroyed );
-            s.Writer.Write( o.IsPooled );
-        }
-        #endregion
 
         /// <summary>
         /// Gets whether this reminder is a pooled one.

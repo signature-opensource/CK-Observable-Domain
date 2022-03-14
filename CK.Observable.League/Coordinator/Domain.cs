@@ -28,7 +28,7 @@ namespace CK.Observable.League
         }
 
         Domain( IBinaryDeserializer r, TypeReadInfo? info )
-            : base( BinarySerialization.Sliced.Instance )
+            : base( RevertSerialization.Default )
         {
             Coordinator = (Coordinator)r.ReadObject();
             DomainName = r.ReadString();
@@ -45,25 +45,14 @@ namespace CK.Observable.League
             }
         }
 
-        Domain( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
-            : base( BinarySerialization.Sliced.Instance )
+        void Write( BinarySerializer w )
         {
-            Coordinator = r.ReadObject<Coordinator>();
-            DomainName = r.Reader.ReadString();
-            _displayName = r.Reader.ReadNullableString();
-            RootTypes = r.ReadObject<string[]>();
-            Options = r.ReadObject<ManagedDomainOptions>();
-            NextActiveTime = r.Reader.ReadDateTime();
-        }
-
-        public static void Write( BinarySerialization.IBinarySerializer w, in Domain o )
-        {
-            w.WriteObject( o.Coordinator );
-            w.Writer.Write( o.DomainName );
-            w.Writer.WriteNullableString( o._displayName );
-            w.WriteObject( (string[])o.RootTypes );
-            w.WriteObject( o.Options );
-            w.Writer.Write( o.NextActiveTime );
+            w.WriteObject( Coordinator );
+            w.Write( DomainName );
+            w.WriteNullableString( _displayName );
+            w.WriteObject( (string[])RootTypes );
+            w.WriteObject( Options );
+            w.Write( NextActiveTime );
         }
 
         internal IManagedDomain Shell => _shell!;
