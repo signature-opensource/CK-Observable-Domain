@@ -28,8 +28,9 @@ namespace CK.Observable.League.Tests
 
             var rootTypes = new string[] { typeof( Model.School ).AssemblyQualifiedName! };
             var options = new ManagedDomainOptions(
-                    // Unload the domain when there's not timer and it's not used.
-                    DomainLifeCycleOption.Default,
+                    // Keep the domain in memory (do not call Dispose) even
+                    // when there's not timer and it's not used.
+                    DomainLifeCycleOption.Always,
                     // Don't compress since we want file with a size.
                     CompressionKind.None,
                     // Default transactional mode. Each commit triggers a snapshot.
