@@ -13,5 +13,10 @@
     <PackageReference Update="Fody" Version="6.6.0" />
     <PackageReference Update="PropertyChanged.Fody" Version="3.4.0" />
     <PackageReference Update="Microsoft.VisualStudio.Threading.Analyzers" Version="17.0.64" />
+
+	<PackageReference Update="CK.Crs.Abstractions" Version="8.0.3" />
+	<PackageReference Update="CK.Crs.Dispatcher" Version="8.0.3" />
+	<PackageReference Update="CK.Crs.CommandDiscoverer" Version="8.0.3" />
+
   </ItemGroup>
 </Project>
