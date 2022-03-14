@@ -196,42 +196,39 @@ namespace CK.Observable.League
 
         async Task<bool> DoSaveSnapshotAsync( IActivityMonitor monitor, bool doHouseKeeping, bool sendToArchive )
         {
-            if( _savedTransactionNumber != CurrentSerialNumber || sendToArchive )
+            try
             {
-                try
+                if( _savedTransactionNumber != CurrentSerialNumber )
                 {
-                    if( _savedTransactionNumber != CurrentSerialNumber )
-                    {
-                        await _streamStore.UpdateAsync( _storeName, WriteSnapshotAsync, true ).ConfigureAwait( false );
-                        if( _snapshotSaveDelay >= 0 ) _nextSave = CurrentTimeUtc.AddMilliseconds( _snapshotSaveDelay );
-                        _savedTransactionNumber = CurrentSerialNumber;
-                    }
-                    if( sendToArchive )
-                    {
-                        await _streamStore.DeleteAsync( _storeName, true ).ConfigureAwait( false );
-                        monitor.Info( $"Domain '{_storeName}' saved and sent to archives." );
-                    }
-                    else monitor.Trace( $"Domain '{_storeName}' successfully saved (TransactionNumber={_savedTransactionNumber})." );
+                    await _streamStore.UpdateAsync( _storeName, WriteSnapshotAsync, true ).ConfigureAwait( false );
+                    if( _snapshotSaveDelay >= 0 ) _nextSave = CurrentTimeUtc.AddMilliseconds( _snapshotSaveDelay );
+                    _savedTransactionNumber = CurrentSerialNumber;
+                }
+                if( sendToArchive )
+                {
+                    await _streamStore.DeleteAsync( _storeName, true ).ConfigureAwait( false );
+                    monitor.Info( $"Domain '{_storeName}' saved and sent to archives." );
+                }
+                else monitor.Trace( $"Domain '{_storeName}' successfully saved (TransactionNumber={_savedTransactionNumber})." );
 
-                    if( _streamStore is IBackupStreamStore backupStreamStore )
+                if( _streamStore is IBackupStreamStore backupStreamStore )
+                {
+                    --_savesBeforeNextHousekeeping;
+                    if( (doHouseKeeping || _savesBeforeNextHousekeeping <= 0)
+                        && (SnapshotKeepDuration > TimeSpan.Zero || SnapshotMaximalTotalKiB > 0) )
                     {
-                        --_savesBeforeNextHousekeeping;
-                        if( (doHouseKeeping || _savesBeforeNextHousekeeping <= 0)
-                            && (SnapshotKeepDuration > TimeSpan.Zero || SnapshotMaximalTotalKiB > 0) )
+                        _savesBeforeNextHousekeeping = HousekeepingRate;
+                        using( monitor.OpenTrace( $"Executing housekeeping for '{_storeName}' backups." ) )
                         {
-                            _savesBeforeNextHousekeeping = HousekeepingRate;
-                            using( monitor.OpenTrace( $"Executing housekeeping for '{_storeName}' backups." ) )
-                            {
-                                backupStreamStore.CleanBackups( monitor, _storeName, SnapshotKeepDuration, SnapshotMaximalTotalKiB * 1024L );
-                            }
+                            backupStreamStore.CleanBackups( monitor, _storeName, SnapshotKeepDuration, SnapshotMaximalTotalKiB * 1024L );
                         }
                     }
                 }
-                catch( Exception ex )
-                {
-                    monitor.Error( $"While {(sendToArchive ? "archiv" : "sav")}ing domain '{_storeName}' snapshot.", ex );
-                    return false;
-                }
+            }
+            catch( Exception ex )
+            {
+                monitor.Error( $"While {(sendToArchive ? "archiv" : "sav")}ing domain '{_storeName}' snapshot.", ex );
+                return false;
             }
             return true;
         }

@@ -348,8 +348,30 @@ namespace CK.Observable.League
                        && await Client.SaveSnapshotAsync( m, false ).ConfigureAwait( false );
             }
 
+            enum SaveCommandOption
+            {
+                /// <summary>
+                /// Default behavior is to trigger a snapshot, save it and triggers
+                /// the housekeeping.
+                /// </summary>
+                SnapshotSaveAndHousekeep,
+
+                /// <summary>
+                /// Snapshot and save but don't trigger housekeeping.
+                /// </summary>
+                SnapshotAndSave,
+
+                /// <summary>
+                /// Snapshot only.
+                /// </summary>
+                SnapshotOnly
+            }
+
             async Task<bool> ExplicitSnapshotDomainAsync( IActivityMonitor m )
             {
+                // Today:
+                SaveCommandOption saveOption = SaveCommandOption.SnapshotSaveAndHousekeep;
+
                 using( m.OpenTrace( $"Snapshotting ObservableDomain {DomainName} manually." ) )
                 {
                     var d = _domain;
@@ -363,7 +385,7 @@ namespace CK.Observable.League
                         m.Error( $"ObservableDomain {DomainName} is disposed." );
                         return false;
                     }
-                    if( Client.SkipTransactionCount == 0 )
+                    if( Client.SkipTransactionCount == 0 && saveOption == SaveCommandOption.SnapshotOnly )
                     {
                         m.Warn( $"ObservableDomain {DomainName} uses a {nameof( Client.SkipTransactionCount )} of 0. A snapshot is made on every transaction." );
                         return true;
