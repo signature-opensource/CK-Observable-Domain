@@ -93,7 +93,7 @@ namespace CK.Observable.League
             CreateSnapshot( c.Monitor, c.Domain, false, c.HasSaveCommand );
             // We save the snapshot if we must (and there is no compensation for this of course).
             bool doHouseKeeping = c.HasSaveCommand;
-            if( c.HasSaveCommand || c.CommitTimeUtc >= _nextSave ) c.PostActions.Add( ctx => SaveSnapshotAsync( ctx.Monitor, doHouseKeeping ) );
+            if( doHouseKeeping || c.CommitTimeUtc >= _nextSave ) c.PostActions.Add( ctx => SaveSnapshotAsync( ctx.Monitor, doHouseKeeping ) );
             Next?.OnTransactionCommit( c );
         }
 
