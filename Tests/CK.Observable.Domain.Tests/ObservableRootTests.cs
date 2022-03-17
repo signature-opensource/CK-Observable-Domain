@@ -5,6 +5,7 @@ using FluentAssertions;
 using System.IO;
 using CK.Core;
 using static CK.Testing.MonitorTestHelper;
+using CK.BinarySerialization;
 
 namespace CK.Observable.Domain.Tests
 {
@@ -80,9 +81,9 @@ namespace CK.Observable.Domain.Tests
         {
             using( var s = new MemoryStream() )
             {
-                domain.Save( TestHelper.Monitor, s, leaveOpen: true );
+                domain.Save( TestHelper.Monitor, s );
                 s.Position = 0;
-                return new ObservableDomain<T>( TestHelper.Monitor, domain.DomainName, null, s);
+                return new ObservableDomain<T>( TestHelper.Monitor, domain.DomainName, null, RewindableStream.FromStream( s ) );
             }
         }
     }

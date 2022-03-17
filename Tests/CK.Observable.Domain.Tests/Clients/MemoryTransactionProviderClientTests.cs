@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using CK.BinarySerialization;
 using FluentAssertions;
 using NUnit.Framework;
 using static CK.Testing.MonitorTestHelper;
@@ -166,11 +168,10 @@ namespace CK.Observable.Domain.Tests.Clients
             using( var domainStream = client1.CreateStreamFromSnapshot() )
             {
                 // Create domain from that snapshot
-                using var d2 = new ObservableDomain<TestObservableRootObject>(
-                    TestHelper.Monitor,
-                    nameof( WriteSnapshotTo_creates_valid_stream_for_ObservableDomain_ctor ),
-                    new ConcreteMemoryTransactionProviderClient(),
-                    domainStream );
+                using var d2 = new ObservableDomain<TestObservableRootObject>( TestHelper.Monitor,
+                                                                               nameof( WriteSnapshotTo_creates_valid_stream_for_ObservableDomain_ctor ),
+                                                                               new ConcreteMemoryTransactionProviderClient(),
+                                                                               RewindableStream.FromStream( domainStream ) );
 
                 d2.TimeManager.IsRunning.Should().BeTrue();
 
@@ -196,7 +197,7 @@ namespace CK.Observable.Domain.Tests.Clients
                 d1.Root.Prop2 = "World";
             } );
             // Get snapshot stream
-            using( var domainStream = client1.CreateStreamFromSnapshot() )
+            using( MemoryStream domainStream = client1.CreateStreamFromSnapshot() )
             {
                 // Create domain using a client with this snapshot
                 using var d2 = new ObservableDomain<TestObservableRootObject>(
@@ -234,16 +235,14 @@ namespace CK.Observable.Domain.Tests.Clients
                     d1.Root.Prop1 = "Hello 2";
                     d1.Root.Prop2 = "World 2";
                 } );
-                using( var domainStream2 = client1.CreateStreamFromSnapshot() )
+                using( MemoryStream domainStream2 = client1.CreateStreamFromSnapshot() )
                 {
                     // Create domain using BOTH ctor Stream (domainStream1)
                     // AND custom load from OnDomainCreated (domainStream2)
-                    using var d2 = new ObservableDomain<TestObservableRootObject>(
-                        TestHelper.Monitor,
-                        nameof( ObservableDomain_loads_from_Client_when_given_both_Client_and_ctor_Stream ),
-                        new TestMemoryTransactionProviderClient(domainStream2),
-                        domainStream1
-                    );
+                    using var d2 = new ObservableDomain<TestObservableRootObject>( TestHelper.Monitor,
+                                                                                   nameof( ObservableDomain_loads_from_Client_when_given_both_Client_and_ctor_Stream ),
+                                                                                    new TestMemoryTransactionProviderClient(domainStream2),
+                                                                                    RewindableStream.FromStream( domainStream1 ) );
 
                     using( d2.AcquireReadLock() )
                     {

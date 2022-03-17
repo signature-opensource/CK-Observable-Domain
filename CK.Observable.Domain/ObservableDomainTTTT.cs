@@ -1,3 +1,4 @@
+using CK.BinarySerialization;
 using CK.Core;
 using CK.Text;
 using System;
@@ -76,12 +77,10 @@ namespace CK.Observable
         public ObservableDomain( IActivityMonitor monitor,
                                  string domainName,
                                  IObservableDomainClient client,
-                                 Stream s,
-                                 bool leaveOpen = false,
-                                 Encoding? encoding = null,
+                                 RewindableStream s,
                                  IServiceProvider? serviceProvider = null,
                                  bool? startTimer = null )
-            : base( monitor, domainName, client, s, leaveOpen, encoding, serviceProvider, startTimer )
+            : base( monitor, domainName, client, s, serviceProvider, startTimer )
         {
             BindRoots();
         }

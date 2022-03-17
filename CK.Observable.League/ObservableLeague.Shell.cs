@@ -1,3 +1,4 @@
+using CK.BinarySerialization;
 using CK.Core;
 using System;
 using System.Collections.Generic;
@@ -537,9 +538,9 @@ namespace CK.Observable.League
                 return new ObservableDomain( monitor, DomainName, startTimer, Client, ServiceProvider );
             }
 
-            internal protected virtual ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, bool? startTimer )
+            internal protected virtual ObservableDomain DeserializeDomain( IActivityMonitor monitor, RewindableStream stream, bool? startTimer )
             {
-                return new ObservableDomain( monitor, DomainName, Client, stream, leaveOpen: false, encoding: null, ServiceProvider, startTimer );
+                return new ObservableDomain( monitor, DomainName, Client, stream, ServiceProvider, startTimer );
             }
 
             private protected virtual IObservableDomainShell CreateIndependentShell( IActivityMonitor monitor ) => new IndependentShell( this, monitor );
@@ -682,9 +683,9 @@ namespace CK.Observable.League
                 return new ObservableDomain<T>( monitor, DomainName, startTimer, Client, ServiceProvider );
             }
 
-            internal protected override ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, bool? startTimer )
+            internal protected override ObservableDomain DeserializeDomain( IActivityMonitor monitor, RewindableStream stream, bool? startTimer )
             {
-                return new ObservableDomain<T>( monitor, DomainName, Client, stream, leaveOpen: true, encoding: null, ServiceProvider, startTimer );
+                return new ObservableDomain<T>( monitor, DomainName, Client, stream, ServiceProvider, startTimer );
             }
 
             class IndependentShellT : IndependentShell, IObservableDomainShell<T>
@@ -798,9 +799,9 @@ namespace CK.Observable.League
                 return new ObservableDomain<T1, T2>( monitor, DomainName, startTimer, Client, ServiceProvider );
             }
 
-            internal protected override ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, bool? startTimer )
+            internal protected override ObservableDomain DeserializeDomain( IActivityMonitor monitor, RewindableStream stream, bool? startTimer )
             {
-                return new ObservableDomain<T1, T2>( monitor, DomainName, Client, stream, leaveOpen: true, encoding: null, ServiceProvider, startTimer );
+                return new ObservableDomain<T1, T2>( monitor, DomainName, Client, stream, ServiceProvider, startTimer );
             }
 
             class IndependentShellTT : IndependentShell, IObservableDomainShell<T1, T2>
@@ -917,9 +918,9 @@ namespace CK.Observable.League
                 return new ObservableDomain<T1, T2, T3>( monitor, DomainName, startTimer, Client, ServiceProvider );
             }
 
-            internal protected override ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, bool? startTimer )
+            internal protected override ObservableDomain DeserializeDomain( IActivityMonitor monitor, RewindableStream stream, bool? startTimer )
             {
-                return new ObservableDomain<T1, T2, T3>( monitor, DomainName, Client, stream, leaveOpen: true, encoding: null, ServiceProvider, startTimer );
+                return new ObservableDomain<T1, T2, T3>( monitor, DomainName, Client, stream, ServiceProvider, startTimer );
             }
 
             class IndependentShellTTT : IndependentShell, IObservableDomainShell<T1, T2, T3>
@@ -1036,9 +1037,9 @@ namespace CK.Observable.League
                 return new ObservableDomain<T1, T2, T3, T4>( monitor, DomainName, startTimer, Client, ServiceProvider );
             }
 
-            internal protected override ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, bool? startTimer )
+            internal protected override ObservableDomain DeserializeDomain( IActivityMonitor monitor, RewindableStream stream, bool? startTimer )
             {
-                return new ObservableDomain<T1, T2, T3, T4>( monitor, DomainName, Client, stream, leaveOpen: true, encoding: null, ServiceProvider, startTimer );
+                return new ObservableDomain<T1, T2, T3, T4>( monitor, DomainName, Client, stream, ServiceProvider, startTimer );
             }
 
             class IndependentShellTTTT : IndependentShell, IObservableDomainShell<T1, T2, T3, T4>

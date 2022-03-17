@@ -69,7 +69,7 @@ namespace CK.Core
                                                                      BinaryDeserializerContext? deserializerContext = null )
         {
             using( var s = new MemoryStream() )
-            using( var writer = BinarySerialization.BinarySerializer.Create( s, true, serializerContext ?? new BinarySerializerContext() ) )
+            using( var writer = BinarySerialization.BinarySerializer.Create( s, serializerContext ?? new BinarySerializerContext() ) )
             {
                 writer.DebugWriteMode( true );
 
@@ -91,29 +91,29 @@ namespace CK.Core
                     writer.WriteAny( o2 );
                 }
                 s.Position = 0;
-                using( var reader = BinarySerialization.BinaryDeserializer.Create( s, true, deserializerContext ?? new BinaryDeserializerContext() ) )
+                return BinarySerialization.BinaryDeserializer.Deserialize( s, deserializerContext ?? new BinaryDeserializerContext(), d =>
                 {
-                    reader.DebugReadMode();
-                    
+                    d.DebugReadMode();
+
                     object? r1 = null;
                     if( CheckObjectReferences )
                     {
-                        r1 = reader.ReadAny();
+                        r1 = d.ReadAny();
                     }
-                    
-                    reader.DebugCheckSentinel();
-                    T result = r( reader );
-                    reader.DebugCheckSentinel();
+
+                    d.DebugCheckSentinel();
+                    T result = r( d );
+                    d.DebugCheckSentinel();
 
                     if( CheckObjectReferences )
                     {
-                        reader.ReadAny().Should().BeSameAs( r1 );
-                        var r2 = reader.ReadAny();
+                        d.ReadAny().Should().BeSameAs( r1 );
+                        var r2 = d.ReadAny();
                         r2.Should().BeOfType<object>();
-                        reader.ReadAny().Should().BeSameAs( r2 );
+                        d.ReadAny().Should().BeSameAs( r2 );
                     }
                     return result;
-                }
+                } ).GetResult();
             }
         }
 
@@ -123,18 +123,19 @@ namespace CK.Core
                                                                      BinaryDeserializerContext? deserializerContext = null )
         {
             using( var s = new MemoryStream() )
-            using( var writer = BinarySerialization.BinarySerializer.Create( s, true, serializerContext ?? new BinarySerializerContext() ) )
+            using( var writer = BinarySerialization.BinarySerializer.Create( s, serializerContext ?? new BinarySerializerContext() ) )
             {
                 writer.DebugWriteSentinel();
                 w( writer );
                 writer.DebugWriteSentinel();
                 s.Position = 0;
-                using( var reader = BinarySerialization.BinaryDeserializer.Create( s, true, deserializerContext ?? new BinaryDeserializerContext() ) )
+                BinarySerialization.BinaryDeserializer.Deserialize( s, deserializerContext ?? new BinaryDeserializerContext(), d =>
                 {
-                    reader.DebugCheckSentinel();
-                    r( reader );
-                    reader.DebugCheckSentinel();
-                }
+                    d.DebugCheckSentinel();
+                    r( d );
+                    d.DebugCheckSentinel();
+
+                } ).ThrowOnInvalidResult();
             }
         }
 
@@ -178,12 +179,12 @@ namespace CK.Core
         {
             using( var s = new MemoryStream() )
             {
-                domain.Save( m, s, leaveOpen: true, debugMode: debugMode );
+                domain.Save( m, s, debugMode: debugMode );
                 if( !skipDomainDispose ) domain.Dispose();
                 System.Threading.Thread.Sleep( pauseMilliseconds );
                 var d = new ObservableDomain( m, renamed ?? domain.DomainName, false, serviceProvider );
                 s.Position = 0;
-                d.Load( m, s, domain.DomainName, startTimer: startTimer );
+                d.Load( m, RewindableStream.FromStream( s ), domain.DomainName, startTimer: startTimer );
                 return d;
             }
         }

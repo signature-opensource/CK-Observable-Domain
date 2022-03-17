@@ -1,3 +1,4 @@
+using CK.BinarySerialization;
 using CK.Core;
 using CK.Observable.Domain.Tests.Sample;
 using FluentAssertions;
@@ -95,14 +96,14 @@ namespace CK.Observable.Domain.Tests
             {
                 using( d.BeginTransaction( TestHelper.Monitor ) )
                 {
-                    d.Invoking( sut => sut.Save( TestHelper.Monitor, s, leaveOpen: true ) ).Should().NotThrow();
+                    d.Invoking( sut => sut.Save( TestHelper.Monitor, s ) ).Should().NotThrow();
                     s.Position = 0;
-                    d.Invoking( sut => sut.Load( TestHelper.Monitor, s, leaveOpen: true ) ).Should().NotThrow();
+                    d.Invoking( sut => sut.Load( TestHelper.Monitor, RewindableStream.FromStream( s ) ) ).Should().NotThrow();
                 }
                 s.Position = 0;
-                d.Invoking( sut => sut.Load( TestHelper.Monitor, s, leaveOpen: true ) ).Should().NotThrow();
+                d.Invoking( sut => sut.Load( TestHelper.Monitor, RewindableStream.FromStream( s ) ) ).Should().NotThrow();
                 s.Position = 0;
-                d.Invoking( sut => sut.Save( TestHelper.Monitor, s, leaveOpen: true ) ).Should().NotThrow();
+                d.Invoking( sut => sut.Save( TestHelper.Monitor, s ) ).Should().NotThrow();
             }
         }
 

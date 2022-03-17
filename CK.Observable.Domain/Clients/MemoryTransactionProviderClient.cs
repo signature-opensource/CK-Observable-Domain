@@ -1,3 +1,4 @@
+using CK.BinarySerialization;
 using CK.Core;
 using System;
 using System.Collections.Generic;
@@ -338,16 +339,16 @@ namespace CK.Observable
         {
             static void ReloadOrThrow( IActivityMonitor monitor,
                                        ObservableDomain domain,
-                                       Stream stream,
+                                       RewindableStream stream,
                                        bool? startTimer )
             {
-                if( !domain.Load( monitor, stream, leaveOpen: true, startTimer: startTimer ) )
+                if( !domain.Load( monitor, stream, startTimer: startTimer ) )
                 {
                     throw new CKException( $"Error while loading serialized domain. Please see logs." );
                 }
             }
 
-            void Ensure( IActivityMonitor monitor, ref ObservableDomain? domain, Stream stream, bool? startTimer )
+            void Ensure( IActivityMonitor monitor, ref ObservableDomain? domain, RewindableStream stream, bool? startTimer )
             {
                 if( domain != null )
                 {
@@ -361,15 +362,12 @@ namespace CK.Observable
             _memory.Position = _currentSnapshotHeaderLength;
             if( _currentSnapshotKind == CompressionKind.GZiped )
             {
-                using( var gz = new GZipStream( _memory, CompressionMode.Decompress, leaveOpen: true ) )
-                {
-                    Ensure( monitor, ref domain, gz, startTimer );
-                }
+                Ensure( monitor, ref domain, RewindableStream.FromFactory( () => new GZipStream( _memory, CompressionMode.Decompress, leaveOpen: true ) ), startTimer );
             }
             else
             {
                 Debug.Assert( CompressionKind == CompressionKind.None );
-                Ensure( monitor, ref domain, _memory, startTimer );
+                Ensure( monitor, ref domain, RewindableStream.FromStream( _memory ), startTimer );
             }
         }
 
@@ -385,7 +383,7 @@ namespace CK.Observable
         /// When null, it keeps its previous state (it is initially stopped at domain creation) and then its current state is persisted.
         /// </param>
         /// <returns>The new domain.</returns>
-        protected abstract ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, bool? startTimer );
+        protected abstract ObservableDomain DeserializeDomain( IActivityMonitor monitor, RewindableStream stream, bool? startTimer );
 
         /// <summary>
         /// Creates a snapshot, respecting the <see cref="CompressionKind"/>.
@@ -431,13 +429,13 @@ namespace CK.Observable
                 {
                     using( var gz = new GZipStream( _memory, CompressionLevel.Optimal, leaveOpen: true ) )
                     {
-                        d.Save( monitor, gz, leaveOpen: true );
+                        d.Save( monitor, gz );
                     }
                 }
                 else
                 {
                     Debug.Assert( CompressionKind == CompressionKind.None );
-                    d.Save( monitor, _memory, leaveOpen: true );
+                    d.Save( monitor, _memory );
                 }
                 _currentSnapshotHeaderLength = SnapshotHeaderLength;
                 _currentSnapshotKind = CompressionKind;

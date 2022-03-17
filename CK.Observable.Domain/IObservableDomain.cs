@@ -61,10 +61,8 @@ namespace CK.Observable
         /// Saves this domain.
         /// </summary>
         /// <param name="monitor">The monitor to use. Cannot be null.</param>
-        /// <param name="stream">The output stream.</param>
-        /// <param name="leaveOpen">True to leave the stream opened.</param>
+        /// <param name="stream">The output stream. Must be opened and is left opened.</param>
         /// <param name="debugMode">True to activate <see cref="BinarySerializer.IsDebugMode"/>.</param>
-        /// <param name="encoding">Optional encoding for characters. Defaults to UTF-8.</param>
         /// <param name="millisecondsTimeout">
         /// The maximum number of milliseconds to wait for a read access before giving up.
         /// Wait indefinitely by default.
@@ -72,9 +70,7 @@ namespace CK.Observable
         /// <returns>True on success, false if timeout occurred.</returns>
         bool Save( IActivityMonitor monitor,
                    Stream stream,
-                   bool leaveOpen = false,
                    bool debugMode = false,
-                   Encoding? encoding = null,
                    int millisecondsTimeout = -1 );
 
     }

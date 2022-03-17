@@ -386,20 +386,20 @@ namespace CK.Observable.Domain.Tests
             h.Add( StaticOnEvent, nameof( StaticOnEvent ) );
 
             using( var s = new MemoryStream() )
-            using( var writer = BinarySerialization.BinarySerializer.Create( s, false, new BinarySerialization.BinarySerializerContext() ) )
+            using( var writer = BinarySerialization.BinarySerializer.Create( s, new BinarySerialization.BinarySerializerContext() ) )
             {
                 writer.DebugWriteMode( true );
                 writer.DebugWriteSentinel();
                 h.Write( writer );
                 writer.DebugWriteSentinel();
                 s.Position = 0;
-                using( var reader = BinarySerialization.BinaryDeserializer.Create( s, false, new BinarySerialization.BinaryDeserializerContext() ) )
+                BinarySerialization.BinaryDeserializer.Deserialize( s, new BinarySerialization.BinaryDeserializerContext(), d =>
                 {
-                    reader.DebugReadMode();
-                    reader.DebugCheckSentinel();
-                    ObservableEventHandler.Skip( reader );
-                    reader.DebugCheckSentinel();
-                }
+                    d.DebugReadMode();
+                    d.DebugCheckSentinel();
+                    ObservableEventHandler.Skip( d );
+                    d.DebugCheckSentinel();
+                } );
             }
         }
     }

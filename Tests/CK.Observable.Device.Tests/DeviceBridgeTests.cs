@@ -1,3 +1,4 @@
+using CK.BinarySerialization;
 using CK.Core;
 using CK.DeviceModel;
 using FluentAssertions;
@@ -300,7 +301,7 @@ namespace CK.Observable.Device.Tests
                 using var s = new MemoryStream();
                 if( !obs.Save( TestHelper.Monitor, s, true ) ) throw new Exception( "Failed to save." );
                 s.Position = 0;
-                if( !obs.Load( TestHelper.Monitor, s ) ) throw new Exception( "Reload failed." );
+                if( !obs.Load( TestHelper.Monitor, RewindableStream.FromStream( s ) ) ) throw new Exception( "Reload failed." );
             }
 
             device = obs.AllObjects.OfType<OSampleDevice>().Single();

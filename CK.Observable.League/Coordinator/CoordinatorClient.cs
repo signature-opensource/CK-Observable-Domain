@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Linq;
 using System.IO;
+using CK.BinarySerialization;
 
 namespace CK.Observable.League
 {
@@ -41,7 +42,7 @@ namespace CK.Observable.League
             if( !_optionsPropertyId.HasValue ) _optionsPropertyId = c.FindPropertyId( nameof( CK.Observable.League.Domain.Options ) );
             if( _optionsPropertyId.HasValue )
             {
-                Domain d = null;
+                Domain? d = null;
                 foreach( var e in c.Events )
                 {
                     if( e is NewObjectEvent n && n.Object is Domain dN )
@@ -82,9 +83,9 @@ namespace CK.Observable.League
             if( _league != null ) Domain.Root.Initialize( monitor, _league );
         }
 
-        protected override ObservableDomain DoDeserializeDomain( IActivityMonitor monitor, Stream stream, bool? startTimer )
+        protected override ObservableDomain DoDeserializeDomain( IActivityMonitor monitor, RewindableStream stream, bool? startTimer )
         {
-            return new ObservableDomain<Coordinator>( monitor, String.Empty, this, stream, leaveOpen: true, encoding: null, _serviceProvider, startTimer );
+            return new ObservableDomain<Coordinator>( monitor, String.Empty, this, stream, _serviceProvider, startTimer );
         }
 
         #region Coordinator: IObservableDomainAccess<Coordinator>.
