@@ -1298,13 +1298,6 @@ namespace CK.Observable
             return Export( w, millisecondsTimeout ) ? w.ToString() : null;
         }
 
-        ///// <inheritdoc cref="Load(IActivityMonitor, RewindableStream, string, int, bool?)" />
-        ///// <remarks>This is a simple helper that calls <see cref="RewindableStream.FromStream(Stream)"/> and <see cref="Load(IActivityMonitor, RewindableStream, string, int, bool?)"/>.</remarks>
-        //public bool Load( IActivityMonitor monitor, Stream stream, string expectedLoadedName, int millisecondsTimeout = -1, bool? startTimer = null )
-        //{
-        //    return Load( monitor, RewindableStream.FromStream( stream ), expectedLoadedName, millisecondsTimeout, startTimer );
-        //}
-
         /// <summary>
         /// Loads previously <see cref="Save"/>d objects from a named domain into this domain: the <paramref name="expectedLoadedName"/> can be
         /// this <see cref="DomainName"/> or another name but it must match the name in the stream otherwise an <see cref="InvalidDataException"/>
@@ -1343,7 +1336,7 @@ namespace CK.Observable
             if( !hasWriteLock && !_lock.TryEnterWriteLock( millisecondsTimeout ) ) return false;
             Debug.Assert( !hasWriteLock || _currentTran != null, "isWrite => _currentTran != null" );
             bool needFakeTran = _currentTran == null || _currentTran.Monitor != monitor;
-            using( monitor.OpenInfo( $"Reloading domain '{DomainName}' (using {(needFakeTran ? "fake" : "current")} transaction) from stream." ) )
+            using( monitor.OpenInfo( $"Reloading domain '{DomainName}' (using {(needFakeTran ? "fake" : "current")} transaction) from rewindable '{stream.Kind}'." ) )
             {
                 if( needFakeTran ) new InitializationTransaction( monitor, this, false );
                 try

@@ -362,7 +362,8 @@ namespace CK.Observable
             _memory.Position = _currentSnapshotHeaderLength;
             if( _currentSnapshotKind == CompressionKind.GZiped )
             {
-                Ensure( monitor, ref domain, RewindableStream.FromFactory( () => new GZipStream( _memory, CompressionMode.Decompress, leaveOpen: true ) ), startTimer );
+                using var g = new GZipStream( _memory, CompressionMode.Decompress, leaveOpen: true );
+                Ensure( monitor, ref domain, RewindableStream.FromGZipStream( g ), startTimer );
             }
             else
             {
