@@ -7,9 +7,33 @@ using System.Text;
 namespace CK.Observable
 {
     /// <summary>
-    /// Serializable and safe event handler: only non null and static method or method on a <see cref="IDestroyable"/> (that must
-    /// be serializable) can be added.
+    /// Serializable and safe event handler: only static methods or methods on a <see cref="IDestroyable"/> (that must
+    /// be serializable) can be registered.
+    /// <para>
+    /// When suppressing the event, <see cref="ObservableEventHandler.Skip(BinarySerialization.IBinaryDeserializer)"/>
+    /// must be used when deserializing from a previous version that had the event.
+    /// </para>
+    /// <para>
     /// This is a helper class that implements <see cref="SafeEventHandler{TEventArgs}"/> events.
+    /// This field MUST not be readonly. The pattern is the following one:
+    /// <code>
+    /// // Declare a private non readonly field:
+    /// ObservableEventHandler&lt;MyEventArgs&gt; _event;
+    /// 
+    /// // In the Write method, saves it:
+    /// o._event.Write( s );
+    /// 
+    /// // In the Deserialization constructor, reads it back:
+    /// _event = new ObservableEventHandler&lt;MyEventArgs&gt;( d );
+    /// 
+    /// // Exposes the event:
+    /// public event SafeEventHandler&lt;MyEventArgs&gt; MyEvent
+    /// {
+    ///    add => _itemSent.Add( value, nameof( MyEvent ) );
+    ///    remove => _itemSent.Remove( value );
+    /// }
+    /// </code>
+    /// </para>
     /// </summary>
     /// <typeparam name="TEventArgs">The type of the event argument.</typeparam>
     public struct ObservableEventHandler<TEventArgs> where TEventArgs : EventArgs
@@ -24,10 +48,17 @@ namespace CK.Observable
         public ObservableEventHandler( IBinaryDeserializer r ) => _handler = new ObservableDelegate( r );
 
         /// <summary>
+        /// Deserializes the <see cref="ObservableEventHandler{TEventArgs}"/>.
+        /// If the method has been suppressed, use the static helper <see cref="ObservableEventHandler.Skip(IBinaryDeserializer)"/>.
+        /// </summary>
+        /// <param name="r">The deserializer.</param>
+        public ObservableEventHandler( BinarySerialization.IBinaryDeserializer d ) => _handler = new ObservableDelegate( d );
+
+        /// <summary>
         /// Serializes this <see cref="ObservableEventHandler{TEventArgs}"/>.
         /// </summary>
         /// <param name="w">The writer.</param>
-        public void Write( BinarySerializer w ) => _handler.Write( w );
+        public void Write( BinarySerialization.IBinarySerializer s ) => _handler.Write( s );
 
         /// <summary>
         /// Gets whether at least one handler is registered.

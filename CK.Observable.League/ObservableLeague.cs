@@ -113,7 +113,7 @@ namespace CK.Observable.League
                     int retryCount = 0;
                     for( ; ; )
                     {
-                        if( !await _coordinator.SaveSnapshotAsync( monitor ) )
+                        if( !await _coordinator.SaveSnapshotAsync( monitor, true ) )
                         {
                             if( retryCount++ <= 3 )
                             {

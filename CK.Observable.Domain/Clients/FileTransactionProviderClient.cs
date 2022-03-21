@@ -5,6 +5,7 @@ using System.Threading;
 using CK.Core;
 using System.Threading.Tasks;
 using System.Diagnostics.CodeAnalysis;
+using CK.BinarySerialization;
 
 namespace CK.Observable
 {
@@ -205,7 +206,7 @@ namespace CK.Observable
         /// <param name="startTimer">Unused.</param>
         /// <returns>Never: throws a <see cref="NotSupportedException"/>.</returns>
         [DoesNotReturn]
-        protected override ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, bool? startTimer )
+        protected override ObservableDomain DeserializeDomain( IActivityMonitor monitor, RewindableStream stream, bool? startTimer )
         {
             throw new NotSupportedException( "FileTransactionProviderClient is not a domain manager." );
         }

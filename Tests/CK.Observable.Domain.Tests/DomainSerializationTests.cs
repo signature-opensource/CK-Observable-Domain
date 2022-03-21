@@ -170,15 +170,15 @@ namespace CK.Observable.Domain.Tests
 
             }
 
-            LoadHookTester( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+            LoadHookTester( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+                : base( BinarySerialization.Sliced.Instance )
             {
-                Count = r.ReadInt32();
+                Count = r.Reader.ReadInt32();
             }
 
-            void Write( BinarySerializer w )
+            public static void Write( BinarySerialization.IBinarySerializer s, in LoadHookTester o )
             {
-                w.Write( Count );
+                s.Writer.Write( o.Count );
             }
 
             public int Count { get; private set; }

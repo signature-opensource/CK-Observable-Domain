@@ -1,3 +1,4 @@
+using CK.Core;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -57,39 +58,50 @@ namespace CK.Observable
             _set = new HashSet<T>();
         }
 
-        /// <summary>
-        /// Specialized deserialization constructor for specialized classes.
-        /// </summary>
-        /// <param name="_">Unused parameter.</param>
+        #region Old Serialization
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-        protected ObservableSet( RevertSerialization _ ) : base( _ ) { }
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
-        /// <summary>
-        /// Deserialization constructor.
-        /// </summary>
-        /// <param name="r">The deserializer.</param>
-        /// <param name="info">The type info.</param>
         ObservableSet( IBinaryDeserializer r, TypeReadInfo info )
-                : base( RevertSerialization.Default )
+                : base( BinarySerialization.Sliced.Instance )
         {
             _set = (HashSet<T>)r.ReadObject()!;
             _itemAdded = new ObservableEventHandler<CollectionAddKeyEvent>( r );
             _itemRemoved = new ObservableEventHandler<CollectionRemoveKeyEvent>( r );
             _collectionCleared = new ObservableEventHandler<CollectionClearEvent>( r );
         }
+        #endregion
+
+        #region New Serialization
+        /// <summary>
+        /// Specialized deserialization constructor for specialized classes.
+        /// </summary>
+        /// <param name="_">Unused parameter.</param>
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+        protected ObservableSet( BinarySerialization.Sliced _ ) : base( _ ) { }
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+
+        ObservableSet( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
+            : base( BinarySerialization.Sliced.Instance )
+        {
+            _set = d.ReadObject<HashSet<T>>()!;
+            _itemAdded = new ObservableEventHandler<CollectionAddKeyEvent>( d );
+            _itemRemoved = new ObservableEventHandler<CollectionRemoveKeyEvent>( d );
+            _collectionCleared = new ObservableEventHandler<CollectionClearEvent>( d );
+        }
 
         /// <summary>
         /// The serialization method.
         /// </summary>
         /// <param name="s">The target binary serializer.</param>
-        void Write( BinarySerializer s )
+        public static void Write( BinarySerialization.IBinarySerializer s, in ObservableSet<T> o )
         {
-            s.WriteObject( _set );
-            _itemAdded.Write( s );
-            _itemRemoved.Write( s );
-            _collectionCleared.Write( s );
+            s.WriteObject( o._set );
+            o._itemAdded.Write( s );
+            o._itemRemoved.Write( s );
+            o._collectionCleared.Write( s );
         }
+        #endregion
 
         /// <summary>
         /// Gets the number of items contained in this set.

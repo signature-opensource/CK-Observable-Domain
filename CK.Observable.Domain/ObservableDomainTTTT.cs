@@ -1,3 +1,4 @@
+using CK.BinarySerialization;
 using CK.Core;
 using System;
 using System.IO;
@@ -77,12 +78,10 @@ namespace CK.Observable
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
                                  string domainName,
                                  IObservableDomainClient client,
-                                 Stream s,
-                                 bool leaveOpen = false,
-                                 Encoding? encoding = null,
+                                 RewindableStream s,
                                  IServiceProvider? serviceProvider = null,
                                  bool? startTimer = null )
-            : base( monitor, domainName, client, s, leaveOpen, encoding, serviceProvider, startTimer )
+            : base( monitor, domainName, client, s, serviceProvider, startTimer )
         {
             BindRoots();
         }

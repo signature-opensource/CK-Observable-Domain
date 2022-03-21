@@ -25,10 +25,9 @@ namespace CK.Observable.Device
             DeviceName = deviceName ?? throw new ArgumentNullException( nameof( deviceName ) );
         }
 
-        protected ObservableDeviceObject( RevertSerialization _ ) : base( _ ) { }
-
+        #region Old Deserialization
         ObservableDeviceObject( IBinaryDeserializer r, TypeReadInfo info )
-                : base( RevertSerialization.Default )
+                : base( BinarySerialization.Sliced.Instance )
         {
             DeviceName = info.Version == 0 ? r.ReadNullableString()! : r.ReadString();
             _statusChanged = new ObservableEventHandler( r );
@@ -37,15 +36,28 @@ namespace CK.Observable.Device
                 _configurationChanged = new ObservableEventHandler( r );
             }
         }
+        #endregion
 
-#pragma warning restore CS8618
+        #region New serialization
 
-        void Write( BinarySerializer w )
+        protected ObservableDeviceObject( BinarySerialization.Sliced _ ) : base( _ ) { }
+
+        ObservableDeviceObject( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
+        : base( BinarySerialization.Sliced.Instance )
         {
-            w.Write( DeviceName );
-            _statusChanged.Write( w );
+            DeviceName = d.Reader.ReadNullableString();
+            _statusChanged = new ObservableEventHandler( d );
             _configurationChanged.Write( w );
         }
+
+        public static void Write( BinarySerialization.IBinarySerializer d, in ObservableDeviceObject o )
+        {
+            d.Writer.WriteNullableString( o.DeviceName );
+            o._statusChanged.Write( d );
+        }
+        #endregion
+
+#pragma warning restore CS8618
 
         internal interface IDeviceBridge
         {

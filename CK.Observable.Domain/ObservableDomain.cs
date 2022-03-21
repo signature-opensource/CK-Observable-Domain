@@ -1,3 +1,4 @@
+using CK.BinarySerialization;
 using CK.Core;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -46,11 +47,6 @@ namespace CK.Observable
         public const int LockedDomainMonitorTimeout = 1000;
 
         /// <summary>
-        /// Current serialization version.
-        /// </summary>
-        public const int CurrentSerializationVersion = 8;
-
-        /// <summary>
         /// The length in bytes of the <see cref="SecretKey"/>.
         /// </summary>
         public const int DomainSecretKeyLength = 512;
@@ -65,13 +61,14 @@ namespace CK.Observable
         internal static ObservableDomain? CurrentThreadDomain;
 
         internal readonly IExporterResolver _exporters;
-        readonly ISerializerResolver _serializers;
         readonly IDeserializerResolver _deserializers;
         readonly TimeManager _timeManager;
         readonly SidekickManager _sidekickManager;
         readonly ObservableDomainPostActionExecutor _domainPostActionExecutor;
         internal readonly Random _random;
         Action<ISuccessfulTransactionEvent>? _inspectorEvent;
+        BinarySerializerContext _serializerContext;
+        BinaryDeserializerContext _deserializerContext;
 
         /// <summary>
         /// Maps property names to PropInfo that contains the property index.
@@ -566,7 +563,7 @@ namespace CK.Observable
                                  bool startTimer,
                                  IObservableDomainClient? client,
                                  IServiceProvider? serviceProvider = null )
-            : this(monitor, domainName, startTimer, client, true, serviceProvider, exporters: null, serializers: null, deserializers: null)
+            : this(monitor, domainName, startTimer, client, true, serviceProvider, exporters: null, deserializers: null)
         {
         }
 
@@ -577,35 +574,29 @@ namespace CK.Observable
         /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
         /// <param name="client">The observable client (head of the Chain of Responsibility) to use. Can be null.</param>
         /// <param name="s">The input stream.</param>
-        /// <param name="leaveOpen">True to leave the stream opened.</param>
-        /// <param name="encoding">Optional encoding for characters. Defaults to UTF-8.</param>
         /// <param name="serviceProvider">The service providers that will be used to resolve the <see cref="ObservableDomainSidekick"/> objects.</param>
         /// <param name="startTimer">
         /// Ensures that the <see cref="ObservableDomain.TimeManager"/> is running or stopped.
         /// When null, it keeps its previous state (it is initially stopped at domain creation) and then its current state is persisted.
         /// </param>
         /// <param name="exporters">Optional exporters handler.</param>
-        /// <param name="serializers">Optional serializers handler.</param>
         /// <param name="deserializers">Optional deserializers handler.</param>
         public ObservableDomain( IActivityMonitor monitor,
                                  string domainName,
                                  IObservableDomainClient? client,
-                                 Stream s,
-                                 bool leaveOpen = false,
-                                 Encoding? encoding = null,
+                                 RewindableStream s,
                                  IServiceProvider? serviceProvider = null,
                                  bool? startTimer = null,
                                  IExporterResolver? exporters = null,
-                                 ISerializerResolver? serializers = null,
                                  IDeserializerResolver? deserializers = null )
-            : this(monitor, domainName, false, client, false, serviceProvider, exporters, serializers, deserializers)
+            : this(monitor, domainName, false, client, false, serviceProvider, exporters, deserializers)
         {
             using( monitor.OpenInfo( $"Initializing new domain '{domainName}' from stream." ) )
             {
                 try
                 {
                     _currentTran = new InitializationTransaction( monitor, this );
-                    DoLoad( monitor, s, domainName, leaveOpen, encoding, startTimer, mustStartTimer =>
+                    DoLoad( monitor, s, domainName, startTimer, mustStartTimer =>
                     {
                         client?.OnDomainCreated( monitor, this, ref mustStartTimer );
                         return mustStartTimer;
@@ -615,8 +606,6 @@ namespace CK.Observable
                 {
                     _currentTran?.Dispose();
                 }
-
-
             }
         }
 
@@ -627,13 +616,11 @@ namespace CK.Observable
                           bool callClientOnCreate,
                           IServiceProvider? serviceProvider,
                           IExporterResolver? exporters,
-                          ISerializerResolver? serializers,
                           IDeserializerResolver? deserializers)
         {
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
             DomainName = domainName ?? throw new ArgumentNullException( nameof( domainName ) );
             _exporters = exporters ?? ExporterRegistry.Default;
-            _serializers = serializers ?? SerializerRegistry.Default;
             _deserializers = deserializers ?? DeserializerRegistry.Default;
             DomainClient = client;
             _objects = new ObservableObject?[512];
@@ -655,6 +642,11 @@ namespace CK.Observable
             _saveLock = new Object();
             _domainMonitorLock = new SemaphoreSlim( 1, 1 );
             _random = new Random();
+            // The serializer context caches the serialization driver.
+            _serializerContext = new BinarySerializerContext( BinarySerializer.DefaultSharedContext );
+            // The deserialization context exposes the services, including this domain, to the deserializer. 
+            _deserializerContext = new BinaryDeserializerContext( BinarySerialization.BinaryDeserializer.DefaultSharedContext, serviceProvider );
+            _deserializerContext.Services.Add( this );
 
             if( callClientOnCreate )
             {
@@ -1307,15 +1299,16 @@ namespace CK.Observable
         /// Loads previously <see cref="Save"/>d objects from a named domain into this domain: the <paramref name="expectedLoadedName"/> can be
         /// this <see cref="DomainName"/> or another name but it must match the name in the stream otherwise an <see cref="InvalidDataException"/>
         /// is thrown.
+        /// <para>
+        /// The stream must be valid and is left open (since we did not open it, we don't close it).
+        /// </para>
         /// </summary>
         /// <param name="monitor">The monitor to use. Cannot be null.</param>
-        /// <param name="stream">The input stream.</param>
+        /// <param name="stream">The rewindable input stream.</param>
         /// <param name="expectedLoadedName">
         /// Name of the domain that is saved in <paramref name="stream"/> and must be loaded. It can differ from this <see cref="DomainName"/>.
         /// Must not be null or empty.
         /// </param>
-        /// <param name="leaveOpen">True to leave the stream opened.</param>
-        /// <param name="encoding">Optional encoding for characters. Defaults to UTF-8.</param>
         /// <param name="millisecondsTimeout">
         /// The maximum number of milliseconds to wait for a read access before giving up.
         /// Wait indefinitely by default.
@@ -1325,22 +1318,27 @@ namespace CK.Observable
         /// When null, it keeps its previous state (it is initially stopped at domain creation) and then its current state is persisted.
         /// </param>
         /// <returns>True on success, false if timeout occurred.</returns>
-        public bool Load( IActivityMonitor monitor, Stream stream, string expectedLoadedName, bool leaveOpen = false, Encoding? encoding = null, int millisecondsTimeout = -1, bool? startTimer = null )
+        public bool Load( IActivityMonitor monitor, RewindableStream stream, string expectedLoadedName, int millisecondsTimeout = -1, bool? startTimer = null )
         {
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
             if( stream == null ) throw new ArgumentNullException( nameof( stream ) );
             if( expectedLoadedName == null ) throw new ArgumentNullException( nameof( expectedLoadedName ) );
+
+            // Temporary NetCoreApp3.1: we accept the 5 to 8 legacy version.
+            // In Net6 this must be just: Throw.CheckData( stream.IsValid );
+            if( !stream.IsValid && (stream.SerializerVersion < 5 || stream.SerializerVersion > 8) ) throw new InvalidDataException( nameof( stream ) );
+            
             CheckDisposed();
             bool hasWriteLock = _lock.IsWriteLockHeld;
             if( !hasWriteLock && !_lock.TryEnterWriteLock( millisecondsTimeout ) ) return false;
             Debug.Assert( !hasWriteLock || _currentTran != null, "isWrite => _currentTran != null" );
             bool needFakeTran = _currentTran == null || _currentTran.Monitor != monitor;
-            using( monitor.OpenInfo( $"Reloading domain '{DomainName}' (using {(needFakeTran ? "fake" : "current")} transaction) from stream." ) )
+            using( monitor.OpenInfo( $"Reloading domain '{DomainName}' (using {(needFakeTran ? "fake" : "current")} transaction) from rewindable '{stream.Kind}'." ) )
             {
                 if( needFakeTran ) new InitializationTransaction( monitor, this, false );
                 try
                 {
-                    DoLoad( monitor, stream, expectedLoadedName, leaveOpen, encoding, startTimer );
+                    DoLoad( monitor, stream, expectedLoadedName, startTimer );
                     return true;
                 }
                 finally
@@ -1355,14 +1353,38 @@ namespace CK.Observable
             }
         }
 
-        void DoLoad( IActivityMonitor monitor, Stream stream, string expectedLoadedName, bool leaveOpen, Encoding? encoding, bool? startTimer, Func<bool,bool>? beforeTimer = null )
+        void DoLoad( IActivityMonitor monitor, RewindableStream stream, string expectedLoadedName, bool? startTimer, Func<bool,bool>? beforeTimer = null )
         {
             try
             {
-                using( var d = new BinaryDeserializer( stream, null, _deserializers, leaveOpen, encoding ) )
+                if( !stream.IsValid )
                 {
-                    d.Services.Add( this );
-                    var mustStartTimer = DoRealLoad( monitor, d, expectedLoadedName, startTimer );
+                    using( monitor.OpenWarn( $"The stream may be from a previous serialization implementation (version: {stream.SerializerVersion}). Trying to read it with the legacy implementation." ) )
+                    {
+                        try
+                        {
+                            using( var dOld = new BinaryDeserializer( stream.Reader.BaseStream, null, _deserializers, true, Encoding.UTF8 ) )
+                            {
+                                dOld.Services.Add( this );
+                                var mustStartTimer = DoLegacyRealLoad( monitor, dOld, expectedLoadedName, startTimer, stream.SerializerVersion );
+                                if( beforeTimer != null ) mustStartTimer = beforeTimer( mustStartTimer );
+                                if( mustStartTimer )
+                                {
+                                    _timeManager.DoStartOrStop( monitor, true );
+                                }
+                            }
+                        }
+                        catch( Exception ex )
+                        { 
+                            monitor.Error( ex );
+                            throw;
+                        }
+                    }
+                }
+                else
+                {
+                    monitor.Trace( $"Stream's Serializer version is {stream.SerializerVersion}." );
+                    bool mustStartTimer = DoRealLoad( monitor, stream, expectedLoadedName, startTimer );
                     if( beforeTimer != null ) mustStartTimer = beforeTimer( mustStartTimer );
                     if( mustStartTimer )
                     {
@@ -1382,8 +1404,6 @@ namespace CK.Observable
         /// </summary>
         /// <param name="monitor">The monitor to use. Cannot be null.</param>
         /// <param name="stream">The input stream.</param>
-        /// <param name="leaveOpen">True to leave the stream opened.</param>
-        /// <param name="encoding">Optional encoding for characters. Defaults to UTF-8.</param>
         /// <param name="millisecondsTimeout">
         /// The maximum number of milliseconds to wait for a read access before giving up.
         /// Wait indefinitely by default.
@@ -1393,9 +1413,9 @@ namespace CK.Observable
         /// When null, it keeps its previous state (it is initially stopped at domain creation) and then its current state is persisted.
         /// </param>
         /// <returns>True on success, false if timeout occurred.</returns>
-        public bool Load( IActivityMonitor monitor, Stream stream, bool leaveOpen = false, Encoding? encoding = null, int millisecondsTimeout = -1, bool? startTimer = null )
+        public bool Load( IActivityMonitor monitor, RewindableStream stream, int millisecondsTimeout = -1, bool? startTimer = null )
         {
-            return Load( monitor, stream, DomainName, leaveOpen, encoding, millisecondsTimeout, startTimer );
+            return Load( monitor, stream, DomainName, millisecondsTimeout, startTimer );
         }
 
         /// <summary>
@@ -1825,14 +1845,14 @@ namespace CK.Observable
             using( monitor.OpenInfo( $"Idempotence check of '{domain.DomainName}'." ) )
             using( var s = new MemoryStream() )
             {
-                if( !domain.Save( monitor, s, true, millisecondsTimeout: milliSecondsTimeout, debugMode: useDebugMode ) ) throw new Exception( "First Save failed: Unable to acquire lock." );
+                if( !domain.Save( monitor, s, millisecondsTimeout: milliSecondsTimeout, debugMode: useDebugMode ) ) throw new Exception( "First Save failed: Unable to acquire lock." );
                 var originalBytes = s.ToArray();
                 var originalTransactionSerialNumber = domain.TransactionSerialNumber;
                 s.Position = 0;
-                if( !domain.Load( monitor, s, true, millisecondsTimeout: milliSecondsTimeout, startTimer: null ) ) throw new Exception( "Reload failed: Unable to acquire lock." );
+                if( !domain.Load( monitor, RewindableStream.FromStream( s ), millisecondsTimeout: milliSecondsTimeout, startTimer: null ) ) throw new Exception( "Reload failed: Unable to acquire lock." );
 
-                using var checker = new BinarySerializer.CheckedWriteStream( originalBytes );
-                if( !domain.Save( monitor, checker, true, millisecondsTimeout: milliSecondsTimeout, debugMode: useDebugMode ) ) throw new Exception( "Second Save failed: Unable to acquire lock." );
+                using var checker = BinarySerializer.CreateCheckedWriteStream( originalBytes );
+                if( !domain.Save( monitor, checker, millisecondsTimeout: milliSecondsTimeout, debugMode: useDebugMode ) ) throw new Exception( "Second Save failed: Unable to acquire lock." );
                 return domain.CurrentLostObjectTracker!;
             }
         }

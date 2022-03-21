@@ -1,3 +1,4 @@
+using CK.BinarySerialization;
 using CK.Core;
 using System;
 using System.IO;
@@ -58,23 +59,18 @@ namespace CK.Observable
         /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
         /// <param name="client">The observable client (head of the Chain of Responsibility) to use. Can be null.</param>
         /// <param name="stream">The input stream.</param>
-        /// <param name="leaveOpen">True to leave the stream opened.</param>
-        /// <param name="encoding">Optional encoding for characters. Defaults to UTF-8.</param>
         /// <param name="serviceProvider">The service providers that will be used to resolve the <see cref="ObservableDomainSidekick"/> objects.</param>
         /// <param name="startTimer">
         /// Ensures that the <see cref="ObservableDomain.TimeManager"/> is running or stopped.
         /// When null, it keeps its previous state (it is initially stopped at domain creation) and then its current state is persisted.
         /// </param>
-        public ObservableDomain(
-            IActivityMonitor monitor,
-            string domainName,
-            IObservableDomainClient client,
-            Stream stream,
-            bool leaveOpen = false,
-            Encoding? encoding = null,
-            IServiceProvider? serviceProvider = null,
-            bool? startTimer = null )
-            : base( monitor, domainName, client, stream, leaveOpen, encoding, serviceProvider, startTimer )
+        public ObservableDomain( IActivityMonitor monitor,
+                                 string domainName,
+                                 IObservableDomainClient client,
+                                 RewindableStream stream,
+                                 IServiceProvider? serviceProvider = null,
+                                 bool? startTimer = null )
+            : base( monitor, domainName, client, stream, serviceProvider, startTimer )
         {
             BindRoots();
         }

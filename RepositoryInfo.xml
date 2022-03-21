@@ -6,7 +6,7 @@
       <Add>js/package-lock.json</Add>
     </IgnoreModifiedFiles>
     <Branches>
-      <Branch Name="develop" CIVersionMode="LastReleaseBased" VersionName="develop" />
+      <Branch Name="develop-NetCore3" CIVersionMode="LastReleaseBased" VersionName="develop" />
       <Branch Name="vNext" CIVersionMode="ZeroTimed" VersionName="vnext" />
     </Branches>
   </SimpleGitVersion>

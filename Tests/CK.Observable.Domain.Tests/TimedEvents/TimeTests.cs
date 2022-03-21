@@ -208,17 +208,17 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             {
             }
 
-            SimpleValue( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+            SimpleValue( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+                : base( BinarySerialization.Sliced.Instance )
             {
-                Value = r.ReadInt32();
-                ValueFromReminders = r.ReadInt32();
+                Value = r.Reader.ReadInt32();
+                ValueFromReminders = r.Reader.ReadInt32();
             }
 
-            void Write( BinarySerializer w )
+            public static void Write( BinarySerialization.IBinarySerializer w, in SimpleValue o )
             {
-                w.Write( Value );
-                w.Write( ValueFromReminders );
+                w.Writer.Write( o.Value );
+                w.Writer.Write( o.ValueFromReminders );
             }
 
             public int Value { get; set; }
@@ -457,22 +457,22 @@ namespace CK.Observable.Domain.Tests.TimedEvents
         [SerializationVersion(0)]
         class TestReminder : InternalObject
         {
-            readonly TestCounter _counter;
+            readonly TestCounter? _counter;
 
-            public TestReminder( TestCounter counter )
+            public TestReminder( TestCounter? counter )
             {
                 _counter = counter;
             }
 
-            TestReminder( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+            TestReminder( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+                : base( BinarySerialization.Sliced.Instance )
             {
-                _counter = (TestCounter)r.ReadObject();
+                _counter = r.ReadNullableObject<TestCounter>();
             }
 
-            void Write( BinarySerializer w )
+            public static void Write( BinarySerialization.IBinarySerializer w, in TestReminder o )
             {
-                w.WriteObject( _counter );
+                w.WriteNullableObject( o._counter );
             }
 
             public void StartWork( string message, int repeatCount )

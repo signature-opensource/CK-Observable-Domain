@@ -6,7 +6,7 @@ using System.Linq;
 namespace CK.Observable
 {
     /// <summary>
-    /// Registers export drivers. This can be instanciated if needed but most often,
+    /// Registers export drivers. This can be instantiated if needed but most often,
     /// the <see cref="Default"/> registry is enough.
     /// </summary>
     public class ExporterRegistry : IExporterResolver

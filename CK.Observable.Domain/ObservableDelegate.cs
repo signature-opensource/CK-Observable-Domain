@@ -1,6 +1,8 @@
 using CK.Core;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
@@ -45,7 +47,6 @@ namespace CK.Observable
                 int len = r.ReadNonNegativeSmallInt32();
                 while( --len >= 0 ) r.ReadType();
             }
-
         }
 
         /// <summary>
@@ -117,36 +118,156 @@ namespace CK.Observable
             }
         }
 
+        public static void Skip( BinarySerialization.IBinaryDeserializer d )
+        {
+            d.Reader.ReadByte(); // Version
+            int count = d.Reader.ReadNonNegativeSmallInt32();
+            if( count > 0 )
+            {
+                // Skips the delegate signature.
+                d.ReadTypeInfo();
+                do
+                {
+                    // This is either the Target object instance or the Declaring type of the static method
+                    // or null if the target was a SideKick.
+                    object? o = d.ReadNullableObject<object>();
+                    if( o != null )
+                    {
+                        d.Reader.ReadSharedString();
+                        SkipArray( d );
+                    }
+                }
+                while( --count > 0 );
+                d.DebugCheckSentinel();
+            }
+
+            static void SkipArray( BinarySerialization.IBinaryDeserializer d )
+            {
+                int len = d.Reader.ReadNonNegativeSmallInt32();
+                while( --len >= 0 ) d.ReadTypeInfo();
+            }
+        }
+
+        /// <summary>
+        /// Deserializes the delegate.
+        /// </summary>
+        /// <param name="d">The deserializer.</param>
+        public ObservableDelegate( BinarySerialization.IBinaryDeserializer d )
+        {
+            static void ThrowError( string typeName, Type[] paramTypes, string methodName, bool isStatic )
+            {
+                var msg = $"Unable to find {(isStatic ? "static" : "")} method {methodName} on type {typeName} with parameters {paramTypes.Select( t => t.Name ).Concatenate()}.";
+                msg += Environment.NewLine + "If the event has been suppressed, please use the static helper: ObservableEventHandler.Skip( IBinaryDeserializer d ).";
+                throw new Exception( msg );
+            }
+
+            _d = null;
+            d.Reader.ReadByte(); // Version
+            int count = d.Reader.ReadNonNegativeSmallInt32();
+            if( count > 0 )
+            {
+                Delegate? final = null;
+                // Reads the type of the delegate itself that must exist (otherwise ResolveLocalType() throws).
+                var tInfoD = d.ReadTypeInfo();
+                Type tD = tInfoD.TargetType ?? tInfoD.ResolveLocalType();
+                do
+                {
+                    object? o = d.ReadAnyNullable();
+                    if( o != null )
+                    {
+                        string? methodName = d.Reader.ReadSharedString();
+                        Debug.Assert( methodName != null );
+
+                        // Use local DoReadArray (sharing this array makes no sense).
+                        Type[] paramTypes = DoReadTypeArray( d );
+                        if( o is Type t )
+                        {
+                            var m = t.GetMethod( methodName, BindingFlags.Static | BindingFlags.FlattenHierarchy | BindingFlags.Public | BindingFlags.NonPublic, null, paramTypes, null );
+                            if( m == null )
+                            {
+                                ThrowError( t.FullName!, paramTypes, methodName, true );
+                                return; // Never.
+                            }
+                            final = Delegate.Combine( final, Delegate.CreateDelegate( tD, m, true ) );
+                        }
+                        else
+                        {
+                            var oT = o.GetType();
+                            var m = oT.GetMethod( methodName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, paramTypes, null );
+                            while( m == null && (oT = oT.BaseType) != null )
+                            {
+                                m = oT.GetMethod( methodName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, paramTypes, null );
+                            }
+                            if( m == null )
+                            {
+                                ThrowError( o.GetType().FullName!, paramTypes, methodName, false );
+                                return; // Never.
+                            }
+                            final = Delegate.Combine( final, Delegate.CreateDelegate( tD, o, m ) );
+                        }
+                    }
+                }
+                while( --count > 0 );
+                _d = final;
+                d.DebugCheckSentinel();
+            }
+
+            static Type[] DoReadTypeArray( BinarySerialization.IBinaryDeserializer r )
+            {
+                int len = r.Reader.ReadNonNegativeSmallInt32();
+                if( len == 0 ) return Array.Empty<Type>();
+                var result = new Type[len];
+                for( int i = 0; i < len; ++i )
+                {
+                    var tInfo = r.ReadTypeInfo();
+                    result[i] = tInfo.TargetType ?? tInfo.ResolveLocalType();
+                }
+                return result;
+            }
+        }
+
         /// <summary>
         /// Serializes this <see cref="ObservableDelegate"/>.
         /// </summary>
-        /// <param name="w">The writer.</param>
-        public void Write( BinarySerializer w )
+        /// <param name="s">The writer.</param>
+        public void Write( BinarySerialization.IBinarySerializer s )
         {
             var list = Cleanup();
-            w.DebugWriteSentinel();
-            w.WriteNonNegativeSmallInt32( list.Length );
+            s.Writer.Write( (byte)0 ); // Version
+            s.Writer.WriteNonNegativeSmallInt32( list.Length );
             if( list.Length > 0 )
             {
-                w.Write( list[0].GetType() );
+                // Writes the Delegate's type (it's a sealed class).
+                // Its signature contains the TEventArgs type (this is used only to implement ObservableEventHandler<TEventArgs>).
+                s.WriteTypeInfo( list[0].GetType() );
                 foreach( var d in list )
                 {
                     // Don't serialize sidekick handlers.
                     if( d.Target is ObservableDomainSidekick )
                     {
-                        w.WriteObject( null );
+                        s.WriteAnyNullable( null );
                     }
                     else
                     {
-                        w.WriteObject( d.Target ?? d.Method.DeclaringType );
-                        w.WriteSharedString( d.Method.Name );
+                        s.WriteObject( d.Target ?? d.Method.DeclaringType! );
+                        s.Writer.WriteSharedString( d.Method.Name );
                         var paramInfos = d.Method.GetParameters();
                         // Writes the type array directly.
-                        w.WriteNonNegativeSmallInt32( paramInfos.Length );
-                        foreach( var p in paramInfos ) w.Write( p.ParameterType );
+                        // We must write the actual parameter type because of contravariance:
+                        // the method's parameters may be a specialization of the Delegate's ones.
+                        // Option:
+                        // This should be changed:
+                        //  - Write should control that the method name is unique.
+                        //  - But we must implement [PreviousNames(...)] attribute to allow existing ambiguous
+                        //  methods to actually be renamed.
+                        //  - Then, only the method name should be used.
+                        // => The reason is that changing the types of the signature will be handled transparently: only the name
+                        //    binds it, the method parameters are then free to evolve.
+                        s.Writer.WriteNonNegativeSmallInt32( paramInfos.Length );
+                        foreach( var p in paramInfos ) s.WriteTypeInfo( p.ParameterType );
                     }
                 }
-                w.DebugWriteSentinel();
+                s.DebugWriteSentinel();
             }
         }
 

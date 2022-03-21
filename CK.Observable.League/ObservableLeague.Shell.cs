@@ -1,3 +1,4 @@
+using CK.BinarySerialization;
 using CK.Core;
 using System;
 using System.Collections.Generic;
@@ -199,7 +200,7 @@ namespace CK.Observable.League
             }
 
             /// <summary>
-            /// Attempts to synthesize the Shell type (with the root types).
+            /// Synthesizes the Shell type (with the root types).
             /// </summary>
             /// <param name="monitor">The monitor to use.</param>
             /// <param name="coordinator">The coordinator access.</param>
@@ -208,6 +209,7 @@ namespace CK.Observable.League
             /// <param name="initializer">The optional domain initializer.</param>
             /// <param name="serviceProvider">The service provider used to instantiate <see cref="ObservableDomainSidekick"/> objects.</param>
             /// <param name="rootTypeNames">The root types.</param>
+            /// <returns>The shell for the domain.</returns>
             internal static Shell Create( IActivityMonitor monitor,
                                           IObservableDomainAccess<Coordinator> coordinator,
                                           string domainName,
@@ -229,10 +231,15 @@ namespace CK.Observable.League
                     rootTypes = new Type[rootTypeNames.Count];
                     for( int i = 0; i < rootTypeNames.Count; ++i )
                     {
-                        if( (rootTypes[i] = SimpleTypeFinder.WeakResolver( rootTypeNames[i], false )) == null )
+                        var t = SimpleTypeFinder.WeakResolver( rootTypeNames[i], false );
+                        if( t == null )
                         {
                             monitor.Error( $"Unable to resolve root type '{rootTypeNames[i]}' for domain '{domainName}'." );
                             success = false;
+                        }
+                        else
+                        {
+                            rootTypes[i] = t;
                         }
                     }
                     if( success )
@@ -244,7 +251,7 @@ namespace CK.Observable.League
                             3 => typeof( Shell<,,> ).MakeGenericType( rootTypes ),
                             _ => typeof( Shell<,,,> ).MakeGenericType( rootTypes )
                         };
-                        return (Shell)Activator.CreateInstance( shellType, monitor, coordinator, domainName, store, initializer, serviceProvider, rootTypeNames, rootTypes );
+                        return (Shell)Activator.CreateInstance( shellType, monitor, coordinator, domainName, store, initializer, serviceProvider, rootTypeNames, rootTypes )!;
                     }
                 }
                 // The domainType is null if the type resolution failed.
@@ -281,7 +288,7 @@ namespace CK.Observable.League
             }
 
             /// <summary>
-            /// Gets or sets the options. This is set directly when the <see cref="Coordinator"/>'s <see cref="Domain.Options"/>
+            /// Gets the options. This is set directly when the <see cref="Coordinator"/>'s <see cref="Domain.Options"/>
             /// value changes.
             /// The different values are hold by this Client or directly by this shell.
             /// </summary>
@@ -345,11 +352,33 @@ namespace CK.Observable.League
             async Task<bool> IObservableDomainShellBase.SaveAsync( IActivityMonitor m )
             {
                 return await ExplicitSnapshotDomainAsync( m ).ConfigureAwait( false )
-                       && await Client.SaveSnapshotAsync( m ).ConfigureAwait( false );
+                       && await Client.SaveSnapshotAsync( m, false ).ConfigureAwait( false );
+            }
+
+            enum SaveCommandOption
+            {
+                /// <summary>
+                /// Default behavior is to trigger a snapshot, save it and triggers
+                /// the housekeeping.
+                /// </summary>
+                SnapshotSaveAndHousekeep,
+
+                /// <summary>
+                /// Snapshot and save but don't trigger housekeeping.
+                /// </summary>
+                SnapshotAndSave,
+
+                /// <summary>
+                /// Snapshot only.
+                /// </summary>
+                SnapshotOnly
             }
 
             async Task<bool> ExplicitSnapshotDomainAsync( IActivityMonitor m )
             {
+                // Today:
+                SaveCommandOption saveOption = SaveCommandOption.SnapshotSaveAndHousekeep;
+
                 using( m.OpenTrace( $"Snapshotting ObservableDomain {DomainName} manually." ) )
                 {
                     var d = _domain;
@@ -363,7 +392,7 @@ namespace CK.Observable.League
                         m.Error( $"ObservableDomain {DomainName} is disposed." );
                         return false;
                     }
-                    if( Client.SkipTransactionCount == 0 )
+                    if( Client.SkipTransactionCount == 0 && saveOption == SaveCommandOption.SnapshotOnly )
                     {
                         m.Warn( $"ObservableDomain {DomainName} uses a {nameof( Client.SkipTransactionCount )} of 0. A snapshot is made on every transaction." );
                         return true;
@@ -415,7 +444,7 @@ namespace CK.Observable.League
                             }
                             else
                             {
-                                await Client.SaveSnapshotAsync( monitor ).ConfigureAwait( false );
+                                await Client.SaveSnapshotAsync( monitor, doHouseKeeping: ClosingLeague ).ConfigureAwait( false );
                             }
                             if( !IsDestroyed && !ClosingLeague )
                             {
@@ -509,9 +538,9 @@ namespace CK.Observable.League
                 return new ObservableDomain( monitor, DomainName, startTimer, Client, ServiceProvider );
             }
 
-            internal protected virtual ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, bool? startTimer )
+            internal protected virtual ObservableDomain DeserializeDomain( IActivityMonitor monitor, RewindableStream stream, bool? startTimer )
             {
-                return new ObservableDomain( monitor, DomainName, Client, stream, leaveOpen: false, encoding: null, ServiceProvider, startTimer );
+                return new ObservableDomain( monitor, DomainName, Client, stream, ServiceProvider, startTimer );
             }
 
             private protected virtual IObservableDomainShell CreateIndependentShell( IActivityMonitor monitor ) => new IndependentShell( this, monitor );
@@ -582,6 +611,8 @@ namespace CK.Observable.League
 
             IObservableDomainInspector IObservableDomainShellBase.DomainInspector => LoadedDomain;
 
+            IObservableDomainInspector IObservableDomainShellBase.DomainInspector => LoadedDomain;
+
             string? IObservableDomainShell.ExportToString( int millisecondsTimeout )
             {
                 var d = LoadedDomain;
@@ -603,9 +634,9 @@ namespace CK.Observable.League
             async Task<(TResult, TransactionResult)> IObservableDomainShell.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain, TResult> actions, int millisecondsTimeout, bool parallelDomainPostActions )
             {
                 var d = LoadedDomain;
-                TResult r = default;
+                TResult? r = default;
                 var tr = await d.ModifyThrowAsync( monitor, () => r = actions.Invoke( monitor, d ), millisecondsTimeout, parallelDomainPostActions );
-                return (r, tr);
+                return (r!, tr);
             }
 
             Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> IObservableDomainShell.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> actions, int millisecondsTimeout, bool parallelDomainPostActions )
@@ -654,9 +685,9 @@ namespace CK.Observable.League
                 return new ObservableDomain<T>( monitor, DomainName, startTimer, Client, ServiceProvider );
             }
 
-            internal protected override ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, bool? startTimer )
+            internal protected override ObservableDomain DeserializeDomain( IActivityMonitor monitor, RewindableStream stream, bool? startTimer )
             {
-                return new ObservableDomain<T>( monitor, DomainName, Client, stream, leaveOpen: true, encoding: null, ServiceProvider, startTimer );
+                return new ObservableDomain<T>( monitor, DomainName, Client, stream, ServiceProvider, startTimer );
             }
 
             class IndependentShellT : IndependentShell, IObservableDomainShell<T>
@@ -718,9 +749,9 @@ namespace CK.Observable.League
             async Task<(TResult, TransactionResult)> IObservableDomainAccess<T>.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<T>, TResult> actions, int millisecondsTimeout, bool parallelDomainPostActions )
             {
                 var d = LoadedDomain;
-                TResult r = default;
+                TResult? r = default;
                 var tr = await d.ModifyThrowAsync( monitor, () => r = actions.Invoke( monitor, d ), millisecondsTimeout, parallelDomainPostActions );
-                return (r, tr);
+                return (r!, tr);
             }
 
             Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> IObservableDomainAccess<T>.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T>> actions, int millisecondsTimeout, bool parallelDomainPostActions )
@@ -770,9 +801,9 @@ namespace CK.Observable.League
                 return new ObservableDomain<T1, T2>( monitor, DomainName, startTimer, Client, ServiceProvider );
             }
 
-            internal protected override ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, bool? startTimer )
+            internal protected override ObservableDomain DeserializeDomain( IActivityMonitor monitor, RewindableStream stream, bool? startTimer )
             {
-                return new ObservableDomain<T1, T2>( monitor, DomainName, Client, stream, leaveOpen: true, encoding: null, ServiceProvider, startTimer );
+                return new ObservableDomain<T1, T2>( monitor, DomainName, Client, stream, ServiceProvider, startTimer );
             }
 
             class IndependentShellTT : IndependentShell, IObservableDomainShell<T1, T2>
@@ -836,9 +867,9 @@ namespace CK.Observable.League
             async Task<TResult> IObservableDomainShell<T1, T2>.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<T1, T2>, TResult> actions, int millisecondsTimeout, bool parallelDomainPostActions )
             {
                 var d = LoadedDomain;
-                TResult r = default;
+                TResult? r = default;
                 await d.ModifyThrowAsync( monitor, () => r = actions.Invoke( monitor, d ), millisecondsTimeout, parallelDomainPostActions );
-                return r;
+                return r!;
             }
 
             Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> IObservableDomainShell<T1, T2>.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2>> actions, int millisecondsTimeout, bool parallelDomainPostActions )
@@ -889,9 +920,9 @@ namespace CK.Observable.League
                 return new ObservableDomain<T1, T2, T3>( monitor, DomainName, startTimer, Client, ServiceProvider );
             }
 
-            internal protected override ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, bool? startTimer )
+            internal protected override ObservableDomain DeserializeDomain( IActivityMonitor monitor, RewindableStream stream, bool? startTimer )
             {
-                return new ObservableDomain<T1, T2, T3>( monitor, DomainName, Client, stream, leaveOpen: true, encoding: null, ServiceProvider, startTimer );
+                return new ObservableDomain<T1, T2, T3>( monitor, DomainName, Client, stream, ServiceProvider, startTimer );
             }
 
             class IndependentShellTTT : IndependentShell, IObservableDomainShell<T1, T2, T3>
@@ -954,9 +985,9 @@ namespace CK.Observable.League
             async Task<TResult> IObservableDomainShell<T1, T2, T3>.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<T1, T2, T3>, TResult> actions, int millisecondsTimeout, bool parallelDomainPostActions )
             {
                 var d = LoadedDomain;
-                TResult r = default;
+                TResult? r = default;
                 await d.ModifyThrowAsync( monitor, () => r = actions.Invoke( monitor, d ), millisecondsTimeout, parallelDomainPostActions );
-                return r;
+                return r!;
             }
 
             Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> IObservableDomainShell<T1, T2, T3>.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3>> actions, int millisecondsTimeout, bool parallelDomainPostActions )
@@ -1008,9 +1039,9 @@ namespace CK.Observable.League
                 return new ObservableDomain<T1, T2, T3, T4>( monitor, DomainName, startTimer, Client, ServiceProvider );
             }
 
-            internal protected override ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, bool? startTimer )
+            internal protected override ObservableDomain DeserializeDomain( IActivityMonitor monitor, RewindableStream stream, bool? startTimer )
             {
-                return new ObservableDomain<T1, T2, T3, T4>( monitor, DomainName, Client, stream, leaveOpen: true, encoding: null, ServiceProvider, startTimer );
+                return new ObservableDomain<T1, T2, T3, T4>( monitor, DomainName, Client, stream, ServiceProvider, startTimer );
             }
 
             class IndependentShellTTTT : IndependentShell, IObservableDomainShell<T1, T2, T3, T4>
@@ -1074,9 +1105,9 @@ namespace CK.Observable.League
             async Task<TResult> IObservableDomainShell<T1, T2, T3, T4>.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<T1, T2, T3, T4>, TResult> actions, int millisecondsTimeout, bool parallelDomainPostActions )
             {
                 var d = LoadedDomain;
-                TResult r = default;
+                TResult? r = default;
                 await d.ModifyThrowAsync( monitor, () => r = actions.Invoke( monitor, d ), millisecondsTimeout, parallelDomainPostActions );
-                return r;
+                return r!;
             }
 
             Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> IObservableDomainShell<T1, T2, T3, T4>.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3, T4>> actions, int millisecondsTimeout, bool parallelDomainPostActions )

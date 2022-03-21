@@ -463,9 +463,14 @@ namespace CK.Observable
             r.ReadByte(); // Version.
         }
 
-        internal void Save( BinarySerializer w )
+        internal void Load( BinarySerialization.IBinaryDeserializer s )
         {
-            w.Write( (byte)0 );
+            s.Reader.ReadByte(); // Version.
+        }
+
+        internal void Save( BinarySerialization.IBinarySerializer d )
+        {
+            d.Writer.Write( (byte)0 );
         }
 
     }

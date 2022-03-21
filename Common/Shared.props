@@ -33,7 +33,7 @@
   <!--<StandardProperties>-->
   <PropertyGroup>
     <RepositoryUrl>https://gitlab.com/Signature-Code/CK-Observable-Domain</RepositoryUrl>
-    <ProductName>SC</ProductName>
+    <ProductName>SC[NetCore3]</ProductName>
     <Company>Signature Code</Company>
     <Authors>Signature Code</Authors>
     <Copyright>Copyright Signature-Code 2007-$([System.DateTime]::UtcNow.ToString("yyyy"))</Copyright>

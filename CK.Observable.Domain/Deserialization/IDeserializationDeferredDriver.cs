@@ -2,6 +2,7 @@ namespace CK.Observable
 {
     /// <summary>
     /// Handles deserialization of object in two phases.
+    /// This should be implemented for reference type.
     /// </summary>
     public interface IDeserializationDeferredDriver : IDeserializationDriver
     {

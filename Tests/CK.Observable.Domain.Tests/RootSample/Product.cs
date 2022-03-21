@@ -1,3 +1,5 @@
+using CK.Core;
+
 namespace CK.Observable.Domain.Tests.RootSample
 {
     [SerializationVersion(0)]
@@ -8,19 +10,19 @@ namespace CK.Observable.Domain.Tests.RootSample
             ProductInfo = p;
         }
 
-        Product( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+        Product( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+                : base( BinarySerialization.Sliced.Instance )
         {
-            ProductNumber = r.ReadInt32();
-            Name = r.ReadNullableString();
-            ProductInfo = (ProductInfo)r.ReadObject();
+            ProductNumber = r.Reader.ReadInt32();
+            Name = r.Reader.ReadNullableString();
+            ProductInfo = r.ReadValue<ProductInfo>();
         }
 
-        void Write( IBinarySerializer s )
+        public static void Write( BinarySerialization.IBinarySerializer s, in Product o )
         {
-            s.Write( ProductNumber );
-            s.WriteNullableString( Name );
-            s.WriteObject( ProductInfo );
+            s.Writer.Write( o.ProductNumber );
+            s.Writer.WriteNullableString( o.Name );
+            s.WriteValue( o.ProductInfo );
         }
 
         public ProductInfo ProductInfo { get; } 
