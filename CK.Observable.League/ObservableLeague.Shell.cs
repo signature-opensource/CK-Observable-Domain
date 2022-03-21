@@ -51,6 +51,7 @@ namespace CK.Observable.League
                 // Exposes the Shell without disposed guard.
                 readonly protected IObservableDomainShell Shell;
                 readonly IActivityMonitor _monitor;
+                Action<ISuccessfulTransactionEvent>? _onSuccess;
                 bool _isDisposed;
 
                 public IndependentShell( Shell s, IActivityMonitor m )
@@ -81,6 +82,8 @@ namespace CK.Observable.League
 
                 ValueTask<bool> IObservableDomainShellBase.DisposeAsync( IActivityMonitor monitor )
                 {
+                    // Unconditionally unsubscribe.
+                    DomainInspector.OnSuccessfulTransaction -= OnSuccessfulTransactionRelay;
                     _isDisposed = true;
                     return Shell.DisposeAsync( monitor );
                 }
@@ -138,17 +141,37 @@ namespace CK.Observable.League
                     }
                 }
 
-                ObservableDomain.LostObjectTracker? IObservableDomainInspector.EnsureLostObjectTracker( IActivityMonitor monitor, int millisecondsTimeout = -1 )
+                ObservableDomain.LostObjectTracker? IObservableDomainInspector.EnsureLostObjectTracker( IActivityMonitor monitor, int millisecondsTimeout )
                 {
                     ThrowOnDispose();
                     return DomainInspector.EnsureLostObjectTracker( monitor, millisecondsTimeout );
                 }
 
-                Task<bool> IObservableDomainInspector.GarbageCollectAsync( IActivityMonitor monitor, int millisecondsTimeout = -1 )
+                Task<bool> IObservableDomainInspector.GarbageCollectAsync( IActivityMonitor monitor, int millisecondsTimeout )
                 {
                     ThrowOnDispose();
                     return DomainInspector.GarbageCollectAsync( monitor, millisecondsTimeout );
-                } 
+                }
+
+                event Action<ISuccessfulTransactionEvent>? IObservableDomainInspector.OnSuccessfulTransaction
+                {
+                    add
+                    {
+                        ThrowOnDispose();
+                        bool mustReg = _onSuccess == null;
+                        _onSuccess += value;
+                        if( mustReg ) DomainInspector.OnSuccessfulTransaction += OnSuccessfulTransactionRelay;
+                    }
+                    remove
+                    {
+                        ThrowOnDispose();
+                        _onSuccess -= value;
+                        if( _onSuccess == null ) DomainInspector.OnSuccessfulTransaction -= OnSuccessfulTransactionRelay;
+                    }
+                }
+
+                void OnSuccessfulTransactionRelay( ISuccessfulTransactionEvent e ) => _onSuccess?.Invoke( e );
+
                 #endregion
             }
 
