@@ -2,7 +2,7 @@
   <Sdk Name="Microsoft.Build.CentralPackageVersions" Version="2.0.79" />
   <Import Project="..\Common\Shared.props" />
   <PropertyGroup>
-    <TargetFramework>netstandard2.1</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <Nullable>enable</Nullable>
     <LangVersion>Latest</LangVersion>
   </PropertyGroup>
@@ -10,6 +10,7 @@
   <ItemGroup>
     <PackageReference Include="CK.StObj.Model" />
     <PackageReference Include="System.Threading.Channels" />
+    <PackageReference Include="CK.BinarySerialization.Sliced" />
   </ItemGroup>
-
+  
 </Project>

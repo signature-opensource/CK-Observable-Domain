@@ -31,18 +31,21 @@ namespace CK.Observable
             // Since this is clearly an edge case, we use a lock with the same timeout and we don't care of a potential 2x wait time.
             if( !Monitor.TryEnter( _saveLock, millisecondsTimeout ) ) return false;
 
-            List<BinarySerialization.IDestroyable>? destroyedRefList = null;
+            List<IDestroyable>? destroyedRefList = null;
 
-            void Track( BinarySerialization.IDestroyable o )
+            void Track( IDestroyable o )
             {
-                if( destroyedRefList == null ) destroyedRefList = new List<BinarySerialization.IDestroyable>();
+                if( destroyedRefList == null ) destroyedRefList = new List<IDestroyable>();
                 Debug.Assert( !destroyedRefList.Contains( o ) );
                 destroyedRefList.Add( o );
             }
 
+<<<<<<< HEAD
             using( var s = BinarySerialization.BinarySerializer.Create( stream, _serializerContext ) )
+=======
+            using( var w = new BinarySerializer( stream, _serializers, leaveOpen, encoding, Track ) )
+>>>>>>> develop-NetCore3
             {
-                s.OnDestroyedObject += Track;
                 bool isWrite = _lock.IsWriteLockHeld;
                 bool isRead = _lock.IsReadLockHeld;
                 if( !isWrite && !isRead && !_lock.TryEnterReadLock( millisecondsTimeout ) )
@@ -56,37 +59,37 @@ namespace CK.Observable
                 {
                     using( monitor.OpenInfo( $"Saving domain ({_actualObjectCount} objects, {_internalObjectCount} internals, {_timeManager.AllObservableTimedEvents.Count} timed events)." ) )
                     {
-                        s.Writer.Write( (byte)0 ); // Version
-                        s.DebugWriteMode( debugMode ? (bool?)debugMode : null );
-                        s.Writer.Write( _currentObjectUniquifier );
-                        s.Writer.Write( _domainSecret );
+                        w.WriteSmallInt32( CurrentSerializationVersion );
+                        w.DebugWriteMode( debugMode ? (bool?)debugMode : null );
+                        w.Write( _currentObjectUniquifier );
+                        w.Write( _domainSecret );
                         if( debugMode ) monitor.Trace( $"Domain {DomainName}: Tran #{_transactionSerialNumber} - {_transactionCommitTimeUtc:o}, {_actualObjectCount} objects." );
-                        s.Writer.Write( DomainName );
-                        s.Writer.Write( _transactionSerialNumber );
-                        s.Writer.Write( _transactionCommitTimeUtc );
-                        s.Writer.Write( _actualObjectCount );
+                        w.Write( DomainName );
+                        w.Write( _transactionSerialNumber );
+                        w.Write( _transactionCommitTimeUtc );
+                        w.Write( _actualObjectCount );
 
-                        s.DebugWriteSentinel();
-                        s.Writer.WriteNonNegativeSmallInt32( _freeList.Count );
-                        foreach( var i in _freeList ) s.Writer.WriteNonNegativeSmallInt32( i );
+                        w.DebugWriteSentinel();
+                        w.WriteNonNegativeSmallInt32( _freeList.Count );
+                        foreach( var i in _freeList ) w.WriteNonNegativeSmallInt32( i );
 
-                        s.DebugWriteSentinel();
-                        s.Writer.WriteNonNegativeSmallInt32( _properties.Count );
+                        w.DebugWriteSentinel();
+                        w.WriteNonNegativeSmallInt32( _properties.Count );
                         foreach( var p in _propertiesByIndex )
                         {
-                            s.Writer.Write( p.PropertyName );
+                            w.Write( p.PropertyName );
                         }
-                        s.DebugWriteSentinel();
+                        w.DebugWriteSentinel();
                         Debug.Assert( _objectsListCount == _actualObjectCount + _freeList.Count );
 
                         // First writes the roots: any reachable objects (including
                         // Internal and Timed objects) will be written. Event callbacks' object will
                         // not if they are destroyed => any non saved objects after these roots
                         // are de facto not reachable from the roots.
-                        s.Writer.WriteNonNegativeSmallInt32( _roots.Count );
+                        w.WriteNonNegativeSmallInt32( _roots.Count );
                         foreach( var r in _roots )
                         {
-                            s.WriteObject( r );
+                            w.WriteObject( r );
                         }
                         // The tracking list of non reachable objects from roots.
                         bool trackLostObjects = _roots.Count > 0;
@@ -98,29 +101,29 @@ namespace CK.Observable
                         {
                             var o = _objects[i];
                             Debug.Assert( o == null || !o.IsDestroyed, "Either it is a free cell (that appears in the free list) or the object is NOT disposed." );
-                            if( s.WriteNullableObject( o ) && o != null && trackLostObjects )
+                            if( w.WriteObject( o ) && o != null && trackLostObjects )
                             {
                                 if( lostObservableObjects == null ) lostObservableObjects = new List<ObservableObject>();
                                 lostObservableObjects.Add( o );
                             }
                         }
-                        s.DebugWriteSentinel();
-                        s.Writer.WriteNonNegativeSmallInt32( _internalObjectCount );
+                        w.DebugWriteSentinel();
+                        w.WriteNonNegativeSmallInt32( _internalObjectCount );
                         var f = _firstInternalObject;
                         while( f != null )
                         {
                             Debug.Assert( !f.IsDestroyed, "Disposed internal objects are removed from the list." );
-                            if( s.WriteObject( f ) && trackLostObjects )
+                            if( w.WriteObject( f ) && trackLostObjects )
                             {
                                 if( lostInternalObjects == null ) lostInternalObjects = new List<InternalObject>();
                                 lostInternalObjects.Add( f );
                             }
                             f = f.Next;
                         }
-                        s.DebugWriteSentinel();
-                        var (lostTimedObjects, unusedPooledReminders, pooledReminderCount) = _timeManager.Save( monitor, s, trackLostObjects );
-                        s.DebugWriteSentinel();
-                        _sidekickManager.Save( s );
+                        w.DebugWriteSentinel();
+                        var (lostTimedObjects, unusedPooledReminders, pooledReminderCount) = _timeManager.Save( monitor, w, trackLostObjects );
+                        w.DebugWriteSentinel();
+                        _sidekickManager.Save( w );
                         var data = new LostObjectTracker( this,
                                                           lostObservableObjects,
                                                           lostInternalObjects,
@@ -146,12 +149,17 @@ namespace CK.Observable
             }
         }
 
+<<<<<<< HEAD
         bool DoRealLoad( IActivityMonitor monitor, RewindableStream s, string expectedName, bool? startTimer )
+=======
+        bool DoRealLoad( IActivityMonitor monitor, BinaryDeserializer r, string expectedName, bool? startTimer )
+>>>>>>> develop-NetCore3
         {
             Debug.Assert( _lock.IsWriteLockHeld );
             _deserializeOrInitializing = true;
             try
             {
+<<<<<<< HEAD
                 var r = BinarySerialization.BinaryDeserializer.Deserialize( s, _deserializerContext, d => DeserializeAndGetTimerState( monitor, expectedName, d ) );
                 // Throw on error.
                 bool timerRunning = r.GetResult();
@@ -263,8 +271,13 @@ namespace CK.Observable
                 UnloadDomain( monitor, true );
                 //int version = r.ReadSmallInt32();
                 if( version < 5 || version > 8 )
+=======
+                UnloadDomain( monitor );
+                int version = r.ReadSmallInt32();
+                if( version < 5 || version > CurrentSerializationVersion )
+>>>>>>> develop-NetCore3
                 {
-                    throw new InvalidDataException( $"Version must be between 5 and 8. Version read: {version}." );
+                    throw new InvalidDataException( $"Version must be between 5 and {CurrentSerializationVersion}. Version read: {version}." );
                 }
                 r.SerializationVersion = version;
                 r.DebugReadMode();

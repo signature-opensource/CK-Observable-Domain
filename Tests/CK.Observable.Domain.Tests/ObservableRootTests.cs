@@ -5,6 +5,7 @@ using FluentAssertions;
 using System.IO;
 using CK.Core;
 using static CK.Testing.MonitorTestHelper;
+using CK.BinarySerialization;
 
 namespace CK.Observable.Domain.Tests
 {
@@ -70,9 +71,9 @@ namespace CK.Observable.Domain.Tests
                         d.Root.ProductInfos.Add( pInfo );
                     }
                 } );
-                var services = new SimpleServiceContainer();
-                services.Add<ObservableDomain>( new ObservableDomain<ApplicationState>(TestHelper.Monitor, nameof( serialization_tests ), startTimer: true ) );
-                BinarySerializer.IdempotenceCheck( d.Root, services );
+                var ctx = new BinarySerialization.BinaryDeserializerContext();
+                ctx.Services.Add<ObservableDomain>( new ObservableDomain<ApplicationState>(TestHelper.Monitor, nameof( serialization_tests ), startTimer: true ) );
+                BinarySerialization.BinarySerializer.IdempotenceCheck( d.Root, deserializerContext: ctx );
             }
         }
 
@@ -80,9 +81,9 @@ namespace CK.Observable.Domain.Tests
         {
             using( var s = new MemoryStream() )
             {
-                domain.Save( TestHelper.Monitor, s, leaveOpen: true );
+                domain.Save( TestHelper.Monitor, s );
                 s.Position = 0;
-                return new ObservableDomain<T>( TestHelper.Monitor, domain.DomainName, null, s);
+                return new ObservableDomain<T>( TestHelper.Monitor, domain.DomainName, null, RewindableStream.FromStream( s ) );
             }
         }
     }

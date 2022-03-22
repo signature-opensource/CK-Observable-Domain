@@ -31,10 +31,23 @@ namespace CK.Observable
         public static void Skip( IBinaryDeserializer r ) => ObservableDelegate.Skip( r );
 
         /// <summary>
+        /// Deserializes the <see cref="ObservableEventHandler"/>.
+        /// If the method has been suppressed, use the static helper <see cref="Skip(IBinaryDeserializer)"/>.
+        /// </summary>
+        /// <param name="d">The deserializer.</param>
+        public ObservableEventHandler( BinarySerialization.IBinaryDeserializer d ) => _handler = new ObservableDelegate( d );
+
+        /// <summary>
+        /// Helper that skips a serialized event to be used when an event is removed.
+        /// </summary>
+        /// <param name="r">The deserializer.</param>
+        public static void Skip( BinarySerialization.IBinaryDeserializer d ) => ObservableDelegate.Skip( d );
+
+        /// <summary>
         /// Serializes this <see cref="ObservableEventHandler"/>.
         /// </summary>
         /// <param name="w">The writer.</param>
-        public void Write( BinarySerializer w ) => _handler.Write( w );
+        public void Write( BinarySerialization.IBinarySerializer s ) => _handler.Write( s );
 
         /// <summary>
         /// Gets whether at least one handler is registered.

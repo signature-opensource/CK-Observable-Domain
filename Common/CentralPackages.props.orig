@@ -1,6 +1,9 @@
 <Project>
   <ItemGroup>
+<<<<<<< HEAD
     <PackageReference Update="CK.BinarySerialization.Sliced" Version="0.1.1-r" />
+=======
+>>>>>>> develop-NetCore3
     <PackageReference Update="CK.DeviceModel" Version="1.0.0-r11" />
     <PackageReference Update="CK.StObj.Model" Version="18.1.1" />
     <PackageReference Update="System.Threading.Channels" Version="4.7.1" />

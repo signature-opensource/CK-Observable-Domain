@@ -16,17 +16,12 @@ namespace CK.Observable
     /// on <see cref="ObservableObject"/> or any other objects managed by a domain.
     /// </para>
     /// </summary>
-    public interface IDestroyable
+    public interface IDestroyable : BinarySerialization.IDestroyable
     {
         /// <summary>
         /// Raised when this object is destroyed and will not be part of its <see cref="ObservableDomain"/> anymore.
         /// </summary>
         event SafeEventHandler<ObservableDomainEventArgs> Destroyed;
-
-        /// <summary>
-        /// Gets whether this object has been disposed.
-        /// </summary>
-        bool IsDestroyed { get; }
     }
 
     /// <summary>

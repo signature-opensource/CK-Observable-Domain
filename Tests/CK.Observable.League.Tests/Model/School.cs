@@ -1,3 +1,4 @@
+using CK.Core;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -12,15 +13,15 @@ namespace CK.Observable.League.Tests.Model
             Persons = new ObservableList<Person>();
         }
 
-        School( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+        School( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+                : base( BinarySerialization.Sliced.Instance )
         {
-            Persons = (ObservableList<Person>)r.ReadObject()!;
+            Persons = r.ReadObject<ObservableList<Person>>();
         }
 
-        void Write( BinarySerializer w )
+        public static void Write( BinarySerialization.IBinarySerializer w, in School o )
         {
-            w.WriteObject( Persons );
+            w.WriteObject( o.Persons );
         }
 
         public ObservableList<Person> Persons { get; }

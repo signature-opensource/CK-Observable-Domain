@@ -47,6 +47,11 @@ namespace CK.Observable
         public const int LockedDomainMonitorTimeout = 1000;
 
         /// <summary>
+        /// Current serialization version.
+        /// </summary>
+        public const int CurrentSerializationVersion = 8;
+
+        /// <summary>
         /// The length in bytes of the <see cref="SecretKey"/>.
         /// </summary>
         public const int DomainSecretKeyLength = 512;
@@ -61,14 +66,18 @@ namespace CK.Observable
         internal static ObservableDomain? CurrentThreadDomain;
 
         internal readonly IExporterResolver _exporters;
+        readonly ISerializerResolver _serializers;
         readonly IDeserializerResolver _deserializers;
         readonly TimeManager _timeManager;
         readonly SidekickManager _sidekickManager;
         readonly ObservableDomainPostActionExecutor _domainPostActionExecutor;
         internal readonly Random _random;
         Action<ISuccessfulTransactionEvent>? _inspectorEvent;
+<<<<<<< HEAD
         BinarySerializerContext _serializerContext;
         BinaryDeserializerContext _deserializerContext;
+=======
+>>>>>>> develop-NetCore3
 
         /// <summary>
         /// Maps property names to PropInfo that contains the property index.
@@ -566,7 +575,7 @@ namespace CK.Observable
                                  bool startTimer,
                                  IObservableDomainClient? client,
                                  IServiceProvider? serviceProvider = null )
-            : this(monitor, domainName, startTimer, client, true, serviceProvider, exporters: null, deserializers: null)
+            : this(monitor, domainName, startTimer, client, true, serviceProvider, exporters: null, serializers: null, deserializers: null)
         {
         }
 
@@ -591,8 +600,9 @@ namespace CK.Observable
                                  IServiceProvider? serviceProvider = null,
                                  bool? startTimer = null,
                                  IExporterResolver? exporters = null,
+                                 ISerializerResolver? serializers = null,
                                  IDeserializerResolver? deserializers = null )
-            : this(monitor, domainName, false, client, false, serviceProvider, exporters, deserializers)
+            : this(monitor, domainName, false, client, false, serviceProvider, exporters, serializers, deserializers)
         {
             using( monitor.OpenInfo( $"Initializing new domain '{domainName}' from stream." ) )
             {
@@ -619,11 +629,13 @@ namespace CK.Observable
                           bool callClientOnCreate,
                           IServiceProvider? serviceProvider,
                           IExporterResolver? exporters,
+                          ISerializerResolver? serializers,
                           IDeserializerResolver? deserializers)
         {
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
             DomainName = domainName ?? throw new ArgumentNullException( nameof( domainName ) );
             _exporters = exporters ?? ExporterRegistry.Default;
+            _serializers = serializers ?? SerializerRegistry.Default;
             _deserializers = deserializers ?? DeserializerRegistry.Default;
             DomainClient = client;
             _objects = new ObservableObject?[512];
@@ -645,11 +657,14 @@ namespace CK.Observable
             _saveLock = new Object();
             _domainMonitorLock = new SemaphoreSlim( 1, 1 );
             _random = new Random();
+<<<<<<< HEAD
             // The serializer context caches the serialization driver.
             _serializerContext = new BinarySerializerContext( BinarySerializer.DefaultSharedContext );
             // The deserialization context exposes the services, including this domain, to the deserializer. 
             _deserializerContext = new BinaryDeserializerContext( BinarySerialization.BinaryDeserializer.DefaultSharedContext, serviceProvider );
             _deserializerContext.Services.Add( this );
+=======
+>>>>>>> develop-NetCore3
 
             if( callClientOnCreate )
             {
@@ -1356,6 +1371,7 @@ namespace CK.Observable
         {
             try
             {
+<<<<<<< HEAD
                 if( !stream.IsValid )
                 {
                     using( monitor.OpenWarn( $"The stream may be from a previous serialization implementation (version: {stream.SerializerVersion}). Trying to read it with the legacy implementation." ) )
@@ -1384,6 +1400,12 @@ namespace CK.Observable
                 {
                     monitor.Trace( $"Stream's Serializer version is {stream.SerializerVersion}." );
                     bool mustStartTimer = DoRealLoad( monitor, stream, expectedLoadedName, startTimer );
+=======
+                using( var d = new BinaryDeserializer( stream, null, _deserializers, leaveOpen, encoding ) )
+                {
+                    d.Services.Add( this );
+                    var mustStartTimer = DoRealLoad( monitor, d, expectedLoadedName, startTimer );
+>>>>>>> develop-NetCore3
                     if( beforeTimer != null ) mustStartTimer = beforeTimer( mustStartTimer );
                     if( mustStartTimer )
                     {
@@ -1838,8 +1860,13 @@ namespace CK.Observable
                 s.Position = 0;
                 if( !domain.Load( monitor, RewindableStream.FromStream( s ), millisecondsTimeout: milliSecondsTimeout, startTimer: null ) ) throw new Exception( "Reload failed: Unable to acquire lock." );
 
+<<<<<<< HEAD
                 using var checker = BinarySerializer.CreateCheckedWriteStream( originalBytes );
                 if( !domain.Save( monitor, checker, millisecondsTimeout: milliSecondsTimeout, debugMode: useDebugMode ) ) throw new Exception( "Second Save failed: Unable to acquire lock." );
+=======
+                using var checker = new BinarySerializer.CheckedWriteStream( originalBytes );
+                if( !domain.Save( monitor, checker, true, millisecondsTimeout: milliSecondsTimeout, debugMode: useDebugMode ) ) throw new Exception( "Second Save failed: Unable to acquire lock." );
+>>>>>>> develop-NetCore3
                 return domain.CurrentLostObjectTracker!;
             }
         }

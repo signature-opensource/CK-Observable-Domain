@@ -1,3 +1,4 @@
+using CK.Core;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -20,21 +21,29 @@ namespace CK.Observable.League.Tests.MicroMachine
         {
         }
 
-        protected MachineConfiguration( RevertSerialization _ ) : base( _ ) { }
-
         MachineConfiguration( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+                : base( BinarySerialization.Sliced.Instance )
         {
             Debug.Assert( !IsDestroyed );
             IdentifyThingTimeout = r.ReadTimeSpan();
             AutoDestroyedTimeout = r.ReadTimeSpan();
         }
 
-        void Write( BinarySerializer w )
+        protected MachineConfiguration( BinarySerialization.Sliced _ ) : base( _ ) { }
+
+        MachineConfiguration( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+                : base( BinarySerialization.Sliced.Instance )
         {
             Debug.Assert( !IsDestroyed );
-            w.Write( IdentifyThingTimeout );
-            w.Write( AutoDestroyedTimeout );
+            IdentifyThingTimeout = r.Reader.ReadTimeSpan();
+            AutoDestroyedTimeout = r.Reader.ReadTimeSpan();
+        }
+
+        public static void Write( BinarySerialization.IBinarySerializer w, in MachineConfiguration o )
+        {
+            Debug.Assert( !o.IsDestroyed );
+            w.Writer.Write( o.IdentifyThingTimeout );
+            w.Writer.Write( o.AutoDestroyedTimeout );
         }
 
         public TimeSpan IdentifyThingTimeout { get; set; } = TimeSpan.FromMilliseconds( 200 );
