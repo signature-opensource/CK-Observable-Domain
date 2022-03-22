@@ -20,30 +20,50 @@ namespace CK.Core
         public static T SaveAndLoadObject<T>( this IBasicTestHelper @this, T o, Action<T,BinarySerializer> w, Func<BinaryDeserializer,T> r, ISerializerResolver serializers = null, IDeserializerResolver deserializers = null )
         {
             using( var s = new MemoryStream() )
-            using( var writer = new BinarySerializer( s, serializers, true ) )
+            using( var writer = BinarySerialization.BinarySerializer.Create( s, serializerContext ?? new BinarySerializerContext() ) )
             {
+                writer.DebugWriteMode( true );
+
+                var o1 = new object();
+                if( CheckObjectReferences )
+                {
+                    writer.WriteAny( o1 );
+                }
+                
                 writer.DebugWriteSentinel();
                 w( o, writer );
                 writer.DebugWriteSentinel();
                 s.Position = 0;
-                using( var reader = new BinaryDeserializer( s, null, deserializers ) )
+                return BinarySerialization.BinaryDeserializer.Deserialize( s, deserializerContext ?? new BinaryDeserializerContext(), d =>
                 {
-                    reader.SerializationVersion = ObservableDomain.CurrentSerializationVersion;
-                    reader.DebugCheckSentinel();
-                    T result = r( reader );
-                    reader.DebugCheckSentinel();
+                    d.DebugReadMode();
+
+                        r1 = d.ReadAny();
+
+                    d.DebugCheckSentinel();
+                    T result = r( d );
+                    d.DebugCheckSentinel();
+                        d.ReadAny().Should().BeSameAs( r1 );
+                        var r2 = d.ReadAny();
+                        d.ReadAny().Should().BeSameAs( r2 );
                     return result;
-                }
+                } ).GetResult();
             }
         }
 
         public static object SaveAndLoadViaStandardSerialization( this IBasicTestHelper @this, object o )
         {
             using( var s = new MemoryStream() )
+            using( var writer = BinarySerialization.BinarySerializer.Create( s, serializerContext ?? new BinarySerializerContext() ) )
             {
                 new BinaryFormatter().Serialize( s, o );
                 s.Position = 0;
-                return new BinaryFormatter().Deserialize( s );
+                BinarySerialization.BinaryDeserializer.Deserialize( s, deserializerContext ?? new BinaryDeserializerContext(), d =>
+                    d.DebugCheckSentinel();
+                    r( d );
+                    d.DebugCheckSentinel();
+
+                } ).ThrowOnInvalidResult();
             }
         }
 
@@ -87,12 +107,12 @@ namespace CK.Core
         {
             using( var s = new MemoryStream() )
             {
-                domain.Save( m, s, leaveOpen: true, debugMode: debugMode );
+                domain.Save( m, s, debugMode: debugMode );
                 if( !skipDomainDispose ) domain.Dispose();
                 System.Threading.Thread.Sleep( pauseMilliseconds );
                 var d = new ObservableDomain( m, renamed ?? domain.DomainName, false, serviceProvider );
                 s.Position = 0;
-                d.Load( m, s, domain.DomainName, startTimer: startTimer );
+                d.Load( m, RewindableStream.FromStream( s ), domain.DomainName, startTimer: startTimer );
                 return d;
             }
         }

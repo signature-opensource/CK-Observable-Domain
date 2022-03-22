@@ -1,3 +1,4 @@
+using CK.BinarySerialization;
 using CK.Core;
 using CK.Text;
 using System;
@@ -17,9 +18,7 @@ namespace CK.Observable
         /// <inheritdoc/>
         public bool Save( IActivityMonitor monitor,
                           Stream stream,
-                          bool leaveOpen = false,
                           bool debugMode = false,
-                          Encoding? encoding = null,
                           int millisecondsTimeout = -1 )
         {
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
@@ -41,7 +40,7 @@ namespace CK.Observable
                 destroyedRefList.Add( o );
             }
 
-            using( var w = new BinarySerializer( stream, _serializers, leaveOpen, encoding, Track ) )
+            using( var s = BinarySerialization.BinarySerializer.Create( stream, _serializerContext ) )
             {
                 bool isWrite = _lock.IsWriteLockHeld;
                 bool isRead = _lock.IsReadLockHeld;
@@ -146,13 +145,105 @@ namespace CK.Observable
             }
         }
 
-        bool DoRealLoad( IActivityMonitor monitor, BinaryDeserializer r, string expectedName, bool? startTimer )
+        bool DoRealLoad( IActivityMonitor monitor, RewindableStream s, string expectedName, bool? startTimer )
         {
             Debug.Assert( _lock.IsWriteLockHeld );
             _deserializeOrInitializing = true;
             try
             {
-                UnloadDomain( monitor );
+                var r = BinarySerialization.BinaryDeserializer.Deserialize( s, _deserializerContext, d => DeserializeAndGetTimerState( monitor, expectedName, d ) );
+                // Throw on error.
+                bool timerRunning = r.GetResult();
+                if( startTimer.HasValue ) timerRunning = startTimer.Value;
+                if( !_sidekickManager.CreateWaitingSidekicks( monitor, ex => { }, true ) )
+                {
+                    var msg = "At least one critical error occurred while activating sidekicks. The error should be investigated since this may well be a blocking error.";
+                    if( timerRunning )
+                    {
+                        timerRunning = false;
+                        msg += " The TimeManager (that should have ran) has been stopped.";
+                    }
+                    monitor.Error( msg );
+                }
+                return timerRunning;
+            }
+            finally
+            {
+                _deserializeOrInitializing = false;
+            }
+        }
+
+        bool DeserializeAndGetTimerState( IActivityMonitor monitor, string expectedName, BinarySerialization.IBinaryDeserializer d )
+        {
+            UnloadDomain( monitor, !d.StreamInfo.SecondPass );
+
+            // This is where specialized typed ObservableDomain bind their roots:
+            // this must be called before any PostActions added by the objects.
+            d.PostActions.Add( OnLoaded );
+
+            d.Reader.ReadByte(); // Local version.
+            d.DebugReadMode();
+            _currentObjectUniquifier = d.Reader.ReadInt32();
+            _domainSecret = d.Reader.ReadBytes( DomainSecretKeyLength );
+            var loaded = d.Reader.ReadString();
+            if( loaded != expectedName ) throw new InvalidDataException( $"Domain name mismatch: loading domain named '{loaded}' but expected '{expectedName}'." );
+            _transactionSerialNumber = d.Reader.ReadInt32();
+            _transactionCommitTimeUtc = d.Reader.ReadDateTime();
+            _actualObjectCount = d.Reader.ReadInt32();
+            d.DebugCheckSentinel();
+            // Read the new free list.
+            Debug.Assert( _freeList.Count == 0 );
+            int count = d.Reader.ReadNonNegativeSmallInt32();
+            while( --count >= 0 )
+            {
+                _freeList.Add( d.Reader.ReadNonNegativeSmallInt32() );
+            }
+            d.DebugCheckSentinel();
+            // Read the properties index.
+            count = d.Reader.ReadNonNegativeSmallInt32();
+            for( int iProp = 0; iProp < count; iProp++ )
+            {
+                string name = d.Reader.ReadString();
+                var p = new ObservablePropertyChangedEventArgs( iProp, name );
+                _properties.Add( name, p );
+                _propertiesByIndex.Add( p );
+            }
+            d.DebugCheckSentinel();
+            // Resize _objects array.
+            _objectsListCount = count = _actualObjectCount + _freeList.Count;
+            while( _objectsListCount > _objects.Length )
+            {
+                Array.Resize( ref _objects, _objects.Length * 2 );
+            }
+            // Reading roots first (including Internal and Timed objects).
+            int rootCount = d.Reader.ReadNonNegativeSmallInt32();
+            for( int i = 0; i < rootCount; ++i )
+            {
+                _roots.Add( d.ReadObject<ObservableRootObject>() );
+            }
+            // Reads all the objects. 
+            for( int i = 0; i < count; ++i )
+            {
+                _objects[i] = d.ReadNullableObject<ObservableObject>();
+                Debug.Assert( _objects[i] == null || !_objects[i]!.IsDestroyed );
+            }
+            // Reading InternalObjects.
+            d.DebugCheckSentinel();
+            count = d.Reader.ReadNonNegativeSmallInt32();
+            while( --count >= 0 )
+            {
+                var o = d.ReadObject<InternalObject>();
+                Debug.Assert( !o.IsDestroyed );
+                Register( o );
+            }
+            // Reading Timed events.
+            d.DebugCheckSentinel();
+            bool timerRunning = _timeManager.Load( monitor, d );
+            d.DebugCheckSentinel();
+            _sidekickManager.Load( d );
+            return timerRunning;
+        }
+                UnloadDomain( monitor, true );
                 int version = r.ReadSmallInt32();
                 if( version < 5 || version > CurrentSerializationVersion )
                 {
@@ -276,17 +367,22 @@ namespace CK.Observable
         /// or to be forgotten.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
-        void UnloadDomain( IActivityMonitor monitor )
+        /// <param name="callUnload">Whether <see cref="ObservableObject.Unload(bool)"/> and
+        /// <see cref="InternalObject.Unload(bool)"/> must be called.</param>
+        void UnloadDomain( IActivityMonitor monitor, bool callUnload )
         {
             Debug.Assert( _lock.IsWriteLockHeld );
-            // Call Unload( false ) on all objects.
-            for( int i = 0; i < _objectsListCount; ++i )
+            if( callUnload )
             {
-                var o = _objects[i];
-                if( o != null )
+                // Call Unload( false ) on all objects.
+                for( int i = 0; i < _objectsListCount; ++i )
                 {
-                    Debug.Assert( !o.IsDestroyed );
-                    o.Unload( false );
+                    var o = _objects[i];
+                    if( o != null )
+                    {
+                        Debug.Assert( !o.IsDestroyed );
+                        o.Unload( false );
+                    }
                 }
             }
             // Empty _objects completely.
@@ -302,11 +398,14 @@ namespace CK.Observable
             _sidekickManager.Clear( monitor );
 
             // Clears any internal objects.
-            var internalObj = _firstInternalObject;
-            while( internalObj != null )
+            if( callUnload )
             {
-                internalObj.Unload( false );
-                internalObj = internalObj.Next;
+                var internalObj = _firstInternalObject;
+                while( internalObj != null )
+                {
+                    internalObj.Unload( false );
+                    internalObj = internalObj.Next;
+                }
             }
             _firstInternalObject = _lastInternalObject = null;
             _internalObjectCount = 0;
@@ -317,6 +416,9 @@ namespace CK.Observable
             // Clears and read the properties index.
             _properties.Clear();
             _propertiesByIndex.Clear();
+
+            // Clears the free list.
+            _freeList.Clear();
 
             _currentObjectUniquifier = 0;
         }

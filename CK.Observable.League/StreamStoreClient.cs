@@ -1,3 +1,4 @@
+using CK.BinarySerialization;
 using CK.Core;
 using System;
 using System.Collections.Generic;
@@ -93,7 +94,7 @@ namespace CK.Observable.League
             CreateSnapshot( c.Monitor, c.Domain, false, c.HasSaveCommand );
             // We save the snapshot if we must (and there is no compensation for this of course).
             bool doHouseKeeping = c.HasSaveCommand;
-            if( c.HasSaveCommand || c.CommitTimeUtc >= _nextSave ) c.PostActions.Add( ctx => SaveSnapshotAsync( ctx.Monitor, doHouseKeeping ) );
+            if( doHouseKeeping || c.CommitTimeUtc >= _nextSave ) c.PostActions.Add( ctx => SaveSnapshotAsync( ctx.Monitor, doHouseKeeping ) );
             Next?.OnTransactionCommit( c );
         }
 
@@ -112,14 +113,14 @@ namespace CK.Observable.League
         /// <param name="stream">The stream from which the domain must be deserialized.</param>
         /// <param name="startTimer">Whether to start the domain's <see cref="TimeManager"/>.</param>
         /// <returns>The deserialized domain.</returns>
-        protected override sealed ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, bool? startTimer )
+        protected override sealed ObservableDomain DeserializeDomain( IActivityMonitor monitor, RewindableStream stream, bool? startTimer )
         {
             var d = DoDeserializeDomain( monitor, stream, startTimer );
             _eventCollector.CollectEvent( d, clearEvents: false );
             return d;
         }
 
-        protected abstract ObservableDomain DoDeserializeDomain( IActivityMonitor monitor, Stream stream, bool? startTimer );
+        protected abstract ObservableDomain DoDeserializeDomain( IActivityMonitor monitor, RewindableStream stream, bool? startTimer );
 
         /// <summary>
         /// Initializes the domain from the store or initializes the store with a new domain.

@@ -1,3 +1,4 @@
+using CK.BinarySerialization;
 using CK.Core;
 using System;
 using System.IO;
@@ -6,9 +7,9 @@ namespace CK.Observable.Domain.Tests.Clients
 {
     public class TestMemoryTransactionProviderClient : MemoryTransactionProviderClient
     {
-        private readonly Stream _domainCreatedStream;
+        private readonly MemoryStream? _domainCreatedStream;
 
-        public TestMemoryTransactionProviderClient( Stream domainCreatedStream = null )
+        public TestMemoryTransactionProviderClient( MemoryStream? domainCreatedStream = null )
         {
             _domainCreatedStream = domainCreatedStream;
         }
@@ -17,7 +18,7 @@ namespace CK.Observable.Domain.Tests.Clients
         {
             if( _domainCreatedStream != null )
             {
-                d.Load( monitor, _domainCreatedStream );
+                d.Load( monitor, RewindableStream.FromStream( _domainCreatedStream ) );
             }
             base.OnDomainCreated( monitor, d, ref startTimer );
         }
@@ -30,7 +31,7 @@ namespace CK.Observable.Domain.Tests.Clients
             return ms;
         }
 
-        protected override ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, bool? startTimer )
+        protected override ObservableDomain DeserializeDomain( IActivityMonitor monitor, RewindableStream stream, bool? startTimer )
         {
             throw new NotImplementedException( "This is not called since LoadOrCreateAndInitializeSnapshot is not called here." );
         }
