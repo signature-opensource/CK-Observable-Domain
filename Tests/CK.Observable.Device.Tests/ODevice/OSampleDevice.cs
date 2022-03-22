@@ -1,4 +1,3 @@
-using CK.Core;
 using CK.DeviceModel;
 using System;
 using System.Collections.Generic;
@@ -21,13 +20,13 @@ namespace CK.Observable.Device.Tests
             Domain.EnsureSidekicks();
         }
 
-        OSampleDevice( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
-                : base( BinarySerialization.Sliced.Instance )
+        OSampleDevice( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
         {
         }
 #pragma warning restore CS8618
 
-        public static void Write( BinarySerialization.IBinarySerializer w, in OSampleDevice o )
+        void Write( BinarySerializer w )
         {
         }
 

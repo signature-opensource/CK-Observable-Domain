@@ -1,9 +1,8 @@
-using CK.Core;
 using System.Collections.Generic;
 
 namespace CK.Observable.Domain.Tests.Sample
 {
-    [SerializationVersion(0)]
+    [SerializationVersionAttribute(0)]
     public sealed class Garage : ObservableObject
     {
         readonly ObservableDictionary<Car, Car> _replacementCars;
@@ -15,21 +14,21 @@ namespace CK.Observable.Domain.Tests.Sample
             _replacementCars = new ObservableDictionary<Car, Car>();
         }
 
-        Garage( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
-                : base( BinarySerialization.Sliced.Instance )
+        Garage( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
         {
-            CompanyName = r.Reader.ReadNullableString();
-            Employees = r.ReadObject<ObservableList<Person>>();
-            Cars = r.ReadObject<ObservableList<Car>>();
-            _replacementCars = r.ReadObject<ObservableDictionary<Car, Car>>();
+            CompanyName = r.ReadNullableString();
+            Employees = (ObservableList<Person>)r.ReadObject();
+            Cars = (ObservableList<Car>)r.ReadObject();
+            _replacementCars = (ObservableDictionary<Car, Car>)r.ReadObject();
         }
 
-        public static void Write( BinarySerialization.IBinarySerializer s, in Garage o )
+        void Write( IBinarySerializer s )
         {
-            s.Writer.WriteNullableString( o.CompanyName );
-            s.WriteObject( o.Employees );
-            s.WriteObject( o.Cars );
-            s.WriteObject( o._replacementCars );
+            s.WriteNullableString( CompanyName );
+            s.WriteObject( Employees );
+            s.WriteObject( Cars );
+            s.WriteObject( _replacementCars );
         }
 
         public string CompanyName { get; set; }

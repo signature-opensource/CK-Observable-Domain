@@ -1,5 +1,3 @@
-using CK.BinarySerialization;
-using CK.Core;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -8,11 +6,10 @@ using System.Linq;
 namespace CK.Observable
 {
     /// <summary>
-    /// This must not be used anymore: this doesn't bring much to the table. 
-    /// So this is NOT serializable anymore: OwningSet must be reverted to simple ObservableSet.
+    /// Specializes a <see cref="ObservableSet{T}"/> (where T must be <see cref="IDestroyableObject"/>)
+    /// that destroys its items when destroyed, .
     /// </summary>
     /// <typeparam name="T">Item type.</typeparam>
-    [Obsolete( "This must not be used anymore: this doesn't bring much to the table. So this is NOT serializable anymore: OwningSet must be reverted to simple ObservableSet." )]
     [SerializationVersion( 0 )]
     public class OwningSet<T> : ObservableSet<T> where T : IDestroyableObject
     {
@@ -27,15 +24,27 @@ namespace CK.Observable
         /// Specialized deserialization constructor for specialized classes.
         /// </summary>
         /// <param name="_">Unused parameter.</param>
-        protected OwningSet( Sliced _ ) : base( _ ) { }
+        protected OwningSet( RevertSerialization _ ) : base( _ ) { }
 
-        /// Legacy only and read only, no more Write support.
-        OwningSet( CK.Observable.IBinaryDeserializer r, TypeReadInfo info )
-                : base( Sliced.Instance )
+        /// <summary>
+        /// Deserialization constructor.
+        /// </summary>
+        /// <param name="r">The deserializer.</param>
+        /// <param name="info">The type info.</param>
+        OwningSet( IBinaryDeserializer r, TypeReadInfo info )
+                : base( RevertSerialization.Default )
         {
             AutoDestroyItems = r.ReadBoolean();
         }
 
+        /// <summary>
+        /// The serialization method.
+        /// </summary>
+        /// <param name="w">The target binary serializer.</param>
+        void Write( BinarySerializer w )
+        {
+            w.Write( AutoDestroyItems );
+        }
 
         /// <summary>
         /// Gets or sets whether this owning list should destroy its items.

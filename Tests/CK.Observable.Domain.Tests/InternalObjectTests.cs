@@ -23,17 +23,17 @@ namespace CK.Observable.Domain.Tests
                 Message = "I'm Invisible!";
             }
 
-            Invisible( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
-                : base( BinarySerialization.Sliced.Instance )
+            Invisible( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
             {
-                Message = d.Reader.ReadString();
-                NoWay = d.Reader.ReadInt32();
+                Message = r.ReadString();
+                NoWay = r.ReadInt32();
             }
 
-            public static void Write( BinarySerialization.IBinarySerializer s, in Invisible o )
+            void Write( BinarySerializer w )
             {
-                s.Writer.Write( o.Message );
-                s.Writer.Write( o.NoWay );
+                w.Write( Message );
+                w.Write( NoWay );
             }
 
             public int NoWay { get; set; }
@@ -50,19 +50,19 @@ namespace CK.Observable.Domain.Tests
                 Message = "I'm Visible!";
             }
 
-            Visible( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
-                : base( BinarySerialization.Sliced.Instance )
+            Visible( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
             {
-                NotVisible = d.ReadNullableObject<Invisible>();
-                Yes = d.Reader.ReadInt32();
-                Message = d.Reader.ReadNullableString();
+                NotVisible = (Invisible?)r.ReadObject();
+                Yes = r.ReadInt32();
+                Message = r.ReadNullableString();
             }
 
-            public static void Write( BinarySerialization.IBinarySerializer s, in Visible o )
+            void Write( BinarySerializer w )
             {
-                s.WriteNullableObject( o.NotVisible );
-                s.Writer.Write( o.Yes );
-                s.Writer.WriteNullableString( o.Message );
+                w.WriteObject( NotVisible );
+                w.Write( Yes );
+                w.WriteNullableString( Message );
             }
 
             public Invisible? NotVisible { get; set; }

@@ -1,4 +1,3 @@
-using CK.Core;
 using CK.DeviceModel;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -34,34 +33,22 @@ namespace CK.Observable.Device
             InternalDevices = new ObservableList<AvailableDeviceInfo>();
         }
 
-        #region Old Deserialization
-
-        ObservableDeviceHostObject( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( BinarySerialization.Sliced.Instance )
-        {
-            InternalDevices = new ObservableList<AvailableDeviceInfo>();
-        }
-#pragma warning restore CS8618 // Non-nullable field is uninitialized. Consider declaring as nullable.
-        #endregion
-
-        #region New serialization
         /// <summary>
         /// Specialized deserialization constructor for specialized classes.
         /// </summary>
         /// <param name="_">Unused parameter.</param>
-        protected ObservableDeviceHostObject( BinarySerialization.Sliced _ ) : base( _ ) { }
+        protected ObservableDeviceHostObject( RevertSerialization _ ) : base( _ ) { }
 
-        ObservableDeviceHostObject( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
-                : base( BinarySerialization.Sliced.Instance )
+        ObservableDeviceHostObject( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
         {
             InternalDevices = new ObservableList<AvailableDeviceInfo>();
         }
+#pragma warning restore CS8618 // Non-nullable field is uninitialized. Consider declaring as nullable.
 
-        public static void Write( BinarySerialization.IBinarySerializer w, in ObservableDeviceHostObject o )
+        void Write( BinarySerializer w )
         {
         }
-
-        #endregion 
 
         /// <summary>
         /// Gets an observable list of devices that are managed by the device host.

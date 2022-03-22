@@ -1,5 +1,3 @@
-using CK.BinarySerialization;
-using CK.Core;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -13,7 +11,6 @@ namespace CK.Observable
     /// </summary>
     /// <typeparam name="TKey">The type of the key.</typeparam>
     /// <typeparam name="TValue">The type of the value.</typeparam>
-    [Obsolete( "This must not be used anymore: this doesn't bring much to the table. So this is NOT serializable anymore: OwningDictionary must be reverted to simple ObservableDictionary." )]
     [SerializationVersion( 0 )]
     public class OwningDictionary<TKey,TValue> : ObservableDictionary<TKey,TValue>
         where TKey : notnull
@@ -30,13 +27,26 @@ namespace CK.Observable
         /// Specialized deserialization constructor for specialized classes.
         /// </summary>
         /// <param name="_">Unused parameter.</param>
-        protected OwningDictionary( Sliced _ ) : base( _ ) { }
+        protected OwningDictionary( RevertSerialization _ ) : base( _ ) { }
 
-        /// Legacy only and read only, no more Write support.
-        OwningDictionary( CK.Observable.IBinaryDeserializer r, TypeReadInfo info )
-                : base( Sliced.Instance )
+        /// <summary>
+        /// Deserialization constructor.
+        /// </summary>
+        /// <param name="r">The deserializer.</param>
+        /// <param name="info">The type info.</param>
+        OwningDictionary( IBinaryDeserializer r, TypeReadInfo info )
+                : base( RevertSerialization.Default )
         {
             AutoDestroyValues = r.ReadBoolean();
+        }
+
+        /// <summary>
+        /// The serialization method.
+        /// </summary>
+        /// <param name="w">The target binary serializer.</param>
+        void Write( BinarySerializer w )
+        {
+            w.Write( AutoDestroyValues );
         }
 
         /// <summary>

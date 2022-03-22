@@ -15,9 +15,9 @@ namespace CK.Observable.League.Tests
         public void coordinator_serialization()
         {
             using var d = new ObservableDomain<Coordinator>(TestHelper.Monitor, String.Empty, startTimer: true );
-            var ctx = new BinarySerialization.BinaryDeserializerContext();
-            ctx.Services.Add<ObservableDomain>( new ObservableDomain<Coordinator>(TestHelper.Monitor, String.Empty, startTimer: true ) );
-            BinarySerialization.BinarySerializer.IdempotenceCheck( d.Root, deserializerContext: ctx );
+            var services = new SimpleServiceContainer();
+            services.Add<ObservableDomain>( new ObservableDomain<Coordinator>(TestHelper.Monitor, String.Empty, startTimer: true ) );
+            BinarySerializer.IdempotenceCheck( d.Root, services );
         }
 
         [Test]
@@ -66,13 +66,13 @@ namespace CK.Observable.League.Tests
                 ++ContructorCount;
             }
 
-            InstantiationTracker( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
-                : base( BinarySerialization.Sliced.Instance )
+            InstantiationTracker( IBinaryDeserializer r, TypeReadInfo info )
+                : base( RevertSerialization.Default )
             {
                 ++DeserializationCount;
             }
 
-            public static void Write( BinarySerialization.IBinarySerializer w, in InstantiationTracker o )
+            void Write( BinarySerializer w )
             {
                 ++WriteCount;
             }
@@ -140,15 +140,15 @@ namespace CK.Observable.League.Tests
             {
             }
 
-            WriteCounter( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
-                : base( BinarySerialization.Sliced.Instance )
+            WriteCounter( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
             {
-                WriteCount = r.Reader.ReadInt32();
+                WriteCount = r.ReadInt32();
             }
 
-            public static void Write( BinarySerialization.IBinarySerializer w, in WriteCounter o )
+            void Write( BinarySerializer w )
             {
-                w.Writer.Write( ++o.WriteCount );
+                w.Write( ++WriteCount );
             }
 
             public int WriteCount { get; private set; }

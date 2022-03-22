@@ -9,7 +9,7 @@ namespace CK.Observable
     /// </summary>
     /// <typeparam name="TKey">Type of the key.</typeparam>
     /// <typeparam name="TValue">Type of the value.</typeparam>
-    public interface IObservableReadOnlyDictionary<TKey, TValue> : IReadOnlyDictionary<TKey, TValue> where TKey : notnull
+    public interface IObservableReadOnlyDictionary<TKey, TValue> : IReadOnlyDictionary<TKey, TValue>
     {
         /// <summary>
         /// Raised when an existing item has been updated by <see cref="IDictionary{TKey, TValue}.this[TKey]"/> to a different value.

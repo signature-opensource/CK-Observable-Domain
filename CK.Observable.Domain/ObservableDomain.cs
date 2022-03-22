@@ -47,6 +47,11 @@ namespace CK.Observable
         public const int LockedDomainMonitorTimeout = 1000;
 
         /// <summary>
+        /// Current serialization version.
+        /// </summary>
+        public const int CurrentSerializationVersion = 8;
+
+        /// <summary>
         /// The length in bytes of the <see cref="SecretKey"/>.
         /// </summary>
         public const int DomainSecretKeyLength = 512;
@@ -61,6 +66,7 @@ namespace CK.Observable
         internal static ObservableDomain? CurrentThreadDomain;
 
         internal readonly IExporterResolver _exporters;
+        readonly ISerializerResolver _serializers;
         readonly IDeserializerResolver _deserializers;
         readonly TimeManager _timeManager;
         readonly SidekickManager _sidekickManager;
@@ -566,7 +572,7 @@ namespace CK.Observable
                                  bool startTimer,
                                  IObservableDomainClient? client,
                                  IServiceProvider? serviceProvider = null )
-            : this(monitor, domainName, startTimer, client, true, serviceProvider, exporters: null, deserializers: null)
+            : this(monitor, domainName, startTimer, client, true, serviceProvider, exporters: null, serializers: null, deserializers: null)
         {
         }
 
@@ -591,8 +597,9 @@ namespace CK.Observable
                                  IServiceProvider? serviceProvider = null,
                                  bool? startTimer = null,
                                  IExporterResolver? exporters = null,
+                                 ISerializerResolver? serializers = null,
                                  IDeserializerResolver? deserializers = null )
-            : this(monitor, domainName, false, client, false, serviceProvider, exporters, deserializers)
+            : this(monitor, domainName, false, client, false, serviceProvider, exporters, serializers, deserializers)
         {
             using( monitor.OpenInfo( $"Initializing new domain '{domainName}' from stream." ) )
             {
@@ -619,11 +626,13 @@ namespace CK.Observable
                           bool callClientOnCreate,
                           IServiceProvider? serviceProvider,
                           IExporterResolver? exporters,
+                          ISerializerResolver? serializers,
                           IDeserializerResolver? deserializers)
         {
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
             DomainName = domainName ?? throw new ArgumentNullException( nameof( domainName ) );
             _exporters = exporters ?? ExporterRegistry.Default;
+            _serializers = serializers ?? SerializerRegistry.Default;
             _deserializers = deserializers ?? DeserializerRegistry.Default;
             DomainClient = client;
             _objects = new ObservableObject?[512];

@@ -23,7 +23,7 @@ namespace CK.Observable
                                         IReadOnlyList<ObservableObject>? observables,
                                         IReadOnlyList<InternalObject>? internals,
                                         IReadOnlyList<ObservableTimedEventBase>? timed,
-                                        IReadOnlyList<BinarySerialization.IDestroyable>? refDestroyed,
+                                        IReadOnlyList<IDestroyable>? refDestroyed,
                                         int unusedPooledReminders,
                                         int pooledReminderCount )
             {
@@ -31,7 +31,7 @@ namespace CK.Observable
                 UnreacheableObservables = observables ?? Array.Empty<ObservableObject>();
                 UnreacheableInternals = internals ?? Array.Empty<InternalObject>();
                 UnreacheableTimedObjects = timed ?? Array.Empty<ObservableTimedEventBase>();
-                ReferencedDestroyed = refDestroyed ?? Array.Empty<BinarySerialization.IDestroyable>();
+                ReferencedDestroyed = refDestroyed ?? Array.Empty<IDestroyable>();
                 UnusedPooledReminderCount = unusedPooledReminders;
                 PooledReminderCount = pooledReminderCount;
             }
@@ -45,7 +45,7 @@ namespace CK.Observable
             /// Gets a list of <see cref="IDestroyable"/> that are destroyed but are
             /// still referenced from non destroyed objects.
             /// </summary>
-            public IReadOnlyList<BinarySerialization.IDestroyable> ReferencedDestroyed { get; }
+            public IReadOnlyList<IDestroyable> ReferencedDestroyed { get; }
 
             /// <summary>
             /// Gets a list of non destroyed <see cref="ObservableObject"/> that are no more reachable

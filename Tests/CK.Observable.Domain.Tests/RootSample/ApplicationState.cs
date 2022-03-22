@@ -1,5 +1,3 @@
-using CK.Core;
-
 namespace CK.Observable.Domain.Tests.RootSample
 {
     [SerializationVersion(0)]
@@ -23,23 +21,23 @@ namespace CK.Observable.Domain.Tests.RootSample
             p3.Destroy();
         }
 
-        ApplicationState( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
-                : base( BinarySerialization.Sliced.Instance )
+        ApplicationState( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
         {
-            ToDoNumbers = r.ReadObject<ObservableList<int>>();
-            Products = r.ReadObject<ObservableDictionary<string, ProductInfo>>();
-            ProductStateList = r.ReadObject<ObservableList<Product>>();
-            CurrentProductState = r.ReadNullableObject<Product>();
-            ProductInfos = r.ReadObject<ObservableList<ProductInfo>>();
+            ToDoNumbers = (ObservableList<int>)r.ReadObject();
+            Products = (ObservableDictionary<string, ProductInfo>)r.ReadObject();
+            ProductStateList = (ObservableList<Product>)r.ReadObject();
+            CurrentProductState = (Product)r.ReadObject();
+            ProductInfos = (ObservableList<ProductInfo>)r.ReadObject();
         }
 
-        public static void Write( BinarySerialization.IBinarySerializer s, in ApplicationState o )
+        void Write( IBinarySerializer s )
         {
-            s.WriteObject( o.ToDoNumbers );
-            s.WriteObject( o.Products );
-            s.WriteObject( o.ProductStateList );
-            s.WriteNullableObject( o.CurrentProductState );
-            s.WriteObject( o.ProductInfos );
+            s.WriteObject( ToDoNumbers );
+            s.WriteObject( Products );
+            s.WriteObject( ProductStateList );
+            s.WriteObject( CurrentProductState );
+            s.WriteObject( ProductInfos );
         }
 
         public ObservableList<int> ToDoNumbers { get; }
@@ -50,7 +48,7 @@ namespace CK.Observable.Domain.Tests.RootSample
 
         public ObservableList<Product> ProductStateList { get; }
 
-        public Product? CurrentProductState { get; set; }
+        public Product CurrentProductState { get; set; }
 
         public void SkipToNextProduct()
         {

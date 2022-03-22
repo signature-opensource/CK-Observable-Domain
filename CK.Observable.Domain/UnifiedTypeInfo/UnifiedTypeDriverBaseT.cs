@@ -8,7 +8,7 @@ namespace CK.Observable
     /// Base class that implements <see cref="IUnifiedTypeDriver{T}"/>.
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public abstract class UnifiedTypeDriverBase<T> : IUnifiedTypeDriver<T>, IDeserializationDriver<T>, IObjectExportTypeDriver<T>
+    public abstract class UnifiedTypeDriverBase<T> : IUnifiedTypeDriver<T>, ITypeSerializationDriver<T>, IDeserializationDriver<T>, IObjectExportTypeDriver<T>
     {
         readonly bool _isFinalType;
 
@@ -22,6 +22,11 @@ namespace CK.Observable
         }
 
         /// <summary>
+        /// Gets this unified driver as the serialization driver.
+        /// </summary>
+        public ITypeSerializationDriver<T> SerializationDriver => this;
+
+        /// <summary>
         /// Gets this unified driver as the deserialization driver.
         /// </summary>
         public IDeserializationDriver<T> DeserializationDriver => this;
@@ -30,6 +35,8 @@ namespace CK.Observable
         /// Gets this unified driver as the export driver.
         /// </summary>
         public IObjectExportTypeDriver<T> ExportDriver => this;
+
+        ITypeSerializationDriver IUnifiedTypeDriver.SerializationDriver => this;
 
         IDeserializationDriver IUnifiedTypeDriver.DeserializationDriver => this;
 
@@ -44,6 +51,12 @@ namespace CK.Observable
 
         IReadOnlyList<PropertyInfo> IObjectExportTypeDriver.ExportableProperties => Array.Empty<PropertyInfo>();
 
+        bool ITypeSerializationDriver.IsFinalType => _isFinalType;
+
+        void ITypeSerializationDriver.WriteTypeInformation( BinarySerializer s ) => s.WriteSimpleType( typeof( T ) );
+
+        void ITypeSerializationDriver.WriteData( BinarySerializer w, object o ) => WriteData( w, (T)o );
+
         object? IDeserializationDriver.ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => ReadInstance( r, readInfo, mustRead );
 
         void IObjectExportTypeDriver.Export( object o, int num, ObjectExporter exporter ) => Export( (T)o, num, exporter );
@@ -57,6 +70,13 @@ namespace CK.Observable
         /// <param name="num">The reference number for this object. -1 for value type.</param>
         /// <param name="exporter">The exporter.</param>
         public abstract void Export( T o, int num, ObjectExporter exporter );
+
+        /// <summary>
+        /// Writes the object's data.
+        /// </summary>
+        /// <param name="w">The serializer.</param>
+        /// <param name="o">The object instance.</param>
+        public abstract void WriteData( BinarySerializer w, T o );
 
         /// <summary>
         /// Reads the data and returns the value or instantiates a new object.

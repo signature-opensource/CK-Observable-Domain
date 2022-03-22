@@ -19,30 +19,32 @@ namespace CK.Observable.League.Tests.MicroMachine
         }
 
 #pragma warning disable CS8618 // Non-nullable field is uninitialized. Consider declaring as nullable.
-        protected MachineThing( BinarySerialization.Sliced _ ) : base( _ ) { }
+        protected MachineThing( RevertSerialization _ ) : base( _ ) { }
 #pragma warning restore CS8618 // Non-nullable field is uninitialized. Consider declaring as nullable.
 
-        MachineThing( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
-                : base( BinarySerialization.Sliced.Instance )
+        MachineThing( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
         {
             Debug.Assert( !IsDestroyed );
-            Machine = r.ReadObject<Machine>();
-            TemporaryId = r.Reader.ReadSmallInt32( 1 );
-            _startRead = r.Reader.ReadDateTime();
-            _reminders = r.ReadObject<List<ObservableReminder>>();
-            IdentifiedId = r.Reader.ReadNullableString();
-            Error = r.Reader.ReadNullableString();
+            Machine = (Machine)r.ReadObject()!;
+            TemporaryId = r.ReadSmallInt32( 1 );
+            _startRead = r.ReadDateTime();
+            _reminders = (List<ObservableReminder>?)r.ReadObject();
+            IdentifiedId = r.ReadNullableString();
+            Error = r.ReadNullableString();
         }
 
-        public static void Write( BinarySerialization.IBinarySerializer w, in MachineThing o )
+        void Write( BinarySerializer w )
         {
-            Debug.Assert( !o.IsDestroyed );
-            w.WriteObject( o.Machine );
-            w.Writer.WriteSmallInt32( o.TemporaryId, 1 );
-            w.Writer.Write( o._startRead );
-            w.WriteNullableObject( o._reminders );
-            w.Writer.WriteNullableString( o.IdentifiedId );
-            w.Writer.WriteNullableString( o.Error );
+            if( !IsDestroyed )
+            {
+                w.WriteObject( Machine );
+                w.WriteSmallInt32( TemporaryId, 1 );
+                w.Write( _startRead );
+                w.WriteObject( _reminders );
+                w.WriteNullableString( IdentifiedId );
+                w.WriteNullableString( Error );
+            }
         }
 
         public Machine Machine { get; }

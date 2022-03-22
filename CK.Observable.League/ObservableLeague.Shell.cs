@@ -200,7 +200,7 @@ namespace CK.Observable.League
             }
 
             /// <summary>
-            /// Synthesizes the Shell type (with the root types).
+            /// Attempts to synthesize the Shell type (with the root types).
             /// </summary>
             /// <param name="monitor">The monitor to use.</param>
             /// <param name="coordinator">The coordinator access.</param>
@@ -209,7 +209,6 @@ namespace CK.Observable.League
             /// <param name="initializer">The optional domain initializer.</param>
             /// <param name="serviceProvider">The service provider used to instantiate <see cref="ObservableDomainSidekick"/> objects.</param>
             /// <param name="rootTypeNames">The root types.</param>
-            /// <returns>The shell for the domain.</returns>
             internal static Shell Create( IActivityMonitor monitor,
                                           IObservableDomainAccess<Coordinator> coordinator,
                                           string domainName,
@@ -231,15 +230,10 @@ namespace CK.Observable.League
                     rootTypes = new Type[rootTypeNames.Count];
                     for( int i = 0; i < rootTypeNames.Count; ++i )
                     {
-                        var t = SimpleTypeFinder.WeakResolver( rootTypeNames[i], false );
-                        if( t == null )
+                        if( (rootTypes[i] = SimpleTypeFinder.WeakResolver( rootTypeNames[i], false )) == null )
                         {
                             monitor.Error( $"Unable to resolve root type '{rootTypeNames[i]}' for domain '{domainName}'." );
                             success = false;
-                        }
-                        else
-                        {
-                            rootTypes[i] = t;
                         }
                     }
                     if( success )
@@ -251,7 +245,7 @@ namespace CK.Observable.League
                             3 => typeof( Shell<,,> ).MakeGenericType( rootTypes ),
                             _ => typeof( Shell<,,,> ).MakeGenericType( rootTypes )
                         };
-                        return (Shell)Activator.CreateInstance( shellType, monitor, coordinator, domainName, store, initializer, serviceProvider, rootTypeNames, rootTypes )!;
+                        return (Shell)Activator.CreateInstance( shellType, monitor, coordinator, domainName, store, initializer, serviceProvider, rootTypeNames, rootTypes );
                     }
                 }
                 // The domainType is null if the type resolution failed.
@@ -632,9 +626,9 @@ namespace CK.Observable.League
             async Task<(TResult, TransactionResult)> IObservableDomainShell.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain, TResult> actions, int millisecondsTimeout, bool parallelDomainPostActions )
             {
                 var d = LoadedDomain;
-                TResult? r = default;
+                TResult r = default;
                 var tr = await d.ModifyThrowAsync( monitor, () => r = actions.Invoke( monitor, d ), millisecondsTimeout, parallelDomainPostActions );
-                return (r!, tr);
+                return (r, tr);
             }
 
             Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> IObservableDomainShell.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> actions, int millisecondsTimeout, bool parallelDomainPostActions )
@@ -747,9 +741,9 @@ namespace CK.Observable.League
             async Task<(TResult, TransactionResult)> IObservableDomainAccess<T>.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<T>, TResult> actions, int millisecondsTimeout, bool parallelDomainPostActions )
             {
                 var d = LoadedDomain;
-                TResult? r = default;
+                TResult r = default;
                 var tr = await d.ModifyThrowAsync( monitor, () => r = actions.Invoke( monitor, d ), millisecondsTimeout, parallelDomainPostActions );
-                return (r!, tr);
+                return (r, tr);
             }
 
             Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> IObservableDomainAccess<T>.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T>> actions, int millisecondsTimeout, bool parallelDomainPostActions )
@@ -865,9 +859,9 @@ namespace CK.Observable.League
             async Task<TResult> IObservableDomainShell<T1, T2>.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<T1, T2>, TResult> actions, int millisecondsTimeout, bool parallelDomainPostActions )
             {
                 var d = LoadedDomain;
-                TResult? r = default;
+                TResult r = default;
                 await d.ModifyThrowAsync( monitor, () => r = actions.Invoke( monitor, d ), millisecondsTimeout, parallelDomainPostActions );
-                return r!;
+                return r;
             }
 
             Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> IObservableDomainShell<T1, T2>.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2>> actions, int millisecondsTimeout, bool parallelDomainPostActions )
@@ -983,9 +977,9 @@ namespace CK.Observable.League
             async Task<TResult> IObservableDomainShell<T1, T2, T3>.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<T1, T2, T3>, TResult> actions, int millisecondsTimeout, bool parallelDomainPostActions )
             {
                 var d = LoadedDomain;
-                TResult? r = default;
+                TResult r = default;
                 await d.ModifyThrowAsync( monitor, () => r = actions.Invoke( monitor, d ), millisecondsTimeout, parallelDomainPostActions );
-                return r!;
+                return r;
             }
 
             Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> IObservableDomainShell<T1, T2, T3>.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3>> actions, int millisecondsTimeout, bool parallelDomainPostActions )
@@ -1103,9 +1097,9 @@ namespace CK.Observable.League
             async Task<TResult> IObservableDomainShell<T1, T2, T3, T4>.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<T1, T2, T3, T4>, TResult> actions, int millisecondsTimeout, bool parallelDomainPostActions )
             {
                 var d = LoadedDomain;
-                TResult? r = default;
+                TResult r = default;
                 await d.ModifyThrowAsync( monitor, () => r = actions.Invoke( monitor, d ), millisecondsTimeout, parallelDomainPostActions );
-                return r!;
+                return r;
             }
 
             Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> IObservableDomainShell<T1, T2, T3, T4>.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3, T4>> actions, int millisecondsTimeout, bool parallelDomainPostActions )

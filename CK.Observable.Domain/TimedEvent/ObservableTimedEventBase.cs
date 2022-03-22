@@ -16,7 +16,7 @@ namespace CK.Observable
     /// </summary>
     [SerializationVersion( 1 )]
     [NotExportable]
-    public abstract class ObservableTimedEventBase : IDestroyableObject, BinarySerialization.IDestroyable, BinarySerialization.ICKSlicedSerializable
+    public abstract class ObservableTimedEventBase : IDestroyableObject
     {
         internal TimeManager? TimeManager;
         /// <summary>
@@ -44,9 +44,14 @@ namespace CK.Observable
             TimeManager.OnCreated( this, true );
         }
 
-        #region Old Deserialization
+        protected ObservableTimedEventBase( RevertSerialization _ )
+        {
+            RevertSerialization.OnRootDeserialized( this );
+        }
+
         ObservableTimedEventBase( IBinaryDeserializer r, TypeReadInfo info )
         {
+            RevertSerialization.OnRootDeserialized( this );
             int index = r.ReadInt32();
             if( index >= 0 )
             {
@@ -92,54 +97,21 @@ namespace CK.Observable
                 Debug.Assert( IsDestroyed );
             }
         }
-        #endregion
 
-        #region New Serialization
-        /// <summary>
-        /// Specialized deserialization constructor for specialized classes.
-        /// </summary>
-        /// <param name="_">Unused parameter.</param>
-#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-        protected ObservableTimedEventBase( BinarySerialization.Sliced _ ) { }
-#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-
-        ObservableTimedEventBase( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
+        void Write( BinarySerializer w )
         {
-            int index = d.Reader.ReadInt32();
-            if( index >= 0 )
+            if( IsDestroyed )
             {
-                TimeManager = ObservableDomain.GetCurrentActiveDomain().TimeManager;
-                Debug.Assert( TimeManager != null );
-                ActiveIndex = index;
-                ExpectedDueTimeUtc = d.Reader.ReadDateTime();
-                _disposed = new ObservableEventHandler<ObservableDomainEventArgs>( d );
-                Tag = d.ReadNullableObject<object>();
-                // Call to TimeManager.OnCreated is done by TimeManager.Load() that is called at the end of the object load,
-                // before the sidekicks so that the order in the linked list of ObservableTimedEventBase is preserved.
-                // Activation is also done by TimeManager.Load().
-                Debug.Assert( !IsDestroyed );
+                w.Write( -1 );
             }
             else
             {
-                Debug.Assert( IsDestroyed );
+                w.Write( ActiveIndex );
+                w.Write( ExpectedDueTimeUtc );
+                _disposed.Write( w );
+                w.WriteObject( Tag );
             }
         }
-        
-        public static void Write( BinarySerialization.IBinarySerializer s, in ObservableTimedEventBase o )
-        {
-            if( o.IsDestroyed )
-            {
-                s.Writer.Write( -1 );
-            }
-            else
-            {
-                s.Writer.Write( o.ActiveIndex );
-                s.Writer.Write( o.ExpectedDueTimeUtc );
-                o._disposed.Write( s );
-                s.WriteNullableObject( o.Tag );
-            }
-        }
-        #endregion
 
         /// <summary>
         /// This is used by the <see cref="TimeManager.Save"/> to track lost objects.

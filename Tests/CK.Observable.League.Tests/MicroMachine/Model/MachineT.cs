@@ -19,23 +19,17 @@ namespace CK.Observable.League.Tests.MicroMachine
             _all = new ObservableList<T>();
         }
 
+        protected Machine( RevertSerialization _ ) : base( _ ) { }
+
         Machine( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( BinarySerialization.Sliced.Instance )
+                : base( RevertSerialization.Default )
         {
             _all = (ObservableList<T>)r.ReadObject()!;
         }
 
-        protected Machine( BinarySerialization.Sliced _ ) : base( _ ) { }
-
-        Machine( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
-                : base( BinarySerialization.Sliced.Instance )
+        void Write( BinarySerializer s )
         {
-            _all = r.ReadObject<ObservableList<T>>();
-        }
-
-        public static void Write( BinarySerialization.IBinarySerializer s, in Machine<T> o )
-        {
-            s.WriteObject( o._all );
+            s.WriteObject( _all );
         }
 
         public IObservableReadOnlyList<T> Things => _all;

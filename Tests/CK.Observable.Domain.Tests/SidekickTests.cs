@@ -52,17 +52,17 @@ namespace CK.Observable.Domain.Tests
             {
             }
 
-            protected ObjWithSKBase( BinarySerialization.Sliced _ ) : base( _ ) { }
+            protected ObjWithSKBase(RevertSerialization _ ) : base( _ ) { }
 
-            ObjWithSKBase( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
-                : base( BinarySerialization.Sliced.Instance )
+            ObjWithSKBase( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
             {
-                Message = r.Reader.ReadString();
+                Message = r.ReadString();
             }
 
-            public static void Write( BinarySerialization.IBinarySerializer s, in ObjWithSKBase o )
+            void Write( BinarySerializer s )
             {
-                s.Writer.Write( o.Message );
+                s.Write( Message );
             }
 
             public string Message { get; set; }
@@ -89,12 +89,12 @@ namespace CK.Observable.Domain.Tests
             {
             }
 
-            ObjWithSKSimple( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
-                : base( BinarySerialization.Sliced.Instance )
+            ObjWithSKSimple( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
             {
             }
 
-            public static void Write( BinarySerialization.IBinarySerializer s, in ObjWithSKSimple o )
+            void Write( BinarySerializer s )
             {
             }
         }
@@ -109,12 +109,12 @@ namespace CK.Observable.Domain.Tests
             {
             }
 
-            ObjWithSKSimpleViaInterface( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
-                : base( BinarySerialization.Sliced.Instance )
+            ObjWithSKSimpleViaInterface( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
             {
             }
 
-            public static void Write( BinarySerialization.IBinarySerializer s, in ObjWithSKSimpleViaInterface o )
+            void Write( BinarySerializer s )
             {
             }
         }
@@ -250,12 +250,12 @@ namespace CK.Observable.Domain.Tests
             {
             }
 
-            ObjWithSKWithDependencies( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
-                : base( BinarySerialization.Sliced.Instance )
+            ObjWithSKWithDependencies( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
             {
             }
 
-            public static void Write( BinarySerialization.IBinarySerializer s, in ObjWithSKWithDependencies o )
+            void Write( BinarySerializer s )
             {
             }
         }
@@ -267,12 +267,12 @@ namespace CK.Observable.Domain.Tests
             {
             }
 
-            ObjWithSKWithDependenciesViaInterface( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
-                : base( BinarySerialization.Sliced.Instance )
+            ObjWithSKWithDependenciesViaInterface( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
             {
             }
 
-            public static void Write( BinarySerialization.IBinarySerializer s, in ObjWithSKWithDependenciesViaInterface o )
+            void Write( BinarySerializer s )
             {
             }
         }

@@ -27,24 +27,15 @@ namespace CK.Observable
         {
         }
 
-        #region Old Deserialization
+        protected ObservableRootObject( RevertSerialization _ ) : base( _ ) { }
+
         ObservableRootObject( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( BinarySerialization.Sliced.Instance )
-        {
-        }
-        #endregion
-
-        #region New Deserialization
-        protected ObservableRootObject( BinarySerialization.Sliced _ ) : base( _ ) { }
-
-        ObservableRootObject( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
-        : base( BinarySerialization.Sliced.Instance )
+                : base( RevertSerialization.Default )
         {
         }
 
-        public static void Write( BinarySerialization.IBinarySerializer s, in ObservableRootObject o )
+        void Write( BinarySerializer w )
         {
         }
-        #endregion
     }
 }

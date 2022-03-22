@@ -10,18 +10,18 @@ namespace CK.Observable.Domain.Tests.Sample
         {
         }
 
-        Mechanic( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
-            : base( BinarySerialization.Sliced.Instance )
+        Mechanic( IBinaryDeserializer r, TypeReadInfo? info )
+            : base( RevertSerialization.Default )
         {
-            CurrentCar = r.ReadNullableObject<Car>();
+            CurrentCar = (Car)r.ReadObject();
         }
 
-        public static void Write( BinarySerialization.IBinarySerializer s, in Mechanic o )
+        void Write( BinarySerializer s )
         {
-            s.WriteNullableObject( o.CurrentCar );
+            s.WriteObject( CurrentCar );
         }
 
-        public Car? CurrentCar { get; set; }
+        public Car CurrentCar { get; set; }
 
         public MechanicLevel Level { get; set; }
 

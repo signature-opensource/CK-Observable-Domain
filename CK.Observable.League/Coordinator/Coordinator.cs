@@ -27,20 +27,14 @@ namespace CK.Observable.League
         }
 
         Coordinator( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( BinarySerialization.Sliced.Instance )
+                : base( RevertSerialization.Default )
         {
             _domains = (ObservableDictionary<string, Domain>)r.ReadObject();
         }
 
-        Coordinator( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
-                : base( BinarySerialization.Sliced.Instance )
+        void Write( BinarySerializer w )
         {
-            _domains = r.ReadObject<ObservableDictionary<string, Domain>>();
-        }
-
-        public static void Write( BinarySerialization.IBinarySerializer w, in Coordinator o )
-        {
-            w.WriteObject( o._domains );
+            w.WriteObject( _domains );
         }
 
         /// <summary>
@@ -101,7 +95,7 @@ namespace CK.Observable.League
         {
             Debug.Assert( _domains.Values.All( d => d.Shell == null ) );
             _league = league;
-            List<Domain>? failed = null;
+            List<Domain> failed = null;
             foreach( var d in _domains.Values )
             {
                 try
@@ -115,7 +109,7 @@ namespace CK.Observable.League
                     failed.Add( d );
                 }
             }
-            if( failed != null )
+            if( failed.Count > 0 )
             {
                 monitor.Warn( $"Domains '{failed.Select( d => d.DomainName ).Concatenate("', '")}' must be removed." );
                 foreach( var d in failed ) d.Destroy();

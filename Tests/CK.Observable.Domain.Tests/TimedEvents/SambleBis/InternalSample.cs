@@ -1,5 +1,3 @@
-using CK.Core;
-
 namespace CK.Observable.Domain.Tests
 {
     [SerializationVersion( 0 )]
@@ -11,15 +9,15 @@ namespace CK.Observable.Domain.Tests
 
         public string? Name { get; set; }
 
-        InternalSample( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
-            : base( BinarySerialization.Sliced.Instance )
+        InternalSample( IBinaryDeserializer r, TypeReadInfo info )
+            : base( RevertSerialization.Default )
         {
-            Name = r.Reader.ReadNullableString();
+            Name = r.ReadNullableString();
         }
 
-        public static void Write( BinarySerialization.IBinarySerializer w, in InternalSample o )
+        void Write( BinarySerializer w )
         {
-            w.Writer.WriteNullableString( o.Name );
+            w.WriteNullableString( Name );
         }
     }
 }

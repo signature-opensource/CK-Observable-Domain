@@ -1,5 +1,3 @@
-using CK.Core;
-
 namespace CK.Observable.Domain.Tests
 {
     [SerializationVersion( 0 )]
@@ -19,19 +17,19 @@ namespace CK.Observable.Domain.Tests
 
         public ObservableObject? Observable { get; set; }
 
-        Machine( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
-            : base( BinarySerialization.Sliced.Instance )
+        Machine( IBinaryDeserializer r, TypeReadInfo info )
+            : base( RevertSerialization.Default )
         {
-            Clock = r.ReadObject<SuspendableClock>();
-            Internal = r.ReadNullableObject<InternalObject>();
-            Observable = r.ReadNullableObject<ObservableObject>();
+            Clock = (SuspendableClock)r.ReadObject();
+            Internal = (InternalObject?)r.ReadObject();
+            Observable = (ObservableObject?)r.ReadObject();
         }
 
-        public static void Write( BinarySerialization.IBinarySerializer w, in Machine o )
+        void Write( BinarySerializer w )
         {
-            w.WriteObject( o.Clock );
-            w.WriteNullableObject( o.Internal );
-            w.WriteNullableObject( o.Observable );
+            w.WriteObject( Clock );
+            w.WriteObject( Internal );
+            w.WriteObject( Observable );
         }
     }
 }

@@ -1,10 +1,9 @@
-using CK.Core;
 using System.Collections.Generic;
 
 namespace CK.Observable.Domain.Tests.RootSample
 {
     [SerializationVersion(0)]
-    public struct ProductInfo : BinarySerialization.ICKSlicedSerializable
+    public struct ProductInfo
     {
         public ProductInfo( string n, int p )
         {
@@ -13,18 +12,18 @@ namespace CK.Observable.Domain.Tests.RootSample
             ExtraData = new Dictionary<string, string>();
         }
 
-        ProductInfo( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
+        ProductInfo( IBinaryDeserializer r, TypeReadInfo? info )
         {
-            Name = d.Reader.ReadNullableString();
-            Power = d.Reader.ReadInt32();
-            ExtraData = d.ReadObject<IDictionary<string, string>>();
+            Name = r.ReadNullableString();
+            Power = r.ReadInt32();
+            ExtraData = (IDictionary<string, string>)r.ReadObject();
         }
 
-        public static void Write( BinarySerialization.IBinarySerializer s, in ProductInfo o )
+        void Write( IBinarySerializer b )
         {
-            s.Writer.WriteNullableString( o.Name );
-            s.Writer.Write( o.Power );
-            s.WriteObject( o.ExtraData );
+            b.WriteNullableString( Name );
+            b.Write( Power );
+            b.WriteObject( ExtraData );
         }
 
         public string Name { get; }

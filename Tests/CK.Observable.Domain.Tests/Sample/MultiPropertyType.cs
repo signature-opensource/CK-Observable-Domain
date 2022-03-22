@@ -4,7 +4,7 @@ using System.Diagnostics;
 
 namespace CK.Observable.Domain.Tests.Sample
 {
-    [SerializationVersion(0)]
+    [SerializationVersionAttribute(0)]
     public sealed class MultiPropertyType : ObservableObject, IEquatable<MultiPropertyType>
     {
         public static readonly string DefString = "MultiPropertyType";
@@ -77,10 +77,9 @@ namespace CK.Observable.Domain.Tests.Sample
             Position = new Position( Position.Latitude + delta, Position.Longitude + delta );
         }
 
-        MultiPropertyType( BinarySerialization.IBinaryDeserializer s, BinarySerialization.ITypeReadInfo info )
-                : base( BinarySerialization.Sliced.Instance )
+        MultiPropertyType( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
         {
-            var r = s.Reader;
             String = r.ReadNullableString();
             Int32 = r.ReadInt32();
             UInt32 = r.ReadUInt32();
@@ -100,40 +99,39 @@ namespace CK.Observable.Domain.Tests.Sample
             Boolean = r.ReadBoolean();
 
             // Enum can be serialized through their drivers:
-            Enum = s.ReadValue<MechanicLevel>();
-            // Or directly (simpler, more efficient but the underlying type cannot be changed directly):
+            Enum = (MechanicLevel)r.ReadObject();
+            // Or directly (simpler and more efficient):
             var e = (MechanicLevel)r.ReadInt32();
             Debug.Assert( e == Enum );
 
-            Position = s.ReadValue<Position>();
+            Position = (Position)r.ReadObject();
         }
 
-        public static void Write( BinarySerialization.IBinarySerializer s, in MultiPropertyType o )
+        void Write( BinarySerializer w )
         {
-            var w = s.Writer;
-            w.WriteNullableString( o.String );
-            w.Write( o.Int32 );
-            w.Write( o.UInt32 );
-            w.Write( o.Int64 );
-            w.Write( o.UInt64 );
-            w.Write( o.Int16 );
-            w.Write( o.UInt16 );
-            w.Write( o.Byte );
-            w.Write( o.SByte );
-            w.Write( o.DateTime );
-            w.Write( o.TimeSpan );
-            w.Write( o.DateTimeOffset );
-            w.Write( o.Guid );
-            w.Write( o.Double );
-            w.Write( o.Single );
-            w.Write( o.Char );
-            w.Write( o.Boolean );
+            w.WriteNullableString( String );
+            w.Write( Int32 );
+            w.Write( UInt32 );
+            w.Write( Int64 );
+            w.Write( UInt64 );
+            w.Write( Int16 );
+            w.Write( UInt16 );
+            w.Write( Byte );
+            w.Write( SByte );
+            w.Write( DateTime );
+            w.Write( TimeSpan );
+            w.Write( DateTimeOffset );
+            w.Write( Guid );
+            w.Write( Double );
+            w.Write( Single );
+            w.Write( Char );
+            w.Write( Boolean );
 
             // See the deserialization part.
-            s.WriteValue( o.Enum );
-            w.Write( (int)o.Enum );
+            w.WriteObject( Enum );
+            w.Write( (int)Enum );
 
-            s.WriteValue( o.Position );
+            w.WriteObject( Position );
         }
 
         public override bool Equals( object obj ) => obj is MultiPropertyType m && Equals( m );

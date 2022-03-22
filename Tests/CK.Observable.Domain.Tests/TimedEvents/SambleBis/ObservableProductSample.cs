@@ -17,19 +17,19 @@ namespace CK.Observable.Domain.Tests
 
         public Machine Machine { get; }
 
-        ObservableProductSample( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
-            : base( BinarySerialization.Sliced.Instance )
+        ObservableProductSample( IBinaryDeserializer r, TypeReadInfo info )
+            : base( RevertSerialization.Default )
         {
-            Name = r.Reader.ReadNullableString();
-            Machine = r.ReadObject<Machine>();
-            _autoDestroyReminder = r.ReadNullableObject<ObservableReminder>();
+            Name = r.ReadNullableString();
+            Machine = (Machine)r.ReadObject();
+            _autoDestroyReminder = (ObservableReminder?)r.ReadObject();
         }
 
-        public static void Write( BinarySerialization.IBinarySerializer w, in ObservableProductSample o )
+        void Write( BinarySerializer w )
         {
-            w.Writer.WriteNullableString( o.Name );
-            w.WriteObject( o.Machine );
-            w.WriteObject( o._autoDestroyReminder );
+            w.WriteNullableString( Name );
+            w.WriteObject( Machine );
+            w.WriteObject( _autoDestroyReminder );
         }
 
         protected override void OnDestroy()

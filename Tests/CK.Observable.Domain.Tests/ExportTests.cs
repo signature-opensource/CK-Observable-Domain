@@ -343,12 +343,12 @@ namespace CK.Observable.Domain.Tests
             {
             }
 
-            TryingToExportNotExportableProperties1( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
-                : base( BinarySerialization.Sliced.Instance )
+            TryingToExportNotExportableProperties1( IBinaryDeserializer r, TypeReadInfo info )
+                : base( RevertSerialization.Default )
             {
             }
 
-            public static void Write( BinarySerialization.IBinarySerializer s, in TryingToExportNotExportableProperties1 o )
+            void Write( BinarySerializer w )
             {
             }
 
@@ -363,12 +363,12 @@ namespace CK.Observable.Domain.Tests
             {
             }
 
-            TryingToExportNotExportableProperties2( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
-               : base( BinarySerialization.Sliced.Instance )
+            TryingToExportNotExportableProperties2( IBinaryDeserializer r, TypeReadInfo info )
+               : base( RevertSerialization.Default )
             {
             }
 
-            public static void Write( BinarySerialization.IBinarySerializer s, in TryingToExportNotExportableProperties2 o )
+            void Write( BinarySerializer w )
             {
             }
 
@@ -385,12 +385,12 @@ namespace CK.Observable.Domain.Tests
             {
             }
 
-            TryingToExportNotExportableProperties3( BinarySerialization.IBinaryDeserializer s, BinarySerialization.ITypeReadInfo info )
-               : base( BinarySerialization.Sliced.Instance )
+            TryingToExportNotExportableProperties3( IBinaryDeserializer r, TypeReadInfo info )
+               : base( RevertSerialization.Default )
             {
             }
 
-            public static void Write( BinarySerialization.IBinarySerializer s, in TryingToExportNotExportableProperties3 o )
+            void Write( BinarySerializer w )
             {
             }
 
@@ -446,16 +446,16 @@ namespace CK.Observable.Domain.Tests
                 Reminder = new ObservableReminder( Timer.DueTimeUtc );
             }
 
-            TimerAndRemiderProperties( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+            TimerAndRemiderProperties( IBinaryDeserializer r, TypeReadInfo info )
             {
-                Timer = r.ReadObject<ObservableTimer>();
-                Reminder = r.ReadObject<ObservableReminder>();
+                Timer = (ObservableTimer)r.ReadObject();
+                Reminder = (ObservableReminder)r.ReadObject();
             }
 
-            public static void Write( BinarySerialization.IBinarySerializer s, in TimerAndRemiderProperties o )
+            void Write( BinarySerializer w )
             {
-                s.WriteObject( o.Timer );
-                s.WriteObject( o.Reminder );
+                w.WriteObject( Timer );
+                w.WriteObject( Reminder );
             }
 
             public ObservableTimer Timer { get; }

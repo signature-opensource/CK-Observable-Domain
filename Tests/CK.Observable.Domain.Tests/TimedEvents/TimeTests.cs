@@ -209,17 +209,17 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             {
             }
 
-            SimpleValue( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
-                : base( BinarySerialization.Sliced.Instance )
+            SimpleValue( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
             {
-                Value = r.Reader.ReadInt32();
-                ValueFromReminders = r.Reader.ReadInt32();
+                Value = r.ReadInt32();
+                ValueFromReminders = r.ReadInt32();
             }
 
-            public static void Write( BinarySerialization.IBinarySerializer w, in SimpleValue o )
+            void Write( BinarySerializer w )
             {
-                w.Writer.Write( o.Value );
-                w.Writer.Write( o.ValueFromReminders );
+                w.Write( Value );
+                w.Write( ValueFromReminders );
             }
 
             public int Value { get; set; }
@@ -458,22 +458,22 @@ namespace CK.Observable.Domain.Tests.TimedEvents
         [SerializationVersion(0)]
         class TestReminder : InternalObject
         {
-            readonly TestCounter? _counter;
+            readonly TestCounter _counter;
 
-            public TestReminder( TestCounter? counter )
+            public TestReminder( TestCounter counter )
             {
                 _counter = counter;
             }
 
-            TestReminder( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
-                : base( BinarySerialization.Sliced.Instance )
+            TestReminder( IBinaryDeserializer r, TypeReadInfo? info )
+                : base( RevertSerialization.Default )
             {
-                _counter = r.ReadNullableObject<TestCounter>();
+                _counter = (TestCounter)r.ReadObject();
             }
 
-            public static void Write( BinarySerialization.IBinarySerializer w, in TestReminder o )
+            void Write( BinarySerializer w )
             {
-                w.WriteNullableObject( o._counter );
+                w.WriteObject( _counter );
             }
 
             public void StartWork( string message, int repeatCount )

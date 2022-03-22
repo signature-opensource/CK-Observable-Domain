@@ -47,17 +47,10 @@ namespace CK.Observable
         public ObservableEventHandler( IBinaryDeserializer r ) => _handler = new ObservableDelegate( r );
 
         /// <summary>
-        /// Deserializes the <see cref="ObservableEventHandler{TEventArgs}"/>.
-        /// If the method has been suppressed, use the static helper <see cref="ObservableEventHandler.Skip(IBinaryDeserializer)"/>.
-        /// </summary>
-        /// <param name="r">The deserializer.</param>
-        public ObservableEventHandler( BinarySerialization.IBinaryDeserializer d ) => _handler = new ObservableDelegate( d );
-
-        /// <summary>
         /// Serializes this <see cref="ObservableEventHandler{TEventArgs}"/>.
         /// </summary>
         /// <param name="w">The writer.</param>
-        public void Write( BinarySerialization.IBinarySerializer s ) => _handler.Write( s );
+        public void Write( BinarySerializer w ) => _handler.Write( w );
 
         /// <summary>
         /// Gets whether at least one handler is registered.
