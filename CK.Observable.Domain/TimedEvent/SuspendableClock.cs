@@ -1,3 +1,4 @@
+using CK.BinarySerialization;
 using CK.Core;
 using System;
 using System.Collections.Generic;
@@ -53,105 +54,8 @@ namespace CK.Observable
             }
         }
 
-        #region Old Deserialization
-        List<ObservableTimedEventBase>? _0Bug;
-        bool _0BugDone;
-        internal IReadOnlyList<ObservableTimedEventBase>? V0Bug
-        {
-            get
-            {
-                if( !_0BugDone && _0Bug != null )
-                {
-                    _0BugDone = true;
-                    for( int i = 0; i < _0Bug.Count; ++i )
-                    {
-                        var o = _0Bug[i];
-                        o.PrevInClock = i == 0 ? null : _0Bug[i - 1];
-                        o.NextInClock = i == _0Bug.Count - 1 ? null : _0Bug[i + 1];
-                    }
-                    _firstInClock = _0Bug[0];
-                    _lastInClock = _0Bug[^1];
-                }
-                return _0Bug;
-            }
-        }
-
-        SuspendableClock( IBinaryDeserializer r, TypeReadInfo info )
-            : base( BinarySerialization.Sliced.Instance )
-        {
-            _cumulativeOffset = r.ReadTimeSpan();
-            _isActive = r.ReadBoolean();
-            if( _isActive )
-            {
-                var t = r.ReadDateTime();
-                if( t != Util.UtcMinValue )
-                {
-                    _cumulateUnloadedTime = true;
-                    var unloadedDuration = DateTime.UtcNow - t;
-                    r.ImplementationServices.OnPostDeserialization( () => AdjustCumulativeOffset( unloadedDuration ) );
-                }
-            }
-            else
-            {
-                _cumulateUnloadedTime = r.ReadBoolean();
-                _lastStop = r.ReadDateTime();
-            }
-            if( info.Version == 0 )
-            {
-                _firstInClock = (ObservableTimedEventBase?)r.ReadObject();
-                _lastInClock = (ObservableTimedEventBase?)r.ReadObject();
-                var t = _firstInClock;
-                while( t != null )
-                {
-                    if( _0Bug == null ) _0Bug = new List<ObservableTimedEventBase>();
-                    _0Bug.Add( t );
-                    t = t.NextInClock;
-                }
-                _count = _0Bug?.Count ?? 0;
-            }
-            else if( info.Version == 1 )
-            {
-                int count = r.ReadNonNegativeSmallInt32();
-                while( --count >= 0 )
-                {
-                    if( count == 6425 ) break;
-                    var t = (ObservableTimedEventBase)r.ReadObject()!;
-                    t.SetDeserializedClock( this );
-                    Bound( t );
-                }
-            }
-            else if( info.Version == 2 )
-            {
-                // There is a bug in count/linked list (0Bug was... buggy on the _lastInClock).
-                // Rely only on the linked list that has been written with boolean markers.
-                int count = r.ReadNonNegativeSmallInt32();
-                while( r.ReadBoolean() )
-                {
-                    var t = (ObservableTimedEventBase)r.ReadObject()!;
-                    t.SetDeserializedClock( this );
-                    Bound( t );
-                }
-                CheckInvariant();
-            }
-            else
-            {
-                int count = r.ReadNonNegativeSmallInt32();
-                while( --count >= 0 )
-                {
-                    var t = (ObservableTimedEventBase)r.ReadObject()!;
-                    t.SetDeserializedClock( this );
-                    Bound( t );
-                }
-                CheckInvariant();
-            }
-            _isActiveChanged = new ObservableEventHandler<ObservableDomainEventArgs>( r );
-        }
-        #endregion
-
-        #region New Serialization
-
-        SuspendableClock( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
-            : base( BinarySerialization.Sliced.Instance )
+        SuspendableClock( IBinaryDeserializer d, ITypeReadInfo info )
+            : base( Sliced.Instance )
         {
             _cumulativeOffset = d.Reader.ReadTimeSpan();
             _isActive = d.Reader.ReadBoolean();
@@ -181,7 +85,7 @@ namespace CK.Observable
             _isActiveChanged = new ObservableEventHandler<ObservableDomainEventArgs>( d );
         }
 
-        public static void Write( BinarySerialization.IBinarySerializer s, in SuspendableClock o )
+        public static void Write( IBinarySerializer s, in SuspendableClock o )
         {
             s.Writer.Write( o._cumulativeOffset );
             s.Writer.Write( o._isActive );
@@ -207,7 +111,6 @@ namespace CK.Observable
             }
             o._isActiveChanged.Write( s );
         }
-        #endregion
 
         /// <summary>
         /// Gets the number of <see cref="ObservableTimedEventBase"/> bound to this clock.

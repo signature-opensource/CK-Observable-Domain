@@ -1,3 +1,4 @@
+using CK.BinarySerialization;
 using CK.Core;
 using System.Diagnostics;
 using System.Text;
@@ -17,20 +18,10 @@ namespace CK.Observable.League.Tests.MicroMachine
             _clock.IsActiveChanged += ClockIsActiveChanged;
         }
 
-        Machine( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( BinarySerialization.Sliced.Instance )
-        {
-            Debug.Assert( !IsDestroyed );
-            Configuration = (MachineConfiguration)r.ReadObject()!;
-            _clock = (SuspendableClock)r.ReadObject()!;
-            Name = r.ReadString();
-            r.ImplementationServices.OnPostDeserialization( () => IsRunning = _clock.IsActive );
-        }
+        protected Machine( Sliced _ ) : base( _ ) { }
 
-        protected Machine( BinarySerialization.Sliced _ ) : base( _ ) { }
-
-        Machine( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
-                : base( BinarySerialization.Sliced.Instance )
+        Machine( IBinaryDeserializer d, ITypeReadInfo info )
+                : base( Sliced.Instance )
         {
             Debug.Assert( !IsDestroyed );
             Configuration = d.ReadObject<MachineConfiguration>();
@@ -39,7 +30,7 @@ namespace CK.Observable.League.Tests.MicroMachine
             d.PostActions.Add( () => IsRunning = _clock.IsActive );
         }
 
-        public static void Write( BinarySerialization.IBinarySerializer s, in Machine o )
+        public static void Write( IBinarySerializer s, in Machine o )
         {
             Debug.Assert( !o.IsDestroyed );
             s.WriteObject( o.Configuration );

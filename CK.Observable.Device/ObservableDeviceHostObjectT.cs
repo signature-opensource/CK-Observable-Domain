@@ -19,19 +19,6 @@ namespace CK.Observable.Device
         {
         }
 
-        #region Old deserialization
-        /// <summary>
-        /// Deserialization constructor for specialized classes.
-        /// </summary>
-        /// <param name="r">The deserializer.</param>
-        /// <param name="info">The information.</param>
-        protected ObservableDeviceHostObject( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( BinarySerialization.Sliced.Instance )
-        {
-        }
-        #endregion
-
-
         /// <summary>
         /// Specialized deserialization constructor for specialized classes.
         /// </summary>

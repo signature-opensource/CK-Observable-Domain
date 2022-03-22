@@ -22,40 +22,29 @@ namespace CK.Observable.Device
 
         private protected ObservableDeviceObject( string deviceName )
         {
-            DeviceName = deviceName ?? throw new ArgumentNullException( nameof( deviceName ) );
+            Throw.CheckNotNullArgument( deviceName );
+            DeviceName = deviceName;
         }
-
-        #region Old Deserialization
-        ObservableDeviceObject( IBinaryDeserializer r, TypeReadInfo info )
-                : base( BinarySerialization.Sliced.Instance )
-        {
-            DeviceName = info.Version == 0 ? r.ReadNullableString()! : r.ReadString();
-            _statusChanged = new ObservableEventHandler( r );
-            if( info.Version == 1 )
-            {
-                _configurationChanged = new ObservableEventHandler( r );
-            }
-        }
-        #endregion
-
-        #region New serialization
 
         protected ObservableDeviceObject( BinarySerialization.Sliced _ ) : base( _ ) { }
 
         ObservableDeviceObject( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
         : base( BinarySerialization.Sliced.Instance )
         {
-            DeviceName = d.Reader.ReadNullableString();
+            DeviceName = info.Version == 0 ? d.Reader.ReadNullableString()! : d.Reader.ReadString();
             _statusChanged = new ObservableEventHandler( d );
-            _configurationChanged.Write( w );
+            if( info.Version == 1 )
+            {
+                _configurationChanged = new ObservableEventHandler( d );
+            }
         }
 
         public static void Write( BinarySerialization.IBinarySerializer d, in ObservableDeviceObject o )
         {
-            d.Writer.WriteNullableString( o.DeviceName );
+            d.Writer.Write( o.DeviceName );
             o._statusChanged.Write( d );
+            o._configurationChanged.Write( d );
         }
-        #endregion
 
 #pragma warning restore CS8618
 
@@ -140,7 +129,7 @@ namespace CK.Observable.Device
         /// </summary>
         public void ApplyDeviceConfiguration( DeviceConfiguration configuration )
         {
-            if( configuration == null ) throw new ArgumentNullException( nameof( configuration ) );
+            Throw.CheckNotNullArgument( configuration );
             ThrowOnUnboundedDevice();
             var cmd = _bridge.CreateConfigureCommand( configuration );
             cmd.ControllerKey = Domain.DomainName;

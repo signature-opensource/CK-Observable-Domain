@@ -44,57 +44,6 @@ namespace CK.Observable
             TimeManager.OnCreated( this, true );
         }
 
-        #region Old Deserialization
-        ObservableTimedEventBase( IBinaryDeserializer r, TypeReadInfo info )
-        {
-            int index = r.ReadInt32();
-            if( index >= 0 )
-            {
-                TimeManager = ObservableDomain.GetCurrentActiveDomain().TimeManager;
-                Debug.Assert( TimeManager != null );
-                ActiveIndex = index;
-                ExpectedDueTimeUtc = r.ReadDateTime();
-                if( info.Version == 0 )
-                {
-                    _clock = (SuspendableClock?)r.ReadObject();
-                    NextInClock = (ObservableTimedEventBase?)r.ReadObject();
-                    PrevInClock = (ObservableTimedEventBase?)r.ReadObject();
-
-                    r.ImplementationServices.OnPostDeserialization( () =>
-                    {
-                        if( _clock != null )
-                        {
-                            if( _clock.V0Bug == null || !_clock.V0Bug.Contains( this ) )
-                            {
-                                _clock = null;
-                                if( NextInClock != null ) NextInClock = null;
-                                if( PrevInClock != null ) PrevInClock = null;
-                            }
-                        }
-                        else
-                        {
-                            // Oups?
-                            if( NextInClock != null ) NextInClock = null;
-                            if( PrevInClock != null ) PrevInClock = null;
-                        }
-
-                    } );
-                }
-                _disposed = new ObservableEventHandler<ObservableDomainEventArgs>( r );
-                Tag = r.ReadObject();
-                // Call to TimeManager.OnCreated is done by TimeManager.Load() that is called at the end of the object load,
-                // before the sidekicks so that the order in the linked list of ObservableTimedEventBase is preserved.
-                // Activation is also done by TimeManager.Load().
-                Debug.Assert( !IsDestroyed );
-            }
-            else
-            {
-                Debug.Assert( IsDestroyed );
-            }
-        }
-        #endregion
-
-        #region New Serialization
         /// <summary>
         /// Specialized deserialization constructor for specialized classes.
         /// </summary>
@@ -139,7 +88,6 @@ namespace CK.Observable
                 s.WriteNullableObject( o.Tag );
             }
         }
-        #endregion
 
         /// <summary>
         /// This is used by the <see cref="TimeManager.Save"/> to track lost objects.

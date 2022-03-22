@@ -545,7 +545,7 @@ namespace CK.Observable
         /// <param name="startTimer">Whether to initially start the <see cref="TimeManager"/>.</param>
         /// <param name="serviceProvider">The service providers that will be used to resolve the <see cref="ObservableDomainSidekick"/> objects.</param>
         public ObservableDomain( IActivityMonitor monitor, string domainName, bool startTimer, IServiceProvider? serviceProvider = null )
-            : this(monitor, domainName, startTimer, null, serviceProvider)
+            : this( monitor, domainName, startTimer, null, serviceProvider )
         {
         }
 
@@ -563,7 +563,7 @@ namespace CK.Observable
                                  bool startTimer,
                                  IObservableDomainClient? client,
                                  IServiceProvider? serviceProvider = null )
-            : this(monitor, domainName, startTimer, client, true, serviceProvider, exporters: null, deserializers: null)
+            : this( monitor, domainName, startTimer, client, true, serviceProvider, exporters: null )
         {
         }
 
@@ -573,30 +573,31 @@ namespace CK.Observable
         /// <param name="monitor">The monitor used to log the construction of this domain. Cannot be null.</param>
         /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
         /// <param name="client">The observable client (head of the Chain of Responsibility) to use. Can be null.</param>
-        /// <param name="s">The input stream.</param>
+        /// <param name="stream">The input stream that must be valid.</param>
         /// <param name="serviceProvider">The service providers that will be used to resolve the <see cref="ObservableDomainSidekick"/> objects.</param>
         /// <param name="startTimer">
         /// Ensures that the <see cref="ObservableDomain.TimeManager"/> is running or stopped.
         /// When null, it keeps its previous state (it is initially stopped at domain creation) and then its current state is persisted.
         /// </param>
         /// <param name="exporters">Optional exporters handler.</param>
-        /// <param name="deserializers">Optional deserializers handler.</param>
         public ObservableDomain( IActivityMonitor monitor,
                                  string domainName,
                                  IObservableDomainClient? client,
-                                 RewindableStream s,
+                                 RewindableStream stream,
                                  IServiceProvider? serviceProvider = null,
                                  bool? startTimer = null,
-                                 IExporterResolver? exporters = null,
-                                 IDeserializerResolver? deserializers = null )
-            : this(monitor, domainName, false, client, false, serviceProvider, exporters, deserializers)
+                                 IExporterResolver? exporters = null )
+            : this( monitor, domainName, false, client, false, serviceProvider, exporters )
         {
+            Throw.CheckNotNullArgument( stream );
+            Throw.CheckData( stream.IsValid );
+
             using( monitor.OpenInfo( $"Initializing new domain '{domainName}' from stream." ) )
             {
                 try
                 {
                     _currentTran = new InitializationTransaction( monitor, this );
-                    DoLoad( monitor, s, domainName, startTimer, mustStartTimer =>
+                    DoLoad( monitor, stream, domainName, startTimer, mustStartTimer =>
                     {
                         client?.OnDomainCreated( monitor, this, ref mustStartTimer );
                         return mustStartTimer;
@@ -615,13 +616,13 @@ namespace CK.Observable
                           IObservableDomainClient? client,
                           bool callClientOnCreate,
                           IServiceProvider? serviceProvider,
-                          IExporterResolver? exporters,
-                          IDeserializerResolver? deserializers)
+                          IExporterResolver? exporters )
         {
-            if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
-            DomainName = domainName ?? throw new ArgumentNullException( nameof( domainName ) );
+            Throw.CheckNotNullArgument( monitor );
+            // DomainName can be empty.
+            Throw.CheckNotNullArgument( domainName );
+            DomainName = domainName;
             _exporters = exporters ?? ExporterRegistry.Default;
-            _deserializers = deserializers ?? DeserializerRegistry.Default;
             DomainClient = client;
             _objects = new ObservableObject?[512];
             _freeList = new List<int>();
@@ -655,7 +656,7 @@ namespace CK.Observable
                 if( _domainSecret == null ) _domainSecret = CreateSecret();
             }
             if( startTimer ) _timeManager.DoStartOrStop( monitor, true );
-            monitor.Info( $"ObservableDomain {domainName} created." );
+            monitor.Info( $"ObservableDomain '{domainName}' created." );
         }
 
         static byte[] CreateSecret()
@@ -710,7 +711,7 @@ namespace CK.Observable
             IReadOnlyList<CKExceptionData> IObservableTransaction.Errors => Array.Empty<CKExceptionData>();
 
             /// <summary>
-            /// Releases locks and restores intialization context.
+            /// Releases locks and restores initialization context.
             /// </summary>
             public void Dispose()
             {
@@ -765,13 +766,13 @@ namespace CK.Observable
 
         /// <summary>
         /// Gets the current transaction number.
-        /// Incremented each time a transaction successfuly ended, default to 0 until the first transaction commit.
+        /// Incremented each time a transaction successfully ended, default to 0 until the first transaction commit.
         /// </summary>
         public int TransactionSerialNumber => _transactionSerialNumber;
 
         /// <summary>
         /// Gets the last commit time. Defaults to <see cref="DateTime.UtcNow"/> at the very beginning,
-        /// when no transaction has been comitted yet (and <see cref="TransactionSerialNumber"/> is 0).
+        /// when no transaction has been committed yet (and <see cref="TransactionSerialNumber"/> is 0).
         /// </summary>
         public DateTime TransactionCommitTimeUtc => _transactionCommitTimeUtc;
 
@@ -886,7 +887,7 @@ namespace CK.Observable
         /// This immediately returns null if this domain is disposed.
         /// </para>
         /// <para>
-        /// Changing threads (eg. by awaiting tasks) before the returned disposable is disposed
+        /// Changing threads (typically by awaiting tasks) before the returned disposable is disposed
         /// will throw a <see cref="SynchronizationLockException"/>.
         /// </para>
         /// <para>
@@ -902,7 +903,7 @@ namespace CK.Observable
         /// </exception>
         /// <exception cref="SynchronizationLockException">
         /// When the current thread has not entered the lock in read mode.
-        /// Can be caused by other threads trying to use this lock (eg. after awaiting a task).
+        /// Can be caused by other threads trying to use this lock (typically after awaiting a task).
         /// </exception>
         /// <returns>A disposable that releases the read lock when disposed, or null if a timeout occurred (or this is disposed).</returns>
         public IDisposable? AcquireReadLock( int millisecondsTimeout = -1 )
@@ -914,7 +915,7 @@ namespace CK.Observable
 
         /// <summary>
         /// Starts a new transaction that must be <see cref="IObservableTransaction.Commit"/>, otherwise
-        /// all changes are cancelled.
+        /// all changes are canceled.
         /// This must not be called twice (without disposing or committing the existing one) otherwise
         /// an <see cref="InvalidOperationException"/> is thrown.
         /// Any exceptions raised by <see cref="IObservableDomainClient.OnTransactionStart(IActivityMonitor, ObservableDomain, DateTime)"/> are thrown
@@ -961,7 +962,7 @@ namespace CK.Observable
             try
             {
                 // This could throw and be handled just like other pre-transaction errors (when a buggy client throws during OnTransactionStart).
-                // Depending on throwException parameter, it will be rethrown or returned (returning the exception is for MofifyNoThrow).
+                // Depending on throwException parameter, it will be re-thrown or returned (returning the exception is for MofifyNoThrow).
                 // See DoDispose method for the discussion about disposal...
                 CheckDisposed();
                 DomainClient?.OnTransactionStart( m, this, startTime );
@@ -1320,15 +1321,12 @@ namespace CK.Observable
         /// <returns>True on success, false if timeout occurred.</returns>
         public bool Load( IActivityMonitor monitor, RewindableStream stream, string expectedLoadedName, int millisecondsTimeout = -1, bool? startTimer = null )
         {
-            if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
-            if( stream == null ) throw new ArgumentNullException( nameof( stream ) );
-            if( expectedLoadedName == null ) throw new ArgumentNullException( nameof( expectedLoadedName ) );
-
-            // Temporary NetCoreApp3.1: we accept the 5 to 8 legacy version.
-            // In Net6 this must be just: Throw.CheckData( stream.IsValid );
-            if( !stream.IsValid && (stream.SerializerVersion < 5 || stream.SerializerVersion > 8) ) throw new InvalidDataException( nameof( stream ) );
-            
+            Throw.CheckNotNullArgument( monitor );
+            Throw.CheckNotNullArgument( stream );
+            Throw.CheckData( stream.IsValid );
+            Throw.CheckNotNullArgument( expectedLoadedName );            
             CheckDisposed();
+
             bool hasWriteLock = _lock.IsWriteLockHeld;
             if( !hasWriteLock && !_lock.TryEnterWriteLock( millisecondsTimeout ) ) return false;
             Debug.Assert( !hasWriteLock || _currentTran != null, "isWrite => _currentTran != null" );
@@ -1355,41 +1353,15 @@ namespace CK.Observable
 
         void DoLoad( IActivityMonitor monitor, RewindableStream stream, string expectedLoadedName, bool? startTimer, Func<bool,bool>? beforeTimer = null )
         {
+            Debug.Assert( stream.IsValid );
             try
             {
-                if( !stream.IsValid )
+                monitor.Trace( $"Stream's Serializer version is {stream.SerializerVersion}." );
+                bool mustStartTimer = DoRealLoad( monitor, stream, expectedLoadedName, startTimer );
+                if( beforeTimer != null ) mustStartTimer = beforeTimer( mustStartTimer );
+                if( mustStartTimer )
                 {
-                    using( monitor.OpenWarn( $"The stream may be from a previous serialization implementation (version: {stream.SerializerVersion}). Trying to read it with the legacy implementation." ) )
-                    {
-                        try
-                        {
-                            using( var dOld = new BinaryDeserializer( stream.Reader.BaseStream, null, _deserializers, true, Encoding.UTF8 ) )
-                            {
-                                dOld.Services.Add( this );
-                                var mustStartTimer = DoLegacyRealLoad( monitor, dOld, expectedLoadedName, startTimer, stream.SerializerVersion );
-                                if( beforeTimer != null ) mustStartTimer = beforeTimer( mustStartTimer );
-                                if( mustStartTimer )
-                                {
-                                    _timeManager.DoStartOrStop( monitor, true );
-                                }
-                            }
-                        }
-                        catch( Exception ex )
-                        { 
-                            monitor.Error( ex );
-                            throw;
-                        }
-                    }
-                }
-                else
-                {
-                    monitor.Trace( $"Stream's Serializer version is {stream.SerializerVersion}." );
-                    bool mustStartTimer = DoRealLoad( monitor, stream, expectedLoadedName, startTimer );
-                    if( beforeTimer != null ) mustStartTimer = beforeTimer( mustStartTimer );
-                    if( mustStartTimer )
-                    {
-                        _timeManager.DoStartOrStop( monitor, true );
-                    }
+                    _timeManager.DoStartOrStop( monitor, true );
                 }
             }
             catch( Exception ex )

@@ -1,3 +1,4 @@
+using CK.BinarySerialization;
 using CK.Core;
 using System;
 using System.Collections;
@@ -298,42 +299,7 @@ namespace CK.Observable
             return (lostObjects, unusedPoolCount, pooledCount);
         }
 
-        internal bool Load( IActivityMonitor m, BinaryDeserializer r )
-        {
-            int version = r.ReadNonNegativeSmallInt32();
-            bool running = version > 0 ? r.ReadBoolean() : true;
-            int count = r.ReadNonNegativeSmallInt32();
-            while( --count >= 0 )
-            {
-                var t = (ObservableTimedEventBase)r.ReadObject()!;
-                Debug.Assert( !t.IsDestroyed );
-                OnCreated( t, false );
-                if( t.ActiveIndex > 0 )
-                {
-                    EnsureActiveLength( t.ActiveIndex );
-                    _activeEvents[t.ActiveIndex] = t;
-                    ++_activeCount;
-                }
-            }
-#if DEBUG
-            int expectedCount = _count;
-            ObservableTimedEventBase? last = null;
-            ObservableTimedEventBase? f = _first;
-            while( f != null )
-            {
-                Debug.Assert( --expectedCount >= 0 );
-                Debug.Assert( f.Prev == last );
-                last = f;
-                f = f.Next;
-            }
-            Debug.Assert( expectedCount == 0 );
-            Debug.Assert( _last == last );
-#endif
-            CheckMinHeapInvariant();
-            return running;
-        }
-
-        internal bool Load( IActivityMonitor m, BinarySerialization.IBinaryDeserializer d )
+        internal bool Load( IActivityMonitor m, IBinaryDeserializer d )
         {
             int version = d.Reader.ReadNonNegativeSmallInt32();
             bool running = version > 0 ? d.Reader.ReadBoolean() : true;

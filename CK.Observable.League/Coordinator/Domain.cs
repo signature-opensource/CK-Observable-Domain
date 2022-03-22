@@ -1,3 +1,4 @@
+using CK.BinarySerialization;
 using CK.Core;
 using System;
 using System.Collections.Generic;
@@ -27,26 +28,8 @@ namespace CK.Observable.League
             NextActiveTime = Util.UtcMinValue;
         }
 
-        Domain( IBinaryDeserializer r, TypeReadInfo? info )
-            : base( BinarySerialization.Sliced.Instance )
-        {
-            Coordinator = (Coordinator)r.ReadObject();
-            DomainName = r.ReadString();
-            _displayName = r.ReadNullableString();
-            RootTypes = (string[])r.ReadObject();
-            Options = (ManagedDomainOptions)r.ReadObject();
-            if( info.Version > 0 )
-            {
-                NextActiveTime = r.ReadDateTime();
-            }
-            else
-            {
-                NextActiveTime = r.ReadBoolean() ? DateTime.UtcNow : Util.UtcMinValue;
-            }
-        }
-
-        Domain( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
-            : base( BinarySerialization.Sliced.Instance )
+        Domain( IBinaryDeserializer r, ITypeReadInfo info )
+            : base( Sliced.Instance )
         {
             Coordinator = r.ReadObject<Coordinator>();
             DomainName = r.Reader.ReadString();
@@ -56,7 +39,7 @@ namespace CK.Observable.League
             NextActiveTime = r.Reader.ReadDateTime();
         }
 
-        public static void Write( BinarySerialization.IBinarySerializer w, in Domain o )
+        public static void Write( IBinarySerializer w, in Domain o )
         {
             w.WriteObject( o.Coordinator );
             w.Writer.Write( o.DomainName );

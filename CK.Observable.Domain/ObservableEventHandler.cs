@@ -1,3 +1,4 @@
+using CK.BinarySerialization;
 using CK.Core;
 using System;
 using System.Collections.Generic;
@@ -22,27 +23,14 @@ namespace CK.Observable
         /// Deserializes the <see cref="ObservableEventHandler"/>.
         /// If the method has been suppressed, use the static helper <see cref="Skip(IBinaryDeserializer)"/>.
         /// </summary>
-        /// <param name="r">The deserializer.</param>
-        public ObservableEventHandler( IBinaryDeserializer r ) => _handler = new ObservableDelegate( r );
-
-        /// <summary>
-        /// Helper that skips a serialized event to be used when an event is removed.
-        /// </summary>
-        /// <param name="r">The deserializer.</param>
-        public static void Skip( IBinaryDeserializer r ) => ObservableDelegate.Skip( r );
-
-        /// <summary>
-        /// Deserializes the <see cref="ObservableEventHandler"/>.
-        /// If the method has been suppressed, use the static helper <see cref="Skip(IBinaryDeserializer)"/>.
-        /// </summary>
         /// <param name="d">The deserializer.</param>
-        public ObservableEventHandler( BinarySerialization.IBinaryDeserializer d ) => _handler = new ObservableDelegate( d );
+        public ObservableEventHandler( IBinaryDeserializer d ) => _handler = new ObservableDelegate( d );
 
         /// <summary>
         /// Helper that skips a serialized event to be used when an event is removed.
         /// </summary>
         /// <param name="r">The deserializer.</param>
-        public static void Skip( BinarySerialization.IBinaryDeserializer d ) => ObservableDelegate.Skip( d );
+        public static void Skip( IBinaryDeserializer d ) => ObservableDelegate.Skip( d );
 
         /// <summary>
         /// Serializes this <see cref="ObservableEventHandler"/>.

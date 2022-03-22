@@ -1,3 +1,4 @@
+using CK.BinarySerialization;
 using CK.Core;
 using System;
 using System.Collections.Generic;
@@ -45,20 +46,13 @@ namespace CK.Observable
         /// If the method has been suppressed, use the static helper <see cref="ObservableEventHandler.Skip(IBinaryDeserializer)"/>.
         /// </summary>
         /// <param name="r">The deserializer.</param>
-        public ObservableEventHandler( IBinaryDeserializer r ) => _handler = new ObservableDelegate( r );
-
-        /// <summary>
-        /// Deserializes the <see cref="ObservableEventHandler{TEventArgs}"/>.
-        /// If the method has been suppressed, use the static helper <see cref="ObservableEventHandler.Skip(IBinaryDeserializer)"/>.
-        /// </summary>
-        /// <param name="r">The deserializer.</param>
-        public ObservableEventHandler( BinarySerialization.IBinaryDeserializer d ) => _handler = new ObservableDelegate( d );
+        public ObservableEventHandler( IBinaryDeserializer d ) => _handler = new ObservableDelegate( d );
 
         /// <summary>
         /// Serializes this <see cref="ObservableEventHandler{TEventArgs}"/>.
         /// </summary>
         /// <param name="w">The writer.</param>
-        public void Write( BinarySerialization.IBinarySerializer s ) => _handler.Write( s );
+        public void Write( IBinarySerializer s ) => _handler.Write( s );
 
         /// <summary>
         /// Gets whether at least one handler is registered.

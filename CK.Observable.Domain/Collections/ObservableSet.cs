@@ -58,21 +58,6 @@ namespace CK.Observable
             _set = new HashSet<T>();
         }
 
-        #region Old Serialization
-#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-
-        ObservableSet( IBinaryDeserializer r, TypeReadInfo info )
-                : base( BinarySerialization.Sliced.Instance )
-        {
-            _set = (HashSet<T>)r.ReadObject()!;
-            _itemAdded = new ObservableEventHandler<CollectionAddKeyEvent>( r );
-            _itemRemoved = new ObservableEventHandler<CollectionRemoveKeyEvent>( r );
-            _collectionCleared = new ObservableEventHandler<CollectionClearEvent>( r );
-        }
-        #endregion
-
-        #region New Serialization
         /// <summary>
         /// Specialized deserialization constructor for specialized classes.
         /// </summary>
@@ -101,7 +86,6 @@ namespace CK.Observable
             o._itemRemoved.Write( s );
             o._collectionCleared.Write( s );
         }
-        #endregion
 
         /// <summary>
         /// Gets the number of items contained in this set.

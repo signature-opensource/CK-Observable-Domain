@@ -64,22 +64,6 @@ namespace CK.Observable
             _map = new Dictionary<TKey, TValue>();
         }
 
-        #region Old Serialization
-#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-
-        ObservableDictionary( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( BinarySerialization.Sliced.Instance )
-        {
-            _map = (Dictionary<TKey, TValue>)r.ReadObject()!;
-            _itemSet = new ObservableEventHandler<CollectionMapSetEvent>( r );
-            _itemAdded = new ObservableEventHandler<CollectionMapSetEvent>( r );
-            _collectionCleared = new ObservableEventHandler<CollectionClearEvent>( r );
-            _itemRemoved = new ObservableEventHandler<CollectionRemoveKeyEvent>( r );
-        }
-        #endregion
-
-        #region New Serialization
         /// <summary>
         /// Specialized deserialization constructor for specialized classes.
         /// </summary>
@@ -106,7 +90,6 @@ namespace CK.Observable
             o._collectionCleared.Write( s );
             o._itemRemoved.Write( s );
         }
-        #endregion
 
         internal override ObjectExportedKind ExportedKind => ObjectExportedKind.Map;
 

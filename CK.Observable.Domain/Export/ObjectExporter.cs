@@ -11,7 +11,7 @@ namespace CK.Observable
         readonly Dictionary<object, int> _seen;
         readonly IExporterResolver _drivers;
 
-        public ObjectExporter( IObjectExporterTarget target, IExporterResolver drivers = null )
+        public ObjectExporter( IObjectExporterTarget target, IExporterResolver? drivers = null )
         {
             if( target == null ) throw new ArgumentNullException( nameof( target ) );
             _target = target;
@@ -19,7 +19,7 @@ namespace CK.Observable
             _drivers = drivers ?? ExporterRegistry.Default;
         }
 
-        public static void ExportRootList( IObjectExporterTarget target, IEnumerable objects, IExporterResolver drivers = null )
+        public static void ExportRootList( IObjectExporterTarget target, IEnumerable objects, IExporterResolver? drivers = null )
         {
             var e = new ObjectExporter( target, drivers );
             e._seen.Add( objects, 0 );
@@ -37,7 +37,7 @@ namespace CK.Observable
             Target.EmitEndObject( num, ObjectExportedKind.List );
         }
 
-        public void ExportMap<TKey,TValue>( int num, IEnumerable<KeyValuePair<TKey, TValue>> map, IObjectExportTypeDriver<TKey> keyExporter = null, IObjectExportTypeDriver<TValue> valueExporter = null )
+        public void ExportMap<TKey,TValue>( int num, IEnumerable<KeyValuePair<TKey, TValue>> map, IObjectExportTypeDriver<TKey>? keyExporter = null, IObjectExportTypeDriver<TValue>? valueExporter = null )
         {
             Target.EmitStartObject( num, ObjectExportedKind.Map );
             foreach( var kv in map )

@@ -1,3 +1,4 @@
+using CK.BinarySerialization;
 using CK.Core;
 using System;
 using System.Collections.Generic;
@@ -30,21 +31,11 @@ namespace CK.Observable
         {
         }
 
-        #region Old Serialization
-        ObservableChannel( IBinaryDeserializer d, TypeReadInfo? info )
-                : base( BinarySerialization.Sliced.Instance )
-        {
-            _itemSent = new ObservableEventHandler<ListInsertEvent>( d );
-        }
-
-        #endregion
-
-        #region New Serialization
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         protected ObservableChannel( BinarySerialization.Sliced _ ) : base( _ ) { }
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
   
-        ObservableChannel( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
+        ObservableChannel( IBinaryDeserializer d, ITypeReadInfo info )
                 : base( BinarySerialization.Sliced.Instance )
         {
             _itemSent = new ObservableEventHandler<ListInsertEvent>( d );
@@ -54,7 +45,6 @@ namespace CK.Observable
         {
             o._itemSent.Write( s );
         }
-        #endregion
 
         /// <summary>
         /// Define to export this channel as an empty list of items.

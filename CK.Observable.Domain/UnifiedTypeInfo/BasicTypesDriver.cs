@@ -17,8 +17,6 @@ namespace CK.Observable
 
             public static readonly DObject Default = new DObject();
 
-            public override object ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) =>  r.ReadObject();
-
             public override void Export( object o, int num, ObjectExporter exporter ) => exporter.ExportObject( o );
 
         }
@@ -28,8 +26,6 @@ namespace CK.Observable
             public DType() { }
 
             public static readonly DType Default = new DType();
-
-            public override Type ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => r.ReadType();
 
             public override void Export( Type o, int num, ObjectExporter exporter )
             {
@@ -47,8 +43,6 @@ namespace CK.Observable
 
             public static readonly DBool Default = new DBool();
 
-            public override bool ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => r.ReadBoolean();
-
             public override void Export( bool o, int num, ObjectExporter exporter ) => exporter.Target.EmitBool( o );
         }
 
@@ -57,8 +51,6 @@ namespace CK.Observable
             public DChar() { }
 
             public static readonly DChar Default = new DChar();
-
-            public override char ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => r.ReadChar();
             
             public override void Export( char o, int num, ObjectExporter exporter ) => exporter.Target.EmitChar( o );
         }
@@ -69,8 +61,6 @@ namespace CK.Observable
 
             public static readonly DDouble Default = new DDouble();
 
-            public override double ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => r.ReadDouble();
-
             public override void Export( double o, int num, ObjectExporter exporter ) => exporter.Target.EmitDouble( o );
         }
 
@@ -79,8 +69,6 @@ namespace CK.Observable
             public DSingle() { }
 
             public static readonly DSingle Default = new DSingle();
-
-            public override float ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => r.ReadSingle();
 
             public override void Export( float o, int num, ObjectExporter exporter ) => exporter.Target.EmitSingle( o );
         }
@@ -91,8 +79,6 @@ namespace CK.Observable
 
             public static readonly DDecimal Default = new DDecimal();
 
-            public override decimal ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => r.ReadDecimal();
-
             public override void Export( decimal o, int num, ObjectExporter exporter ) => exporter.Target.EmitSByte( o );
         }
 
@@ -101,8 +87,6 @@ namespace CK.Observable
             public DSByte() { }
 
             public static readonly DSByte Default = new DSByte();
-
-            public override sbyte ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => r.ReadSByte();
                         
             public override void Export( sbyte o, int num, ObjectExporter exporter ) => exporter.Target.EmitSByte( o );
         }
@@ -112,8 +96,6 @@ namespace CK.Observable
             public DByte() { }
 
             public static readonly DByte Default = new DByte();
-
-            public override byte ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => r.ReadByte();
             
             public override void Export( byte o, int num, ObjectExporter exporter ) => exporter.Target.EmitByte( o );
         }
@@ -123,8 +105,6 @@ namespace CK.Observable
             public DInt16() { }
 
             public static readonly DInt16 Default = new DInt16();
-
-            public override short ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => r.ReadInt16();
             
             public override void Export( short o, int num, ObjectExporter exporter ) => exporter.Target.EmitInt16( o );
         }
@@ -134,8 +114,6 @@ namespace CK.Observable
             public DUInt16() { }
 
             public static readonly DUInt16 Default = new DUInt16();
-
-            public override ushort ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => r.ReadUInt16();
             
             public override void Export( ushort o, int num, ObjectExporter exporter ) => exporter.Target.EmitUInt16( o );
         }
@@ -146,8 +124,6 @@ namespace CK.Observable
 
             public static readonly DInt32 Default = new DInt32();
 
-            public override int ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => r.ReadInt32();
-
             public override void Export( int o, int num, ObjectExporter exporter ) => exporter.Target.EmitInt32( o );
         }
 
@@ -156,8 +132,6 @@ namespace CK.Observable
             public DUInt32() { }
 
             public static readonly DUInt32 Default = new DUInt32();
-
-            public override uint ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => r.ReadUInt32();
 
             public override void Export( uint o, int num, ObjectExporter exporter ) => exporter.Target.EmitUInt32( o );
         }
@@ -168,8 +142,6 @@ namespace CK.Observable
 
             public static readonly DInt64 Default = new DInt64();
 
-            public override long ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => r.ReadInt64();
-
             public override void Export( long o, int num, ObjectExporter exporter ) => exporter.Target.EmitInt64( o );
         }
 
@@ -178,8 +150,6 @@ namespace CK.Observable
             public DUInt64() { }
 
             public static readonly DUInt64 Default = new DUInt64();
-
-            public override ulong ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => r.ReadUInt64();
 
             public override void Export( ulong o, int num, ObjectExporter exporter ) => exporter.Target.EmitUInt64( o );
         }
@@ -190,8 +160,6 @@ namespace CK.Observable
 
             public static readonly DString Default = new DString();
 
-            public override string ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => r.ReadNullableString();
-
             public override void Export( string o, int num, ObjectExporter exporter ) => exporter.Target.EmitString( o );
         }
 
@@ -200,8 +168,6 @@ namespace CK.Observable
             public DGuid() { }
 
             public static readonly DGuid Default = new DGuid();
-
-            public override Guid ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => r.ReadGuid();
 
             public override void Export( Guid o, int num, ObjectExporter exporter ) => exporter.Target.EmitGuid( o );
         }
@@ -212,8 +178,6 @@ namespace CK.Observable
 
             public static readonly DDateTime Default = new DDateTime();
 
-            public override DateTime ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => r.ReadDateTime();
-
             public override void Export( DateTime o, int num, ObjectExporter exporter ) => exporter.Target.EmitDateTime( o );
         }
 
@@ -223,8 +187,6 @@ namespace CK.Observable
 
             public static readonly DTimeSpan Default = new DTimeSpan();
 
-            public override TimeSpan ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => r.ReadTimeSpan();
-
             public override void Export( TimeSpan o, int num, ObjectExporter exporter ) => exporter.Target.EmitTimeSpan( o );
         }
 
@@ -233,8 +195,6 @@ namespace CK.Observable
             public DDateTimeOffset() { }
 
             public static readonly DDateTimeOffset Default = new DDateTimeOffset();
-
-            public override DateTimeOffset ReadInstance( IBinaryDeserializer r, TypeReadInfo readInfo, bool mustRead ) => r.ReadDateTimeOffset();
 
             public override void Export( DateTimeOffset o, int num, ObjectExporter exporter ) => exporter.Target.EmitDateTimeOffset( o );
         }

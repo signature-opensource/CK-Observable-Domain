@@ -1,9 +1,9 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
 	<Sdk Name="Microsoft.Build.CentralPackageVersions" Version="2.0.79" />
 	<Import Project="..\Common\Shared.props" />
 	<PropertyGroup>
-		<TargetFramework>netcoreapp3.1</TargetFramework>
+		<TargetFramework>net6</TargetFramework>
 		<Nullable>enable</Nullable>
 	</PropertyGroup>
 

@@ -1,3 +1,4 @@
+using CK.BinarySerialization;
 using CK.Core;
 using System;
 using System.Collections.Generic;
@@ -19,21 +20,15 @@ namespace CK.Observable.League.Tests.MicroMachine
             _all = new ObservableList<T>();
         }
 
-        Machine( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( BinarySerialization.Sliced.Instance )
+        protected Machine( Sliced _ ) : base( _ ) { }
+
+        Machine( IBinaryDeserializer d, ITypeReadInfo info )
+                : base( Sliced.Instance )
         {
-            _all = (ObservableList<T>)r.ReadObject()!;
+            _all = d.ReadObject<ObservableList<T>>();
         }
 
-        protected Machine( BinarySerialization.Sliced _ ) : base( _ ) { }
-
-        Machine( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
-                : base( BinarySerialization.Sliced.Instance )
-        {
-            _all = r.ReadObject<ObservableList<T>>();
-        }
-
-        public static void Write( BinarySerialization.IBinarySerializer s, in Machine<T> o )
+        public static void Write( IBinarySerializer s, in Machine<T> o )
         {
             s.WriteObject( o._all );
         }

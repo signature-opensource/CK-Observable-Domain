@@ -1,3 +1,4 @@
+using CK.BinarySerialization;
 using CK.Core;
 using System;
 using System.Collections.Generic;
@@ -143,31 +144,7 @@ namespace CK.Observable.League
             HousekeepingRate = housekeepingRate;
         }
 
-        ManagedDomainOptions( IBinaryDeserializer r, TypeReadInfo info )
-        {
-            LifeCycleOption = r.ReadEnum<DomainLifeCycleOption>();
-            CompressionKind = r.ReadEnum<CompressionKind>();
-            SnapshotSaveDelay = r.ReadTimeSpan();
-            SnapshotKeepDuration = r.ReadTimeSpan();
-            SnapshotMaximalTotalKiB = r.ReadInt32();
-            ExportedEventKeepDuration = r.ReadTimeSpan();
-            ExportedEventKeepLimit = r.ReadInt32();
-            if( info.Version < 2 )
-            {
-                // SaveDestroyedObjectBehavior enumeration (int).
-                r.ReadInt32();
-            }
-            if( info.Version >= 1 )
-            {
-                SkipTransactionCount = r.ReadInt32();
-            }
-            if( info.Version >= 3 )
-            {
-                HousekeepingRate = r.ReadInt32();
-            }
-        }
-
-        ManagedDomainOptions( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
+        ManagedDomainOptions( IBinaryDeserializer d, ITypeReadInfo info )
         {
             var r = d.Reader;
             LifeCycleOption = r.ReadEnum<DomainLifeCycleOption>();
@@ -181,7 +158,7 @@ namespace CK.Observable.League
             HousekeepingRate = r.ReadInt32();
         }
 
-        public static void Write( BinarySerialization.IBinarySerializer s, in ManagedDomainOptions o )
+        public static void Write( IBinarySerializer s, in ManagedDomainOptions o )
         {
             var w = s.Writer;
             w.WriteEnum( o.LifeCycleOption );

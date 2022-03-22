@@ -1,3 +1,4 @@
+using CK.BinarySerialization;
 using CK.Core;
 using System;
 using System.Collections.Generic;
@@ -458,17 +459,12 @@ namespace CK.Observable
             _currentIndex.Clear();
         }
 
-        internal void Load( BinaryDeserializer r )
-        {
-            r.ReadByte(); // Version.
-        }
-
-        internal void Load( BinarySerialization.IBinaryDeserializer s )
+        internal void Load( IBinaryDeserializer s )
         {
             s.Reader.ReadByte(); // Version.
         }
 
-        internal void Save( BinarySerialization.IBinarySerializer d )
+        internal void Save( IBinarySerializer d )
         {
             d.Writer.Write( (byte)0 );
         }

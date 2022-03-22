@@ -50,7 +50,7 @@ namespace CK.Observable
             remove => _propertyChanged.Remove( value );
         }
 
-        event PropertyChangedEventHandler INotifyPropertyChanged.PropertyChanged
+        event PropertyChangedEventHandler? INotifyPropertyChanged.PropertyChanged
         {
             add
             {
@@ -83,30 +83,6 @@ namespace CK.Observable
             _exporter = ActualDomain._exporters.FindDriver( GetType() );
             _oid = ActualDomain.Register( this );
         }
-
-        #region Old Serialization
-
-        ObservableObject( IBinaryDeserializer r, TypeReadInfo? info )
-        {
-            _oid = new ObservableObjectId( r );
-            if( !IsDestroyed )
-            {
-                // This enables the Observable object to be serializable/deserializable outside a Domain
-                // (for instance to use BinarySerializer.IdempotenceCheck): we really register the deserialized object
-                // if and only if the available Domain service is the one being deserialized.
-                var domain = r.Services.GetService<ObservableDomain>( throwOnNull: true );
-                if( (ActualDomain = domain) == ObservableDomain.CurrentThreadDomain )
-                {
-                    domain.SideEffectsRegister( this );
-                }
-                _exporter = domain._exporters.FindDriver( GetType() );
-                _destroyed = new ObservableEventHandler<ObservableDomainEventArgs>( r );
-                _propertyChanged = new ObservableEventHandler<PropertyChangedEventArgs>( r );
-            }
-        }
-        #endregion
-
-        #region New Serialization
 
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         protected ObservableObject( BinarySerialization.Sliced _ ) { }
@@ -141,7 +117,6 @@ namespace CK.Observable
                 o._propertyChanged.Write( s );
             }
         }
-        #endregion
 
         /// <summary>
         /// Gets whether this object has been disposed.

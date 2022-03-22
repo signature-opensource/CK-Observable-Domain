@@ -151,7 +151,7 @@ namespace CK.Observable
             _deserializeOrInitializing = true;
             try
             {
-                var r = BinarySerialization.BinaryDeserializer.Deserialize( s, _deserializerContext, d => DeserializeAndGetTimerState( monitor, expectedName, d ) );
+                var r = BinaryDeserializer.Deserialize( s, _deserializerContext, d => DeserializeAndGetTimerState( monitor, expectedName, d ) );
                 // Throw on error.
                 bool timerRunning = r.GetResult();
                 if( startTimer.HasValue ) timerRunning = startTimer.Value;
@@ -251,131 +251,6 @@ namespace CK.Observable
             d.DebugCheckSentinel();
             _sidekickManager.Load( d );
             return timerRunning;
-        }
-
-        bool DoLegacyRealLoad( IActivityMonitor monitor, BinaryDeserializer r, string expectedName, bool? startTimer, int version )
-        {
-            Debug.Assert( _lock.IsWriteLockHeld );
-            _deserializeOrInitializing = true;
-            try
-            {
-                UnloadDomain( monitor, true );
-                //int version = r.ReadSmallInt32();
-                if( version < 5 || version > 8 )
-                {
-                    throw new InvalidDataException( $"Version must be between 5 and 8. Version read: {version}." );
-                }
-                r.SerializationVersion = version;
-                r.DebugReadMode();
-                _currentObjectUniquifier = r.ReadInt32();
-                _domainSecret = r.ReadBytes( DomainSecretKeyLength );
-                var loaded = r.ReadString();
-                if( loaded != expectedName ) throw new InvalidDataException( $"Domain name mismatch: loading domain named '{loaded}' but expected '{expectedName}'." );
-
-                _transactionSerialNumber = r.ReadInt32();
-                _transactionCommitTimeUtc = r.ReadDateTime();
-                _actualObjectCount = r.ReadInt32();
-
-                r.DebugCheckSentinel();
-
-                // Clears and read the new free list.
-                _freeList.Clear();
-                int count = r.ReadNonNegativeSmallInt32();
-                while( --count >= 0 )
-                {
-                    _freeList.Add( r.ReadNonNegativeSmallInt32() );
-                }
-
-                r.DebugCheckSentinel();
-
-                // Read the properties index.
-                count = r.ReadNonNegativeSmallInt32();
-                for( int iProp = 0; iProp < count; iProp++ )
-                {
-                    string name = r.ReadString();
-                    var p = new ObservablePropertyChangedEventArgs( iProp, name );
-                    _properties.Add( name, p );
-                    _propertiesByIndex.Add( p );
-                }
-
-                r.DebugCheckSentinel();
-
-                // Resize _objects array.
-                _objectsListCount = count = _actualObjectCount + _freeList.Count;
-                while( _objectsListCount > _objects.Length )
-                {
-                    Array.Resize( ref _objects, _objects.Length * 2 );
-                }
-
-                if( version == 5 )
-                {
-                    // Reads objects. This can read Internal and Timed objects.
-                    for( int i = 0; i < count; ++i )
-                    {
-                        _objects[i] = (ObservableObject?)r.ReadObject();
-                        Debug.Assert( _objects[i] == null || !_objects[i]!.IsDestroyed );
-                    }
-
-                    // Fill roots array.
-                    r.DebugCheckSentinel();
-                    count = r.ReadNonNegativeSmallInt32();
-                    while( --count >= 0 )
-                    {
-                        _roots.Add( (ObservableRootObject)_objects[r.ReadNonNegativeSmallInt32()]! );
-                    }
-                }
-                else
-                {
-                    // Reading roots first (including Internal and Timed objects).
-                    int rootCount = r.ReadNonNegativeSmallInt32();
-                    for( int i = 0; i < rootCount; ++i )
-                    {
-                        _roots.Add( (ObservableRootObject)r.ReadObject()! );
-                    }
-                    // Reads all the objects. 
-                    for( int i = 0; i < count; ++i )
-                    {
-                        _objects[i] = (ObservableObject?)r.ReadObject();
-                        Debug.Assert( _objects[i] == null || !_objects[i]!.IsDestroyed );
-                    }
-                }
-
-                // Reading InternalObjects.
-                r.DebugCheckSentinel();
-                count = r.ReadNonNegativeSmallInt32();
-                while( --count >= 0 )
-                {
-                    var o = (InternalObject)r.ReadObject()!;
-                    Debug.Assert( !o.IsDestroyed );
-                    Register( o );
-                }
-                // Reading Timed events.
-                r.DebugCheckSentinel();
-                bool timerRunning = _timeManager.Load( monitor, r );
-                r.DebugCheckSentinel();
-                _sidekickManager.Load( r );
-                // This is where specialized typed ObservableDomain bind their roots.
-                OnLoaded();
-                // Calling PostDeserializationActions finalizes the object's graph.
-                r.ImplementationServices.ExecutePostDeserializationActions();
-
-                if( startTimer.HasValue ) timerRunning = startTimer.Value;
-                if( !_sidekickManager.CreateWaitingSidekicks( monitor, ex => { }, true ) )
-                {
-                    var msg = "At least one critical error occurred while activating sidekicks. The error should be investigated since this may well be a blocking error.";
-                    if( timerRunning )
-                    {
-                        timerRunning = false;
-                        msg += " The TimeManager (that should have ran) has been stopped.";
-                    }
-                    monitor.Error( msg );
-                }
-                return timerRunning;
-            }
-            finally
-            {
-                _deserializeOrInitializing = false;
-            }
         }
 
         /// <summary>

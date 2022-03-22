@@ -611,8 +611,6 @@ namespace CK.Observable.League
 
             IObservableDomainInspector IObservableDomainShellBase.DomainInspector => LoadedDomain;
 
-            IObservableDomainInspector IObservableDomainShellBase.DomainInspector => LoadedDomain;
-
             string? IObservableDomainShell.ExportToString( int millisecondsTimeout )
             {
                 var d = LoadedDomain;

@@ -63,21 +63,6 @@ namespace CK.Observable
             _list = new List<T>();
         }
 
-        #region Old Serialization
-
-        ObservableList( IBinaryDeserializer r, TypeReadInfo info )
-                : base( BinarySerialization.Sliced.Instance )
-        {
-            _list = (List<T>)r.ReadObject()!;
-            _itemSet = new ObservableEventHandler<ListSetAtEvent>( r );
-            _itemInserted = new ObservableEventHandler<ListInsertEvent>( r );
-            _itemRemovedAt = new ObservableEventHandler<ListRemoveAtEvent>( r );
-            _collectionCleared = new ObservableEventHandler<CollectionClearEvent>( r );
-        }
-
-        #endregion
-
-        #region New Serialization
         /// <summary>
         /// Specialized deserialization constructor for specialized classes.
         /// </summary>
@@ -108,7 +93,6 @@ namespace CK.Observable
             o._itemRemovedAt.Write( s );
             o._collectionCleared.Write( s );
         }
-        #endregion
 
         /// <summary>
         /// Gets or sets an item at a given position.

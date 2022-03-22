@@ -47,23 +47,6 @@ namespace CK.Observable
             Name = name ?? throw new ArgumentNullException( nameof( name ) );
         }
 
-        #region Old Deserialization
-        ObservableTimer( IBinaryDeserializer r, TypeReadInfo? info )
-            : base( BinarySerialization.Sliced.Instance )
-        {
-            Debug.Assert( !IsDestroyed );
-            _milliSeconds = r.ReadInt32();
-            if( _milliSeconds < 0 )
-            {
-                _milliSeconds = -_milliSeconds;
-                _isActive = true;
-            }
-            Name = r.ReadNullableString();
-            ReusableArgs = new ObservableTimerEventArgs( this );
-        }
-        #endregion
-
-        #region New Serialization
         ObservableTimer( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
             : base( BinarySerialization.Sliced.Instance )
         {
@@ -84,7 +67,6 @@ namespace CK.Observable
             s.Writer.Write( o._isActive ? -o._milliSeconds : o._milliSeconds );
             s.Writer.WriteNullableString( o.Name );
         }
-        #endregion
 
         private protected override bool GetIsActiveFlag() => _isActive;
 

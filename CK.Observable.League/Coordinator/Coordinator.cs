@@ -1,3 +1,4 @@
+using CK.BinarySerialization;
 using CK.Core;
 using System;
 using System.Collections.Generic;
@@ -25,19 +26,13 @@ namespace CK.Observable.League
             _domains = new ObservableDictionary<string, Domain>();
         }
 
-        Coordinator( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( BinarySerialization.Sliced.Instance )
-        {
-            _domains = (ObservableDictionary<string, Domain>)r.ReadObject();
-        }
-
-        Coordinator( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
-                : base( BinarySerialization.Sliced.Instance )
+        Coordinator( IBinaryDeserializer r, ITypeReadInfo info )
+                : base( Sliced.Instance )
         {
             _domains = r.ReadObject<ObservableDictionary<string, Domain>>();
         }
 
-        public static void Write( BinarySerialization.IBinarySerializer w, in Coordinator o )
+        public static void Write( IBinarySerializer w, in Coordinator o )
         {
             w.WriteObject( o._domains );
         }

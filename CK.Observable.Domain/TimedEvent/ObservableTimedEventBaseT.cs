@@ -25,15 +25,6 @@ namespace CK.Observable
         }
 
 
-        #region Old Deserialization
-        ObservableTimedEventBase( IBinaryDeserializer r, TypeReadInfo info )
-            : base( BinarySerialization.Sliced.Instance )
-        {
-            _handlers = new ObservableEventHandler<TEventArgs>( r );
-        }
-        #endregion
-
-        #region New Serialization
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         protected ObservableTimedEventBase( BinarySerialization.Sliced _ ) : base( _ ) { }
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
@@ -48,7 +39,6 @@ namespace CK.Observable
         {
             o._handlers.Write( s );
         }
-        #endregion
 
         internal override bool HasHandlers => _handlers.HasHandlers;
 

@@ -1,4 +1,5 @@
 using CK.Core;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -55,26 +56,6 @@ namespace CK.Observable
             ActualDomain.Register( this );
         }
 
-        #region Old deserialization
-        InternalObject( IBinaryDeserializer r, TypeReadInfo? info )
-        {
-            Debug.Assert( info != null && info.Version == 0 );
-            if( r.ReadBoolean() )
-            {
-                // This enables the Internal object to be serializable/deserializable outside a Domain
-                // (for instance to use BinarySerializer.IdempotenceCheck): the domain registers it.
-                ActualDomain = r.Services.GetService<ObservableDomain>( throwOnNull: true );
-                _destroyed = new ObservableEventHandler<ObservableDomainEventArgs>( r );
-            }
-            else
-            {
-                Debug.Assert( IsDestroyed );
-            }
-        }
-
-        #endregion
-
-        #region New Serialization
         protected InternalObject( BinarySerialization.Sliced _ ) { }
 
         InternalObject( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
@@ -83,7 +64,7 @@ namespace CK.Observable
             {
                 // This enables the Internal object to be serializable/deserializable outside a Domain
                 // (for instance to use BinarySerializer.IdempotenceCheck): the domain registers it.
-                ActualDomain = d.Context.Services.GetService<ObservableDomain>( throwOnNull: true );
+                ActualDomain = d.Context.Services.GetRequiredService<ObservableDomain>();
                 _destroyed = new ObservableEventHandler<ObservableDomainEventArgs>( d );
             }
             else
@@ -101,9 +82,6 @@ namespace CK.Observable
                 o._destroyed.Write( s );
             }
         }
-
-        #endregion
-
 
         /// <summary>
         /// Gets a safe view on the domain to which this internal object belongs.

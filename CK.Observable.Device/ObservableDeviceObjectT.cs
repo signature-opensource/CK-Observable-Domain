@@ -18,13 +18,6 @@ namespace CK.Observable.Device
         {
         }
 
-        #region Old Deserialization
-        ObservableDeviceObject( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( BinarySerialization.Sliced.Instance )
-        {
-        }
-        #endregion
-
         protected ObservableDeviceObject( BinarySerialization.Sliced _ ) : base( _ ) { }
 
         ObservableDeviceObject( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )

@@ -1,3 +1,4 @@
+using CK.BinarySerialization;
 using CK.Core;
 using System;
 
@@ -27,24 +28,15 @@ namespace CK.Observable
         {
         }
 
-        #region Old Deserialization
-        ObservableRootObject( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( BinarySerialization.Sliced.Instance )
-        {
-        }
-        #endregion
+        protected ObservableRootObject( Sliced _ ) : base( _ ) { }
 
-        #region New Deserialization
-        protected ObservableRootObject( BinarySerialization.Sliced _ ) : base( _ ) { }
-
-        ObservableRootObject( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
-        : base( BinarySerialization.Sliced.Instance )
+        ObservableRootObject( IBinaryDeserializer d, ITypeReadInfo info )
+        : base( Sliced.Instance )
         {
         }
 
-        public static void Write( BinarySerialization.IBinarySerializer s, in ObservableRootObject o )
+        public static void Write( IBinarySerializer s, in ObservableRootObject o )
         {
         }
-        #endregion
     }
 }

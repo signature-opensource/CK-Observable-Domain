@@ -14,12 +14,6 @@ namespace CK.Observable
         Type Type { get; }
 
         /// <summary>
-        /// Gets the deserialization driver.
-        /// Null if no deserialization driver is available.
-        /// </summary>
-        new IDeserializationDriver<T>? DeserializationDriver { get; }
-
-        /// <summary>
         /// Gets the export driver.
         /// Null if no export driver is available.
         /// </summary>

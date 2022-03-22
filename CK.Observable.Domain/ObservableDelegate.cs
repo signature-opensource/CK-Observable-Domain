@@ -1,8 +1,8 @@
+using CK.BinarySerialization;
 using CK.Core;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
@@ -22,103 +22,7 @@ namespace CK.Observable
         /// </summary>
         Delegate? _d;
 
-        public static void Skip( IBinaryDeserializer r )
-        {
-            r.DebugCheckSentinel();
-            int count = r.ReadNonNegativeSmallInt32();
-            if( count > 0 )
-            {
-                r.ReadType();
-                object? o = r.ReadObject();
-                if( o != null )
-                {
-                    do
-                    {
-                        r.ReadSharedString();
-                        SkipArray( r );
-                    }
-                    while( --count > 0 );
-                }
-                r.DebugCheckSentinel();
-            }
-
-            static void SkipArray( IBinaryDeserializer r )
-            {
-                int len = r.ReadNonNegativeSmallInt32();
-                while( --len >= 0 ) r.ReadType();
-            }
-        }
-
-        /// <summary>
-        /// Deserializes the delegate.
-        /// </summary>
-        /// <param name="r">The deserializer.</param>
-        public ObservableDelegate( IBinaryDeserializer r )
-        {
-            static void ThrowError( string typeName, Type[] paramTypes, string methodName, bool isStatic )
-            {
-                var msg = $"Unable to find {(isStatic ? "static" : "")} method {methodName} on type {typeName} with parameters {paramTypes.Select( t => t.Name ).Concatenate()}.";
-                msg += Environment.NewLine + "If the event has been suppressed, please use the static helper: ObservableEventHandler.Skip( IBinaryDeserializer r ).";
-                throw new Exception( msg );
-            }
-
-            r.DebugCheckSentinel();
-            _d = null;
-            int count = r.ReadNonNegativeSmallInt32();
-            if( count > 0 )
-            {
-                Delegate? final = null;
-                Type tD = r.ReadType( throwIfMissing: true )!;
-                do
-                {
-                    object? o = r.ReadObject();
-                    if( o != null )
-                    {
-                        string? methodName = r.ReadSharedString();
-                        if( methodName == null ) throw new InvalidDataException( "Unable to read method name for event." );
-                        // Use local DoReadArray (sharing this array makes no sense).
-                        Type[] paramTypes = DoReadTypeArray( r );
-                        if( o is Type t )
-                        {
-                            var m = t.GetMethod( methodName, BindingFlags.Static | BindingFlags.FlattenHierarchy | BindingFlags.Public | BindingFlags.NonPublic, null, paramTypes, null );
-                            if( m == null )
-                            {
-                                ThrowError( t.FullName, paramTypes, methodName, true );
-                            }
-                            final = Delegate.Combine( final, Delegate.CreateDelegate( tD, m, true ) );
-                        }
-                        else
-                        {
-                            var oT = o.GetType();
-                            var m = oT.GetMethod( methodName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, paramTypes, null );
-                            while( m == null && (oT = oT.BaseType) != null )
-                            {
-                                m = oT.GetMethod( methodName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, paramTypes, null );
-                            }
-                            if( m == null )
-                            {
-                                ThrowError( o.GetType().FullName, paramTypes, methodName, false );
-                            }
-                            final = Delegate.Combine( final, Delegate.CreateDelegate( tD, o, m ) );
-                        }
-                    }
-                }
-                while( --count > 0 );
-                _d = final;
-                r.DebugCheckSentinel();
-            }
-
-            static Type[] DoReadTypeArray( IBinaryDeserializer r )
-            {
-                int len = r.ReadNonNegativeSmallInt32();
-                if( len == 0 ) return Array.Empty<Type>();
-                var result = new Type[len];
-                for( int i = 0; i < len; ++i ) result[i] = r.ReadType( throwIfMissing: true )!;
-                return result;
-            }
-        }
-
-        public static void Skip( BinarySerialization.IBinaryDeserializer d )
+        public static void Skip( IBinaryDeserializer d )
         {
             d.Reader.ReadByte(); // Version
             int count = d.Reader.ReadNonNegativeSmallInt32();
@@ -152,7 +56,7 @@ namespace CK.Observable
         /// Deserializes the delegate.
         /// </summary>
         /// <param name="d">The deserializer.</param>
-        public ObservableDelegate( BinarySerialization.IBinaryDeserializer d )
+        public ObservableDelegate( IBinaryDeserializer d )
         {
             static void ThrowError( string typeName, Type[] paramTypes, string methodName, bool isStatic )
             {
@@ -212,7 +116,7 @@ namespace CK.Observable
                 d.DebugCheckSentinel();
             }
 
-            static Type[] DoReadTypeArray( BinarySerialization.IBinaryDeserializer r )
+            static Type[] DoReadTypeArray( IBinaryDeserializer r )
             {
                 int len = r.Reader.ReadNonNegativeSmallInt32();
                 if( len == 0 ) return Array.Empty<Type>();
