@@ -1,4 +1,5 @@
-﻿using CK.Core;
+﻿using CK.BinarySerialization;
+using CK.Core;
 using FluentAssertions;
 using NUnit.Framework;
 using System;
@@ -93,14 +94,14 @@ namespace CK.Observable.League.Tests
                 Payload = payload;
             }
 
-            OJustForTheSize( IBinaryDeserializer d, TypeReadInfo? info )
+            OJustForTheSize( CK.BinarySerialization.IBinaryDeserializer d, ITypeReadInfo info )
             {
-                Payload = d.ReadNullableString();
+                Payload = d.Reader.ReadNullableString();
             }
 
-            void Write( IBinarySerializer s )
+            public static void Write( IBinarySerializer s, in OJustForTheSize o )
             {
-                s.WriteNullableString( Payload );
+                s.Writer.WriteNullableString( o.Payload );
             }
         }
 

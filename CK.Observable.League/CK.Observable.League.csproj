@@ -5,8 +5,9 @@
   <Import Project="..\Common\Shared.props" />
   
   <PropertyGroup>
-    <TargetFramework>netstandard2.1</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <Nullable>enable</Nullable>
+	<LangVersion>9</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>

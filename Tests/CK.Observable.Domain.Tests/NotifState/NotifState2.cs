@@ -20,19 +20,19 @@ namespace Signature.Process.Dispatching
             Exceptions = new ObservableChannel<CKExceptionData>();
         }
 
-        protected NotificationState2( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+        protected NotificationState2( CK.BinarySerialization.IBinaryDeserializer d, CK.BinarySerialization.ITypeReadInfo info )
+                : base( CK.BinarySerialization.Sliced.Instance )
         {
-            BarcodeScanner = (BarcodeScannerState)r.ReadObject();
-            ProductDispatchErrors = (ObservableChannel<DispatchProductResult>)r.ReadObject();
-            Exceptions = (ObservableChannel<CKExceptionData>)r.ReadObject();
+            BarcodeScanner = d.ReadObject<BarcodeScannerState>();
+            ProductDispatchErrors = d.ReadObject<ObservableChannel<DispatchProductResult>>();
+            Exceptions = d.ReadObject<ObservableChannel<CKExceptionData>>();
         }
 
-        void Write( BinarySerializer w )
+        public static void Write( CK.BinarySerialization.IBinarySerializer s, in NotificationState2 o )
         {
-            w.WriteObject( BarcodeScanner );
-            w.WriteObject( ProductDispatchErrors );
-            w.WriteObject( Exceptions );
+            s.WriteObject( o.BarcodeScanner );
+            s.WriteObject( o.ProductDispatchErrors );
+            s.WriteObject( o.Exceptions );
         }
 
         public void SendDispatchResult( DispatchProductResult r )

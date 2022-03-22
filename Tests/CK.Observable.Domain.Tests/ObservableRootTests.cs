@@ -71,9 +71,9 @@ namespace CK.Observable.Domain.Tests
                         d.Root.ProductInfos.Add( pInfo );
                     }
                 } );
-                var services = new SimpleServiceContainer();
-                services.Add<ObservableDomain>( new ObservableDomain<ApplicationState>(TestHelper.Monitor, nameof( serialization_tests ), startTimer: true ) );
-                BinarySerializer.IdempotenceCheck( d.Root, services );
+                var ctx = new BinarySerialization.BinaryDeserializerContext();
+                ctx.Services.Add<ObservableDomain>( new ObservableDomain<ApplicationState>(TestHelper.Monitor, nameof( serialization_tests ), startTimer: true ) );
+                BinarySerialization.BinarySerializer.IdempotenceCheck( d.Root, deserializerContext: ctx );
             }
         }
 

@@ -1,3 +1,4 @@
+using CK.Core;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -12,17 +13,16 @@ namespace CK.Observable.League.Tests.MicroMachine
             Machine = new SpecializedMachine( "Artemis", new MachineConfiguration() );
         }
 
-        Root( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+        Root( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo? info )
+                : base( BinarySerialization.Sliced.Instance )
         {
-            Machine = (SpecializedMachine)r.ReadObject()!;
+            Machine = r.ReadObject<SpecializedMachine>();
         }
 
-        void Write( BinarySerializer w )
+        public static void Write( BinarySerialization.IBinarySerializer s, in Root o )
         {
-            w.WriteObject( Machine );
+            s.WriteObject( o.Machine );
         }
-
 
         /// <summary>
         /// Gets the "Artemis" machine.

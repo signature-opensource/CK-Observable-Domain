@@ -89,15 +89,15 @@ namespace CK.Observable.Domain.Tests
             {
             }
 
-            ObservableWithJaggedArrays( IBinaryDeserializer r, TypeReadInfo info )
-                : base( RevertSerialization.Default )
+            ObservableWithJaggedArrays( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+                : base( BinarySerialization.Sliced.Instance )
             {
-                Cars = (Car[][])r.ReadObject()!;
+                Cars = r.ReadObject<Car[][]>();
             }
 
-            void Write( BinarySerializer w )
+            public static void Write( BinarySerialization.IBinarySerializer w, in ObservableWithJaggedArrays o )
             {
-                w.WriteObject( Cars );
+                w.WriteObject( o.Cars );
             }
 
             public Car[][] Cars { get; set; }
@@ -212,28 +212,28 @@ namespace CK.Observable.Domain.Tests
         {
             public ObservableDictionary<string, CustomImmutable> ImmutablesById { get; set; }
             public ObservableList<string> SomeList { get; set; }
-            public ObservableList<CustomObservable> CustomObservableList { get; set; }
+            public ObservableList<CustomObservable>? CustomObservableList { get; set; }
 
             public CustomRoot() { }
 
-            CustomRoot( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+            CustomRoot( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+                : base( BinarySerialization.Sliced.Instance )
             {
-                ImmutablesById = (ObservableDictionary<string, CustomImmutable>)r.ReadObject();
-                SomeList = (ObservableList<string>)r.ReadObject();
-                CustomObservableList = (ObservableList<CustomObservable>)r.ReadObject();
+                ImmutablesById = r.ReadObject<ObservableDictionary<string, CustomImmutable>>();
+                SomeList = r.ReadObject<ObservableList<string>>();
+                CustomObservableList = r.ReadNullableObject<ObservableList<CustomObservable>>();
             }
 
-            void Write( BinarySerializer w )
+            public static void Write( BinarySerialization.IBinarySerializer w, in CustomRoot o )
             {
-                w.WriteObject( ImmutablesById );
-                w.WriteObject( SomeList );
-                w.WriteObject( CustomObservableList );
+                w.WriteObject( o.ImmutablesById );
+                w.WriteObject( o.SomeList );
+                w.WriteNullableObject( o.CustomObservableList );
             }
         }
 
         [SerializationVersion( 0 )]
-        public class CustomImmutable
+        public class CustomImmutable : BinarySerialization.ICKSlicedSerializable
         {
             public string Id { get; }
             public string Title { get; }
@@ -244,17 +244,17 @@ namespace CK.Observable.Domain.Tests
                 Title = title;
             }
 
-            CustomImmutable( IBinaryDeserializer r, TypeReadInfo? info )
+            CustomImmutable( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo? info )
             {
-                Id = r.ReadNullableString();
-                Title = r.ReadNullableString();
+                Id = r.Reader.ReadNullableString();
+                Title = r.Reader.ReadNullableString();
             }
 
 
-            void Write( BinarySerializer w )
+            public static void Write( BinarySerialization.IBinarySerializer w, in CustomImmutable o )
             {
-                w.WriteNullableString( Id );
-                w.WriteNullableString( Title );
+                w.Writer.WriteNullableString( o.Id );
+                w.Writer.WriteNullableString( o.Title );
             }
 
         }
@@ -269,16 +269,16 @@ namespace CK.Observable.Domain.Tests
                 ImmutablesById = new ObservableDictionary<string, CustomImmutable>();
             }
 
-            protected CustomObservable( IBinaryDeserializer r, TypeReadInfo? info )
-            : base( RevertSerialization.Default )
+            protected CustomObservable( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+            : base( BinarySerialization.Sliced.Instance )
             {
-                ImmutablesById = (ObservableDictionary<string, CustomImmutable>)r.ReadObject();
+                ImmutablesById = r.ReadObject<ObservableDictionary<string, CustomImmutable>>();
             }
 
 
-            void Write( BinarySerializer w )
+            public static void Write( BinarySerialization.IBinarySerializer w, in CustomObservable o )
             {
-                w.WriteObject( ImmutablesById );
+                w.WriteObject( o.ImmutablesById );
             }
 
         }
@@ -295,17 +295,17 @@ namespace CK.Observable.Domain.Tests
                 ChildObject = new ObservableList<int>();
             }
 
-            TestDisposableObservableObject( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+            TestDisposableObservableObject( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo? info )
+                : base( BinarySerialization.Sliced.Instance )
             {
-                AlwaysDisposeChild = r.ReadBoolean();
-                ChildObject = (ObservableList<int>)r.ReadObject();
+                AlwaysDisposeChild = r.Reader.ReadBoolean();
+                ChildObject = r.ReadObject<ObservableList<int>>();
             }
 
-            void Write( BinarySerializer w )
+            public static void Write( BinarySerialization.IBinarySerializer w, in TestDisposableObservableObject o )
             {
-                w.Write( AlwaysDisposeChild );
-                w.WriteObject( ChildObject );
+                w.Writer.Write( o.AlwaysDisposeChild );
+                w.WriteObject( o.ChildObject );
             }
 
             protected override void OnDestroy()
@@ -342,23 +342,23 @@ namespace CK.Observable.Domain.Tests
                 _oTimers = new ObservableList<ObservableTimer>();
             }
 
-            ReminderAndTimerBag( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+            ReminderAndTimerBag( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo? info )
+                : base( BinarySerialization.Sliced.Instance )
             {
-                _identifier = r.ReadInt32();
-                _reminders = (List<ObservableReminder>)r.ReadObject()!;
-                _oReminders = (ObservableList<ObservableReminder>)r.ReadObject()!;
-                _timers = (List<ObservableTimer>)r.ReadObject()!;
-                _oTimers = (ObservableList<ObservableTimer>)r.ReadObject()!;
+                _identifier = r.Reader.ReadInt32();
+                _reminders = r.ReadObject<List<ObservableReminder>>();
+                _oReminders = r.ReadObject<ObservableList<ObservableReminder>>();
+                _timers = r.ReadObject<List<ObservableTimer>>();
+                _oTimers = r.ReadObject<ObservableList<ObservableTimer>>();
             }
 
-            void Write( BinarySerializer w )
+            public static void Write( BinarySerialization.IBinarySerializer w, in ReminderAndTimerBag o )
             {
-                w.Write( _identifier );
-                w.WriteObject( _reminders );
-                w.WriteObject( _oReminders );
-                w.WriteObject( _timers );
-                w.WriteObject( _oTimers );
+                w.Writer.Write( o._identifier );
+                w.WriteObject( o._reminders );
+                w.WriteObject( o._oReminders );
+                w.WriteObject( o._timers );
+                w.WriteObject( o._oTimers );
             }
 
             public void Create( int count = 5 )

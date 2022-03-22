@@ -12,17 +12,17 @@ namespace CK.Observable.Domain.Tests.Sample
             Garage.Employees.Add( this );
         }
 
-        protected Employee( RevertSerialization _ ) : base( _ ) { }
+        protected Employee( BinarySerialization.Sliced _ ) : base( _ ) { }
 
-        Employee( IBinaryDeserializer r, TypeReadInfo? info )
-            : base( RevertSerialization.Default )
+        Employee( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+            : base( BinarySerialization.Sliced.Instance )
         {
-            Garage = (Garage)r.ReadObject();
+            Garage = r.ReadObject<Garage>();
         }
 
-        void Write( BinarySerializer s )
+        public static void Write( BinarySerialization.IBinarySerializer s, in Employee o )
         {
-            s.WriteObject( Garage );
+            s.WriteObject( o.Garage );
         }
 
         public Garage Garage { get; set; }

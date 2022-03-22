@@ -269,7 +269,7 @@ namespace CK.Observable
                 // Previous attempt failed.
                 if( cache is Exception ex )
                 {
-                    monitor.Error( "This sidekick instantiation previousy failed." );
+                    monitor.Error( "This sidekick instantiation previously failed." );
                     return HandleError( monitor, typeOrName, optional, errorCollector, ex );
                 }
                 monitor.Debug( "Already available." );
@@ -421,7 +421,7 @@ namespace CK.Observable
                 if( errors == null ) errors = new List<(object, CKExceptionData)>();
                 errors.Add( (c, CKExceptionData.CreateFrom( ex )) );
             }
-            // If an error occured, it's because, somehow it has been handled.
+            // If an error occurred, it's because, somehow it has been handled.
             return true;
         }
 
@@ -462,9 +462,14 @@ namespace CK.Observable
             r.ReadByte(); // Version.
         }
 
-        internal void Save( BinarySerializer w )
+        internal void Load( BinarySerialization.IBinaryDeserializer s )
         {
-            w.Write( (byte)0 );
+            s.Reader.ReadByte(); // Version.
+        }
+
+        internal void Save( BinarySerialization.IBinarySerializer d )
+        {
+            d.Writer.Write( (byte)0 );
         }
 
     }

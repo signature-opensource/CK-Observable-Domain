@@ -26,19 +26,32 @@ namespace CK.Observable.Domain.Tests
             _privateTestSerialization.Add( PrivateHandler, "PrivateEvent" );
         }
 
+        #region Old Deserialization
         TestCounter( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+                : base( BinarySerialization.Sliced.Instance )
         {
             Count = r.ReadInt32();
             _privateTestSerialization = new ObservableEventHandler( r );
             _privateTestSerialization.HasHandlers.Should().BeTrue();
         }
+        #endregion
 
-        void Write( BinarySerializer w )
+        #region New Deserialization
+
+        TestCounter( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
+        : base( BinarySerialization.Sliced.Instance )
         {
-            w.Write( Count );
-            _privateTestSerialization.Write( w );
+            Count = d.Reader.ReadInt32();
+            _privateTestSerialization = new ObservableEventHandler( d );
+            _privateTestSerialization.HasHandlers.Should().BeTrue();
         }
+
+        public static void Write( BinarySerialization.IBinarySerializer s, in TestCounter o )
+        {
+            s.Writer.Write( o.Count );
+            o._privateTestSerialization.Write( s );
+        }
+        #endregion
 
         public void IncrementNoLog( object sender ) => Count++;
 
