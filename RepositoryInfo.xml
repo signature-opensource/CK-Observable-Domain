@@ -8,7 +8,6 @@
     </IgnoreModifiedFiles>
     <Branches>
       <Branch Name="develop-NetCore3" CIVersionMode="LastReleaseBased" VersionName="develop" />
-      <Branch Name="binary-serialization" CIVersionMode="ZeroTimed" VersionName="explo" UseReleaseBuildConfigurationFrom="ReleaseCandidate"/>
 	</Branches>
   </SimpleGitVersion>
 </RepositoryInfo>
