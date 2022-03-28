@@ -15,7 +15,7 @@ namespace CK.Observable
     /// </summary>
     [NotExportable]
     [SerializationVersion( 0 )]
-    public abstract class InternalObject : IDestroyableObject, BinarySerialization.IDestroyable, BinarySerialization.ICKSlicedSerializable
+    public abstract class InternalObject : IDestroyableObject, BinarySerialization.ICKSlicedSerializable
     {
         internal ObservableDomain ActualDomain;
         internal InternalObject? Next;

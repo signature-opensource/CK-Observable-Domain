@@ -16,7 +16,7 @@ namespace CK.Observable
     /// </summary>
     [SerializationVersion( 1 )]
     [NotExportable]
-    public abstract class ObservableTimedEventBase : IDestroyableObject, BinarySerialization.IDestroyable, BinarySerialization.ICKSlicedSerializable
+    public abstract class ObservableTimedEventBase : IDestroyableObject, BinarySerialization.ICKSlicedSerializable
     {
         internal TimeManager? TimeManager;
         /// <summary>

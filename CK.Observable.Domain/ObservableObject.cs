@@ -14,8 +14,7 @@ namespace CK.Observable
     /// which properties changes and <see cref="Destroy()"/> are tracked.
     /// </summary>
     [SerializationVersion( 1 )]
-    public abstract partial class ObservableObject : INotifyPropertyChanged, IKnowMyExportDriver, BinarySerialization.IDestroyable, BinarySerialization.ICKSlicedSerializable
-                                                        , IDestroyableObject
+    public abstract partial class ObservableObject : INotifyPropertyChanged, IKnowMyExportDriver, IDestroyableObject, BinarySerialization.ICKSlicedSerializable
     {
         ObservableObjectId _oid;
         internal readonly ObservableDomain ActualDomain;

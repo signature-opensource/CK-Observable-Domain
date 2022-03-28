@@ -20,7 +20,7 @@ namespace CK.Observable
     {
         // Link to the next free reminder. Can be not null if and only if this reminder
         // is a pooled one and is currently inactive.
-        internal ObservableReminder NextFreeReminder;
+        internal ObservableReminder? NextFreeReminder;
 
         /// <summary>
         /// Initializes a new unnamed <see cref="ObservableReminder"/> bound to the current <see cref="ObservableDomain"/>.
