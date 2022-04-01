@@ -110,7 +110,7 @@ namespace CK.Observable.Device
         /// </para>
         /// </summary>
         [NotExportable]
-        public DeviceConfiguration? Configuration { get; internal set; }
+        public DeviceConfiguration? Configuration { get; private set; }
 
         /// <summary>
         /// Raised whenever <see cref="Configuration"/> has changed.
@@ -119,6 +119,16 @@ namespace CK.Observable.Device
         {
             add => _configurationChanged.Add( value, nameof( ConfigurationChanged ) );
             remove => _configurationChanged.Remove( value );
+        }
+
+        /// <summary>
+        /// Called whenever the device's configuration changed.
+        /// This base method MUST be called since it sets the <see cref="Configuration"/> property.
+        /// </summary>
+        /// <param name="configuration">The updated configuration.</param>
+        protected internal virtual void OnDeviceConfigurationApplied( DeviceConfiguration configuration )
+        {
+            Configuration = configuration;
         }
 
         /// <summary>

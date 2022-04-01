@@ -128,7 +128,7 @@ namespace CK.Observable.Device
                         SetObjectDeviceControlProperties( e.Device.ControllerKey );
                         if( e is DeviceConfigurationChangedEvent c )
                         {
-                            Object.Configuration = c.Configuration;
+                            Object.OnDeviceConfigurationApplied( c.Configuration );
                         }
                     }
                 } );
