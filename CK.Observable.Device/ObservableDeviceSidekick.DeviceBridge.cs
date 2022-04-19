@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace CK.Observable.Device
 {
-    public abstract partial class ObservableDeviceSidekick<THost,TDeviceObject,TDeviceHostObject> 
+    public abstract partial class ObservableDeviceSidekick<THost,TDeviceObject,TDeviceHostObject>
     {
         /// <summary>
         /// Must create a <see cref="Bridge{TSidekick, TDevice}"/> between <typeparamref name="TDeviceObject"/> and its actual <see cref="Bridge{TSidekick, TDevice}.Device"/>.
@@ -86,7 +86,7 @@ namespace CK.Observable.Device
                 d.LifetimeEvent.Async += OnDeviceLifetimeChangedAsync;
                 Device = d;
                 Object.Status = d.Status;
-                Object.Configuration = d.ExternalConfiguration;
+                Object.OnDeviceConfigurationApplied( d.ExternalConfiguration );
                 SetObjectDeviceControlProperties( d.ControllerKey );
 
                 if( !initCall ) _sidekick.RemoveUnbound( this );
@@ -106,7 +106,7 @@ namespace CK.Observable.Device
                 Device.LifetimeEvent.Async -= OnDeviceLifetimeChangedAsync;
                 OnDeviceDisappearing( monitor );
                 Object.Status = null;
-                Object.Configuration = null;
+                Object.OnDeviceConfigurationApplied( null );
                 Object.HasDeviceControl = false;
                 Object.HasExclusiveDeviceControl = false;
                 _sidekick.AddUnbound( this );

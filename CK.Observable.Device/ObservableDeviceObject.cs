@@ -126,7 +126,7 @@ namespace CK.Observable.Device
         /// This base method MUST be called since it sets the <see cref="Configuration"/> property.
         /// </summary>
         /// <param name="configuration">The updated configuration.</param>
-        protected internal virtual void OnDeviceConfigurationApplied( DeviceConfiguration configuration )
+        protected internal virtual void OnDeviceConfigurationApplied( DeviceConfiguration? configuration )
         {
             Configuration = configuration;
         }
