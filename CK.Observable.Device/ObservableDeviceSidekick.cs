@@ -48,6 +48,12 @@ namespace CK.Observable.Device
         /// </summary>
         protected TDeviceHostObject? ObjectHost => _objectHost;
 
+        /// <summary>
+        /// Gets the bridges: all the <see cref="TDeviceObject"/> that exist in the domain
+        /// (they may not be bound to their respective device: their <see cref="DeviceBridge.Device"/> can be null).
+        /// </summary>
+        protected IReadOnlyDictionary<string, DeviceBridge> Bridges => _bridges;
+
         Task OnDevicesChangedAsync( IActivityMonitor monitor, IDeviceHost sender )
         {
             Debug.Assert( ReferenceEquals( Host, sender ) );

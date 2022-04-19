@@ -14,7 +14,7 @@ namespace CK.Observable.Device
         /// Must create a <see cref="Bridge{TSidekick, TDevice}"/> between <typeparamref name="TDeviceObject"/> and its actual <see cref="Bridge{TSidekick, TDevice}.Device"/>.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
-        /// <param name="o">The object to be bridged.</param>
+        /// <param name="o">The observable object to be bridged.</param>
         /// <returns>The bridge for the observable device object.</returns>
         protected abstract DeviceBridge CreateBridge( IActivityMonitor monitor, TDeviceObject o );
 
@@ -55,7 +55,7 @@ namespace CK.Observable.Device
                 Object = o;
                 o._bridge = this;
             }
-#pragma warning restore CS8618
+            #pragma warning restore CS8618
 
             ObservableDomainSidekick ObservableDeviceObject.IDeviceBridge.Sidekick => _sidekick;
 
