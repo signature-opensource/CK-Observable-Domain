@@ -1,6 +1,5 @@
 using CK.BinarySerialization;
 using CK.Core;
-using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections;
 using System.Collections.Generic;

@@ -11,6 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="CK.StObj.Model" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
     <PackageReference Include="Fody" PrivateAssets="all" />
     <PackageReference Include="PropertyChanged.Fody" PrivateAssets="all" />

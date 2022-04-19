@@ -8,7 +8,8 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <PackageReference Include="CK.StObj.Model" />
+    <PackageReference Include="CK.ActivityMonitor.SimpleSender" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="System.Threading.Channels" />
     <PackageReference Include="CK.BinarySerialization.Sliced" />
   </ItemGroup>
