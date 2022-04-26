@@ -28,13 +28,15 @@ namespace CK.Observable.Domain.Tests.TimedEvents
         [Test]
         public void Ô_temps_suspend_ton_vol()
         {
+            const int deltaTime = 200;
+
             using( var d = new ObservableDomain( TestHelper.Monitor, nameof( Ô_temps_suspend_ton_vol ), startTimer: true ) )
             {
                 AutoCounter counter = null;
                 SuspendableClock clock = null;
                 d.Modify( TestHelper.Monitor, () =>
                 {
-                    counter = new AutoCounter( 100 );
+                    counter = new AutoCounter( deltaTime );
                     counter.IsRunning.Should().BeTrue();
 
                     clock = new SuspendableClock();
@@ -46,17 +48,17 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 } ).Success.Should().BeTrue();
 
                 int intermediateCount = 0;
-                Thread.Sleep( 100 * 5 );
+                Thread.Sleep( deltaTime * 6 );
                 d.Modify( TestHelper.Monitor, () =>
                 {
                     TestHelper.Monitor.Trace( $"counter.Count = {counter.Count}." );
-                    (intermediateCount = counter.Count).Should().Match( c => c == 6 );
+                    (intermediateCount = counter.Count).Should().Match( c => c == 6 || c == 7 );
                     clock.IsActive = false;
                     counter.IsRunning.Should().BeFalse( "The bound clock is suspended." );
 
                 } ).Success.Should().BeTrue();
 
-                Thread.Sleep( 100 * 5 );
+                Thread.Sleep( deltaTime * 5 );
                 using( d.AcquireReadLock() )
                 {
                     TestHelper.Monitor.Trace( $"counter.Count = {counter.Count}." );
@@ -69,11 +71,11 @@ namespace CK.Observable.Domain.Tests.TimedEvents
 
                 } ).Success.Should().BeTrue();
 
-                Thread.Sleep( 100 * 5 );
+                Thread.Sleep( deltaTime * 5 );
                 using( d.AcquireReadLock() )
                 {
                     TestHelper.Monitor.Trace( $"counter.Count = {counter.Count}." );
-                    counter.Count.Should().BeCloseTo( intermediateCount + 5, 1 );
+                    counter.Count.Should().BeCloseTo( intermediateCount + 5, 2 );
                 }
             }
         }
