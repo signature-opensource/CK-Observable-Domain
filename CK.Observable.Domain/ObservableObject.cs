@@ -117,9 +117,7 @@ namespace CK.Observable
             }
         }
 
-        /// <summary>
-        /// Gets whether this object has been disposed.
-        /// </summary>
+        /// <inheritdoc />
         public bool IsDestroyed => _oid == ObservableObjectId.Destroyed;
 
         /// <summary>
@@ -226,8 +224,29 @@ namespace CK.Observable
             var ev = ActualDomain.OnPropertyChanged( this, propertyName, value );
             if( ev != null )
             {
+                // Is this really useful?
+                // Is this even used?
+                // 
+                // The idea was that for any property:
+                //
+                //   public string Prop { get; set; }
+                //
+                // A Changed handler like this:
+                //
+                //     ObservableEventHandler _propChanged; // (name here DOES matter! '_' + camelCased property name + "Changed" )
+                //
+                //     public event SafeEventHandler&lt;MyEventArgs&gt; OnPChange // (name here doesn't matter)
+                //     {
+                //         add => _propChanged.Add( value );
+                //         remove => _propChanged.Remove( value );
+                //     }
+                //
+                // The event is automatically raised when the Prop changes.
+                //
+                // Code below is awful... Even if it can be optimized (at the price of some memory), this is terrible...
+                //
                 {
-                    // Forbids previously handled EventHandler: this is too dangerous.
+                    // Forbids previously (in initial ObservableDomain versions) handled EventHandler: this is too dangerous.
                     // See https://stackoverflow.com/questions/14885325/eventinfo-getraisemethod-always-null
                     FieldInfo fNamedEv = GetType().GetField( propertyName + "Changed", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance );
                     if( fNamedEv != null )
