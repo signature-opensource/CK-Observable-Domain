@@ -11,6 +11,10 @@ namespace CK.Observable.Device.Tests
     [SerializationVersion(0)]
     public class OSampleDeviceHost : ObservableDeviceHostObject<OSampleDeviceSidekick>
     {
+        public OSampleDeviceHost()
+        {
+        }
+
         OSampleDeviceHost( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
             : base( BinarySerialization.Sliced.Instance )
         {

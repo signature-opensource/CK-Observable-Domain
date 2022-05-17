@@ -21,21 +21,21 @@ namespace CK.Observable
         readonly Dictionary<object,object?> _alreadyHandled;
 
         /// <summary>
-        /// This list is:
+        /// This queue is:
         /// - filled by <see cref="DiscoverSidekicks"/> each time a new type appears that requires
         /// one or more sidekick to be available.
         /// - emptied by <see cref="CreateWaitingSidekicks"/> where the type or name (the object Item1) is resolved.
         /// </summary>
-        readonly List<(object, bool)> _toInstantiate;
+        readonly Queue<(object, bool)> _toInstantiate;
 
         /// <summary>
-        /// This list is:
+        /// This queue is:
         /// - filled by <see cref="DiscoverSidekicks"/> each time a new object with ISidekickClientObject base interfaces appears.
         /// - emptied by <see cref="CreateWaitingSidekicks"/> (after having ensured that the sidekick instances are available)
         ///   where <see cref="ObservableDomainSidekick.RegisterClientObject(IActivityMonitor, IDestroyable)"/> is called
         ///   with the IDestroyableObject Item1.
         /// </summary>
-        readonly List<(IDestroyable, object[])> _toAutoregister;
+        readonly Queue<(IDestroyable, object[])> _toAutoregister;
         readonly List<ObservableDomainSidekick> _sidekicks;
         readonly IServiceProvider _serviceProvider;
 
@@ -50,8 +50,8 @@ namespace CK.Observable
         {
             _domain = domain;
             _alreadyHandled = new Dictionary<object, object?>();
-            _toInstantiate = new List<(object, bool)>();
-            _toAutoregister = new List<(IDestroyable, object[])>();
+            _toInstantiate = new Queue<(object, bool)>();
+            _toAutoregister = new Queue<(IDestroyable, object[])>();
             _sidekicks = new List<ObservableDomainSidekick>();
             _currentIndex = new Dictionary<Type, ObservableDomainSidekick>();
             _serviceProvider = sp;
@@ -77,7 +77,7 @@ namespace CK.Observable
                     var args = attr.NamedArguments;
                     bool optional = args.Count > 0 && args[0].TypedValue.Value.Equals( true );
                     monitor.Trace( $"Domain object '{t.Name}' wants to use {(optional ? "optional" : "required")} sidekick '{typeOrTypeName}'." );
-                    _toInstantiate.Add( (typeOrTypeName, optional) );
+                    _toInstantiate.Enqueue( (typeOrTypeName, optional) );
                 }
                 // 2 - We analyze its ISidekickClientObject<> generic interfaces and populates _toInstantiate tuples.
                 //     The list is of object because the array must be object[] since the types will be replaced
@@ -90,7 +90,7 @@ namespace CK.Observable
                         if( sidekickTypes == null ) sidekickTypes = new List<object>();
                         var tSidekick = tI.GetGenericArguments()[0];
                         sidekickTypes.Add( tSidekick );
-                        _toInstantiate.Add( (tSidekick, false) );
+                        _toInstantiate.Enqueue( (tSidekick, false) );
                     }
                 }
                 // We store either null or the array of ISidekickClientObject<> types (as objects) if there
@@ -102,7 +102,7 @@ namespace CK.Observable
             // indicates that this object must be registered onto one or more sidekicks.
             if( previouslyHandled != null )
             {
-                _toAutoregister.Add( (o, (object[])previouslyHandled) );
+                _toAutoregister.Enqueue( (o, (object[])previouslyHandled) );
             }
         }
 
@@ -127,22 +127,18 @@ namespace CK.Observable
         internal bool CreateWaitingSidekicks( IActivityMonitor monitor, Action<Exception> errorCollector, bool finalCall )
         {
             bool success = true;
-            if( _toInstantiate.Count > 0 )
+
+            again:
+            while( _toInstantiate.TryDequeue( out var r ) )
             {
-                foreach( var r in _toInstantiate )
-                {
-                    success &= Register( monitor, r, errorCollector );
-                }
-                _toInstantiate.Clear();
+                success &= Register( monitor, r, errorCollector );
             }
-            if( _toAutoregister.Count > 0 )
+            while( _toAutoregister.TryDequeue( out var r ) )
             {
-                foreach( var r in _toAutoregister )
-                {
-                    success &= AutoRegisterClientObject( monitor, r, errorCollector );
-                }
-                _toAutoregister.Clear();
+                success &= AutoRegisterClientObject( monitor, r, errorCollector );
+                if( _toInstantiate.Count > 0 ) goto again;
             }
+
             if( finalCall && _currentIndex.Count != _sidekicks.Count )
             {
                 _currentIndex = _sidekicks.ToDictionary( s => s.GetType() );

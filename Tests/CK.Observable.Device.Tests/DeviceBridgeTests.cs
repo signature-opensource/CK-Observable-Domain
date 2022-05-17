@@ -22,7 +22,7 @@ namespace CK.Observable.Device.Tests
         [Timeout( 2 * 1000 )]
         public async Task sample_obervable()
         {
-            using var gLog = TestHelper.Monitor.OpenInfo( nameof( sample_obervable ) );
+            using var _ = TestHelper.Monitor.OpenInfo( nameof( sample_obervable ) );
             var host = new SampleDeviceHost();
             var sp = new SimpleServiceContainer();
             sp.Add( host );
