@@ -2,6 +2,7 @@ using CK.Core;
 using CK.DeviceModel;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace CK.Observable.Device
@@ -132,22 +133,6 @@ namespace CK.Observable.Device
         }
 
         /// <summary>
-        /// Sends a <see cref="BaseConfigureDeviceCommand"/> command to the device with the wanted configuration.
-        /// <para>
-        /// Caution: <see cref="ThrowOnUnboundedDevice"/> is called, <see cref="IsBoundDevice"/> must be true before calling this.
-        /// </para>
-        /// </summary>
-        public void ApplyDeviceConfiguration( DeviceConfiguration configuration )
-        {
-            Throw.CheckNotNullArgument( configuration );
-            ThrowOnUnboundedDevice();
-            var cmd = _bridge.CreateConfigureCommand( configuration );
-            cmd.ControllerKey = Domain.DomainName;
-            cmd.DeviceName = DeviceName;
-            Domain.SendCommand( cmd, _bridge.Sidekick );
-        }
-
-        /// <summary>
         /// Gets whether the device is under control of this object or the <see cref="IDevice.ControllerKey"/> is null: the device
         /// doesn't restrict the commands.
         /// </summary>
@@ -187,6 +172,23 @@ namespace CK.Observable.Device
         }
 
         /// <summary>
+        /// Sends a <see cref="DeviceConfiguration"/> command to the device with the wanted configuration.
+        /// <para>
+        /// This device may obviously not be bound (<see cref="IsBoundDevice"/> can be false): this configuration
+        /// may create the device.
+        /// </para>
+        /// <para>
+        /// To take control of a newly created device, <see cref="DeviceConfiguration.ControllerKey"/> can be
+        /// set to this <see cref="DomainView.DomainName"/>.
+        /// </para>
+        /// </summary>
+        public void ApplyDeviceConfiguration( DeviceConfiguration configuration )
+        {
+            Throw.CheckNotNullArgument( configuration );
+            SendBasicCommand( _bridge.CreateConfigureCommand( configuration ) );
+        }
+
+        /// <summary>
         /// Sends a start command to the device.
         /// <para>
         /// Caution: <see cref="ThrowOnUnboundedDevice"/> is called, <see cref="IsBoundDevice"/> must be true before calling this.
@@ -195,10 +197,7 @@ namespace CK.Observable.Device
         public void SendStartDeviceCommand()
         {
             ThrowOnUnboundedDevice();
-            var cmd = _bridge.CreateStartCommand();
-            cmd.ControllerKey = Domain.DomainName;
-            cmd.DeviceName = DeviceName;
-            Domain.SendCommand( cmd, _bridge.Sidekick );
+            SendBasicCommand( _bridge.CreateStartCommand() );
         }
 
         /// <summary>
@@ -210,10 +209,19 @@ namespace CK.Observable.Device
         public void SendStopDeviceCommand()
         {
             ThrowOnUnboundedDevice();
-            var cmd = _bridge.CreateStopCommand();
-            cmd.ControllerKey = Domain.DomainName;
-            cmd.DeviceName = DeviceName;
-            Domain.SendCommand( cmd, _bridge.Sidekick );
+            SendBasicCommand( _bridge.CreateStopCommand() );
+        }
+
+        /// <summary>
+        /// Sends a destroy command to the device.
+        /// <para>
+        /// Caution: <see cref="ThrowOnUnboundedDevice"/> is called, <see cref="IsBoundDevice"/> must be true before calling this.
+        /// </para>
+        /// </summary>
+        public void SendDestroyDeviceCommand()
+        {
+            ThrowOnUnboundedDevice();
+            SendBasicCommand( _bridge.CreateDestroyCommand() );
         }
 
         /// <summary>
@@ -229,10 +237,8 @@ namespace CK.Observable.Device
             if( !HasExclusiveDeviceControl )
             {
                 var cmd = _bridge.CreateSetControllerKeyCommand();
-                cmd.ControllerKey = _bridge.ControllerKey;
                 cmd.NewControllerKey = Domain.DomainName;
-                cmd.DeviceName = DeviceName;
-                Domain.SendCommand( cmd, _bridge.Sidekick );
+                SendBasicCommand( cmd );
             }
         }
 
@@ -248,11 +254,16 @@ namespace CK.Observable.Device
             if( HasExclusiveDeviceControl )
             {
                 var cmd = _bridge.CreateSetControllerKeyCommand();
-                cmd.ControllerKey = Domain.DomainName;
-                cmd.NewControllerKey = null;
-                cmd.DeviceName = DeviceName;
-                Domain.SendCommand( cmd, _bridge.Sidekick );
+                Debug.Assert( cmd.NewControllerKey == null );
+                SendBasicCommand( cmd );
             }
+        }
+
+        void SendBasicCommand( BaseDeviceCommand cmd )
+        {
+            cmd.ControllerKey = Domain.DomainName;
+            cmd.DeviceName = DeviceName;
+            Domain.SendCommand( cmd, _bridge.Sidekick );
         }
 
         /// <summary>
