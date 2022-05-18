@@ -186,7 +186,7 @@ namespace CK.Observable
             _currentObjectUniquifier = d.Reader.ReadInt32();
             _domainSecret = d.Reader.ReadBytes( DomainSecretKeyLength );
             var loaded = d.Reader.ReadString();
-            if( loaded != expectedName ) throw new InvalidDataException( $"Domain name mismatch: loading domain named '{loaded}' but expected '{expectedName}'." );
+            if( loaded != expectedName ) Throw.InvalidDataException( $"Domain name mismatch: loading domain named '{loaded}' but expected '{expectedName}'." );
 
             _transactionSerialNumber = d.Reader.ReadInt32();
             _transactionCommitTimeUtc = d.Reader.ReadDateTime();

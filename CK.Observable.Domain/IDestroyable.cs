@@ -35,7 +35,17 @@ namespace CK.Observable
         /// <param name="this">This object.</param>
         public static void CheckDestroyed( this IDestroyable @this )
         {
-            if( @this.IsDestroyed ) throw new ObjectDestroyedException( @this.ToString() );
+            if( @this.IsDestroyed ) ThrowObjectDestroyedException( @this.ToString()! );
+        }
+
+        /// <summary>
+        /// Helper that throws the <see cref="ObjectDestroyedException"/>.
+        /// </summary>
+        /// <param name="message">The exception message (usually the destroyed object's type name).</param>
+        /// <exception cref="ObjectDestroyedException">Alway throw.</exception>
+        public static void ThrowObjectDestroyedException( string message )
+        {
+            throw new ObjectDestroyedException( message );
         }
 
     }

@@ -153,7 +153,7 @@ namespace CK.Observable
                 if( this is ObservableRootObject
                     && (!ObservableRootObject.AllowRootObjectDestroying || ActualDomain.AllRoots.IndexOf( x => x == this ) >= 0) )
                 {
-                    throw new InvalidOperationException( "ObservableRootObject cannot be disposed." );
+                    Throw.InvalidOperationException( "ObservableRootObject cannot be disposed." );
                 }
                 ActualDomain.CheckBeforeDestroy( this );
                 OnUnload();

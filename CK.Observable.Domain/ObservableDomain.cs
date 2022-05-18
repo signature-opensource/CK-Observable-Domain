@@ -662,7 +662,7 @@ namespace CK.Observable
         {
             using( var c = new System.Security.Cryptography.Rfc2898DeriveBytes( Guid.NewGuid().ToString(), Guid.NewGuid().ToByteArray(), 1000 ) )
             {
-                return c.GetBytes( 512 );
+                return c.GetBytes( DomainSecretKeyLength );
             }
         }
 
@@ -1789,7 +1789,8 @@ namespace CK.Observable
         /// On success, the _currentTran is necessary not null.
         /// </para>
         /// </summary>
-        IDestroyable CheckWriteLock( [AllowNull]IDestroyable o )
+        [return: NotNullIfNotNull( "o" )]
+        IDestroyable? CheckWriteLock( IDestroyable? o )
         {
             if( !_lock.IsWriteLockHeld )
             {
@@ -1797,8 +1798,7 @@ namespace CK.Observable
                 if( _lock.IsReadLockHeld ) throw new InvalidOperationException( "Concurrent access: only Read lock has been acquired." );
                 throw new InvalidOperationException( "Concurrent access: write lock must be acquired." );
             }
-            // Missing [NotNullWhenNotNull] in netstandard2.1.
-            return o!;
+            return o;
         }
 
         /// <summary>

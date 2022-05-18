@@ -17,7 +17,7 @@ namespace CK.Observable
     [SerializationVersion( 0 )]
     public abstract class InternalObject : IDestroyableObject, BinarySerialization.ICKSlicedSerializable
     {
-        internal ObservableDomain ActualDomain;
+        internal ObservableDomain? ActualDomain;
         internal InternalObject? Next;
         internal InternalObject? Prev;
         ObservableEventHandler<ObservableDomainEventArgs> _destroyed;
@@ -51,7 +51,7 @@ namespace CK.Observable
         /// <param name="domain">The domain to which this object belong.</param>
         protected InternalObject( ObservableDomain domain )
         {
-            if( domain == null ) throw new ArgumentNullException( nameof( domain ) );
+            Throw.CheckNotNullArgument( domain );
             ActualDomain = domain;
             ActualDomain.Register( this );
         }
@@ -90,7 +90,14 @@ namespace CK.Observable
         /// Useful properties and methods (like the <see cref="DomainView.Monitor"/> or <see cref="DomainView.SendCommand"/> )
         /// are exposed by this accessor so that the interface of the observable object is not polluted by infrastructure concerns.
         /// </remarks>
-        protected DomainView Domain => new DomainView( this, ActualDomain ?? throw new ObjectDestroyedException( GetType().Name ) );
+        protected DomainView Domain
+        {
+            get
+            {
+                if( ActualDomain == null ) DestroyableObjectExtensions.ThrowObjectDestroyedException( GetType().Name );
+                return new DomainView( this, ActualDomain! );
+            }
+        }
 
         /// <summary>
         /// Gets whether this object has been disposed.
@@ -112,7 +119,7 @@ namespace CK.Observable
                 OnUnload();
                 OnDestroy();
                 ActualDomain.Unregister( this );
-                ActualDomain = null;
+                ActualDomain = null!;
             }
         }
 
@@ -127,6 +134,7 @@ namespace CK.Observable
         /// </summary>
         protected internal virtual void OnDestroy()
         {
+            Debug.Assert( ActualDomain != null );
             _destroyed.Raise( this, ActualDomain.DefaultEventArgs );
         }
 
