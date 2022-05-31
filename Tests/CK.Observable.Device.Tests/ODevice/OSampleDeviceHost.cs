@@ -9,10 +9,14 @@ namespace CK.Observable.Device.Tests
     /// The observable host is totally optional.
     /// </summary>
     [SerializationVersion(0)]
-    public class OSampleDeviceHost : ObservableDeviceHostObject<OSampleDeviceSidekick>
+    public class OSampleDeviceHost : ObservableDeviceHostObject<OSampleDeviceSidekick,OSampleDevice>
     {
         public OSampleDeviceHost()
         {
+            // This ensures that the sidekicks have been instantiated.
+            // This is called here since it must be called once the object has been fully initialized
+            // (and there is no way to know when this constructor has terminated from the core code).
+            Domain.EnsureSidekicks();
         }
 
         OSampleDeviceHost( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )

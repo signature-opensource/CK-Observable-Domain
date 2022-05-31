@@ -1,3 +1,4 @@
+using CK.BinarySerialization;
 using CK.Core;
 using CK.DeviceModel;
 using System.Collections.Generic;
@@ -16,22 +17,13 @@ namespace CK.Observable.Device
         /// <summary>
         /// This is exposed as a typed TSidekick by ObservableDeviceHostObject{TSidekick}.
         /// </summary>
-        private protected ObservableDomainSidekick _sidekick;
+        private protected IObservableDeviceSidekick _sidekick;
 
-        ObservableDomainSidekick ISidekickLocator.Sidekick => _sidekick;
-
-        /// <summary>
-        /// Contains the set of devices' name.
-        /// This set is mutable by specialization but this should be used this care: the actual devices
-        /// are handled by the <see cref="IDeviceHost"/> (this property is not serialized).
-        /// See <see cref="OnDevicesChanged"/> that merges the devices from the external device host (and can be overridden if needed).
-        /// </summary>
-        internal protected readonly ObservableSet<string> InternalDevices;
+        ObservableDomainSidekick ISidekickLocator.Sidekick => (ObservableDomainSidekick)_sidekick;
 
 #pragma warning disable CS8618 // _sidekick is initialized by the first call to ApplyDevicesChanged.
         private protected ObservableDeviceHostObject()
         {
-            InternalDevices = new ObservableSet<string>();
         }
 
 
@@ -39,69 +31,38 @@ namespace CK.Observable.Device
         /// Specialized deserialization constructor for specialized classes.
         /// </summary>
         /// <param name="_">Unused parameter.</param>
-        protected ObservableDeviceHostObject( BinarySerialization.Sliced _ ) : base( _ ) { }
+        protected ObservableDeviceHostObject( Sliced _ ) : base( _ ) { }
 
 
-        ObservableDeviceHostObject( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
-                : base( BinarySerialization.Sliced.Instance )
-        {
-            InternalDevices = new ObservableSet<string>();
-        }
-
-#pragma warning restore CS8618 // Non-nullable field is uninitialized. Consider declaring as nullable.
-
-        public static void Write( BinarySerialization.IBinarySerializer w, in ObservableDeviceHostObject o )
+        ObservableDeviceHostObject( IBinaryDeserializer d, ITypeReadInfo info )
+                : base( Sliced.Instance )
         {
         }
 
-        /// <summary>
-        /// Gets an observable set of device names that are managed by the device host.
-        /// This list is under control of the <see cref="IDeviceHost"/>.
-        /// </summary>
-        public IObservableReadOnlySet<string> Devices => InternalDevices;
+#pragma warning restore CS8618 // _sidekick is initialized by the first call to ApplyDevicesChanged.
 
-        internal void ApplyDevicesChanged( ObservableDomainSidekick sidekick, IReadOnlyDictionary<string, IDevice> devices )
+        public static void Write( IBinarySerializer w, in ObservableDeviceHostObject o )
         {
-            Debug.Assert( _sidekick == null || _sidekick == sidekick, "Initial call or just an update." );
+        }
 
+        internal void Initialize( IObservableDeviceSidekick sidekick,
+                                  IReadOnlyDictionary<string, IDevice> devices,
+                                  IEnumerable<ObservableDeviceObject> existingObjects )
+        {
+            Debug.Assert( _sidekick == null && sidekick != null);
             _sidekick = sidekick;
-            OnDevicesChanged( devices );
+            Initialize( devices, existingObjects );
         }
 
-        /// <summary>
-        /// Called during initialization of this host and each time the external devices changed.
-        /// This method synchronizes the <see cref="Devices"/> collection.
-        /// </summary>
-        /// <param name="snapshot">The devices snapshot.</param>
-        private protected virtual void OnDevicesChanged( IReadOnlyDictionary<string, IDevice> snapshot )
-        {
-            List<string>? toRemove = null;
-            foreach( var here in InternalDevices )
-            {
-                if( !snapshot.ContainsKey( here ) )
-                {
-                    if( toRemove == null ) toRemove = new List<string>();
-                    toRemove.Add( here );
-                }
-            }
-            if( toRemove != null )
-            {
-                foreach( var noMore in toRemove )
-                {
-                    InternalDevices.Remove( noMore );
-                }
-            }
-            InternalDevices.AddRange( snapshot.Keys );
-        }
+        internal abstract IEnumerable<string> GetAvailableDeviceNames();
 
-        protected override void OnDestroy()
-        {
-            InternalDevices.Destroy();
-            // Using nullable just in case EnsureDomainSidekick has not been called.
-            ((IInternalObservableDeviceSidekick?)_sidekick)?.OnObjectHostDestroyed( Domain.Monitor );
-            base.OnDestroy();
-        }
+        private protected abstract void Initialize( IReadOnlyDictionary<string, IDevice> devices, IEnumerable<ObservableDeviceObject> existingObjects );
 
+        internal abstract void OnDeviceLifetimeEvent( IActivityMonitor monitor, DeviceLifetimeEvent e, ObservableDeviceObject? o );
+
+        internal abstract void Add( ObservableDeviceObject o, IDevice? d );
+
+        internal abstract void Remove( ObservableDeviceObject o );
 
     }
 }

@@ -76,7 +76,7 @@ namespace CK.Observable.League
         /// <param name="domainName">The new domain name.</param>
         /// <param name="rootTypes">The root types (can be empty: a basic <see cref="ObservableDomain"/> is created).</param>
         /// <returns>The new domain.</returns>
-        public Domain CreateDomain( string domainName, params string[] rootTypes ) => CreateDomain(domainName, (IEnumerable<string>)rootTypes);
+        public Domain CreateDomain( string domainName, params string[] rootTypes ) => CreateDomain( domainName, (IEnumerable<string>)rootTypes );
 
 
         internal void OnDestroyDomain( Domain domain )

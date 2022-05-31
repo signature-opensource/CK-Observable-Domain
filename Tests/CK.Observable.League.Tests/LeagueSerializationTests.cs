@@ -21,9 +21,9 @@ namespace CK.Observable.League.Tests
         }
 
         [Test]
-        public async Task empty_league_serialization()
+        public async Task empty_league_serialization_Async()
         {
-            var store = BasicLeagueTests.CreateStore( nameof( empty_league_serialization ) );
+            var store = BasicLeagueTests.CreateStore( nameof( empty_league_serialization_Async ) );
             var league = await ObservableLeague.LoadAsync( TestHelper.Monitor, store );
             Debug.Assert( league != null );
             await league.CloseAsync( TestHelper.Monitor );
@@ -33,9 +33,9 @@ namespace CK.Observable.League.Tests
         }
 
         [Test]
-        public async Task one_domain_league_serialization()
+        public async Task one_domain_league_serialization_Async()
         {
-            var store = BasicLeagueTests.CreateStore( nameof( empty_league_serialization ) );
+            var store = BasicLeagueTests.CreateStore( nameof( empty_league_serialization_Async ) );
             var league = await ObservableLeague.LoadAsync( TestHelper.Monitor, store )!;
             await league.Coordinator.ModifyAsync( TestHelper.Monitor, ( m, d ) => d.Root.CreateDomain( "First", typeof( Model.School ).AssemblyQualifiedName! ) );
             // Using the non generic IObservableDomain.
@@ -85,9 +85,9 @@ namespace CK.Observable.League.Tests
         }
 
         [Test]
-        public async Task league_reload_domains_by_deserializing()
+        public async Task league_reload_domains_by_deserializing_Async()
         {
-            var store = BasicLeagueTests.CreateStore( nameof( league_reload_domains_by_deserializing ) );
+            var store = BasicLeagueTests.CreateStore( nameof( league_reload_domains_by_deserializing_Async ) );
             var league = await ObservableLeague.LoadAsync( TestHelper.Monitor, store );
 
             InstantiationTracker.ContructorCount = InstantiationTracker.DeserializationCount = InstantiationTracker.WriteCount = 0;

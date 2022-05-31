@@ -107,7 +107,7 @@ namespace CK.Observable
             {
                 if( ExpectedDueTimeUtc != value )
                 {
-                    if( value.Kind != DateTimeKind.Utc ) throw new ArgumentException( nameof( DueTimeUtc ), "Must be a Utc DateTime." );
+                    Throw.CheckArgument( value.Kind == DateTimeKind.Utc );
                     this.CheckDestroyed();
                     ExpectedDueTimeUtc = value;
                     TimeManager.OnChanged( this );

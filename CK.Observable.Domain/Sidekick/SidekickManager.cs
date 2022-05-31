@@ -46,6 +46,8 @@ namespace CK.Observable
         /// </summary>
         Dictionary<Type, ObservableDomainSidekick> _currentIndex;
 
+        bool _hasWaitingSidekick;
+
         public SidekickManager( ObservableDomain domain, IServiceProvider sp )
         {
             _domain = domain;
@@ -78,6 +80,7 @@ namespace CK.Observable
                     bool optional = args.Count > 0 && args[0].TypedValue.Value.Equals( true );
                     monitor.Trace( $"Domain object '{t.Name}' wants to use {(optional ? "optional" : "required")} sidekick '{typeOrTypeName}'." );
                     _toInstantiate.Enqueue( (typeOrTypeName, optional) );
+                    _hasWaitingSidekick = true;
                 }
                 // 2 - We analyze its ISidekickClientObject<> generic interfaces and populates _toInstantiate tuples.
                 //     The list is of object because the array must be object[] since the types will be replaced
@@ -91,6 +94,7 @@ namespace CK.Observable
                         var tSidekick = tI.GetGenericArguments()[0];
                         sidekickTypes.Add( tSidekick );
                         _toInstantiate.Enqueue( (tSidekick, false) );
+                        _hasWaitingSidekick = true;
                     }
                 }
                 // We store either null or the array of ISidekickClientObject<> types (as objects) if there
@@ -102,9 +106,15 @@ namespace CK.Observable
             // indicates that this object must be registered onto one or more sidekicks.
             if( previouslyHandled != null )
             {
+                _hasWaitingSidekick = true;
                 _toAutoregister.Enqueue( (o, (object[])previouslyHandled) );
             }
         }
+
+        /// <summary>
+        /// Gets whether CreateWaitingSidekicks may have some work to do.
+        /// </summary>
+        public bool HasWaitingSidekick => _hasWaitingSidekick;
 
         /// <summary>
         /// Instantiates sidekicks that have been discovered by <see cref="DiscoverSidekicks(IActivityMonitor, IDestroyable)"/>.
@@ -143,6 +153,7 @@ namespace CK.Observable
             {
                 _currentIndex = _sidekicks.ToDictionary( s => s.GetType() );
             }
+            _hasWaitingSidekick = false;
             return success;
         }
 
@@ -350,7 +361,7 @@ namespace CK.Observable
                         if( (known = locator.Sidekick) == null )
                         {
                             if( results == null ) results = new List<(object, CKExceptionData)>();
-                            results.Add( (c, CKExceptionData.Create( $"SidekickLocator exposes a null Sidekick." )) );
+                            results.Add( (c, CKExceptionData.Create( $"SidekickLocator '{locator}' exposes a null Sidekick." )) );
                             errorTarget = true;
                         }
                     }
@@ -387,7 +398,7 @@ namespace CK.Observable
                 }
                 if( !foundHandler )
                 {
-                    var msg = $"No sidekick found to handle command type '{c.GetType().FullName}'.";
+                    var msg = $"No sidekick found to handle command type '{c.GetType()}'.";
                     if( known != null )
                     {
                         msg += $" The presumably known target '{known}' rejected it.";

@@ -10,7 +10,6 @@ using System.IO;
 using System.Linq;
 using System.Net.NetworkInformation;
 using System.Net.WebSockets;
-using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -37,7 +36,7 @@ namespace CK.Observable
         /// <see cref="IObservableTransaction.Errors"/> whenever a transaction
         /// has not been committed.
         /// </summary>
-        public static readonly CKExceptionData UncomittedTransaction = new CKExceptionData( "Uncommitted transaction.", "Not.An.Exception", "Not.An.Exception, No.Assembly", null, null, null, null, null, null );
+        public static readonly CKExceptionData UncomittedTransaction = CKExceptionData.Create( "Uncommitted transaction." );
 
         /// <summary>
         /// Default timeout before <see cref="ObtainDomainMonitor(int, bool)"/> creates a new temporary <see cref="IDisposableActivityMonitor"/>
@@ -201,198 +200,6 @@ namespace CK.Observable
                                                                                .GetEnumerator();
 
             IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-        }
-
-        /// <summary>
-        /// The change tracker handles the transformation of actual changes into events that are
-        /// optimized and serialized by the <see cref="Commit"/> method.
-        /// </summary>
-        class ChangeTracker
-        {
-            class PropChanged
-            {
-                public readonly ObservableObject Object;
-                public readonly ObservablePropertyChangedEventArgs Info;
-                public object? FinalValue;
-
-                public long Key => Info.GetObjectPropertyId( Object );
-
-                public PropChanged( ObservableObject o, ObservablePropertyChangedEventArgs p, object? final )
-                {
-                    Object = o;
-                    Info = p;
-                    FinalValue = final;
-                }
-            }
-
-            readonly List<ObservableEvent> _changeEvents;
-            readonly Dictionary<ObservableObject, List<PropertyInfo>?> _newObjects;
-            readonly Dictionary<long, PropChanged> _propChanged;
-            // A new list is allocated each time since commands can be appended to it after the commit, during the
-            // OnSuccessfulTransaction raising.
-            List<ObservableDomainCommand> _commands;
-
-            public ChangeTracker()
-            {
-                _changeEvents = new List<ObservableEvent>();
-                _newObjects = new Dictionary<ObservableObject, List<PropertyInfo>?>( PureObjectRefEqualityComparer<ObservableObject>.Default );
-                _propChanged = new Dictionary<long, PropChanged>();
-                _commands = new List<ObservableDomainCommand>();
-            }
-
-            public SuccessfulTransactionEventArgs Commit( ObservableDomain domain,
-                                                          Func<string, ObservablePropertyChangedEventArgs> ensurePropertInfo,
-                                                          DateTime startTime,
-                                                          int tranNum )
-            {
-                _changeEvents.RemoveAll( e => e is ICollectionEvent c && c.Object.IsDestroyed );
-                foreach( var p in _propChanged.Values )
-                {
-                    if( !p.Object.IsDestroyed )
-                    {
-                        _changeEvents.Add( new PropertyChangedEvent( p.Object, p.Info.PropertyId, p.Info.PropertyName, p.FinalValue ) );
-                        if( _newObjects.TryGetValue( p.Object, out var exportables ) )
-                        {
-                            Debug.Assert( exportables != null, "If the object is not exportable, there must be no property changed events." );
-                            int idx = exportables.IndexOf( exp => exp.Name == p.Info.PropertyName );
-                            if( idx >= 0 ) exportables.RemoveAt( idx );
-                        }
-                    }
-                }
-                foreach( var kv in _newObjects )
-                {
-                    if( kv.Value == null || kv.Value.Count == 0 ) continue;
-                    foreach( var exp in kv.Value )
-                    {
-                        object propValue = exp.GetValue( kv.Key );
-                        var pInfo = ensurePropertInfo( exp.Name );
-                        _changeEvents.Add( new PropertyChangedEvent( kv.Key, pInfo.PropertyId, pInfo.PropertyName, propValue ) );
-                    }
-                }
-                var result = new SuccessfulTransactionEventArgs( domain, domain.FindPropertyId, _changeEvents.ToArray(), _commands, startTime, tranNum );
-                Reset();
-                return result;
-            }
-
-            /// <summary>
-            /// Clears all events collected so far from the 3 internal lists and allocates a new empty command list for the next transaction.
-            /// </summary>
-            public void Reset()
-            {
-                _changeEvents.Clear();
-                _newObjects.Clear();
-                _propChanged.Clear();
-                _commands = new List<ObservableDomainCommand>();
-            }
-
-            /// <summary>
-            /// Gets whether the object has been created in the current transaction:
-            /// it belongs to the _newObjects dictionary.
-            /// </summary>
-            /// <param name="o">The potential new object.</param>
-            /// <returns>True if this is a new object. False if the object has been created earlier.</returns>
-            internal bool IsNewObject( ObservableObject o ) => _newObjects.ContainsKey( o );
-
-            /// <summary>
-            /// Called when a new object is being created.
-            /// </summary>
-            /// <param name="o">The object itself.</param>
-            /// <param name="objectId">The assigned object identifier.</param>
-            /// <param name="exporter">The export driver of the object. Can be null.</param>
-            internal void OnNewObject( ObservableObject o, ObservableObjectId objectId, IObjectExportTypeDriver exporter )
-            {
-                _changeEvents.Add( new NewObjectEvent( o, objectId ) );
-                if( exporter != null )
-                {
-                    _newObjects.Add( o, exporter.ExportableProperties.ToList() );
-                }
-                else _newObjects.Add( o, null );
-            }
-
-            internal void OnDisposeObject( ObservableObject o )
-            {
-                if( IsNewObject( o ) )
-                {
-                    int idx = _changeEvents.IndexOf( e => e is NewObjectEvent n ? n.Object == o : false );
-                    _changeEvents.RemoveAt( idx );
-                    _newObjects.Remove( o );
-                }
-                else
-                {
-                    _changeEvents.Add( new DisposedObjectEvent( o ) );
-                }
-            }
-
-            internal void OnNewProperty( ObservablePropertyChangedEventArgs info )
-            {
-                _changeEvents.Add( new NewPropertyEvent( info.PropertyId, info.PropertyName ) );
-            }
-
-            internal void OnPropertyChanged( ObservableObject o, ObservablePropertyChangedEventArgs p, object? after )
-            {
-                PropChanged c;
-                if( _propChanged.TryGetValue( p.GetObjectPropertyId( o ), out c ) )
-                {
-                    c.FinalValue = after;
-                }
-                else
-                {
-                    c = new PropChanged( o, p, after );
-                    _propChanged.Add( c.Key, c );
-                }
-            }
-
-            internal ListRemoveAtEvent OnListRemoveAt( ObservableObject o, int index )
-            {
-                var e = new ListRemoveAtEvent( o, index );
-                _changeEvents.Add( e );
-                return e;
-            }
-
-            internal ListSetAtEvent OnListSetAt( ObservableObject o, int index, object value )
-            {
-                var e = new ListSetAtEvent( o, index, value );
-                _changeEvents.Add( e );
-                return e;
-            }
-
-            internal CollectionClearEvent OnCollectionClear( ObservableObject o )
-            {
-                var e = new CollectionClearEvent( o );
-                _changeEvents.Add( e );
-                return e;
-            }
-
-            internal ListInsertEvent OnListInsert( ObservableObject o, int index, object? item )
-            {
-                var e = new ListInsertEvent( o, index, item );
-                _changeEvents.Add( e );
-                return e;
-            }
-
-            internal CollectionMapSetEvent OnCollectionMapSet( ObservableObject o, object key, object? value )
-            {
-                var e = new CollectionMapSetEvent( o, key, value );
-                _changeEvents.Add( e );
-                return e;
-            }
-
-            internal CollectionRemoveKeyEvent OnCollectionRemoveKey( ObservableObject o, object key )
-            {
-                var e = new CollectionRemoveKeyEvent( o, key );
-                _changeEvents.Add( e );
-                return e;
-            }
-
-            internal CollectionAddKeyEvent OnCollectionAddKey( ObservableObject o, object key )
-            {
-                var e = new CollectionAddKeyEvent( o, key );
-                _changeEvents.Add( e );
-                return e;
-            }
-
-            internal void OnSendCommand( in ObservableDomainCommand command ) => _commands.Add( command );
-
         }
 
         /// <summary>
@@ -791,6 +598,11 @@ namespace CK.Observable
         /// </summary>
         public bool IsDisposed => _disposed;
 
+        /// <summary>
+        /// Gets whether one or more sidekick are waiting to be instantiated.
+        /// </summary>
+        public bool HasWaitingSidekicks => _sidekickManager.HasWaitingSidekick;
+
         class DomainActivityMonitor : ActivityMonitor, IDisposableActivityMonitor
         {
             readonly ObservableDomain? _domain;
@@ -1024,7 +836,15 @@ namespace CK.Observable
             Debug.Assert( t != null );
             try
             {
-                if( _timeManager.IsRunning ) _timeManager.RaiseElapsedEvent( t.Monitor, t.StartTime, fromTimer );
+                if( _sidekickManager.HasWaitingSidekick )
+                {
+                    // If sidekick instantiation fails, this is a serious error: the transaction will fail on error.
+                    _sidekickManager.CreateWaitingSidekicks( t.Monitor, ex => t.AddError( CKExceptionData.CreateFrom( ex ) ), false );
+                }
+                if( _timeManager.IsRunning )
+                {
+                    _timeManager.RaiseElapsedEvent( t.Monitor, t.StartTime, fromTimer );
+                }
                 bool skipped = false;
                 foreach( var tracker in _trackers )
                 {
@@ -1038,6 +858,7 @@ namespace CK.Observable
                 if( !skipped && actions != null )
                 {
                     actions();
+                    // Always call the "final call".
                     if( _sidekickManager.CreateWaitingSidekicks( t.Monitor, ex => t.AddError( CKExceptionData.CreateFrom( ex ) ), true ) )
                     {
                         var now = DateTime.UtcNow;
@@ -1300,6 +1121,19 @@ namespace CK.Observable
         /// this <see cref="DomainName"/> or another name but it must match the name in the stream otherwise an <see cref="InvalidDataException"/>
         /// is thrown.
         /// <para>
+        /// This can be called directly or inside a <see cref="Modify(IActivityMonitor, Action?, int)"/> or one of the
+        /// <see cref="ModifyAsync(IActivityMonitor, Action, int, bool)"/> methods:
+        /// <list type="bullet">
+        ///     <item>
+        ///     When called directly, sidekicks are not instantiated and <see cref="HasWaitingSidekicks"/> is true. 
+        ///     </item>
+        ///     <item>
+        ///     When called in a Modify context, sidekicks are instantiated and their side effects occur, changes
+        ///     are tracked and events are available.
+        ///     </item>
+        /// </list>
+        /// </para>
+        /// <para>
         /// The stream must be valid and is left open (since we did not open it, we don't close it).
         /// </para>
         /// </summary>
@@ -1372,6 +1206,22 @@ namespace CK.Observable
 
         /// <summary>
         /// Loads previously <see cref="Save"/>d objects into this domain.
+        /// <para>
+        /// This can be called directly or inside a <see cref="Modify(IActivityMonitor, Action?, int)"/> or one of the
+        /// <see cref="ModifyAsync(IActivityMonitor, Action, int, bool)"/> methods:
+        /// <list type="bullet">
+        ///     <item>
+        ///     When called directly, sidekicks are not instantiated and <see cref="HasWaitingSidekicks"/> is true. 
+        ///     </item>
+        ///     <item>
+        ///     When called in a Modify context, sidekicks are instantiated and their side effects occur, changes
+        ///     are tracked and events are available.
+        ///     </item>
+        /// </list>
+        /// </para>
+        /// <para>
+        /// The stream must be valid and is left open (since we did not open it, we don't close it).
+        /// </para>
         /// </summary>
         /// <param name="monitor">The monitor to use. Cannot be null.</param>
         /// <param name="stream">The input stream.</param>
@@ -1467,7 +1317,7 @@ namespace CK.Observable
             var id = CreateId( idx );
             if( !_deserializeOrInitializing )
             {
-                // Deserialiation ctors don't call this Register method, BUT this Register
+                // Deserialization ctors don't call this Register method, BUT this Register
                 // can be called when initializing a domain (for Root objects): in such case we don't want
                 // to declare new objects.
                 _changeTracker.OnNewObject( o, id, o._exporter );
@@ -1589,7 +1439,7 @@ namespace CK.Observable
         /// <param name="monitor">The monitor to use.</param>
         public void Dispose( IActivityMonitor monitor )
         {
-            if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
+            Throw.CheckNotNullArgument( monitor );
             if( !_disposed )
             {
                 _timeManager.Timer.QuickStopBeforeDispose();
@@ -1674,10 +1524,18 @@ namespace CK.Observable
             }
         }
 
-        internal void SendCommand( IDestroyable o, ObservableDomainCommand command )
+        internal void SendCommand( IDestroyable o, in ObservableDomainCommand command )
         {
-            CheckWriteLock( o ).CheckDestroyed();
-            _changeTracker.OnSendCommand( command );
+            if( _deserializeOrInitializing )
+            {
+                Debug.Assert( _currentTran != null );
+                _currentTran.Monitor.Warn( $"Command '{command}' is sent while deserializing. It is ignored. Use Domain.IsDeserializing property to avoid side effect during deserialization." );
+            }
+            else
+            {
+                CheckWriteLock( o ).CheckDestroyed();
+                _changeTracker.OnSendCommand( command );
+            }
         }
 
         /// <summary>
@@ -1686,8 +1544,16 @@ namespace CK.Observable
         /// </summary>
         public void SendSnapshotCommand()
         {
-            CheckWriteLock( null );
-            _changeTracker.OnSendCommand( new ObservableDomainCommand( SnapshotDomainCommand ) );
+            if( _deserializeOrInitializing )
+            {
+                Debug.Assert( _currentTran != null );
+                _currentTran.Monitor.Warn( "SendSnapshotCommand() called while deserializing. It is ignored. Use Domain.IsDeserializing property to avoid side effect during deserialization." );
+            }
+            else
+            {
+                CheckWriteLock( null );
+                _changeTracker.OnSendCommand( new ObservableDomainCommand( SnapshotDomainCommand ) );
+            }
         }
 
         internal bool EnsureSidekicks( IDestroyable o )
@@ -1808,10 +1674,15 @@ namespace CK.Observable
         /// </summary>
         /// <param name="monitor">Monitor to use. Cannot be null.</param>
         /// <param name="domain">The domain to check. Must not be null.</param>
+        /// <param name="restoreSidekicks">True to restore sidekicks (sidekicks instantiation can have side effects).</param>
         /// <param name="milliSecondsTimeout">Optional timeout to wait for read or write lock.</param>
         /// <param name="useDebugMode">False to not activate <see cref="BinarySerializer.IsDebugMode"/>.</param>
         /// <returns>The current <see cref="LostObjectTracker"/>.</returns>
-        public static LostObjectTracker IdempotenceSerializationCheck( IActivityMonitor monitor, ObservableDomain domain, int milliSecondsTimeout = -1, bool useDebugMode = true )
+        public static LostObjectTracker IdempotenceSerializationCheck( IActivityMonitor monitor,
+                                                                       ObservableDomain domain,
+                                                                       bool restoreSidekicks = false,
+                                                                       int milliSecondsTimeout = -1,
+                                                                       bool useDebugMode = true )
         {
             using( monitor.OpenInfo( $"Idempotence check of '{domain.DomainName}'." ) )
             using( var s = new MemoryStream() )
@@ -1821,7 +1692,10 @@ namespace CK.Observable
                 var originalTransactionSerialNumber = domain.TransactionSerialNumber;
                 s.Position = 0;
                 if( !domain.Load( monitor, RewindableStream.FromStream( s ), millisecondsTimeout: milliSecondsTimeout, startTimer: null ) ) throw new Exception( "Reload failed: Unable to acquire lock." );
-
+                if( restoreSidekicks && domain._sidekickManager.HasWaitingSidekick )
+                {
+                    domain._sidekickManager.CreateWaitingSidekicks( monitor, Util.ActionVoid, true );
+                }
                 using var checker = BinarySerializer.CreateCheckedWriteStream( originalBytes );
                 if( !domain.Save( monitor, checker, millisecondsTimeout: milliSecondsTimeout, debugMode: useDebugMode ) ) throw new Exception( "Second Save failed: Unable to acquire lock." );
                 return domain.CurrentLostObjectTracker!;

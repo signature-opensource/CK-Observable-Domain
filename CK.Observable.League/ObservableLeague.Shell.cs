@@ -25,7 +25,7 @@ namespace CK.Observable.League
         /// </para>
         /// <para>
         /// In the current implementation, the IndependentShell are not "strict" regarding their disposal: a disposed Shell continues to
-        /// relay its calls to this Shell. This may be changed in the future (calling any stuff on a disposed IndependentShell may 
+        /// relay its calls to this Shell. This may be changed in the future (calling any stuff on a disposed IndependentShell may throw).
         /// </para>
         /// <para>
         /// This shell exists even when the domain is unloaded: its <see cref="Shell.Client"/> remains the same.

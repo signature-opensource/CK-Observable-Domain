@@ -44,7 +44,7 @@ namespace CK.Observable
     /// 
     /// </para>
     /// </summary>
-    public abstract class ObservableDomainSidekick
+    public abstract class ObservableDomainSidekick : ISidekickLocator
     {
         /// <summary>
         /// Initializes a new sidekick for a domain.
@@ -67,8 +67,14 @@ namespace CK.Observable
 
         /// <summary>
         /// Gets the domain.
+        /// <para>
+        /// Caution: this is the real domain object, not the restricted <see cref="DomainView"/> that is accessible
+        /// from Observable or Internal objects.
+        /// </para>
         /// </summary>
         internal protected ObservableDomain Domain { get; }
+
+        ObservableDomainSidekick ISidekickLocator.Sidekick => this;
 
         /// <summary>
         /// Must register the provided <see cref="InternalObject"/> or <see cref="ObservableObject"/> as a client

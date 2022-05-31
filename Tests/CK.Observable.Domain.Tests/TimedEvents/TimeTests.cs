@@ -514,7 +514,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 TimeSpan ReloadIfNeeded()
                 {
                     var n = DateTime.UtcNow;
-                    if( mode == "WithIntermediateSaves" ) d.Reload( TestHelper.Monitor );
+                    if( mode == "WithIntermediateSaves" ) d.ReloadNewDomain( TestHelper.Monitor );
                     return DateTime.UtcNow - n;
                 }
 

@@ -94,7 +94,7 @@ namespace CK.Observable.Device.Tests
         protected override Task<bool> DoStartAsync( IActivityMonitor monitor, DeviceStartedReason reason )
         {
             _stopToken = new CancellationTokenSource();
-            _run = RunLoopAsync();
+            _run = _period != Timeout.Infinite ? RunLoopAsync() : Task.CompletedTask;
             return Task.FromResult( true );
         }
 

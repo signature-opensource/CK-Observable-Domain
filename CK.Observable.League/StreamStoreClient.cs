@@ -105,7 +105,7 @@ namespace CK.Observable.League
         }
 
         /// <summary>
-        /// Overridden to call the protected <see cref="DoDeserializeDomain(IActivityMonitor, Stream, bool?)"/>
+        /// Overridden to call the protected <see cref="DoDeserializeDomain(IActivityMonitor, RewindableStream, bool?)"/>
         /// and initialize the <see cref="JsonEventCollector"/>.
         /// See base <see cref="MemoryTransactionProviderClient.LoadOrCreateAndInitializeSnapshot"/> comments.
         /// </summary>

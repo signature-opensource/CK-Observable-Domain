@@ -136,7 +136,7 @@ namespace CK.Observable.Domain.Tests.Sample
             s.WriteValue( o.Position );
         }
 
-        public override bool Equals( object obj ) => obj is MultiPropertyType m && Equals( m );
+        public override bool Equals( object? obj ) => obj is MultiPropertyType m && Equals( m );
 
         public override int GetHashCode()
         {
@@ -164,9 +164,10 @@ namespace CK.Observable.Domain.Tests.Sample
                         Enum ) );
         }
 
-        public bool Equals( MultiPropertyType other )
+        public bool Equals( MultiPropertyType? other )
         {
-            return String == other.String &&
+            return other != null &&
+                    String == other.String &&
                     Int32 == other.Int32 &&
                     UInt32 == other.UInt32 &&
                     Int64 == other.Int64 &&
@@ -188,7 +189,7 @@ namespace CK.Observable.Domain.Tests.Sample
                     Enum == other.Enum;
         }
 
-        public string String { get; set; }
+        public string? String { get; set; }
 
         public int Int32 { get; set; }
 

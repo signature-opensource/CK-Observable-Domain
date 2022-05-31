@@ -16,6 +16,7 @@ namespace CK.Observable.League.Tests.MicroMachine
             Configuration = configuration;
             _clock = new SuspendableClock( isActive: false );
             _clock.IsActiveChanged += ClockIsActiveChanged;
+            Domain.EnsureSidekicks();
         }
 
         protected Machine( Sliced _ ) : base( _ ) { }
@@ -39,17 +40,6 @@ namespace CK.Observable.League.Tests.MicroMachine
         }
 
         public string Name { get; }
-
-        /// <summary>
-        /// This is NOT to be exposed in real life.
-        /// This shows that the observable object may interact with its sidekick if needed.
-        /// </summary>
-        public MachineSideKick.MicroBridge BridgeToTheSidekick { get; internal set; }
-
-        /// <summary>
-        /// This is typically done in the constructor...
-        /// </summary>
-        public void TestCallEnsureBridge() => Domain.EnsureSidekicks();
 
         public MachineConfiguration Configuration { get; }
 

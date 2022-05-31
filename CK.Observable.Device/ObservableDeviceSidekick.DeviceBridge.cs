@@ -11,7 +11,7 @@ namespace CK.Observable.Device
     public abstract partial class ObservableDeviceSidekick<THost,TDeviceObject,TDeviceHostObject>
     {
         /// <summary>
-        /// Must create a <see cref="Bridge{TSidekick, TDevice}"/> between <typeparamref name="TDeviceObject"/> and its actual <see cref="Bridge{TSidekick, TDevice}.Device"/>.
+        /// Must create a <see cref="PassiveBridge{TSidekick, TDevice}"/> between <typeparamref name="TDeviceObject"/> and its actual <see cref="PassiveBridge{TSidekick, TDevice}.Device"/>.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="o">The observable object to be bridged.</param>
@@ -27,17 +27,16 @@ namespace CK.Observable.Device
 
         /// <summary>
         /// Non generic bridge between observable <typeparamref name="TDeviceObject"/> and its actual <see cref="Device"/>.
-        /// This cannot be directly instantiated: the generic <see cref="Bridge{TSidekick,TDevice}"/> adapter must be used.
+        /// This cannot be directly instantiated: the generic <see cref="PassiveBridge{TSidekick,TDevice}"/> adapter must be used.
         /// </summary>
-        protected abstract class DeviceBridge : ObservableDeviceObject.IDeviceBridge
+        internal protected abstract class DeviceBridge : ObservableDeviceObject.IInternalDeviceBridge
         {
             internal ObservableDeviceSidekick<THost,TDeviceObject,TDeviceHostObject> _sidekick;
-            internal DeviceBridge? _nextUnbound;
 
             /// <summary>
             /// Gets the observable object device.
             /// </summary>
-            internal protected TDeviceObject Object { get; }
+            public TDeviceObject Object { get; }
 
             /// <summary>
             /// Gets the associated device or null if no actual device with the <see cref="ObservableDeviceObject.DeviceName"/> exists in the host.
@@ -46,7 +45,7 @@ namespace CK.Observable.Device
 
             #pragma warning disable CS8618 // Non-nullable _sidekick uninitialized. Consider declaring as nullable.
             /// <summary>
-            /// This is private protected so that developers are obliged to use the <see cref="Bridge{TSidekick,TDevice}"/> generic adapter.
+            /// This is private protected so that developers are obliged to use the <see cref="PassiveBridge{TSidekick,TDevice}"/> generic adapter.
             /// </summary>
             /// <param name="o">The observable object device.</param>
             private protected DeviceBridge( TDeviceObject o )
@@ -57,81 +56,51 @@ namespace CK.Observable.Device
             }
             #pragma warning restore CS8618
 
-            ObservableDomainSidekick ObservableDeviceObject.IDeviceBridge.Sidekick => _sidekick;
+            ObservableDomainSidekick ISidekickLocator.Sidekick => _sidekick;
 
-            BaseStartDeviceCommand ObservableDeviceObject.IDeviceBridge.CreateStartCommand() => new StartDeviceCommand<THost>();
-            BaseConfigureDeviceCommand ObservableDeviceObject.IDeviceBridge.CreateConfigureCommand( DeviceConfiguration? configuration ) => _sidekick.Host.CreateConfigureCommand( configuration );
-            BaseStopDeviceCommand ObservableDeviceObject.IDeviceBridge.CreateStopCommand() => new StopDeviceCommand<THost>();
-            BaseDestroyDeviceCommand ObservableDeviceObject.IDeviceBridge.CreateDestroyCommand() => new DestroyDeviceCommand<THost>();
-            BaseSetControllerKeyDeviceCommand ObservableDeviceObject.IDeviceBridge.CreateSetControllerKeyCommand() => new SetControllerKeyDeviceCommand<THost>();
+            BaseStartDeviceCommand ObservableDeviceObject.IInternalDeviceBridge.CreateStartCommand() => new StartDeviceCommand<THost>();
+            BaseConfigureDeviceCommand ObservableDeviceObject.IInternalDeviceBridge.CreateConfigureCommand( DeviceConfiguration? configuration ) => _sidekick.Host.CreateConfigureCommand( configuration );
+            BaseStopDeviceCommand ObservableDeviceObject.IInternalDeviceBridge.CreateStopCommand() => new StopDeviceCommand<THost>();
+            BaseDestroyDeviceCommand ObservableDeviceObject.IInternalDeviceBridge.CreateDestroyCommand() => new DestroyDeviceCommand<THost>();
+            BaseSetControllerKeyDeviceCommand ObservableDeviceObject.IInternalDeviceBridge.CreateSetControllerKeyCommand() => new SetControllerKeyDeviceCommand<THost>();
 
-            IEnumerable<string> ObservableDeviceObject.IDeviceBridge.CurrentlyAvailableDeviceNames => _sidekick._objectHost?.Devices
-                                                                                                        ?? _sidekick.Host.GetDevices().Values.Select( d => d.Name );
-
-            string? ObservableDeviceObject.IDeviceBridge.ControllerKey => Device?.ControllerKey;
+            IEnumerable<string> ObservableDeviceObject.IInternalDeviceBridge.CurrentlyAvailableDeviceNames => _sidekick._objectHost?.GetAvailableDeviceNames()
+                                                                                                                ?? _sidekick.Host.GetDevices().Keys;
 
             internal void Initialize( IActivityMonitor monitor, ObservableDeviceSidekick<THost, TDeviceObject, TDeviceHostObject> owner, IDevice? initialDevice )
             {
                 _sidekick = owner;
-                if( initialDevice == null ) owner.AddUnbound( this );
-                else
-                {
-                    SetDevice( monitor, initialDevice, initCall: true );
-                }
+                if( initialDevice != null ) SetDevice( monitor, initialDevice );
             }
 
             internal void SetDevice( IActivityMonitor monitor, IDevice d, bool initCall = false )
             {
                 Debug.Assert( Device == null, "This is called only if the current Device is null." );
-                d.LifetimeEvent.Async += OnDeviceLifetimeChangedAsync;
                 Device = d;
-                Object.Status = d.Status;
+                SubscribeDeviceEvent();
+                Object.SetIsRunning( d.Status.IsRunning );
                 Object.OnDeviceConfigurationApplied( d.ExternalConfiguration );
-                SetObjectDeviceControlProperties( d.ControllerKey );
-
-                if( !initCall ) _sidekick.RemoveUnbound( this );
+                Object.SetDeviceControlStatus( ObservableDeviceObject.ComputeStatus( d, _sidekick.Domain.DomainName ) );
                 OnDeviceAppeared( monitor );
-            }
-
-            void SetObjectDeviceControlProperties( string? deviceKey )
-            {
-                var n = _sidekick.Domain.DomainName;
-                Object.HasDeviceControl = deviceKey == null || deviceKey == n;
-                Object.HasExclusiveDeviceControl = deviceKey == n;
             }
 
             internal void DetachDevice( IActivityMonitor monitor )
             {
                 Debug.Assert( Device != null, "This is called only if a Device is bound." );
-                Device.LifetimeEvent.Async -= OnDeviceLifetimeChangedAsync;
+                UnsubscribeDeviceEvent();
                 OnDeviceDisappearing( monitor );
-                Object.Status = null;
+                Object.SetIsRunning( null );
                 Object.OnDeviceConfigurationApplied( null );
-                Object.HasDeviceControl = false;
-                Object.HasExclusiveDeviceControl = false;
-                _sidekick.AddUnbound( this );
+                Object.SetDeviceControlStatus( DeviceControlStatus.MissingDevice );
                 Device = null;
             }
 
-            Task OnDeviceLifetimeChangedAsync( IActivityMonitor monitor, DeviceLifetimeEvent e )
+            private protected virtual void SubscribeDeviceEvent()
             {
-                Debug.Assert( Device != null );
-                return ModifyAsync( monitor, () =>
-                {
-                    if( e.Device.IsDestroyed )
-                    {
-                        DetachDevice( monitor );
-                    }
-                    else
-                    {
-                        Object.Status = e.Device.Status;
-                        SetObjectDeviceControlProperties( e.Device.ControllerKey );
-                        if( e is DeviceConfigurationChangedEvent c )
-                        {
-                            Object.OnDeviceConfigurationApplied( c.Configuration );
-                        }
-                    }
-                } );
+            }
+
+            private protected virtual void UnsubscribeDeviceEvent()
+            {
             }
 
             /// <summary>
@@ -142,11 +111,7 @@ namespace CK.Observable.Device
             /// <param name="isObjectDestroyed">True when the object has been destroyed, false when it is only unloaded.</param>
             internal void OnDispose( IActivityMonitor monitor, bool isObjectDestroyed )
             {
-                if( Device == null ) _sidekick.RemoveUnbound( this );
-                else
-                {
-                    Device.LifetimeEvent.Async -= OnDeviceLifetimeChangedAsync;
-                }
+                if( Device != null ) UnsubscribeDeviceEvent();
                 OnObjectDisappeared( monitor, isObjectDestroyed );
             }
 
@@ -156,7 +121,7 @@ namespace CK.Observable.Device
                 var c = new T();
                 if( !c.HostType.IsAssignableFrom( _sidekick.Host.GetType() ) )
                 {
-                    throw new InvalidOperationException( $"Command '{c.GetType().Name}' is bound to HostType '{c.HostType.Name}'. It cannot be handled by host {_sidekick.Host.GetType().Name}." );
+                    Throw.InvalidOperationException( $"Command '{c.GetType().Name}' is bound to HostType '{c.HostType.Name}'. It cannot be handled by host {_sidekick.Host.GetType().Name}." );
                 }
                 c.DeviceName = Object.DeviceName;
                 c.ControllerKey = Device?.ControllerKey;
@@ -206,14 +171,15 @@ namespace CK.Observable.Device
         }
 
         /// <summary>
-        /// Base class to implement to bridge <typeparamref name="TDevice"/> to observable objects.
+        /// Base class to implement to bridge <typeparamref name="TDevice"/> that are not <see cref="IActiveDevice"/>
+        /// to observable objects.
         /// Specialized classes have access to the observable object (<see cref="DeviceBridge.Object"/>),
         /// the device that may not exist (<see cref="Device"/>) and the <see cref="Sidekick"/> in a
         /// strongly typed manner.
         /// </summary>
         /// <typeparam name="TSidekick">The type of the sidekick that manages this bridge.</typeparam>
         /// <typeparam name="TDevice">The type of the actual device.</typeparam>
-        protected abstract class Bridge<TSidekick,TDevice> : DeviceBridge
+        internal protected abstract class PassiveBridge<TSidekick, TDevice> : DeviceBridge
             where TSidekick : ObservableDeviceSidekick<THost, TDeviceObject, TDeviceHostObject>
             where TDevice : class, IDevice
         {
@@ -221,14 +187,50 @@ namespace CK.Observable.Device
             /// Initializes a new bridge.
             /// </summary>
             /// <param name="o">The observable object device.</param>
-            protected Bridge( TDeviceObject o )
+            protected PassiveBridge( TDeviceObject o )
                 : base( o )
             {
             }
 
+            /// <inheritdoc cref="PassiveBridge{TSidekick,TDevice}.Device" />
+            public new TDevice? Device => (TDevice?)base.Device;
+
             /// <summary>
-            /// Gets the device if it exists in the host.
+            /// Gets the Sidekick that manages this bridge.
             /// </summary>
+            public TSidekick Sidekick => (TSidekick)_sidekick;
+        }
+
+        /// <summary>
+        /// Base class to implement to bridge <typeparamref name="TDevice"/> that are <see cref="IActiveDevice"/>
+        /// to observable objects.
+        /// <para>
+        /// Specialized classes have access to the observable object (<see cref="DeviceBridge.Object"/>),
+        /// the device that may not exist (<see cref="Device"/>) and the <see cref="Sidekick"/> in a
+        /// strongly typed manner.
+        /// </para>
+        /// <para>
+        /// Since the device is active, the abstract <see cref="OnDeviceEventAsync"/> must be used to
+        /// handle device events.
+        /// </para>
+        /// </summary>
+        /// <typeparam name="TSidekick">The type of the sidekick that manages this bridge.</typeparam>
+        /// <typeparam name="TDevice">The type of the actual device.</typeparam>
+        internal protected abstract class ActiveBridge<TSidekick, TDevice, TDeviceEvent> : DeviceBridge
+            where TSidekick : ObservableDeviceSidekick<THost, TDeviceObject, TDeviceHostObject>
+            where TDevice : class, IActiveDevice<TDeviceEvent>
+            where TDeviceEvent : ActiveDeviceEvent<TDevice>
+        {
+            /// <summary>
+            /// Initializes a new bridge.
+            /// </summary>
+            /// <param name="o">The observable object device.</param>
+            protected ActiveBridge( TDeviceObject o )
+                : base( o )
+            {
+            }
+
+            /// <inheritdoc cref="PassiveBridge{TSidekick,TDevice}.Device" />
             public new TDevice? Device => (TDevice?)base.Device;
 
             /// <summary>
@@ -236,6 +238,26 @@ namespace CK.Observable.Device
             /// </summary>
             public TSidekick Sidekick => (TSidekick)_sidekick;
 
+            private protected override void SubscribeDeviceEvent()
+            {
+                Debug.Assert( Device != null );
+                Device.DeviceEvent.Async += OnDeviceEventAsync;
+            }
+
+            private protected override void UnsubscribeDeviceEvent()
+            {
+                Debug.Assert( Device != null );
+                Device.DeviceEvent.Async -= OnDeviceEventAsync;
+            }
+
+            /// <summary>
+            /// Can handle the device events.
+            /// Note that lifetime events are handled separately.
+            /// </summary>
+            /// <param name="monitor">The monitor to use.</param>
+            /// <param name="deviceEvent">The event to handle.</param>
+            /// <returns>The awaitable.</returns>
+            protected abstract Task OnDeviceEventAsync( IActivityMonitor monitor, TDeviceEvent deviceEvent );
         }
     }
 

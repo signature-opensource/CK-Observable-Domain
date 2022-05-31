@@ -100,13 +100,13 @@ public void Main()
 ```
 ## PropertyChanged event, PropertyChanged.Fody & Safe events
 
-An  `ObservableObject` implements the `System.ComponentModel.INotifyPropertyChanged` that is the standard .Net way to track property changes.
+An `ObservableObject` implements the `System.ComponentModel.INotifyPropertyChanged` that is the standard .Net way to track property changes.
 However we use it only because we support (and recommend) the use of PropertyChanged.Fody in any project that implements Observable objects:
 
 ```xml
   <ItemGroup>
-    <PackageReference Include="Fody" Version="6.1.1" PrivateAssets="all" />
-    <PackageReference Include="PropertyChanged.Fody" Version="3.2.6" PrivateAssets="all" />
+    <PackageReference Include="Fody" Version=""6.6.0" PrivateAssets="all" />
+    <PackageReference Include="PropertyChanged.Fody" Version="4.0.0" PrivateAssets="all" />
   </ItemGroup>
 ```
 
@@ -125,13 +125,13 @@ public event SafeEventHandler<PropertyChangedEventArgs> PropertyChanged
 {
     add
     {
-        if( IsDisposed ) throw new ObjectDisposedException( ToString() );
-        _propertyChanged.Add( value, nameof( PropertyChanged ) );
+        this.CheckDestroyed();
+        _propertyChanged.Add( value );
     }
     remove => _propertyChanged.Remove( value );
 }
 
-event PropertyChangedEventHandler INotifyPropertyChanged.PropertyChanged
+event PropertyChangedEventHandler? INotifyPropertyChanged.PropertyChanged
 {
     add
     {
@@ -143,8 +143,8 @@ event PropertyChangedEventHandler INotifyPropertyChanged.PropertyChanged
     }
 }
 ```
-There is a little bit more to this. Here, to locate the property that has changed, `PropertyChangedEventArgs.PropertyName` must be used which can be boring.
-If, for some (important) property, you want the developer to easily track any of its change, you can simply expose a specific named event. Below is the full 
+Here, to locate the property that has changed, `PropertyChangedEventArgs.PropertyName` must be used which can be boring.
+If, for some (important) property, you want the developer to easily track any of its change, you can expose a specific named event. Below is the full 
 code of a property and its associated safe event (we are using PropertyChanged.Fody, so the property itself is minimalist):  
 
 ```csharp
@@ -157,7 +157,7 @@ public class Car : ObservableObject
 
     public event SafeEventHandler<ObservableDomainEventArgs> TestSpeedChanged
     {
-        add => _testSpeedChanged.Add( value, nameof( TestSpeedChanged ) );
+        add => _testSpeedChanged.Add( value );
         remove => _testSpeedChanged.Remove( value );
     }
 ```
@@ -168,20 +168,22 @@ Defining the event is enough: it will be automatically fired whenever TestSpeed 
 - Don't forget the serialization support of the event!
 
 ```csharp
-    Car( IBinaryDeserializer r, TypeReadInfo? info )
-            : base( RevertSerialization.Default )
-    {
-        Name = r.ReadNullableString();
-        TestSpeed = r.ReadInt32();
-        _testSpeedChanged = new ObservableEventHandler<ObservableDomainEventArgs>( r );
-    }
+Car( IBinaryDeserializer d, ITypeReadInfo info )
+: base( Sliced.Instance )
+{
+    Name = d.Reader.ReadString();
+    TestSpeed = d.Reader.ReadInt32();
+    _position = d.ReadValue<Position>();
+    _testSpeedChanged = new ObservableEventHandler<ObservableDomainEventArgs>( d );
+}
 
-    void Write( BinarySerializer w )
-    {
-        w.WriteNullableString( Name );
-        w.Write( TestSpeed );
-        _testSpeedChanged.Write( w );
-    }}
+public static void Write( IBinarySerializer s, in Car o )
+{
+    s.Writer.Write( o.Name );
+    s.Writer.Write( o.TestSpeed );
+    s.WriteValue( o._position );
+    o._testSpeedChanged.Write( s );
+}
 ```
 
 

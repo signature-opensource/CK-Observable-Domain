@@ -27,7 +27,7 @@ namespace CK.Observable.Device.Tests
             SampleDevice.SafeDeviceState? GetDeviceState();
         }
 
-        class SampleBridge : Bridge<OSampleDeviceSidekick, SampleDevice>, IBridge
+        class SampleBridge : PassiveBridge<OSampleDeviceSidekick, SampleDevice>, IBridge
         {
             public SampleBridge( OSampleDevice o )
                 : base( o )

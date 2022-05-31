@@ -155,15 +155,24 @@ namespace CK.Observable
                 // Throw on error.
                 bool timerRunning = r.GetResult();
                 if( startTimer.HasValue ) timerRunning = startTimer.Value;
-                if( !_sidekickManager.CreateWaitingSidekicks( monitor, ex => { }, true ) )
+                // If we are in a real transaction, we leave the deserialization/initialization mode
+                // and instantiate any expected sidekick.
+                Debug.Assert( _currentTran is Transaction || _currentTran is InitializationTransaction );
+                if( _currentTran is Transaction && _sidekickManager.HasWaitingSidekick )
                 {
-                    var msg = "At least one critical error occurred while activating sidekicks. The error should be investigated since this may well be a blocking error.";
-                    if( timerRunning )
+                    // The sidekicks will initialize themselves in a "normal" context. The changes will be collected
+                    // and the ObservableEvents will be available.
+                    _deserializeOrInitializing = false;
+                    if( !_sidekickManager.CreateWaitingSidekicks( monitor, Util.ActionVoid, true ) )
                     {
-                        timerRunning = false;
-                        msg += " The TimeManager (that should have ran) has been stopped.";
+                        var msg = "At least one critical error occurred while activating sidekicks. The error should be investigated since this may well be a blocking error.";
+                        if( timerRunning )
+                        {
+                            timerRunning = false;
+                            msg += " The TimeManager (that should have ran) has been stopped.";
+                        }
+                        monitor.Error( msg );
                     }
-                    monitor.Error( msg );
                 }
                 return timerRunning;
             }
@@ -173,7 +182,7 @@ namespace CK.Observable
             }
         }
 
-        bool DeserializeAndGetTimerState( IActivityMonitor monitor, string expectedName, BinarySerialization.IBinaryDeserializer d )
+        bool DeserializeAndGetTimerState( IActivityMonitor monitor, string expectedName, IBinaryDeserializer d )
         {
             UnloadDomain( monitor, !d.StreamInfo.SecondPass );
 
@@ -232,8 +241,13 @@ namespace CK.Observable
             // Reads all the objects. 
             for( int i = 0; i < count; ++i )
             {
-                _objects[i] = d.ReadNullableObject<ObservableObject>();
-                Debug.Assert( _objects[i] == null || !_objects[i]!.IsDestroyed );
+                var o = d.ReadNullableObject<ObservableObject>();
+                Debug.Assert( o == null || !o.IsDestroyed );
+                if( o != null && o.OId.Index != i )
+                {
+                    Throw.InvalidDataException( $"Deserialization error for '{o.GetType().ToCSharpName()}': its deserialization constructor must call \": base( Sliced.{nameof(Sliced.Instance)} )\"." );
+                }
+                _objects[i] = o;
             }
 
             // Reading InternalObjects.

@@ -1,3 +1,4 @@
+using CK.BinarySerialization;
 using CK.Core;
 using System;
 using System.Collections;
@@ -63,11 +64,11 @@ namespace CK.Observable
         /// </summary>
         /// <param name="_">Unused parameter.</param>
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-        protected ObservableSet( BinarySerialization.Sliced _ ) : base( _ ) { }
-#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+        protected ObservableSet( Sliced _ ) : base( _ ) { }
+#pragma warning restore CS8618
 
-        ObservableSet( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
-            : base( BinarySerialization.Sliced.Instance )
+        ObservableSet( IBinaryDeserializer d, ITypeReadInfo info )
+            : base( Sliced.Instance )
         {
             _set = d.ReadObject<HashSet<T>>()!;
             _itemAdded = new ObservableEventHandler<CollectionAddKeyEvent>( d );
@@ -79,7 +80,7 @@ namespace CK.Observable
         /// The serialization method.
         /// </summary>
         /// <param name="s">The target binary serializer.</param>
-        public static void Write( BinarySerialization.IBinarySerializer s, in ObservableSet<T> o )
+        public static void Write( IBinarySerializer s, in ObservableSet<T> o )
         {
             s.WriteObject( o._set );
             o._itemAdded.Write( s );
@@ -144,6 +145,9 @@ namespace CK.Observable
             }
         }
 
+        /// <summary>
+        /// Destroys any <see cref="IDestroyableObject"/> items that may appear in this set.
+        /// </summary>
         protected void DestroyItems()
         {
             // Take a snapshot so that OnDestroyed reflexes can safely alter the _set.

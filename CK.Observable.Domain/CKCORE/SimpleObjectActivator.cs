@@ -31,7 +31,7 @@ namespace CK.Core
         {
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
             if( t == null ) throw new ArgumentNullException( nameof( t ) );
-            using( monitor.OpenDebug( $"Creating instance of type: {t.AssemblyQualifiedName}." ) )
+            using( monitor.OpenDebug( $"Creating instance of type: {t}." ) )
                 try
                 {
                     Required required = parameters == null

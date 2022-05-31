@@ -1,4 +1,4 @@
-﻿using CK.BinarySerialization;
+using CK.BinarySerialization;
 using CK.Observable;
 using CK.Testing;
 using FluentAssertions;
@@ -13,54 +13,6 @@ namespace CK.Core
     static class TestHelperExtensions
     {
         public static bool CheckObjectReferences = true;
-
-        /// <summary>
-        /// Gets or sets whether SaveAndLoad methods check the reference management
-        /// by writing a first (empty) object before and after the actual write, and yet another
-        /// (empty) instance after twice (to use the reference tracking). 
-        /// When reading, we first read this empty instance before the actual read, read it again
-        /// and reads twice the second instance.
-        /// <para>
-        /// Defaults to true.
-        /// </para>
-        /// </summary>
-        /// <param name="this">This tester.</param>
-        /// <param name="check">Check the references.</param>
-        public static void SetCheckObjectReferences( this IBasicTestHelper @this, bool check )
-        {
-            CheckObjectReferences = check;
-        }
-
-
-        [return: NotNullIfNotNull("o")]
-        public static T SaveAndLoadObject<T>( this IBasicTestHelper @this, T o,
-                                                                            BinarySerializerContext? serializerContext = null,
-                                                                            BinaryDeserializerContext? deserializerContext = null ) where T : class
-        {
-            return SaveAndLoad( @this, o, ( x, w ) => w.WriteObject( x ), r => r.ReadObject<T>(), serializerContext, deserializerContext );
-        }
-
-        [return: NotNullIfNotNull("o")]
-        public static object? SaveAndLoadAny( this IBasicTestHelper @this, object? o,
-                                                                           BinarySerializerContext? serializerContext = null,
-                                                                           BinaryDeserializerContext? deserializerContext = null )
-        {
-            return SaveAndLoad( @this, o, ( x, w ) => w.WriteAnyNullable( x ), r => r.ReadAnyNullable(), serializerContext, deserializerContext );
-        }
-
-        public static T SaveAndLoadValue<T>( this IBasicTestHelper @this, in T v,
-                                                                          BinarySerializerContext? serializerContext = null,
-                                                                          BinaryDeserializerContext? deserializerContext = null ) where T : struct
-        {
-            return SaveAndLoad<T>( @this, v, ( x, w ) => w.WriteValue( x ), r => r.ReadValue<T>(), serializerContext, deserializerContext );
-        }
-
-        public static T? SaveAndLoadNullableValue<T>( this IBasicTestHelper @this, in T? v,
-                                                                                   BinarySerializerContext? serializerContext = null,
-                                                                                   BinaryDeserializerContext? deserializerContext = null ) where T : struct
-        {
-            return SaveAndLoad<T?>( @this, v, ( x, w ) => w.WriteNullableValue( x ), r => r.ReadNullableValue<T>(), serializerContext, deserializerContext );
-        }
 
         public static T SaveAndLoad<T>( this IBasicTestHelper @this, in T o,
                                                                      Action<T, BinarySerialization.IBinarySerializer> w,
@@ -151,7 +103,13 @@ namespace CK.Core
 
             public ObservableDomain Domain { get; private set; }
 
-            public void Reload( IActivityMonitor m, bool idempotenceCheck = false, int pauseReloadMilliseconds = 0 )
+            /// <summary>
+            /// Saves this <see cref="Domain"/>, disposes it and return a new domain from the saved bits.
+            /// </summary>
+            /// <param name="m">The monitor.</param>
+            /// <param name="idempotenceCheck">True to call <see cref="ObservableDomain.IdempotenceSerializationCheck"/> on this domain first.</param>
+            /// <param name="pauseReloadMilliseconds">Optional pause between reloading a new domain.</param>
+            public void ReloadNewDomain( IActivityMonitor m, bool idempotenceCheck = false, int pauseReloadMilliseconds = 0 )
             {
                 if( idempotenceCheck ) ObservableDomain.IdempotenceSerializationCheck( m, Domain );
                 Domain = MonitorTestHelper.TestHelper.SaveAndLoad( Domain, serviceProvider: ServiceProvider, debugMode: true, pauseMilliseconds: pauseReloadMilliseconds );

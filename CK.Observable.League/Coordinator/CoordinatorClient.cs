@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using System.Linq;
 using System.IO;
 using CK.BinarySerialization;
+using System.Diagnostics.CodeAnalysis;
+using System.Collections.Generic;
 
 namespace CK.Observable.League
 {
@@ -40,23 +42,25 @@ namespace CK.Observable.League
         {
             base.OnTransactionCommit( c );
             if( !_optionsPropertyId.HasValue ) _optionsPropertyId = c.FindPropertyId( nameof( CK.Observable.League.Domain.Options ) );
-            if( _optionsPropertyId.HasValue )
+            HashSet<Domain>? touched = null;
+            foreach( var e in c.Events )
             {
-                Domain? d = null;
-                foreach( var e in c.Events )
+                if( e is NewObjectEvent n && n.Object is Domain dN )
                 {
-                    if( e is NewObjectEvent n && n.Object is Domain dN )
-                    {
-                        d = dN;
-                        break;
-                    }
-                    if( e is PropertyChangedEvent p && p.PropertyId == _optionsPropertyId.Value && p.Object is Domain dP )
-                    {
-                        d = dP;
-                        break;
-                    }
+                    if( touched == null ) touched = new HashSet<Domain>();
+                    touched.Add( dN );
+                    break;
                 }
-                if( d != null )
+                if( _optionsPropertyId.HasValue && e is PropertyChangedEvent p && p.PropertyId == _optionsPropertyId.Value && p.Object is Domain dP )
+                {
+                    if( touched == null ) touched = new HashSet<Domain>();
+                    touched.Add( dP );
+                    break;
+                }
+            }
+            if( touched != null )
+            {
+                foreach( var d in touched )
                 {
                     c.DomainPostActions.Add( ctx => d.Shell.SynchronizeOptionsAsync( ctx.Monitor, d.Options, nextActiveTime: null ) );
                 }
@@ -76,7 +80,7 @@ namespace CK.Observable.League
             Domain.Root.FinalizeConstruct( league );
         }
 
-        protected override void DoLoadOrCreateFromSnapshot( IActivityMonitor monitor, ref ObservableDomain? d, bool restoring, bool? startTimer )
+        protected override void DoLoadOrCreateFromSnapshot( IActivityMonitor monitor, [AllowNull]ref ObservableDomain d, bool restoring, bool? startTimer )
         {
             Debug.Assert( Domain == d );
             base.DoLoadOrCreateFromSnapshot( monitor, ref d, restoring, startTimer );

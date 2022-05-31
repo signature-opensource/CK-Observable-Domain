@@ -50,25 +50,7 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Sends a command to a known sidekick. By default, the target sidekick must handle the command: see <paramref name="isOptionalExecution"/>.
-        /// <para>
-        /// This is just a helper that calls <see cref="SendCommand(in ObservableDomainCommand)"/>.
-        /// </para>
-        /// </summary>
-        /// <param name="command">The command payload.</param>
-        /// <param name="target">The target sidekick that must handle the command.</param>
-        /// <param name="isOptionalExecution">
-        /// By default, the sidekick must handle the command (<see cref="ObservableDomainSidekick.ExecuteCommand(Core.IActivityMonitor, in SidekickCommand)"/>
-        /// must return true).
-        /// When set to true, a simple warning is emitted if the sidekick failed to handle the command.
-        /// </param>
-        public void SendCommand( object command, ObservableDomainSidekick target, bool isOptionalExecution = false )
-        {
-            _d.SendCommand( _o, new ObservableDomainCommand( command, target, isOptionalExecution ) );
-        }
-
-        /// <summary>
-        /// Sends a command to a sidekick associated to a locator.
+        /// Sends a command to a sidekick via a locator (a sidekick is its own <see cref="ISidekickLocator"/>).
         /// By default, the target sidekick must handle the command: see <paramref name="isOptionalExecution"/>.
         /// <para>
         /// This is just a helper that calls <see cref="SendCommand(in ObservableDomainCommand)"/>.
@@ -96,7 +78,7 @@ namespace CK.Observable
         /// <param name="command">The command payload.</param>
         /// <param name="sidekickTargetType">The type of the sidekick that must handle the command.</param>
         /// <param name="isOptionalExecution">
-        /// By default, the sidekick instance must exist AND handle the command (<see cref="ObservableDomainSidekick.ExecuteCommand(Core.IActivityMonitor, in SidekickCommand)"/>
+        /// By default, the sidekick instance must exist AND handle the command (<see cref="ObservableDomainSidekick.ExecuteCommand(IActivityMonitor, in SidekickCommand)"/>
         /// must return true).
         /// When set to true, a simple warning is emitted if the sidekick is not instantiated or failed to handle the command.
         /// </param>

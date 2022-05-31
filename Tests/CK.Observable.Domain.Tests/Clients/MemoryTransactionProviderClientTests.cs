@@ -260,8 +260,8 @@ namespace CK.Observable.Domain.Tests.Clients
         {
             using var d = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, "TEST", startTimer: true, client: new ConcreteMemoryTransactionProviderClient() );
             // Initial successful Modify
-            TestObservableRootObject initialObservableObject = null;
-            TestObservableRootObject restoredObservableObject = null;
+            TestObservableRootObject initialObservableObject = null!;
+            TestObservableRootObject restoredObservableObject = null!;
             d.Modify( TestHelper.Monitor, () =>
             {
                 initialObservableObject = d.Root;

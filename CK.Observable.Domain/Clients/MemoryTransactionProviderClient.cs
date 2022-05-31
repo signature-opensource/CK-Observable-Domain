@@ -201,14 +201,14 @@ namespace CK.Observable
             _memory.Position = 0;
             s.CopyTo( _memory );
             // We check 16 bytes. Even an empty domain require more bytes than that (secret, name, object count...).
-            if( _memory.Position < 16 ) throw new InvalidDataException( $"Invalid Snapshot restoration (stream length is {_memory.Position})." );
+            Throw.CheckState( _memory.Position > 16 );
             var rawBytes = _memory.GetBuffer();
             if( rawBytes[0] == 0 )
             {
                 _currentSnapshotKind = (CompressionKind)rawBytes[1];
                 if( _currentSnapshotKind != CompressionKind.None && _currentSnapshotKind != CompressionKind.GZiped )
                 {
-                    throw new InvalidDataException( "Invalid CompressionKind marker." );
+                    Throw.InvalidDataException( "Invalid CompressionKind marker." );
                 }
                 _currentSnapshotHeaderLength = 2; 
             }
@@ -335,7 +335,7 @@ namespace CK.Observable
         /// Ensures that the <see cref="ObservableDomain.TimeManager"/> is running or stopped.
         /// When null, it keeps its previous state (it is initially stopped at domain creation) and then its current state is persisted.
         /// </param>
-        protected virtual void DoLoadOrCreateFromSnapshot( IActivityMonitor monitor, ref ObservableDomain? domain, bool restoring, bool? startTimer )
+        protected virtual void DoLoadOrCreateFromSnapshot( IActivityMonitor monitor, [AllowNull]ref ObservableDomain domain, bool restoring, bool? startTimer )
         {
             static void ReloadOrThrow( IActivityMonitor monitor,
                                        ObservableDomain domain,

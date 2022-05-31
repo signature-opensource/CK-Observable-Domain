@@ -116,7 +116,7 @@ namespace CK.Observable
                     {
                         using( monitor.OpenError( $"{ReferencedDestroyed.Count} destroyed objects are referenced by one or more non destroyed objects." ) )
                         {
-                            monitor.Error( ReferencedDestroyed.GroupBy( r => r.GetType() ).Select( g => $"{g.Count()} of type '{g.Key.Name}'" ).Concatenate() );
+                            monitor.Error( ReferencedDestroyed.GroupBy( r => r.GetType() ).Select( g => $"{g.Count()} of type '{g.Key}'" ).Concatenate() );
                         }
                     }
                     else
@@ -128,7 +128,7 @@ namespace CK.Observable
                 {
                     using( monitor.OpenWarn( $"{UnreacheableObservables.Count} Observable objects are not reachable from any of the domain's roots." ) )
                     {
-                        monitor.Warn( UnreacheableObservables.GroupBy( r => r.GetType() ).Select( g => $"{g.Count()} of type '{g.Key.Name}'" ).Concatenate() );
+                        monitor.Warn( UnreacheableObservables.GroupBy( r => r.GetType() ).Select( g => $"{g.Count()} of type '{g.Key}'" ).Concatenate() );
                     }
                 }
                 else
@@ -139,7 +139,7 @@ namespace CK.Observable
                 {
                     using( monitor.OpenWarn( $"{UnreacheableInternals.Count} Internal objects are not reachable from any of the domain's roots." ) )
                     {
-                        monitor.Warn( UnreacheableInternals.GroupBy( r => r.GetType() ).Select( g => $"{g.Count()} of type '{g.Key.Name}'" ).Concatenate() );
+                        monitor.Warn( UnreacheableInternals.GroupBy( r => r.GetType() ).Select( g => $"{g.Count()} of type '{g.Key}'" ).Concatenate() );
                     }
                 }
                 else
@@ -150,7 +150,7 @@ namespace CK.Observable
                 {
                     using( monitor.OpenWarn( $"{UnreacheableTimedObjects.Count} Timer or Reminder objects are not reachable from any of the domain's roots." ) )
                     {
-                        monitor.Warn( UnreacheableTimedObjects.GroupBy( r => r.GetType() ).Select( g => $"{g.Count()} of type '{g.Key.Name}'" ).Concatenate() );
+                        monitor.Warn( UnreacheableTimedObjects.GroupBy( r => r.GetType() ).Select( g => $"{g.Count()} of type '{g.Key}'" ).Concatenate() );
                     }
                 }
                 else

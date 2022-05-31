@@ -94,7 +94,7 @@ namespace CK.Observable
             get => _keepLimit;
             set
             {
-                if( value < 1 ) throw new ArgumentOutOfRangeException();
+                Throw.CheckOutOfRangeArgument( value >= 1 );
                 _keepLimit = value;
             }
         }
@@ -107,7 +107,7 @@ namespace CK.Observable
         /// </summary>
         /// <param name="transactionNumber">The starting transaction number.</param>
         /// <returns>The current transaction number and the set of transaction events to apply or null if an export is required.</returns>
-        public (int TransactionNumber,IReadOnlyList<TransactionEvent>? Events) GetTransactionEvents( int transactionNumber )
+        public (int TransactionNumber, IReadOnlyList<TransactionEvent>? Events) GetTransactionEvents( int transactionNumber )
         {
             lock( _events )
             {
@@ -151,10 +151,10 @@ namespace CK.Observable
         /// <param name="clearEvents">True to clear any existing transactions events.</param>
         public void CollectEvent( ObservableDomain domain, bool clearEvents )
         {
-            if( domain == null ) throw new ArgumentNullException( nameof( domain ) );
+            Throw.CheckNotNullArgument( domain );
             lock( _events )
             {
-                if( _domain != null ) throw new InvalidOperationException( "Event collector is already associated to a domain." );
+                Throw.CheckState( _domain == null, "Event collector is already associated to a domain." );
                 _domain = domain;
                 domain.OnSuccessfulTransaction += OnSuccessfulTransaction;
                 if( clearEvents )
@@ -177,13 +177,13 @@ namespace CK.Observable
                     if( _domain != null )
                     {
                         _domain.OnSuccessfulTransaction -= OnSuccessfulTransaction;
-                        _domain = null;
+                        _domain = null!;
                     }
                 }
             }
         }
 
-        void OnSuccessfulTransaction( object sender, SuccessfulTransactionEventArgs c ) 
+        void OnSuccessfulTransaction( object? sender, SuccessfulTransactionEventArgs c ) 
         {
             Debug.Assert( sender == _domain );
             // It's useless to capture the initial transaction: the full export will be more efficient.

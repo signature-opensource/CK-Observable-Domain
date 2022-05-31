@@ -30,7 +30,7 @@ namespace CK.Observable.League.Tests.MicroMachine
 
             // No Identification appears: => IdentificationTimeout.
             Thread.Sleep( 250 );
-            ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
+            ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d, restoreSidekicks: true );
             d.Modify( TestHelper.Monitor, () =>
             {
                 d.Root.Machine.Things.Should().HaveCount( 1 );
@@ -39,7 +39,7 @@ namespace CK.Observable.League.Tests.MicroMachine
 
             } ).Success.Should().BeTrue();
 
-            ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
+            ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d, restoreSidekicks: true );
             // AutoDisposed fired.
             Thread.Sleep( 200 );
             d.Modify( TestHelper.Monitor, () =>
@@ -79,10 +79,6 @@ namespace CK.Observable.League.Tests.MicroMachine
                         // commands are handled after the new sidekick initialization (and after the release of
                         // the write lock).
                         d.Root.Machine.CmdToTheMachine( "no bug" );
-
-                        d.Root.Machine.BridgeToTheSidekick.Should().BeNull( "The sidekick is not yet instantiated." );
-                        d.Root.Machine.TestCallEnsureBridge();
-                        d.Root.Machine.BridgeToTheSidekick.Should().NotBeNull( "Now it is." );
                     } );
                 }
             }

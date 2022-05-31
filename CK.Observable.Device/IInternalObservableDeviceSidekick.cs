@@ -5,7 +5,7 @@ using System.Text;
 
 namespace CK.Observable.Device
 {
-    interface IInternalObservableDeviceSidekick
+    interface IInternalObservableDeviceSidekick : IObservableDeviceSidekick
     {
         void OnObjectDestroyed( IActivityMonitor monitor, ObservableDeviceObject o );
 

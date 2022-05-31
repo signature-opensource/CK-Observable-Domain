@@ -66,6 +66,7 @@ namespace CK.Observable
                 // (for instance to use BinarySerializer.IdempotenceCheck): the domain registers it.
                 ActualDomain = d.Context.Services.GetRequiredService<ObservableDomain>();
                 _destroyed = new ObservableEventHandler<ObservableDomainEventArgs>( d );
+                // We don't call Register here: this is called by the domain deserializer method.
             }
             else
             {

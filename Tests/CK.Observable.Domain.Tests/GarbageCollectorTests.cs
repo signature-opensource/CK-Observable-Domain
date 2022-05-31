@@ -17,9 +17,9 @@ namespace CK.Observable.Domain.Tests
     public partial class GarbageCollectorTests
     {
         [Test]
-        public async Task garbage_collect_observable_objects()
+        public async Task garbage_collect_observable_objects_Async()
         {
-            using var od = new ObservableDomain<RootSample.ApplicationState>( TestHelper.Monitor, nameof( garbage_collect_observable_objects ), true );
+            using var od = new ObservableDomain<RootSample.ApplicationState>( TestHelper.Monitor, nameof( garbage_collect_observable_objects_Async ), true );
 
             od.Modify( TestHelper.Monitor, () =>
             {
@@ -51,9 +51,9 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
-        public async Task garbage_collect_internal_object()
+        public async Task garbage_collect_internal_object_Async()
         {
-            using var od = new ObservableDomain<Root>( TestHelper.Monitor, nameof( garbage_collect_internal_object ), true );
+            using var od = new ObservableDomain<Root>( TestHelper.Monitor, nameof( garbage_collect_internal_object_Async ), true );
 
             od.Modify( TestHelper.Monitor, () =>
             {
@@ -83,9 +83,9 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
-        public async Task garbage_collect_ObservableTimedEventBase_that_have_no_callback()
+        public async Task garbage_collect_ObservableTimedEventBase_that_have_no_callback_Async()
         {
-            using var od = new ObservableDomain<Root>( TestHelper.Monitor, nameof( garbage_collect_ObservableTimedEventBase_that_have_no_callback ), true );
+            using var od = new ObservableDomain<Root>( TestHelper.Monitor, nameof( garbage_collect_ObservableTimedEventBase_that_have_no_callback_Async ), true );
 
             od.Modify( TestHelper.Monitor, () =>
             {
@@ -120,7 +120,7 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
-        public async Task ObservableTimedEventBase_with_callback_are_not_lost()
+        public async Task ObservableTimedEventBase_with_callback_are_not_lost_Async()
         {
             static void T_Elapsed( object sender, ObservableTimerEventArgs e )
             {
@@ -129,7 +129,7 @@ namespace CK.Observable.Domain.Tests
             {
             }
 
-            using var od = new ObservableDomain<Root>( TestHelper.Monitor, nameof( ObservableTimedEventBase_with_callback_are_not_lost ), true );
+            using var od = new ObservableDomain<Root>( TestHelper.Monitor, nameof( ObservableTimedEventBase_with_callback_are_not_lost_Async ), true );
 
             od.Modify( TestHelper.Monitor, () =>
             {
@@ -167,12 +167,12 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
-        public async Task pooled_reminders_are_not_GCed_when_half_or_less_of_them_are_inactive()
+        public async Task pooled_reminders_are_not_GCed_when_half_or_less_of_them_are_inactive_Async()
         {
             static void R_Elapsed( object sender, ObservableReminderEventArgs e )
             {
             }
-            using var od = new ObservableDomain<Root>( TestHelper.Monitor, nameof( pooled_reminders_are_not_GCed_when_half_or_less_of_them_are_inactive ), true );
+            using var od = new ObservableDomain<Root>( TestHelper.Monitor, nameof( pooled_reminders_are_not_GCed_when_half_or_less_of_them_are_inactive_Async ), true );
 
             od.Modify( TestHelper.Monitor, () =>
             {
@@ -208,12 +208,12 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
-        public async Task pooled_reminders_are_GCed_when_more_than_half_of_them_are_inactive()
+        public async Task pooled_reminders_are_GCed_when_more_than_half_of_them_are_inactive_Async()
         {
             static void R_Elapsed( object sender, ObservableReminderEventArgs e )
             {
             }
-            using var od = new ObservableDomain<Root>( TestHelper.Monitor, nameof( pooled_reminders_are_GCed_when_more_than_half_of_them_are_inactive ), true );
+            using var od = new ObservableDomain<Root>( TestHelper.Monitor, nameof( pooled_reminders_are_GCed_when_more_than_half_of_them_are_inactive_Async ), true );
 
             od.Modify( TestHelper.Monitor, () =>
             {

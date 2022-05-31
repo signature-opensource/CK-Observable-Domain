@@ -14,7 +14,7 @@ namespace CK.Observable.Domain.Tests
     [TestFixture]
     public class SidekickTests
     {
-        public class CmdSimple { public string Text { get; set; } }
+        public class CmdSimple { public string? Text { get; set; } }
 
         public class SKSimple : ObservableDomainSidekick
         {
@@ -50,9 +50,12 @@ namespace CK.Observable.Domain.Tests
         {
             public ObjWithSKBase()
             {
+                Message = "";
             }
 
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
             protected ObjWithSKBase( BinarySerialization.Sliced _ ) : base( _ ) { }
+#pragma warning restore CS8618 
 
             ObjWithSKBase( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
                 : base( BinarySerialization.Sliced.Instance )
@@ -119,23 +122,122 @@ namespace CK.Observable.Domain.Tests
             }
         }
 
-        [TestCase( "UseSidekickAttribute" )]
-        [TestCase( "ISidekickClientObject<>" )]
-        public void sidekick_simple_instantiation_and_serialization( string mode )
+        #region Same 2 objects as above but Internal rather than Observable.
+        [SerializationVersion( 0 )]
+        public class InternalObjWithSKBase : InternalObject
+        {
+            string _message;
+
+            public InternalObjWithSKBase()
+            {
+                _message = "";
+            }
+
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+            protected InternalObjWithSKBase( BinarySerialization.Sliced _ ) : base( _ ) { }
+#pragma warning restore CS8618 
+
+            InternalObjWithSKBase( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+                : base( BinarySerialization.Sliced.Instance )
+            {
+                _message = r.Reader.ReadString();
+            }
+
+            public static void Write( BinarySerialization.IBinarySerializer s, in InternalObjWithSKBase o )
+            {
+                s.Writer.Write( o._message );
+            }
+
+            public string Message
+            {
+                get => _message;
+                set
+                {
+                    if( _message != value )
+                    {
+                        _message = value;
+                        Domain.SendCommand( new CmdSimple() { Text = _message } );
+                    }
+
+                }
+            }
+
+        }
+
+        /// <summary>
+        /// When using the attribute, the object is not registered onto the sidekick.
+        /// If the sidekick needs to know some of the objects of the domain, it has to discover them
+        /// (typically through the <see cref="ObservableDomain.AllObjects"/>).
+        /// </summary>
+        [UseSidekick( typeof( SKSimple ) )]
+        [SerializationVersion( 0 )]
+        public class InternalObjWithSKSimple : InternalObjWithSKBase
+        {
+            public InternalObjWithSKSimple()
+            {
+            }
+
+            InternalObjWithSKSimple( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+                : base( BinarySerialization.Sliced.Instance )
+            {
+            }
+
+            public static void Write( BinarySerialization.IBinarySerializer s, in InternalObjWithSKSimple o )
+            {
+            }
+        }
+
+        /// <summary>
+        /// When using the ISidekickClientObject<>, the object is automatically registered on the sidekick.
+        /// </summary>
+        [SerializationVersion( 0 )]
+        public class InternalObjWithSKSimpleViaInterface : InternalObjWithSKBase, ISidekickClientObject<SKSimple>
+        {
+            public InternalObjWithSKSimpleViaInterface()
+            {
+            }
+
+            InternalObjWithSKSimpleViaInterface( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+                : base( BinarySerialization.Sliced.Instance )
+            {
+            }
+
+            public static void Write( BinarySerialization.IBinarySerializer s, in InternalObjWithSKSimpleViaInterface o )
+            {
+            }
+        }
+        #endregion
+
+        [TestCase( "UseSidekickAttribute", "ObservableObject" )]
+        [TestCase( "ISidekickClientObject<>", "ObservableObject" )]
+        [TestCase( "UseSidekickAttribute", "InternalObject" )]
+        [TestCase( "ISidekickClientObject<>", "InternalObject" )]
+        public void sidekick_simple_instantiation_and_serialization( string mode, string type )
         {
             // Will be disposed by TestHelper.SaveAndLoad at the end of this test.
             var obs = new ObservableDomain(TestHelper.Monitor, nameof(sidekick_simple_instantiation_and_serialization) + '-' + mode, startTimer: true );
 
-            IReadOnlyList<ActivityMonitorSimpleCollector.Entry> logs = null;
+            IReadOnlyList<ActivityMonitorSimpleCollector.Entry> logs = null!;
             using( TestHelper.Monitor.CollectEntries( entries => logs = entries, LogLevelFilter.Info ) )
             {
                 TransactionResult t = obs.Modify( TestHelper.Monitor, () =>
                 {
-                    ObjWithSKBase o = mode == "UseSidekickAttribute"
-                                                ? (ObjWithSKBase)new ObjWithSKSimple()
+                    if( type == "ObservableObject" )
+                    {
+                        ObjWithSKBase o = mode == "UseSidekickAttribute"
+                                                ? new ObjWithSKSimple()
                                                 : new ObjWithSKSimpleViaInterface();
-                    obs.AllObjects.Should().HaveCount( 1 );
-                    o.Message = "Hello!";
+                        obs.AllObjects.Should().HaveCount( 1 );
+                        o.Message = "Hello!";
+                    }
+                    else
+                    {
+                        InternalObjWithSKBase o = mode == "UseSidekickAttribute"
+                                                ? new InternalObjWithSKSimple()
+                                                : new InternalObjWithSKSimpleViaInterface();
+                        obs.AllInternalObjects.Should().HaveCount( 1 );
+                        o.Message = "Hello!";
+                    }
                 } );
                 t.Success.Should().BeTrue();
             }
@@ -148,7 +250,9 @@ namespace CK.Observable.Domain.Tests
             }
             else
             {
-                logs.SingleOrDefault( logs => logs.Text == "Registered: ObjWithSKSimpleViaInterface." )
+                logs.SingleOrDefault( logs => logs.Text == (type == "ObservableObject"
+                                                                    ? "Registered: ObjWithSKSimpleViaInterface."
+                                                                    : "Registered: InternalObjWithSKSimpleViaInterface.") )
                     .Should().NotBeNull();
             }
 
@@ -156,13 +260,26 @@ namespace CK.Observable.Domain.Tests
             {
                 TransactionResult t = obs.Modify( TestHelper.Monitor, () =>
                 {
-                    ObjWithSKBase another = mode == "UseSidekickAttribute"
-                                                        ? (ObjWithSKBase)new ObjWithSKSimple()
-                                                        : new ObjWithSKSimpleViaInterface();
-                    obs.AllObjects.Should().HaveCount( 2 );
-                    var o = (ObjWithSKBase)obs.AllObjects.First();
-                    o.Message = "FromO";
-                    another.Message = "FromA";
+                    if( type == "ObservableObject" )
+                    {
+                        ObjWithSKBase another = mode == "UseSidekickAttribute"
+                                                            ? (ObjWithSKBase)new ObjWithSKSimple()
+                                                            : new ObjWithSKSimpleViaInterface();
+                        obs.AllObjects.Should().HaveCount( 2 );
+                        var o = (ObjWithSKBase)obs.AllObjects.First();
+                        o.Message = "FromO";
+                        another.Message = "FromA";
+                    }
+                    else
+                    {
+                        InternalObjWithSKBase another = mode == "UseSidekickAttribute"
+                                                            ? new InternalObjWithSKSimple()
+                                                            : new InternalObjWithSKSimpleViaInterface();
+                        obs.AllInternalObjects.Should().HaveCount( 2 );
+                        var o = (InternalObjWithSKBase)obs.AllInternalObjects.First();
+                        o.Message = "FromO";
+                        another.Message = "FromA";
+                    }
                 } );
                 t.Success.Should().BeTrue();
             }
@@ -174,7 +291,9 @@ namespace CK.Observable.Domain.Tests
             }
             else
             {
-                logs.SingleOrDefault( logs => logs.Text == "Registered: ObjWithSKSimpleViaInterface." )
+                logs.SingleOrDefault( logs => logs.Text == (type == "ObservableObject"
+                                                                    ? "Registered: ObjWithSKSimpleViaInterface."
+                                                                    : "Registered: InternalObjWithSKSimpleViaInterface.") )
                     .Should().NotBeNull();
             }
 
@@ -183,10 +302,20 @@ namespace CK.Observable.Domain.Tests
             {
                 TransactionResult t = obs2.Modify( TestHelper.Monitor, () =>
                 {
-                    var o = (ObjWithSKBase)obs2.AllObjects.First();
-                    var a = (ObjWithSKBase)obs2.AllObjects.Skip( 1 ).First();
-                    o.Message = "O!";
-                    a.Message = "A!";
+                    if( type == "ObservableObject" )
+                    {
+                        var o = (ObjWithSKBase)obs2.AllObjects.First();
+                        var a = (ObjWithSKBase)obs2.AllObjects.Skip( 1 ).First();
+                        o.Message = "O!";
+                        a.Message = "A!";
+                    }
+                    else
+                    {
+                        var o = (InternalObjWithSKBase)obs2.AllInternalObjects.First();
+                        var a = (InternalObjWithSKBase)obs2.AllInternalObjects.Skip( 1 ).First();
+                        o.Message = "O!";
+                        a.Message = "A!";
+                    }
                 } );
                 t.Success.Should().BeTrue();
             }
@@ -199,7 +328,9 @@ namespace CK.Observable.Domain.Tests
             }
             else
             {
-                logs.Where( logs => logs.Text == "Registered: ObjWithSKSimpleViaInterface." )
+                logs.Where( logs => logs.Text == (type == "ObservableObject"
+                                                    ? "Registered: ObjWithSKSimpleViaInterface."
+                                                    : "Registered: InternalObjWithSKSimpleViaInterface.") )
                     .Should().HaveCount( 2 );
             }
         }
@@ -230,7 +361,7 @@ namespace CK.Observable.Domain.Tests
             {
                 if( command.Command is CmdSimple c )
                 {
-                    monitor.Info( $"SKWithDependencies[{_s.Format( c.Text )}]" );
+                    monitor.Info( $"SKWithDependencies[{_s.Format( c.Text ?? "no text" )}]" );
                     return true;
                 }
                 return false;
@@ -286,7 +417,7 @@ namespace CK.Observable.Domain.Tests
                                 .AddSingleton<ExternalService>()
                                 .BuildServiceProvider();
 
-            IReadOnlyList<ActivityMonitorSimpleCollector.Entry> logs = null;
+            IReadOnlyList<ActivityMonitorSimpleCollector.Entry> logs = null!;
 
             using var obs = new ObservableDomain(TestHelper.Monitor, nameof(sidekick_with_ExternalService) + '_' + mode, startTimer: true, serviceProvider: services );
 

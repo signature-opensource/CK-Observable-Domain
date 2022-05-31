@@ -21,9 +21,11 @@ namespace CK.Observable.Device
         where TDeviceObject : ObservableDeviceObject
         where TDeviceHostObject: ObservableDeviceHostObject
     {
+        // A Bridge exists if and only if the ObservableDeviceObject exists.
+        // Actual devices that have no corresponding ObservableDeviceObject don't appear here.
         readonly Dictionary<string, DeviceBridge> _bridges;
         TDeviceHostObject? _objectHost;
-        DeviceBridge? _firstUnbound;
+        bool _deviceTracking;
 
         /// <summary>
         /// Initializes a new <see cref="ObservableDeviceSidekick{THost, TObjectDevice, TObjectDeviceHost}"/>.
@@ -35,7 +37,6 @@ namespace CK.Observable.Device
         {
             Host = host;
             _bridges = new Dictionary<string, DeviceBridge>();
-            host.DevicesChanged.Async += OnDevicesChangedAsync;
         }
 
         /// <summary>
@@ -43,42 +44,25 @@ namespace CK.Observable.Device
         /// </summary>
         protected THost Host { get; }
 
+        IDeviceHost IObservableDeviceSidekick.Host => Host;
+
         /// <summary>
         /// Gets the object device host if the observable object has been instantiated, null otherwise.
         /// </summary>
         protected TDeviceHostObject? ObjectHost => _objectHost;
+
+        ObservableDeviceHostObject? IObservableDeviceSidekick.ObjectHost => _objectHost;
+
+        public TDeviceObject? FindObservableDeviceObject( string deviceName ) => _bridges.GetValueOrDefault( deviceName )?.Object;
+
+        ObservableDeviceObject? IObservableDeviceSidekick.FindObservableDeviceObject( string deviceName ) => FindObservableDeviceObject( deviceName );
+
 
         /// <summary>
         /// Gets the bridges: all the <see cref="TDeviceObject"/> that exist in the domain
         /// (they may not be bound to their respective device: their <see cref="DeviceBridge.Device"/> can be null).
         /// </summary>
         protected IReadOnlyDictionary<string, DeviceBridge> Bridges => _bridges;
-
-        Task OnDevicesChangedAsync( IActivityMonitor monitor, IDeviceHost sender )
-        {
-            Debug.Assert( ReferenceEquals( Host, sender ) );
-
-            return Domain.ModifyAsync( monitor, () =>
-            {
-                if( _objectHost != null ) UpdateObjectHost();
-                if( _firstUnbound != null )
-                {
-                    DeviceBridge f = _firstUnbound;
-                    for( ; ; )
-                    {
-                        Debug.Assert( f.Device == null );
-                        var d = Host.Find( f.Object.DeviceName );
-                        var next = f._nextUnbound;
-                        if( d != null )
-                        {
-                            f.SetDevice( monitor, d );
-                        }
-                        if( next == null ) break;
-                        f = next;
-                    }
-                }
-            } );
-        }
 
         /// <summary>
         /// Registers <typeparamref name="TDeviceObject"/> and <typeparamref name="TDeviceHostObject"/> instances.
@@ -95,9 +79,16 @@ namespace CK.Observable.Device
                 {
                     throw new Exception( $"Duplicate device error: A device named '{device.DeviceName}' already exists in the domain (index {bridge.Object.OId.Index})." );
                 }
+                if( !_deviceTracking )
+                {
+                    Host.AllDevicesLifetimeEvent.Async += OnAllDevicesLifetimeEventAsync;
+                    _deviceTracking = true;
+                }
                 bridge = CreateBridge( monitor, device );
                 _bridges.Add( device.DeviceName, bridge );
-                bridge.Initialize( monitor, this, Host.Find( device.DeviceName ) );
+                var d = Host.Find( device.DeviceName );
+                bridge.Initialize( monitor, this, d );
+                _objectHost?.Add( device, d );
             }
             else if( o is TDeviceHostObject host )
             {
@@ -105,10 +96,50 @@ namespace CK.Observable.Device
                 {
                     throw new Exception( $"There must be at most one device host object in a ObservableDomain. Object at index {_objectHost.OId.Index} is already registered." );
                 }
+                if( !_deviceTracking )
+                {
+                    Host.AllDevicesLifetimeEvent.Async += OnAllDevicesLifetimeEventAsync;
+                    _deviceTracking = true;
+                }
                 _objectHost = host;
-                UpdateObjectHost();
+                var existingObjects = _bridges.Values.Select( b => b.Object );
+
+                host.Initialize( this, Host.GetDevices(), existingObjects );
                 OnObjectHostAppeared( monitor );
             }
+        }
+
+        Task OnAllDevicesLifetimeEventAsync( IActivityMonitor monitor, IDeviceHost sender, DeviceLifetimeEvent e )
+        {
+            var bridge = _bridges.GetValueOrDefault( e.Device.Name );
+            // No bridge (no observable object) and no host: this sidekick is "empty", it is not
+            // concerned by the device.
+            if( bridge == null && _objectHost == null ) return Task.CompletedTask;
+
+            return Domain.ModifyAsync( monitor, () =>
+            {
+                if( e.Device.IsDestroyed )
+                {
+                    if( bridge?.Device != null ) bridge.DetachDevice( monitor );
+                }
+                else
+                {
+                    if( bridge != null )
+                    {
+                        if( bridge.Device == null ) bridge.SetDevice( monitor, e.Device );
+                        else 
+                        {
+                            var o = bridge.Object;
+                            o.SetIsRunning( e.Device.Status.IsRunning );
+                            o.OnDeviceConfigurationApplied( e.Device.ExternalConfiguration );
+                            o.SetDeviceControlStatus( ObservableDeviceObject.ComputeStatus( e.Device, Domain.DomainName ) );
+
+                        }
+                    }
+                }
+                // Updates the ODeviceInfo after the Object if it exists.
+                _objectHost?.OnDeviceLifetimeEvent( monitor, e, bridge?.Object );
+            } );
         }
 
         void IInternalObservableDeviceSidekick.OnObjectHostDestroyed( IActivityMonitor monitor )
@@ -122,44 +153,7 @@ namespace CK.Observable.Device
             _bridges.Remove( o.DeviceName, out var bridge );
             Debug.Assert( bridge != null );
             bridge.OnDispose( monitor, isObjectDestroyed: true );
-        }
-
-        void AddUnbound( DeviceBridge b )
-        {
-            b._nextUnbound = _firstUnbound;
-            _firstUnbound = b;
-        }
-
-        /// <summary>
-        /// Removes a bridge that is not bound to a IDevice.
-        /// </summary>
-        /// <param name="b">The unbound bridge to remove.</param>
-        void RemoveUnbound( DeviceBridge b )
-        {
-            Debug.Assert( _firstUnbound != null );
-            DeviceBridge? p = null;
-            DeviceBridge f = _firstUnbound;
-            for( ; ;)
-            {
-                if( f == b )
-                {
-                    if( p == null ) _firstUnbound = b._nextUnbound;
-                    else p._nextUnbound = b._nextUnbound;
-                    b._nextUnbound = null;
-                    break;
-                }
-                p = f;
-                Debug.Assert( f._nextUnbound != null );
-                f = f._nextUnbound;
-            }
-        }
-
-        void UpdateObjectHost()
-        {
-            Debug.Assert( _objectHost != null );
-            // provides the new snapshot to the object host.
-            // This also initializes the _objectHost._sidekick field on the first call.
-            _objectHost.ApplyDevicesChanged( this, Host.GetDevices() );
+            _objectHost?.Remove( o );
         }
 
         /// <summary>
@@ -174,21 +168,36 @@ namespace CK.Observable.Device
         /// <returns>True if this device sidekick handles the command, false otherwise.</returns>
         protected override bool ExecuteCommand( IActivityMonitor monitor, in SidekickCommand command )
         {
+            if( command.Command is ObservableDeviceObject.ForceSendCommand force )
+            {
+                return SendDeviceCommand( monitor, force.SetControllerKeyCommand, false );
+            }
+
             if( command.Command is BaseDeviceCommand c )
             {
-                var result = Host.SendCommand( monitor, c );
-                if( result != DeviceHostCommandResult.Success )
+                if( c is BaseConfigureDeviceCommand config )
                 {
-                    if( result == DeviceHostCommandResult.InvalidHostType )
-                    {
-                        // This is not a command for this Host.
-                        return false;
-                    }
-                    monitor.Warn( $"Command '{c}' has not been sent: {result}." );
+                    command.DomainPostActions.Add( ctx => Host.EnsureDeviceAsync( ctx.Monitor, config.Configuration ) );
+                    return true;
                 }
-                return true;
+                return SendDeviceCommand( monitor, c, true );
             }
             return false;
+        }
+
+        bool SendDeviceCommand( IActivityMonitor monitor, BaseDeviceCommand c, bool checkControllerKey )
+        {
+            var result = Host.SendCommand( monitor, c, checkControllerKey );
+            if( result != DeviceHostCommandResult.Success )
+            {
+                if( result == DeviceHostCommandResult.InvalidHostType )
+                {
+                    // This is not a command for this Host.
+                    return false;
+                }
+                monitor.Warn( $"Command '{c}' has not been sent: {result}." );
+            }
+            return true;
         }
 
         /// <inheritdoc />
@@ -198,7 +207,10 @@ namespace CK.Observable.Device
         /// </remarks>
         protected sealed override void OnDomainCleared( IActivityMonitor monitor )
         {
-            Host.DevicesChanged.Async -= OnDevicesChangedAsync;
+            if( _deviceTracking )
+            {
+                Host.AllDevicesLifetimeEvent.Async -= OnAllDevicesLifetimeEventAsync;
+            }
             foreach( var b in _bridges.Values )
             {
                 b.OnDispose( monitor, isObjectDestroyed: false );

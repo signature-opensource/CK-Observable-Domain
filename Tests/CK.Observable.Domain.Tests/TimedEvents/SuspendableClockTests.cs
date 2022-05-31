@@ -105,7 +105,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 initialExpected = r.DueTimeUtc;
             } );
             // We pause for 2*enoughMilliseconds before reloading.
-            handler.Reload( TestHelper.Monitor, idempotenceCheck: false, pauseReloadMilliseconds: 2*enoughMilliseconds );
+            handler.ReloadNewDomain( TestHelper.Monitor, idempotenceCheck: false, pauseReloadMilliseconds: 2*enoughMilliseconds );
             var minUpdated = initialExpected.AddMilliseconds( 2 * enoughMilliseconds );
             // Using Modify to trigger the timed events without waiting for the AutoTimer to fire.
             handler.Domain.Modify( TestHelper.Monitor, () =>
@@ -158,7 +158,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 counter.Count.Should().Be( 1, "AutoCounter fires immediately." );
             }
 
-            handler.Reload( TestHelper.Monitor, idempotenceCheck: false );
+            handler.ReloadNewDomain( TestHelper.Monitor, idempotenceCheck: false );
 
             using( handler.Domain.AcquireReadLock() )
             {
@@ -194,9 +194,9 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             } ).Success.Should().BeTrue();
 
             ReminderHasElapsed = false;
-            handler.Reload( TestHelper.Monitor, idempotenceCheck: true );
+            handler.ReloadNewDomain( TestHelper.Monitor, idempotenceCheck: true );
             Thread.Sleep( enoughMilliseconds );
-            handler.Reload( TestHelper.Monitor, idempotenceCheck: true );
+            handler.ReloadNewDomain( TestHelper.Monitor, idempotenceCheck: true );
             ReminderHasElapsed.Should().BeFalse();
 
             using( handler.Domain.AcquireReadLock() )
@@ -237,7 +237,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
 
             } ).Success.Should().BeTrue();
 
-            handler.Reload( TestHelper.Monitor, idempotenceCheck: false );
+            handler.ReloadNewDomain( TestHelper.Monitor, idempotenceCheck: false );
             Thread.Sleep( enoughMilliseconds );
 
             ReminderHasElapsed.Should().BeTrue();
@@ -253,7 +253,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
 
             } ).Success.Should().BeTrue();
 
-            handler.Reload( TestHelper.Monitor, idempotenceCheck: true );
+            handler.ReloadNewDomain( TestHelper.Monitor, idempotenceCheck: true );
         }
 
         static bool ClockIsActiveChanged = false;

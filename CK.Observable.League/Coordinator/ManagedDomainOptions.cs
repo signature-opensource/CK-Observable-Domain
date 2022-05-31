@@ -10,7 +10,7 @@ namespace CK.Observable.League
     /// Immutable definition of options for domains managed in a <see cref="ObservableLeague"/>.
     /// </summary>
     [SerializationVersion( 3 )]
-    public sealed class ManagedDomainOptions : IEquatable<ManagedDomainOptions>, BinarySerialization.ICKSlicedSerializable
+    public sealed class ManagedDomainOptions : IEquatable<ManagedDomainOptions>, ICKSlicedSerializable
     {
         /// <summary>
         /// Gets the <see cref="DomainLifeCycleOption"/> configuration.
@@ -147,8 +147,8 @@ namespace CK.Observable.League
         ManagedDomainOptions( IBinaryDeserializer d, ITypeReadInfo info )
         {
             var r = d.Reader;
-            LifeCycleOption = r.ReadEnum<DomainLifeCycleOption>();
-            CompressionKind = r.ReadEnum<CompressionKind>();
+            LifeCycleOption = (DomainLifeCycleOption)r.ReadInt32();
+            CompressionKind = (CompressionKind)r.ReadInt32();
             SnapshotSaveDelay = r.ReadTimeSpan();
             SnapshotKeepDuration = r.ReadTimeSpan();
             SnapshotMaximalTotalKiB = r.ReadInt32();
@@ -161,8 +161,8 @@ namespace CK.Observable.League
         public static void Write( IBinarySerializer s, in ManagedDomainOptions o )
         {
             var w = s.Writer;
-            w.WriteEnum( o.LifeCycleOption );
-            w.WriteEnum( o.CompressionKind );
+            w.Write( (int)o.LifeCycleOption );
+            w.Write( (int)o.CompressionKind );
             w.Write( o.SnapshotSaveDelay );
             w.Write( o.SnapshotKeepDuration );
             w.Write( o.SnapshotMaximalTotalKiB );

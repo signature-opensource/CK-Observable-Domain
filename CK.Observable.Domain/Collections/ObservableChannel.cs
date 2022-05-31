@@ -47,7 +47,7 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Define to export this channel as an empty list of items.
+        /// Exports this channel as an empty list of items.
         /// </summary>
         /// <param name="num">The object number.</param>
         /// <param name="exporter">The target exporter.</param>

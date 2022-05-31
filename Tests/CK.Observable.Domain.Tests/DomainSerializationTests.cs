@@ -4,6 +4,7 @@ using FluentAssertions;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -14,6 +15,34 @@ namespace CK.Observable.Domain.Tests
     [TestFixture]
     public class DomainSerializationTests
     {
+
+        class A
+        {
+            public readonly string Called;
+
+            public A()
+            {
+                Called = Virtual();
+            }
+
+            protected virtual string Virtual() => "A";
+        }
+
+        class B : A
+        {
+            protected override string Virtual() => "B";
+        }
+
+        // C# allows virtual methods to be called by the constructor of a base class.
+        // Collections Write method calls a virtual WriteContent(): specialized collections can override WriteContent().
+        // And collections use a virtual ReadContent( int version ) that may be use to handle specific deserialization.
+        [Test]
+        public void how_specialized_collections_can_handle_specific_serialization_issues()
+        {
+            var o = new B();
+            o.Called.Should().Be( "B" );
+        }
+
         [Test]
         public void simple_serialization()
         {
@@ -45,7 +74,7 @@ namespace CK.Observable.Domain.Tests
         public void serialization_with_mutiple_types()
         {
             using var domain = new ObservableDomain( TestHelper.Monitor, nameof( serialization_with_mutiple_types ), startTimer: true );
-            MultiPropertyType defValue = null;
+            MultiPropertyType defValue = null!;
             domain.Modify( TestHelper.Monitor, () =>
             {
                 defValue = new MultiPropertyType();
@@ -183,7 +212,7 @@ namespace CK.Observable.Domain.Tests
 
             public int Count { get; private set; }
 
-            public ObservableTimer Timer { get; }
+            public ObservableTimer? Timer { get; }
  
         }
 
@@ -234,6 +263,7 @@ namespace CK.Observable.Domain.Tests
                 }
             } ).Success.Should().BeTrue();
 
+            Debug.Assert( d2.CurrentLostObjectTracker != null );
             d2.CurrentLostObjectTracker.ReferencedDestroyed.Should().HaveCount( 4 );
         }
 

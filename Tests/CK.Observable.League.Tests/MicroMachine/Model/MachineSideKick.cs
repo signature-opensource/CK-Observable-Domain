@@ -49,7 +49,6 @@ namespace CK.Observable.League.Tests.MicroMachine
                 var b = new MicroBridge( m, this );
                 _objects.Add( m.Name, b );
                 m.Destroyed += MachineDestroyed;
-                m.BridgeToTheSidekick = b;
             }
         }
 

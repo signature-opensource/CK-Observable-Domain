@@ -192,7 +192,7 @@ namespace CK.Observable
 
         /// <summary>
         /// Called when this object is unloaded: either because the <see cref="ObservableDomain"/> is disposed
-        /// or <see cref="ObservableDomain.Load(IActivityMonitor, System.IO.Stream, bool, System.Text.Encoding, int, bool)"/>
+        /// or <see cref="ObservableDomain.Load(IActivityMonitor, BinarySerialization.RewindableStream, int, bool?)"/>
         /// has been called or <see cref="Destroy"/> is being called (this is called prior to call <see cref="OnDestroy"/>).
         /// <para>
         /// This base is an empty implementation (we have nothing to do at this level). This must be overridden whenever

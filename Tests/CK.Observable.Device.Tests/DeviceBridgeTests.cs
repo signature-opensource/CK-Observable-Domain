@@ -18,26 +18,42 @@ namespace CK.Observable.Device.Tests
     [TestFixture]
     public class DeviceBridgeTests
     {
-        [Test]
+        [TestCase( "BeforeObservableDevice" )]
+        [TestCase( "AfterObservableDevice" )]
+        [TestCase( "AfterDevice" )]
         [Timeout( 2 * 1000 )]
-        public async Task sample_obervable()
+        public async Task sample_obervable_Async( string createHostStep )
         {
-            using var _ = TestHelper.Monitor.OpenInfo( nameof( sample_obervable ) );
+            using var _ = TestHelper.Monitor.OpenInfo( nameof( sample_obervable_Async ) );
             var host = new SampleDeviceHost();
             var sp = new SimpleServiceContainer();
             sp.Add( host );
 
-            using var obs = new ObservableDomain(TestHelper.Monitor, nameof(sample_obervable), false, serviceProvider: sp );
+            using var obs = new ObservableDomain(TestHelper.Monitor, nameof(sample_obervable_Async), false, serviceProvider: sp );
 
             OSampleDevice? device1 = null;
+            OSampleDeviceHost? oHost = null;
             await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
+                if( createHostStep == "BeforeObservableDevice" ) oHost = new OSampleDeviceHost();
+
                 device1 = new OSampleDevice( "n°1" );
 
-                device1.HasDeviceControl.Should().BeFalse();
+                if( createHostStep == "AfterObservableDevice" ) oHost = new OSampleDeviceHost();
+
+                if( oHost != null )
+                {
+                    oHost.Devices.Should().HaveCount( 1 );
+                    oHost.Devices["n°1"].DeviceName.Should().Be( "n°1" );
+                    oHost.Devices["n°1"].Object.Should().Be( device1 );
+                    oHost.Devices["n°1"].IsRunning.Should().Be( false );
+                    oHost.Devices["n°1"].Status.Should().Be( DeviceControlStatus.MissingDevice );
+                }
+                device1.IsBoundDevice.Should().BeFalse();
+                device1.DeviceControlStatus.Should().Be( DeviceControlStatus.MissingDevice );
                 device1.Configuration.Should().BeNull();
                 device1.Message.Should().BeNull();
-                device1.Status.Should().BeNull();
+                device1.IsRunning.Should().BeNull();
             } );
             Debug.Assert( device1 != null );
 
@@ -49,24 +65,22 @@ namespace CK.Observable.Device.Tests
             };
             (await host.EnsureDeviceAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.CreateSucceeded );
 
-            using( obs.AcquireReadLock() )
+            await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
+                device1.IsBoundDevice.Should().BeTrue();
                 Debug.Assert( device1.Configuration != null );
                 device1.Configuration.Status.Should().Be( DeviceConfigurationStatus.Disabled );
-                device1.HasDeviceControl.Should().BeTrue( "Since there is no ControllerKey on the device, anybody can control it." );
-                device1.HasExclusiveDeviceControl.Should().BeFalse();
+                device1.DeviceControlStatus.Should().Be( DeviceControlStatus.HasSharedControl, "Since there is no ControllerKey on the device, anybody can control it." );
                 device1.Message.Should().BeNull();
-                Debug.Assert( device1.Status != null );
-                device1.Status.Value.IsRunning.Should().BeFalse();
+                device1.IsRunning.Should().BeFalse();
 
-                device1.Status.Value.IsDestroyed.Should().BeFalse();
-                device1.Status.Value.HasBeenReconfigured.Should().BeFalse();
-                device1.Status.Value.HasStarted.Should().BeFalse();
-                device1.Status.Value.HasStopped.Should().BeFalse( "The device is not running... but it has not been stopped." );
-                device1.Status.Value.StoppedReason.Should().Be( DeviceStoppedReason.None );
-                device1.Status.Value.StartedReason.Should().Be( DeviceStartedReason.None );
-                device1.Status.Value.ReconfiguredResult.Should().Be( DeviceReconfiguredResult.None );
-            }
+                if( oHost == null ) oHost = new OSampleDeviceHost();
+                oHost.Devices.Should().HaveCount( 1 );
+                oHost.Devices["n°1"].DeviceName.Should().Be( "n°1" );
+                oHost.Devices["n°1"].Object.Should().Be( device1 );
+                oHost.Devices["n°1"].IsRunning.Should().Be( false );
+                oHost.Devices["n°1"].Status.Should().Be( DeviceControlStatus.HasSharedControl );
+            } ); 
 
             config.Status = DeviceConfigurationStatus.AlwaysRunning;
             (await host.EnsureDeviceAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.UpdateSucceeded );
@@ -74,18 +88,16 @@ namespace CK.Observable.Device.Tests
             using( obs.AcquireReadLock() )
             {
                 device1.Configuration.Status.Should().Be( DeviceConfigurationStatus.AlwaysRunning );
-                device1.HasDeviceControl.Should().BeTrue();
-                device1.HasExclusiveDeviceControl.Should().BeFalse();
-                device1.Status.Value.IsRunning.Should().BeTrue();
-                device1.Status.Value.StartedReason.Should().Be( DeviceStartedReason.StartedByAlwaysRunningConfiguration );
+                device1.IsRunning.Should().BeTrue();
+                oHost.Devices["n°1"].IsRunning.Should().BeTrue();
             }
 
             config.ControllerKey = obs.DomainName;
             (await host.EnsureDeviceAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.UpdateSucceeded );
             using( obs.AcquireReadLock() )
             {
-                device1.HasDeviceControl.Should().BeTrue();
-                device1.HasExclusiveDeviceControl.Should().BeTrue( "This time, it is this domain that controls." );
+                device1.DeviceControlStatus.Should().Be( DeviceControlStatus.HasOwnership );
+                oHost.Devices["n°1"].Status.Should().Be( DeviceControlStatus.HasOwnership );
             }
 
             config.ControllerKey = obs.DomainName + "No more!";
@@ -93,18 +105,24 @@ namespace CK.Observable.Device.Tests
 
             using( obs.AcquireReadLock() )
             {
-                device1.HasDeviceControl.Should().BeFalse();
-                device1.HasExclusiveDeviceControl.Should().BeFalse();
+                device1.DeviceControlStatus.Should().Be( DeviceControlStatus.OutOfControlByConfiguration );
+                oHost.Devices["n°1"].Status.Should().Be( DeviceControlStatus.OutOfControlByConfiguration );
             }
 
             await host.Find( "n°1" )!.DestroyAsync( TestHelper.Monitor );
 
+            await Task.Delay( 150 );
+
             using( obs.AcquireReadLock() )
             {
                 device1.Configuration.Should().BeNull();
-                device1.Status.Should().BeNull();
-                device1.HasDeviceControl.Should().BeFalse();
-                device1.HasExclusiveDeviceControl.Should().BeFalse();
+                device1.IsRunning.Should().BeNull();
+                device1.DeviceControlStatus.Should().Be( DeviceControlStatus.MissingDevice );
+
+                oHost.Devices["n°1"].DeviceName.Should().Be( "n°1" );
+                oHost.Devices["n°1"].Object.Should().Be( device1 );
+                oHost.Devices["n°1"].IsRunning.Should().BeFalse();
+                oHost.Devices["n°1"].Status.Should().Be( DeviceControlStatus.MissingDevice );
             }
 
             TestHelper.Monitor.Info( "Disposing Domain..." );
@@ -115,11 +133,11 @@ namespace CK.Observable.Device.Tests
         }
 
 
-        static bool DeviceStatusChanged = false;
+        static bool DeviceIsRunningChanged = false;
 
-        static void Device_StatusChanged( object sender )
+        static void Device_IsRunningChanged( object sender )
         {
-            DeviceStatusChanged = true;
+            DeviceIsRunningChanged = true;
         }
 
         [Test]
@@ -127,7 +145,7 @@ namespace CK.Observable.Device.Tests
         public async Task Start_and_Stop_commands()
         {
             using var gLog = TestHelper.Monitor.OpenInfo( nameof( Start_and_Stop_commands ) );
-            DeviceStatusChanged = false;
+            DeviceIsRunningChanged = false;
 
             var host = new SampleDeviceHost();
             var sp = new SimpleServiceContainer();
@@ -148,16 +166,17 @@ namespace CK.Observable.Device.Tests
             await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 device = new OSampleDevice( "The device..." );
-                device.StatusChanged += Device_StatusChanged;
-                Debug.Assert( device.Status != null );
-                device.Status.Value.IsRunning.Should().BeTrue( "ConfigurationStatus is RunnableStarted." );
-
+                device.IsRunningChanged += Device_IsRunningChanged;
+                Debug.Assert( device.IsRunning != null );
+                device.IsRunning.Should().BeTrue( "ConfigurationStatus is RunnableStarted." );
+                device.DeviceControlStatus.Should().NotBe( DeviceControlStatus.MissingDevice );
+                device.Configuration.Should().NotBeNull();
             } );
             bool isRunning = true;
 
-            DeviceStatusChanged.Should().BeFalse();
+            DeviceIsRunningChanged.Should().BeFalse();
             Debug.Assert( device != null );
-            Debug.Assert( device.Status != null );
+            Debug.Assert( device.IsRunning != null );
 
             await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
@@ -168,11 +187,11 @@ namespace CK.Observable.Device.Tests
             {
                 using( obs.AcquireReadLock() )
                 {
-                    isRunning = device.Status.Value.IsRunning;
+                    isRunning = device.IsRunning.Value;
                 }
             }
-            DeviceStatusChanged.Should().BeTrue();
-            DeviceStatusChanged = false;
+            DeviceIsRunningChanged.Should().BeTrue();
+            DeviceIsRunningChanged = false;
 
             await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
@@ -183,20 +202,22 @@ namespace CK.Observable.Device.Tests
             {
                 using( obs.AcquireReadLock() )
                 {
-                    isRunning = device.Status.Value.IsRunning;
+                    isRunning = device.IsRunning.Value;
                 }
             }
-            DeviceStatusChanged.Should().BeTrue();
-            DeviceStatusChanged = false;
+            DeviceIsRunningChanged.Should().BeTrue();
+            DeviceIsRunningChanged = false;
 
             await host.Find( "The device..." )!.DestroyAsync( TestHelper.Monitor );
             await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 device.IsBoundDevice.Should().BeFalse();
-                device.Status.Should().BeNull();
+                device.IsRunning.Should().BeNull();
+                device.DeviceControlStatus.Should().Be( DeviceControlStatus.MissingDevice );
+                device.Configuration.Should().BeNull();
             } );
-            DeviceStatusChanged.Should().BeTrue();
-            DeviceStatusChanged = false;
+            DeviceIsRunningChanged.Should().BeTrue();
+            DeviceIsRunningChanged = false;
 
             TestHelper.Monitor.Info( "Disposing Domain..." );
             obs.Dispose( TestHelper.Monitor );
@@ -207,9 +228,9 @@ namespace CK.Observable.Device.Tests
 
         [Test]
         [Timeout( 2*1000 )]
-        public async Task commands_are_easy_to_send()
+        public async Task commands_are_easy_to_send_Async()
         {
-            using var gLog = TestHelper.Monitor.OpenInfo( nameof( commands_are_easy_to_send ) );
+            using var gLog = TestHelper.Monitor.OpenInfo( nameof( commands_are_easy_to_send_Async ) );
             var host = new SampleDeviceHost();
             var sp = new SimpleServiceContainer();
             sp.Add( host );
@@ -222,18 +243,17 @@ namespace CK.Observable.Device.Tests
             };
             (await host.EnsureDeviceAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.CreateAndStartSucceeded );
 
-            using var obs = new ObservableDomain(TestHelper.Monitor, nameof(commands_are_easy_to_send), true, serviceProvider: sp );
+            using var obs = new ObservableDomain(TestHelper.Monitor, nameof(commands_are_easy_to_send_Async), true, serviceProvider: sp );
 
             OSampleDevice? device = null;
             await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 device = new OSampleDevice( "n°1" );
-                Debug.Assert( device.Status != null );
-                device.Status.Value.IsRunning.Should().BeTrue( "ConfigurationStatus is RunnableStarted." );
+                Debug.Assert( device.IsRunning == true, "ConfigurationStatus is RunnableStarted." );
                 device.SendSimpleCommand();
             } );
             Debug.Assert( device != null );
-            Debug.Assert( device.Status != null );
+            Debug.Assert( device.IsRunning != null );
 
             System.Threading.Thread.Sleep( 20 );
             await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
@@ -262,9 +282,9 @@ namespace CK.Observable.Device.Tests
 
         [Test]
         [Timeout( 2 * 1000 )]
-        public async Task bridges_rebind_to_their_Device_when_reloaded()
+        public async Task bridges_rebind_to_their_Device_when_reloaded_Async()
         {
-            using var gLog = TestHelper.Monitor.OpenInfo( nameof( bridges_rebind_to_their_Device_when_reloaded ) );
+            using var gLog = TestHelper.Monitor.OpenInfo( nameof( bridges_rebind_to_their_Device_when_reloaded_Async ) );
             // The device is available and running.
             var host = new SampleDeviceHost();
             var sp = new SimpleServiceContainer();
@@ -277,19 +297,18 @@ namespace CK.Observable.Device.Tests
             };
             (await host.EnsureDeviceAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.CreateAndStartSucceeded );
 
-            using var obs = new ObservableDomain( TestHelper.Monitor, nameof( bridges_rebind_to_their_Device_when_reloaded ), true, serviceProvider: sp );
+            using var obs = new ObservableDomain( TestHelper.Monitor, nameof( bridges_rebind_to_their_Device_when_reloaded_Async ), true, serviceProvider: sp );
 
             // The bridge relay the event: the message is updated.
             OSampleDevice? device = null;
             await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 device = new OSampleDevice( "n°1" );
-                Debug.Assert( device.Status != null );
-                device.Status.Value.IsRunning.Should().BeTrue( "ConfigurationStatus is RunnableStarted." );
+                Debug.Assert( device.IsRunning == true, "ConfigurationStatus is RunnableStarted." );
                 device.SendSimpleCommand( "NEXT" );
             } );
             Debug.Assert( device != null );
-            Debug.Assert( device.Status != null );
+            Debug.Assert( device.IsRunning != null );
 
             System.Threading.Thread.Sleep( 90 );
             using( obs.AcquireReadLock() )
@@ -298,13 +317,16 @@ namespace CK.Observable.Device.Tests
             }
 
             // Unloading/Reloading the domain.
-            using( TestHelper.Monitor.OpenInfo( "Serializing/Deserializing." ) )
+            using( TestHelper.Monitor.OpenInfo( "Serializing/Deserializing with a fake transaction. Sidekicks are not instantiated." ) )
             {
                 using var s = new MemoryStream();
                 if( !obs.Save( TestHelper.Monitor, s, true ) ) throw new Exception( "Failed to save." );
                 s.Position = 0;
                 if( !obs.Load( TestHelper.Monitor, RewindableStream.FromStream( s ) ) ) throw new Exception( "Reload failed." );
             }
+            obs.HasWaitingSidekicks.Should().BeTrue();
+            obs.Modify( TestHelper.Monitor, null );
+            obs.HasWaitingSidekicks.Should().BeFalse();
 
             device = obs.AllObjects.OfType<OSampleDevice>().Single();
             await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
@@ -327,9 +349,9 @@ namespace CK.Observable.Device.Tests
 
 
         [Test]
-        public async Task unbound_devices_serialization()
+        public async Task unbound_devices_serialization_Async()
         {
-            using var gLog = TestHelper.Monitor.OpenInfo( nameof( unbound_devices_serialization ) );
+            using var gLog = TestHelper.Monitor.OpenInfo( nameof( unbound_devices_serialization_Async ) );
             bool error = false;
             using( TestHelper.Monitor.OnError( () => error = true ) )
             {
@@ -338,15 +360,15 @@ namespace CK.Observable.Device.Tests
                 var sp = new SimpleServiceContainer();
                 sp.Add( host );
 
-                using var obs = new ObservableDomain( TestHelper.Monitor, nameof( unbound_devices_serialization ), false, serviceProvider: sp );
+                using var obs = new ObservableDomain( TestHelper.Monitor, nameof( unbound_devices_serialization_Async ), false, serviceProvider: sp );
 
                 await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     var d1 = new OSampleDevice( "n°1" );
-                    d1.Status.Should().BeNull();
+                    d1.IsRunning.Should().BeNull();
                     d1.IsBoundDevice.Should().BeFalse();
                     var d2 = new OSampleDevice( "n°2" );
-                    d2.Status.Should().BeNull();
+                    d2.IsRunning.Should().BeNull();
                     d2.IsBoundDevice.Should().BeFalse();
                 } );
                 ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, obs );

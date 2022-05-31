@@ -1,3 +1,4 @@
+using CK.BinarySerialization;
 using CK.Core;
 using FluentAssertions;
 using System;
@@ -20,8 +21,8 @@ namespace CK.Observable.Domain.Tests.Sample
             Name = name;
         }
 
-        Car( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
-        : base( BinarySerialization.Sliced.Instance )
+        Car( IBinaryDeserializer d, ITypeReadInfo info )
+        : base( Sliced.Instance )
         {
             Name = d.Reader.ReadString();
             TestSpeed = d.Reader.ReadInt32();
@@ -29,7 +30,7 @@ namespace CK.Observable.Domain.Tests.Sample
             _testSpeedChanged = new ObservableEventHandler<ObservableDomainEventArgs>( d );
         }
 
-        public static void Write( BinarySerialization.IBinarySerializer s, in Car o )
+        public static void Write( IBinarySerializer s, in Car o )
         {
             s.Writer.Write( o.Name );
             s.Writer.Write( o.TestSpeed );

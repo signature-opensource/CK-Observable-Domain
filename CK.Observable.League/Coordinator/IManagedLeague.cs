@@ -11,7 +11,7 @@ namespace CK.Observable.League
     interface IManagedLeague
     {
         /// <summary>
-        /// Creates and adds a new domain: this is called by <see cref="Coordinator.CreateDomain(string, IEnumerable{string})"/>.
+        /// Creates and adds a new domain: this is called by <see cref="Coordinator.CreateDomain(string, IEnumerable{string}?, ManagedDomainOptions?)"/>.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="name">The new domain name.</param>
@@ -21,8 +21,8 @@ namespace CK.Observable.League
 
         /// <summary>
         /// Called when the <see cref="Coordinator"/> has been reloaded (from snapshot): this is called
-        /// to find the managed domain and ensure that its key information (the root types) are the same
-        /// (otherwise an exception is raised).
+        /// to find the managed domains and ensure that their key information (their root types) are the same
+        /// as the ones of the coordinator's domains (otherwise an exception is raised).
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="name">The domain name that must be found or created.</param>

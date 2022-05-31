@@ -5,8 +5,10 @@ using System.Text;
 namespace CK.Observable
 {
     /// <summary>
-    /// This interface supports easy targeting of command handling by <see cref="DomainView.SendCommand(object, ISidekickLocator, bool)"/>
-    /// and <see cref="SuccessfulTransactionEventArgs.SendCommand(object, ISidekickLocator, bool)"/>.
+    /// This interface supports easy targeting of command handling by <see cref="DomainView.SendCommand(object, ISidekickLocator, bool)"/>.
+    /// <para>
+    /// A sidekick is its own locator: a command can be sent directly to the Sidekick object. 
+    /// </para>
     /// <para>
     /// It is totally optional but it helps the developer to target a command handler instead of using command broadcast (to all available sidekicks).
     /// </para>
