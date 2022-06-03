@@ -277,55 +277,59 @@ namespace CK.Observable
         void UnloadDomain( IActivityMonitor monitor, bool callUnload )
         {
             Debug.Assert( _lock.IsWriteLockHeld );
-            if( callUnload )
+
+            using( monitor.OpenTrace( $"Unloading domain '{DomainName}'{(callUnload ? "" : " NOT")} calling OnUnlaod methods." ) )
             {
-                // Call Unload( false ) on all objects.
-                for( int i = 0; i < _objectsListCount; ++i )
+                if( callUnload )
                 {
-                    var o = _objects[i];
-                    if( o != null )
+                    // Call Unload( false ) on all objects.
+                    for( int i = 0; i < _objectsListCount; ++i )
                     {
-                        Debug.Assert( !o.IsDestroyed );
-                        o.Unload( false );
+                        var o = _objects[i];
+                        if( o != null )
+                        {
+                            Debug.Assert( !o.IsDestroyed );
+                            o.Unload( false );
+                        }
                     }
                 }
-            }
-            // Empty _objects completely.
-            Array.Clear( _objects, 0, _objectsListCount );
-            _objectsListCount = 0;
-            _actualObjectCount = 0;
+                // Empty _objects completely.
+                Array.Clear( _objects, 0, _objectsListCount );
+                _objectsListCount = 0;
+                _actualObjectCount = 0;
 
-            // Clears root list.
-            _roots.Clear();
+                // Clears root list.
+                _roots.Clear();
 
-            // Free sidekicks and IObservableDomainActionTracker.
-            _trackers.Clear();
-            _sidekickManager.Clear( monitor );
+                // Free sidekicks and IObservableDomainActionTracker.
+                _trackers.Clear();
+                _sidekickManager.Clear( monitor );
 
-            // Clears any internal objects.
-            if( callUnload )
-            {
-                var internalObj = _firstInternalObject;
-                while( internalObj != null )
+                // Clears any internal objects.
+                if( callUnload )
                 {
-                    internalObj.Unload( false );
-                    internalObj = internalObj.Next;
+                    var internalObj = _firstInternalObject;
+                    while( internalObj != null )
+                    {
+                        internalObj.Unload( false );
+                        internalObj = internalObj.Next;
+                    }
                 }
+                _firstInternalObject = _lastInternalObject = null;
+                _internalObjectCount = 0;
+
+                // Clears any time event objects.
+                _timeManager.ClearAndStop( monitor );
+
+                // Clears and read the properties index.
+                _properties.Clear();
+                _propertiesByIndex.Clear();
+
+                // Clears the free list.
+                _freeList.Clear();
+
+                _currentObjectUniquifier = 0;
             }
-            _firstInternalObject = _lastInternalObject = null;
-            _internalObjectCount = 0;
-
-            // Clears any time event objects.
-            _timeManager.ClearAndStop( monitor );
-
-            // Clears and read the properties index.
-            _properties.Clear();
-            _propertiesByIndex.Clear();
-
-            // Clears the free list.
-            _freeList.Clear();
-
-            _currentObjectUniquifier = 0;
         }
     }
 }

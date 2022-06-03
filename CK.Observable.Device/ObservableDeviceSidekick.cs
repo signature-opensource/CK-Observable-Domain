@@ -111,13 +111,13 @@ namespace CK.Observable.Device
 
         Task OnAllDevicesLifetimeEventAsync( IActivityMonitor monitor, IDeviceHost sender, DeviceLifetimeEvent e )
         {
-            var bridge = _bridges.GetValueOrDefault( e.Device.Name );
-            // No bridge (no observable object) and no host: this sidekick is "empty", it is not
-            // concerned by the device.
-            if( bridge == null && _objectHost == null ) return Task.CompletedTask;
-
             return Domain.ModifyAsync( monitor, () =>
             {
+                var bridge = _bridges.GetValueOrDefault( e.Device.Name );
+                // No bridge (no observable object) and no host: this sidekick is "empty", it is not
+                // concerned by the device.
+                if( bridge == null && _objectHost == null ) return;
+
                 if( e.Device.IsDestroyed )
                 {
                     if( bridge?.Device != null ) bridge.DetachDevice( monitor );
@@ -215,6 +215,8 @@ namespace CK.Observable.Device
             {
                 b.OnDispose( monitor, isObjectDestroyed: false );
             }
+            _bridges.Clear();
+            _objectHost = null;
             OnDispose( monitor );
         }
 

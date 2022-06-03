@@ -44,7 +44,7 @@ namespace CK.Observable.Device.Tests
             }
 
             Task OnMessageChanged( IActivityMonitor monitor, SampleDevice sender, string e )
-            {
+            {  
                 return ModifyAsync( monitor, () =>
                 {
                     Object.Message = e;

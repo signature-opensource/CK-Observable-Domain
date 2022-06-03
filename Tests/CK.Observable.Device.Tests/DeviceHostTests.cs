@@ -15,7 +15,7 @@ using static CK.Testing.MonitorTestHelper;
 namespace CK.Observable.Device.Tests
 {
     [TestFixture]
-    public class ObservableDeviceHostTests
+    public class DeviceHostTests
     {
         [SerializationVersion(0)]
         public class Root : ObservableRootObject

@@ -26,7 +26,7 @@ namespace CK.Observable
             if( _runSignal == null )
             {
                 _runSignal = new object();
-                _ = Run();
+                _ = RunAsync();
             }
             _queue.Writer.TryWrite( r );
         }
@@ -49,7 +49,7 @@ namespace CK.Observable
                     System.Threading.Monitor.Wait( _runSignal );
         }
 
-        internal async Task Run()
+        internal async Task RunAsync()
         {
             Debug.Assert( _runSignal != null );
             IActivityMonitor monitor = new ActivityMonitor( $"DomainPostAction executor for '{_domain.DomainName}'." ); ;

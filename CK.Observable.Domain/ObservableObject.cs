@@ -77,7 +77,7 @@ namespace CK.Observable
         /// <param name="domain">The domain to which this object belong.</param>
         ObservableObject( ObservableDomain domain )
         {
-            if( domain == null ) throw new ArgumentNullException( nameof( domain ) );
+            Throw.CheckNotNullArgument( domain );
             ActualDomain = domain;
             _exporter = ActualDomain._exporters.FindDriver( GetType() );
             _oid = ActualDomain.Register( this );

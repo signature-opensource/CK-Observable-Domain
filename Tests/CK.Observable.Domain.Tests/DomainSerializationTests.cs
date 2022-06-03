@@ -113,11 +113,14 @@ namespace CK.Observable.Domain.Tests
                 var m = new Mechanic( g ) { FirstName = "Hela", LastName = "Bas" };
                 m.CurrentCar = car;
             } );
+            // SaveAndLoad disposes domain.
+            // Captures the Garage's OId since it is set to invalid.
+            var g1OId = domain.AllObjects.OfType<Garage>().Single().OId;
+
             using var d2 = TestHelper.SaveAndLoad( domain );
-            var g1 = domain.AllObjects.OfType<Garage>().Single();
             var g2 = d2.AllObjects.OfType<Garage>().Single();
-            g2.CompanyName.Should().Be( g1.CompanyName );
-            g2.OId.Should().Be( g1.OId );
+            g2.CompanyName.Should().Be( "Hello" );
+            g2.OId.Should().Be( g1OId );
         }
 
 
@@ -131,13 +134,13 @@ namespace CK.Observable.Domain.Tests
                 var p2 = new Person() { FirstName = "B", Friend = p1 };
                 p1.Friend = p2;
             } );
-            using var d2 = TestHelper.SaveAndLoad( domain );
             var pA1 = domain.AllObjects.OfType<Person>().Single( p => p.FirstName == "A" );
             var pB1 = domain.AllObjects.OfType<Person>().Single( p => p.FirstName == "B" );
 
             pA1.Friend.Should().BeSameAs( pB1 );
             pB1.Friend.Should().BeSameAs( pA1 );
 
+            using var d2 = TestHelper.SaveAndLoad( domain );
             var pA2 = d2.AllObjects.OfType<Person>().Single( p => p.FirstName == "A" );
             var pB2 = d2.AllObjects.OfType<Person>().Single( p => p.FirstName == "B" );
 
@@ -154,10 +157,10 @@ namespace CK.Observable.Domain.Tests
                 var p = new Person() { FirstName = "P" };
                 p.Friend = p;
             } );
-            using var d2 = TestHelper.SaveAndLoad( domain );
             var p1 = domain.AllObjects.OfType<Person>().Single();
             p1.Friend.Should().BeSameAs( p1 );
 
+            using var d2 = TestHelper.SaveAndLoad( domain );
             var p2 = d2.AllObjects.OfType<Person>().Single();
             p2.Friend.Should().BeSameAs( p2 );
         }

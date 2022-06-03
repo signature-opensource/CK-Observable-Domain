@@ -369,7 +369,7 @@ namespace CK.Observable
                                  bool startTimer,
                                  IObservableDomainClient? client,
                                  IServiceProvider? serviceProvider = null )
-            : this( monitor, domainName, startTimer, client, true, serviceProvider, exporters: null )
+            : this( monitor, domainName, startTimer, client, callClientOnCreate: true, serviceProvider, exporters: null )
         {
         }
 
@@ -1458,35 +1458,40 @@ namespace CK.Observable
             using( monitor.OpenInfo( $"Disposing domain '{DomainName}'." ) )
             {
                 bool executorRun = _domainPostActionExecutor.Stop();
+                if( executorRun )
+                {
+                    monitor.Debug( "The running DomainPostActionExecutor has been asked to stop." );
+                }
                 DomainClient?.OnDomainDisposed( monitor, this );
                 DomainClient = null;
                 _disposed = true;
 
-                //UnloadDomain( monitor );
+                // We call OnUnload on all the Observable and Internal objects
+                // so they can free any external resources.
+                UnloadDomain( monitor, true );
                 _timeManager.Timer.Dispose();
-                _sidekickManager.Clear( monitor );
 
                 if( monitor != _domainMonitor && _domainMonitorLock.Wait( 0 ) )
                 {
                     if( _domainMonitor != null ) _domainMonitor.MonitorEnd( "Disposing domain." );
                     _domainMonitorLock.Release();
                 }
+                monitor.Debug( "Exiting write lock." );
+                _lock.ExitWriteLock();
                 if( executorRun )
                 {
-                    monitor.Debug( "Waiting for DomainPostActionExecutor stopped..." );
+                    monitor.Debug( "Waiting for DomainPostActionExecutor stopped." );
                     _domainPostActionExecutor.WaitStopped();
-                    monitor.Debug( "...DomainPostActionExecutor stopped." );
                 }
-                monitor.Debug( "Exiting write lock. Domain disposed." );
-                _lock.ExitWriteLock();
+                monitor.Info( $"Domain '{DomainName}' disposed." );
                 // There is a race condition here. AcquireReadLock, BeginTransaction (and others)
                 // may have also seen a false _disposed and then try to acquire the lock.
                 // If the race is won by this Dispose() thread, then the write lock is taken, released and
                 // the lock itself should be disposed...
                 //
                 // There is 2 possibilities:
-                // 1 - If the other thread acquire the lock between the previous _lock.ExitWriteLock and
-                //     the following _lock.Dispose(), the other threads may work on a disposed domain even
+                // 1 - If the other thread acquire the lock between the _lock.ExitWriteLock (above) and
+                //     the _lock.Dispose() below, the other threads may work on a disposed domain even
                 //     if they had perfectly acquired the lock :(.
                 // 2 - If the other thread continue their execution after the following _lock.Dispose(), they will
                 //     try to acquire a disposed lock. An ObjectDisposedException should be thrown (that is somehow fine).
@@ -1497,7 +1502,7 @@ namespace CK.Observable
                 // However, the _lock.Dispose() call below MAY occur while a TryEnter has been successful and before
                 // the _disposed check and the release: this would result in an awful "Incorrect Lock Dispose" exception
                 // since disposing a lock while it is held is an error.
-                // ==> This solution that seems the cleanest and most reasonable one is NOT an option... 
+                // ==> This solution that seems the cleanest and most reasonable one is eventually NOT an option... 
                 //
                 // Another solution is to defer the actual Disposing. By using the timer for instance: the domain is "logically disposed"
                 // but technically perfectly valid until a timer event calls a DoRealDispose(). If this call is made after a "long enough"
@@ -1517,7 +1522,7 @@ namespace CK.Observable
                 //
                 // Conclusion:
                 //   - We only protect, inside the lock, the Modify action: read only operations are free to run and end in this "in between".
-                //     The good place to call CheckDisposed() is in DoBeginTransaction().
+                //     The good place to call CheckDisposed() is in TryEnterUpgradeableReadAndWriteLockAtOnce().
                 //   - We comment the following line.
                 //
                 //_lock.Dispose();

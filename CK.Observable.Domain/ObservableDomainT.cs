@@ -89,7 +89,7 @@ namespace CK.Observable
         {
             if( AllRoots.Count != 1 || !(AllRoots[0] is T) )
             {
-                throw new InvalidDataException( $"Incompatible stream. No root of type {typeof( T ).FullName}. {AllRoots.Count} roots of type: {AllRoots.Select( t => t.GetType().Name ).Concatenate()}." );
+                Throw.InvalidDataException( $"Incompatible stream. No root of type {typeof( T ).FullName}. {AllRoots.Count} roots of type: {AllRoots.Select( t => t.GetType().Name ).Concatenate()}." );
             }
             Root = (T)AllRoots[0];
         }

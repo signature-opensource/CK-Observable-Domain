@@ -215,7 +215,7 @@ namespace CK.Observable.Domain.Tests
         public void sidekick_simple_instantiation_and_serialization( string mode, string type )
         {
             // Will be disposed by TestHelper.SaveAndLoad at the end of this test.
-            var obs = new ObservableDomain(TestHelper.Monitor, nameof(sidekick_simple_instantiation_and_serialization) + '-' + mode, startTimer: true );
+            var obs = new ObservableDomain( TestHelper.Monitor, nameof( sidekick_simple_instantiation_and_serialization ) + '-' + mode, startTimer: true );
 
             IReadOnlyList<ActivityMonitorSimpleCollector.Entry> logs = null!;
             using( TestHelper.Monitor.CollectEntries( entries => logs = entries, LogLevelFilter.Info ) )
