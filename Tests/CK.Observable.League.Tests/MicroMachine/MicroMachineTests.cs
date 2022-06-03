@@ -29,7 +29,7 @@ namespace CK.Observable.League.Tests.MicroMachine
             } ).Success.Should().BeTrue();
 
             // No Identification appears: => IdentificationTimeout.
-            Thread.Sleep( 250 );
+            Thread.Sleep( 300 );
             ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d, restoreSidekicks: true );
             d.Modify( TestHelper.Monitor, () =>
             {
@@ -41,7 +41,7 @@ namespace CK.Observable.League.Tests.MicroMachine
 
             ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d, restoreSidekicks: true );
             // AutoDisposed fired.
-            Thread.Sleep( 200 );
+            Thread.Sleep( 300 );
             d.Modify( TestHelper.Monitor, () =>
             {
                 d.Root.Machine.Things.Should().BeEmpty();
@@ -54,9 +54,9 @@ namespace CK.Observable.League.Tests.MicroMachine
         [TestCase( 100 )]
         [TestCase( 300 )]
         [TestCase( 500 )]
-        public async Task initial_configuration_and_subsequent_work( int numberOfThing )
+        public async Task initial_configuration_and_subsequent_work_Async( int numberOfThing )
         {
-            var store = BasicLeagueTests.CreateStore( nameof( initial_configuration_and_subsequent_work ) );
+            var store = BasicLeagueTests.CreateStore( nameof( initial_configuration_and_subsequent_work_Async ) );
             var league = (await ObservableLeague.LoadAsync( TestHelper.Monitor, store ))!;
             await league.Coordinator.ModifyAsync( TestHelper.Monitor, ( m, coodinator ) =>
             {
