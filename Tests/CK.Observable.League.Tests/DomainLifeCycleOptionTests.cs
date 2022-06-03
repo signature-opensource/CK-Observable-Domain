@@ -19,9 +19,9 @@ namespace CK.Observable.League.Tests
         }
 
         [Test]
-        public async Task always_option_keeps_the_domain_in_memory()
+        public async Task always_option_keeps_the_domain_in_memory_Async()
         {
-            var store = BasicLeagueTests.CreateStore( nameof( always_option_keeps_the_domain_in_memory ) );
+            var store = BasicLeagueTests.CreateStore( nameof( always_option_keeps_the_domain_in_memory_Async ) );
             var league = await ObservableLeague.LoadAsync( TestHelper.Monitor, store );
             Debug.Assert( league != null );
 
@@ -33,6 +33,9 @@ namespace CK.Observable.League.Tests
 
             var loader = league["AlwaysLoaded"];
             Debug.Assert( loader != null );
+
+            // On the CI, the configuration from the Coordinator takes some time to be applied...
+            await Task.Delay( 200 );
 
             loader.IsLoaded.Should().BeTrue( "The domain is kept alive." );
 
