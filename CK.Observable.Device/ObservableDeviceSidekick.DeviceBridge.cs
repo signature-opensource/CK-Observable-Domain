@@ -252,7 +252,13 @@ namespace CK.Observable.Device
 
             /// <summary>
             /// Can handle the device events.
-            /// Note that lifetime events are handled separately.
+            /// Note that lifetime events are handled separately and are reflected on the <see cref="ObservableDeviceObject"/>.
+            /// <para>
+            /// This is called by the device, either from the command loop (for <see cref="SimpleActiveDevice{TConfiguration, TEvent}"/>)
+            /// or the event loop (for <see cref="ActiveDevice{TConfiguration, TEvent}"/>): unless appropriate synchronization is done,
+            /// this executes concurrently with the domain state. <see cref="ObservableDomain.ModifyAsync(IActivityMonitor, Action, int, bool)"/>
+            /// must be used to interact with the domain.
+            /// </para>
             /// </summary>
             /// <param name="monitor">The monitor to use.</param>
             /// <param name="deviceEvent">The event to handle.</param>

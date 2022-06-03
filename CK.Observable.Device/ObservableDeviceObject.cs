@@ -193,6 +193,12 @@ namespace CK.Observable.Device
             return false;
         }
 
+        /// <summary>
+        /// Called when <see cref="DeviceControlStatus"/> changed.
+        /// <para>
+        /// When overridden, this base method MUST be called to raise <see cref="DeviceControlStatusChanged"/> event.
+        /// </para>
+        /// </summary>
         protected virtual void OnDeviceControlStatusChanged()
         {
             OnPropertyChanged( nameof( DeviceControlStatus ), _deviceControlStatus );
@@ -406,24 +412,20 @@ namespace CK.Observable.Device
             base.OnDestroy();
         }
 
-        internal static DeviceControlStatus ComputeStatus( IDevice? d, string domainName, bool choosePersistentOwnership = false )
+        internal static DeviceControlStatus ComputeStatus( IDevice? d, string domainName )
         {
             if( d == null ) return DeviceControlStatus.MissingDevice;
-            string? controllerKey = d.ControllerKey;
-            string? configKey = d.ExternalConfiguration.ControllerKey;
-
-            return ComputeStatus( d.ControllerKey, d.ExternalConfiguration.ControllerKey, domainName, choosePersistentOwnership );
+            return ComputeStatus( d.ControllerKey, d.ExternalConfiguration.ControllerKey, domainName );
         }
 
-        internal static DeviceControlStatus ComputeStatus( string? controllerKey, string? configKey, string domainName, bool choosePersistentOwnership )
+        internal static DeviceControlStatus ComputeStatus( string? controllerKey, string? configKey, string domainName )
         {
             if( controllerKey == null ) return DeviceControlStatus.HasSharedControl;
             if( controllerKey == domainName )
             {
-                if( configKey == domainName ) return choosePersistentOwnership
-                                                      ? DeviceControlStatus.HasPersistentOwnership
-                                                      : DeviceControlStatus.HasOwnership;
-                return DeviceControlStatus.HasControl;
+                return configKey == domainName
+                                    ? DeviceControlStatus.HasOwnership
+                                    : DeviceControlStatus.HasControl;
             }
             return configKey != null
                     ? DeviceControlStatus.OutOfControlByConfiguration

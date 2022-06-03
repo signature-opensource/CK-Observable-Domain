@@ -141,64 +141,69 @@ namespace CK.Observable.Device.Tests
             }
         }
 
-        //[Test]
-        //public async Task playing_with_ownership_Async()
-        //{
-        //    using var _ = TestHelper.Monitor.OpenInfo( nameof( playing_with_ownership_Async ) );
+        [Test]
+        public async Task playing_with_ownership_Async()
+        {
+            using var _ = TestHelper.Monitor.OpenInfo( nameof( playing_with_ownership_Async ) );
 
-        //    var host = new SampleDeviceHost();
-        //    await host.EnsureDeviceAsync( TestHelper.Monitor, new SampleDeviceConfiguration()
-        //    {
-        //        Name = "TheOne",
-        //        Status = DeviceConfigurationStatus.Runnable,
-        //        // Initial ownership is for d1.
-        //        ControllerKey = "Domain n°1",
-        //        PeriodMilliseconds = Timeout.Infinite,
-        //        Message = "Not used here."
-        //    } );
-        //    var device = host["TheOne"];
-        //    Debug.Assert( device != null );
+            var host = new SampleDeviceHost();
+            await host.EnsureDeviceAsync( TestHelper.Monitor, new SampleDeviceConfiguration()
+            {
+                Name = "TheOne",
+                Status = DeviceConfigurationStatus.Runnable,
+                // Initial ownership is for d1.
+                ControllerKey = "Domain n°1",
+                PeriodMilliseconds = Timeout.Infinite,
+                Message = "Not used here."
+            } );
+            var device = host["TheOne"];
+            Debug.Assert( device != null );
 
-        //    var sp = new SimpleServiceContainer();
-        //    sp.Add( host );
+            var sp = new SimpleServiceContainer();
+            sp.Add( host );
 
-        //    using( var d1 = new ObservableDomain<Root>( TestHelper.Monitor, "Domain n°1", false, serviceProvider: sp ) )
-        //    using( var d2 = new ObservableDomain<Root>( TestHelper.Monitor, "Domain n°2", false, serviceProvider: sp ) )
-        //    {
+            using( var d1 = new ObservableDomain<Root>( TestHelper.Monitor, "Domain n°1", false, serviceProvider: sp ) )
+            using( var d2 = new ObservableDomain<Root>( TestHelper.Monitor, "Domain n°2", false, serviceProvider: sp ) )
+            {
 
-        //        CheckStatus( d1, DeviceControlStatus.HasOwnership );
-        //        CheckStatus( d2, DeviceControlStatus.OutOfControlByConfiguration );
+                CheckStatus( d1, DeviceControlStatus.HasOwnership );
+                CheckStatus( d2, DeviceControlStatus.OutOfControlByConfiguration );
 
-        //        await SetControlAsync( "d2 takes control: this doesn't work.", d2, DeviceControlAction.TakeControl );
-        //        CheckStatus( d1, DeviceControlStatus.HasOwnership );
-        //        CheckStatus( d2, DeviceControlStatus.OutOfControlByConfiguration );
+                await SetControlAsync( "d2 takes control: this doesn't work.", d2, DeviceControlAction.TakeControl );
+                CheckStatus( d1, DeviceControlStatus.HasOwnership );
+                CheckStatus( d2, DeviceControlStatus.OutOfControlByConfiguration );
 
-        //        await SetControlAsync( "But d2 can take back the ownership.", d2, DeviceControlAction.TakeOwnership );
-        //        CheckStatus( d1, DeviceControlStatus.OutOfControlByConfiguration );
-        //        CheckStatus( d2, DeviceControlStatus.HasOwnership );
+                await SetControlAsync( "But d2 can take back the ownership.", d2, DeviceControlAction.TakeOwnership );
+                CheckStatus( d1, DeviceControlStatus.OutOfControlByConfiguration );
+                CheckStatus( d2, DeviceControlStatus.HasOwnership );
 
-        //        await SetControlAsync( "And d1 can ForceReleaseControl to free the device from any ownership.", d2, DeviceControlAction.ForceReleaseControl );
-        //        CheckStatus( d1, DeviceControlStatus.HasSharedControl );
-        //        CheckStatus( d2, DeviceControlStatus.HasSharedControl );
-        //    }
-        //    static void CheckStatus( ObservableDomain<Root> d, DeviceControlStatus s )
-        //    {
-        //        using( d.AcquireReadLock() )
-        //        {
-        //            d.Root.TheOne.DeviceControlStatus.Should().Be( s );
-        //            d.Root.Host.Devices["TheOne"].Status.Should().Be( s );
-        //        }
-        //    }
+                await SetControlAsync( "And d1 can ForceReleaseControl to free the device from any ownership.", d2, DeviceControlAction.ForceReleaseControl );
+                CheckStatus( d1, DeviceControlStatus.HasSharedControl );
+                CheckStatus( d2, DeviceControlStatus.HasSharedControl );
+            }
 
-        //    async Task SetControlAsync( string action, ObservableDomain<Root> d, DeviceControlAction c )
-        //    {
-        //        using( TestHelper.Monitor.OpenInfo( action ) )
-        //        {
-        //            await d.ModifyThrowAsync( TestHelper.Monitor, () => d.Root.TheOne.SendDeviceControlCommand( c ) );
-        //            await device.WaitForSynchronizationAsync( false );
-        //        }
-        //    }
-        //}
+            static void CheckStatus( ObservableDomain<Root> d, DeviceControlStatus s )
+            {
+                using( d.AcquireReadLock() )
+                {
+                    d.Root.TheOne.DeviceControlStatus.Should().Be( s );
+                    d.Root.Host.Devices["TheOne"].Status.Should().Be( s );
+                }
+            }
+
+            async Task SetControlAsync( string action, ObservableDomain<Root> d, DeviceControlAction c )
+            {
+                using( TestHelper.Monitor.OpenInfo( action ) )
+                {
+                    await d.ModifyThrowAsync( TestHelper.Monitor, () => d.Root.TheOne.SendDeviceControlCommand( c ) );
+                    // Since the reconfiguration currently goes through the host that sends an InternalConfigureDeviceCommand
+                    // to the device, waiting here for the synchronization is not enough: we unfortunately have
+                    // to wait for the InternalConfigureDeviceCommand to reach the command queue.
+                    await Task.Delay( 100 );
+                    await device.WaitForSynchronizationAsync( false );
+                }
+            }
+        }
 
 
     }

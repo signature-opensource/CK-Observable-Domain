@@ -133,7 +133,6 @@ namespace CK.Observable.Device
                             o.SetIsRunning( e.Device.Status.IsRunning );
                             o.OnDeviceConfigurationApplied( e.Device.ExternalConfiguration );
                             o.SetDeviceControlStatus( ObservableDeviceObject.ComputeStatus( e.Device, Domain.DomainName ) );
-
                         }
                     }
                 }

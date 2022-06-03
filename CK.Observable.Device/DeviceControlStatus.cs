@@ -68,13 +68,7 @@ namespace CK.Observable.Device
         /// </list>
         /// </para>
         /// </summary>
-        HasOwnership,
-
-        /// <summary>
-        /// Same as <see cref="HasOwnership"/> but the current device's configuration is persisted while
-        /// serializing the domain and is automatically applied when deserialized.
-        /// </summary>
-        HasPersistentOwnership,
+        HasOwnership
 
     }
 }

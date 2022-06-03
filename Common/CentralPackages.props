@@ -2,7 +2,7 @@
   <ItemGroup>
     <PackageReference Update="CK.BinarySerialization.Sliced" Version="1.0.0-r01-01" />
     <PackageReference Update="CK.ActivityMonitor.SimpleSender" Version="15.0.0-r08" />
-    <PackageReference Update="CK.DeviceModel" Version="2.0.0-r03-01-0022-develop" />
+    <PackageReference Update="CK.DeviceModel" Version="2.0.0-r03-01-0023-develop" />
     <PackageReference Update="CK.StObj.Model" Version="19.0.0-r09" />
     <PackageReference Update="System.Threading.Channels" Version="6.0.0" />
     <PackageReference Update="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
