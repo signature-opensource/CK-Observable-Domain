@@ -39,7 +39,7 @@ namespace CK.Observable
                 destroyedRefList.Add( o );
             }
 
-            using( var s = BinarySerialization.BinarySerializer.Create( stream, _serializerContext ) )
+            using( var s = BinarySerializer.Create( stream, _serializerContext ) )
             {
                 s.OnDestroyedObject += Track;
                 bool isWrite = _lock.IsWriteLockHeld;
@@ -184,11 +184,13 @@ namespace CK.Observable
 
         bool DeserializeAndGetTimerState( IActivityMonitor monitor, string expectedName, IBinaryDeserializer d )
         {
+            // We call unload on the current objects only on the first pass.
+            // On the second pass (if it happens), we just forget all the result of the first pass.
             UnloadDomain( monitor, !d.StreamInfo.SecondPass );
 
             // This is where specialized typed ObservableDomain bind their roots:
             // this must be called before any PostActions added by the objects.
-            d.PostActions.Add( OnLoaded );
+            d.PostActions.Add( BindRoots );
 
             d.Reader.ReadByte(); // Local version.
             d.DebugReadMode();

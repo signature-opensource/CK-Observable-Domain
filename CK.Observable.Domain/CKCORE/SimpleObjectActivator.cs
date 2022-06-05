@@ -9,7 +9,6 @@ namespace CK.Core
 
     /// <summary>
     /// Ad-hoc DI helper that focuses on required parameters injection.
-    /// The static Create method can be used as-is or an instance that implements
     /// </summary>
     public class SimpleObjectActivator
     {
@@ -36,7 +35,7 @@ namespace CK.Core
                 {
                     Required required = parameters == null
                             ? Array.Empty<KeyValuePair<object?, Type>>()
-                            : (Required)parameters.Select( r => new KeyValuePair<object?, Type>( r, r.GetType() ) ).ToList();
+                            : parameters.Select( r => new KeyValuePair<object?, Type>( r, r.GetType() ) ).ToList();
 
                     var longestCtor = t.GetConstructors()
                                         .Select( x => ValueTuple.Create( x, x.GetParameters() ) )

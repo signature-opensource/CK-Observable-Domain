@@ -1,6 +1,8 @@
 using CK.BinarySerialization;
 using CK.Core;
 using System;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -45,11 +47,22 @@ namespace CK.Observable
                                  IServiceProvider? serviceProvider = null )
             : base( monitor, domainName, startTimer, client, serviceProvider )
         {
-            if( AllRoots.Count != 0 ) BindRoots();
-            else using( var initialization = new InitializationTransaction( monitor, this ) )
+            // Either the client.OnDomainCreated:
+            //  - has load the domain: we have nothing to do.
+            //  - has done nothing: we must create and add it.
+            //
+            // This pattern is the same for the other ObservableDomain<T1...> generics.
+            //
+            if( AllRoots.Count == 0 )
+            {
+                using( var initialization = new InitializationTransaction( monitor, this ) )
                 {
-                    Root = AddRoot<T>( initialization );
+                    Root = CreateAndAddRoot<T>( initialization );
                 }
+            }
+            Debug.Assert( Root == AllRoots[0], "Binding has been done." );
+            _initializingStatus = DomainInitializingStatus.None;
+            monitor.Info( $"ObservableDomain<{typeof(T)}> '{domainName}' created." );
         }
 
         /// <summary>
@@ -72,7 +85,8 @@ namespace CK.Observable
                                  bool? startTimer = null )
             : base( monitor, domainName, client, stream, serviceProvider, startTimer )
         {
-            BindRoots();
+            Debug.Assert( Root == AllRoots[0], "Binding has been done." );
+            _initializingStatus = DomainInitializingStatus.None;
         }
 
         /// <summary>
@@ -80,16 +94,11 @@ namespace CK.Observable
         /// </summary>
         public T Root { get; private set; }
 
-        /// <summary>
-        /// Overridden to bind our typed root.
-        /// </summary>
-        protected internal override void OnLoaded() => BindRoots();
-
-        void BindRoots()
+        private protected override void BindRoots()
         {
             if( AllRoots.Count != 1 || !(AllRoots[0] is T) )
             {
-                Throw.InvalidDataException( $"Incompatible stream. No root of type {typeof( T ).FullName}. {AllRoots.Count} roots of type: {AllRoots.Select( t => t.GetType().Name ).Concatenate()}." );
+                Throw.InvalidDataException( $"Incompatible stream. Expected single root of type {typeof( T )}. {AllRoots.Count} roots of type: {AllRoots.Select( t => t.GetType().Name ).Concatenate()}." );
             }
             Root = (T)AllRoots[0];
         }

@@ -148,14 +148,14 @@ namespace CK.Observable
         {
             if( _skipTransactionCount < 0 )
             {
-                monitor.Error( $"Error while modifying domain '{d.DomainName}' (SkipTransactionCount = -1).", ex );
+                monitor.Error( $"Error while modifying domain '{d.DomainName}' (SkipTransactionCount = -1 - Transaction is off).", ex );
                 swallowError = true;
             }
         }
 
         /// <summary>
         /// Default behavior is FIRST to relay the failure to the next client if any, and
-        /// THEN to call <see cref="RestoreSnapshot"/> (and throws an <see cref="Exception"/>
+        /// THEN to call <see cref="RollbackSnapshot"/> (and throws an <see cref="Exception"/>
         /// if no snapshot was available or if an error occurred).
         /// By default, <see cref="ObservableDomain.TimeManager"/> is started if it was previously started.
         /// </summary>
@@ -165,9 +165,9 @@ namespace CK.Observable
         public virtual void OnTransactionFailure( IActivityMonitor monitor, ObservableDomain d, IReadOnlyList<CKExceptionData> errors )
         {
             Next?.OnTransactionFailure( monitor, d, errors );
-            if( !RestoreSnapshot( monitor, d, null ) )
+            if( !RollbackSnapshot( monitor, d, null ) )
             {
-                throw new Exception( "No snapshot available or error while restoring the last snapshot." );
+                Throw.Exception( "No snapshot available or error while restoring the last snapshot." );
             }
         }
 
@@ -298,7 +298,7 @@ namespace CK.Observable
         /// When null, it keeps its previous state (it is initially stopped at domain creation) and then its current state is persisted.
         /// </param>
         /// <returns>False if no snapshot is available or if the restoration failed. True otherwise.</returns>
-        protected bool RestoreSnapshot( IActivityMonitor monitor, ObservableDomain d, bool? startTimer )
+        protected bool RollbackSnapshot( IActivityMonitor monitor, ObservableDomain d, bool? startTimer )
         {
             if( _snapshotSerialNumber == -1 )
             {
@@ -329,7 +329,7 @@ namespace CK.Observable
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="domain">The domain to reload or deserialize.</param>
         /// <param name="restoring">
-        /// True when called from <see cref="RestoreSnapshot"/>, false when called by <see cref="LoadOrCreateAndInitializeSnapshot"/>.
+        /// True when called from <see cref="RollbackSnapshot"/>, false when called by <see cref="LoadOrCreateAndInitializeSnapshot"/>.
         /// </param>
         /// <param name="startTimer">
         /// Ensures that the <see cref="ObservableDomain.TimeManager"/> is running or stopped.
@@ -337,22 +337,14 @@ namespace CK.Observable
         /// </param>
         protected virtual void DoLoadOrCreateFromSnapshot( IActivityMonitor monitor, [AllowNull]ref ObservableDomain domain, bool restoring, bool? startTimer )
         {
-            static void ReloadOrThrow( IActivityMonitor monitor,
-                                       ObservableDomain domain,
-                                       RewindableStream stream,
-                                       bool? startTimer )
-            {
-                if( !domain.Load( monitor, stream, startTimer: startTimer ) )
-                {
-                    throw new CKException( $"Error while loading serialized domain. Please see logs." );
-                }
-            }
-
-            void Ensure( IActivityMonitor monitor, ref ObservableDomain? domain, RewindableStream stream, bool? startTimer )
+            void Ensure( IActivityMonitor monitor, [AllowNull]ref ObservableDomain domain, RewindableStream stream, bool? startTimer )
             {
                 if( domain != null )
                 {
-                    ReloadOrThrow( monitor, domain, stream, startTimer );
+                    if( !domain.Load( monitor, stream, startTimer: startTimer ) )
+                    {
+                        Throw.Exception( $"Error while loading serialized domain. Please see logs." );
+                    }
                 }
                 else
                 {

@@ -75,12 +75,15 @@ namespace CK.Observable
                 // 1 - We analyze its Sidekick attributes and populates _toInstantiate tuples.
                 foreach( var attr in t.GetCustomAttributesData().Where( a => a.AttributeType == typeof( UseSidekickAttribute ) ) )
                 {
-                    object typeOrTypeName = attr.ConstructorArguments[0].Value;
-                    var args = attr.NamedArguments;
-                    bool optional = args.Count > 0 && args[0].TypedValue.Value.Equals( true );
-                    monitor.Trace( $"Domain object '{t.Name}' wants to use {(optional ? "optional" : "required")} sidekick '{typeOrTypeName}'." );
-                    _toInstantiate.Enqueue( (typeOrTypeName, optional) );
-                    _hasWaitingSidekick = true;
+                    object? typeOrTypeName = attr.ConstructorArguments[0].Value;
+                    if( typeOrTypeName != null )
+                    {
+                        var args = attr.NamedArguments;
+                        bool optional = args.Count > 0 && (args[0].TypedValue.Value?.Equals( true ) ?? false);
+                        monitor.Trace( $"Domain object '{t.Name}' wants to use {(optional ? "optional" : "required")} sidekick '{typeOrTypeName}'." );
+                        _toInstantiate.Enqueue( (typeOrTypeName, optional) );
+                        _hasWaitingSidekick = true;
+                    }
                 }
                 // 2 - We analyze its ISidekickClientObject<> generic interfaces and populates _toInstantiate tuples.
                 //     The list is of object because the array must be object[] since the types will be replaced
@@ -256,7 +259,7 @@ namespace CK.Observable
                     var h = (ObservableDomainSidekick?)SimpleObjectActivator.Create( monitor, type, _serviceProvider, false, new object[] { monitor, _domain } );
                     if( h == null )
                     {
-                        throw new Exception( $"Unable to instantiate '{type.FullName}' type." );
+                        throw new Exception( $"Unable to instantiate '{type}' type." );
                     }
                     _alreadyHandled.Add( type, h );
                     _sidekicks.Add( h );
@@ -322,7 +325,7 @@ namespace CK.Observable
         /// If a command is not executed because no sidekick has accepted it, this is an error that, just as other execution errors will
         /// appear in <see cref="TransactionResult.CommandHandlingErrors"/>.
         /// <para>
-        /// This executes outside of any locks on the domain. Doamin's objects must not be touched in any way (read or write).
+        /// This executes outside of any locks on the domain. Domain's objects must not be touched in any way (read or write).
         /// </para>
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
@@ -418,7 +421,11 @@ namespace CK.Observable
             return results;
         }
 
-        static bool ExecuteCommand(IActivityMonitor monitor, ObservableDomainSidekick h, in SidekickCommand cmd, ObservableDomainCommand c, ref List<(object, CKExceptionData)>? errors)
+        static bool ExecuteCommand( IActivityMonitor monitor,
+                                    ObservableDomainSidekick h,
+                                    in SidekickCommand cmd,
+                                    ObservableDomainCommand c,
+                                    ref List<(object, CKExceptionData)>? errors )
         {
             try
             {
@@ -430,7 +437,7 @@ namespace CK.Observable
                 if( errors == null ) errors = new List<(object, CKExceptionData)>();
                 errors.Add( (c, CKExceptionData.CreateFrom( ex )) );
             }
-            // If an error occurred, it's because, somehow it has been handled.
+            // If an error occurred, it's because, somehow, it has been handled.
             return true;
         }
 

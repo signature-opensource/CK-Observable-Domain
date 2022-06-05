@@ -1,6 +1,8 @@
 using CK.BinarySerialization;
 using CK.Core;
 using System;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -49,13 +51,18 @@ namespace CK.Observable
                                  IServiceProvider? serviceProvider = null )
             : base( monitor, domainName, startTimer, client, serviceProvider )
         {
-            if( AllRoots.Count != 0 ) BindRoots();
-            else using( var initialization = new InitializationTransaction( monitor, this ) )
+            if( AllRoots.Count == 0 )
+            {
+                using( var initialization = new InitializationTransaction( monitor, this ) )
                 {
-                    Root1 = AddRoot<T1>( initialization );
-                    Root2 = AddRoot<T2>( initialization );
-                    Root3 = AddRoot<T3>( initialization );
+                    Root1 = CreateAndAddRoot<T1>( initialization );
+                    Root2 = CreateAndAddRoot<T2>( initialization );
+                    Root3 = CreateAndAddRoot<T3>( initialization );
                 }
+            }
+            Debug.Assert( Root1 == AllRoots[0] && Root2 == AllRoots[1] && Root3 == AllRoots[2], "Binding has been done." );
+            _initializingStatus = DomainInitializingStatus.None;
+            monitor.Info( $"ObservableDomain<{typeof( T1 )}, {typeof( T2 )}, {typeof( T3 )}> '{domainName}' created." );
         }
 
         /// <summary>
@@ -78,7 +85,8 @@ namespace CK.Observable
                                  bool? startTimer = null )
             : base( monitor, domainName, client, s, serviceProvider, startTimer )
         {
-            BindRoots();
+            Debug.Assert( Root1 == AllRoots[0] && Root2 == AllRoots[1] && Root3 == AllRoots[2], "Binding has been done." );
+            _initializingStatus = DomainInitializingStatus.None;
         }
 
         /// <summary>
@@ -96,19 +104,14 @@ namespace CK.Observable
         /// </summary>
         public T3 Root3 { get; private set; }
 
-        /// <summary>
-        /// Overridden to bind our typed roots.
-        /// </summary>
-        protected internal override void OnLoaded() => BindRoots();
-
-        void BindRoots()
+        private protected override void BindRoots()
         {
             if( AllRoots.Count != 3
                 || !(AllRoots[0] is T1)
                 || !(AllRoots[1] is T2)
                 || !(AllRoots[2] is T3) )
             {
-                throw new InvalidDataException( $"Incompatible stream. No root of type {typeof( T1 ).Name}, {typeof( T2 ).Name} and {typeof( T3 ).Name}. {AllRoots.Count} roots of type: {AllRoots.Select( t => t.GetType().Name ).Concatenate()}." );
+                Throw.InvalidDataException( $"Incompatible stream. No root of type {typeof( T1 ).Name}, {typeof( T2 ).Name} and {typeof( T3 ).Name}. {AllRoots.Count} roots of type: {AllRoots.Select( t => t.GetType().Name ).Concatenate()}." );
             }
             Root1 = (T1)AllRoots[0];
             Root2 = (T2)AllRoots[1];

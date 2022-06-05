@@ -1,6 +1,8 @@
 using CK.BinarySerialization;
 using CK.Core;
 using System;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -49,14 +51,19 @@ namespace CK.Observable
                                  IServiceProvider? serviceProvider = null )
             : base(monitor, domainName, startTimer, client, serviceProvider )
         {
-            if( AllRoots.Count != 0 ) BindRoots();
-            else using( var initialization = new InitializationTransaction( monitor, this ) )
+            if( AllRoots.Count == 0 )
+            {
+                using( var initialization = new InitializationTransaction( monitor, this ) )
                 {
-                    Root1 = AddRoot<T1>( initialization );
-                    Root2 = AddRoot<T2>( initialization );
-                    Root3 = AddRoot<T3>( initialization );
-                    Root4 = AddRoot<T4>( initialization );
+                    Root1 = CreateAndAddRoot<T1>( initialization );
+                    Root2 = CreateAndAddRoot<T2>( initialization );
+                    Root3 = CreateAndAddRoot<T3>( initialization );
+                    Root4 = CreateAndAddRoot<T4>( initialization );
                 }
+            }
+            Debug.Assert( Root1 == AllRoots[0] && Root2 == AllRoots[1] && Root3 == AllRoots[2] && Root4 == AllRoots[3], "Binding has been done." );
+            _initializingStatus = DomainInitializingStatus.None;
+            monitor.Info( $"ObservableDomain<{typeof( T1 )}, {typeof( T2 )}, {typeof( T3 )}, {typeof( T4 )}> '{domainName}' created." );
         }
 
         /// <summary>
@@ -73,9 +80,7 @@ namespace CK.Observable
         /// Ensures that the <see cref="ObservableDomain.TimeManager"/> is running or stopped.
         /// When null, it keeps its previous state (it is initially stopped at domain creation) and then its current state is persisted.
         /// </param>
-#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         public ObservableDomain( IActivityMonitor monitor,
-#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
                                  string domainName,
                                  IObservableDomainClient client,
                                  RewindableStream s,
@@ -83,7 +88,8 @@ namespace CK.Observable
                                  bool? startTimer = null )
             : base( monitor, domainName, client, s, serviceProvider, startTimer )
         {
-            BindRoots();
+            Debug.Assert( Root1 == AllRoots[0] && Root2 == AllRoots[1] && Root3 == AllRoots[2] && Root4 == AllRoots[3], "Binding has been done." );
+            _initializingStatus = DomainInitializingStatus.None;
         }
 
         /// <summary>
@@ -106,12 +112,7 @@ namespace CK.Observable
         /// </summary>
         public T4 Root4 { get; private set; }
 
-        /// <summary>
-        /// Overridden to bind our typed roots.
-        /// </summary>
-        protected internal override void OnLoaded() => BindRoots();
-
-        void BindRoots()
+        private protected override void BindRoots()
         {
             if( AllRoots.Count != 4
                 || !(AllRoots[0] is T1)
@@ -119,7 +120,7 @@ namespace CK.Observable
                 || !(AllRoots[2] is T3)
                 || !(AllRoots[3] is T4) )
             {
-                throw new InvalidDataException( $"Incompatible stream. No root of type {typeof( T1 ).Name}, {typeof( T2 ).Name} , {typeof( T3 ).Name} and {typeof( T4 ).Name}. {AllRoots.Count} roots of type: {AllRoots.Select( t => t.GetType().Name ).Concatenate()}." );
+                Throw.InvalidDataException( $"Incompatible stream. No root of type {typeof( T1 ).Name}, {typeof( T2 ).Name} , {typeof( T3 ).Name} and {typeof( T4 ).Name}. {AllRoots.Count} roots of type: {AllRoots.Select( t => t.GetType().Name ).Concatenate()}." );
             }
             Root1 = (T1)AllRoots[0];
             Root2 = (T2)AllRoots[1];

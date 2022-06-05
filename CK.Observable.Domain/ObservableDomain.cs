@@ -59,7 +59,6 @@ namespace CK.Observable
         internal static ObservableDomain? CurrentThreadDomain;
 
         internal readonly IExporterResolver _exporters;
-        readonly IDeserializerResolver _deserializers;
         readonly TimeManager _timeManager;
         readonly SidekickManager _sidekickManager;
         readonly ObservableDomainPostActionExecutor _domainPostActionExecutor;
@@ -149,6 +148,7 @@ namespace CK.Observable
         // the potential fake transaction that is used when saving.
         readonly object _saveLock;
 
+        private protected DomainInitializingStatus _initializingStatus;
         bool _deserializeOrInitializing;
         bool _disposed;
 
@@ -393,12 +393,18 @@ namespace CK.Observable
                                  IServiceProvider? serviceProvider = null,
                                  bool? startTimer = null,
                                  IExporterResolver? exporters = null )
-            : this( monitor, domainName, false, client, false, serviceProvider, exporters )
+            : this( monitor, domainName, startTimer: false, client, callClientOnCreate: false, serviceProvider, exporters )
         {
             Throw.CheckNotNullArgument( stream );
             Throw.CheckData( stream.IsValid );
 
-            using( monitor.OpenInfo( $"Initializing new domain '{domainName}' from stream." ) )
+            // This has been initialized and checked by the central constructor.
+            Debug.Assert( _initializingStatus == DomainInitializingStatus.Deserializing );
+            Debug.Assert( GetType() == typeof( ObservableDomain )
+                         || new[] { typeof(ObservableDomain<> ), typeof( ObservableDomain<,> ), typeof( ObservableDomain<,,> ), typeof( ObservableDomain<,,,> ) }
+                                .Contains( GetType().GetGenericTypeDefinition() ) );
+
+            using( monitor.OpenInfo( $"Loading new {GetType()} '{domainName}' from stream." ) )
             {
                 try
                 {
@@ -427,6 +433,28 @@ namespace CK.Observable
             Throw.CheckNotNullArgument( monitor );
             // DomainName can be empty.
             Throw.CheckNotNullArgument( domainName );
+
+            // This class should be sealed for the external world. But since ObservableDomain<T>...<T1,T2,T3,T4>
+            // that are defined in this assembly needs to extend it, it cannot be sealed.
+            // This may be refactored once with a public BaseObservableDomain base class (with private protected constructor) and a
+            // public sealed ObservableDomain : BaseObservableDomain...
+            var runtimeType = GetType();
+            bool isNakedDomain = runtimeType == typeof( ObservableDomain );
+
+            static bool IsAllowedSpecializedType( Type runtimeType )
+            {
+                if( !runtimeType.IsGenericType ) return false;
+                var tGen = runtimeType.GetGenericTypeDefinition();
+                return tGen == typeof( ObservableDomain<> )
+                       || tGen == typeof( ObservableDomain<,> )
+                       || tGen == typeof( ObservableDomain<,,> )
+                       || tGen == typeof( ObservableDomain<,,,> );
+            }
+
+            if( !isNakedDomain && !IsAllowedSpecializedType( runtimeType ) )
+            {
+                Throw.InvalidOperationException( "ObservableDomain class must not be specialized." );
+            }
             DomainName = domainName;
             _exporters = exporters ?? ExporterRegistry.Default;
             DomainClient = client;
@@ -452,17 +480,32 @@ namespace CK.Observable
             // The serializer context caches the serialization driver.
             _serializerContext = new BinarySerializerContext( BinarySerializer.DefaultSharedContext );
             // The deserialization context exposes the services, including this domain, to the deserializer. 
-            _deserializerContext = new BinaryDeserializerContext( BinarySerialization.BinaryDeserializer.DefaultSharedContext, serviceProvider );
+            _deserializerContext = new BinaryDeserializerContext( BinaryDeserializer.DefaultSharedContext, serviceProvider );
             _deserializerContext.Services.Add( this );
 
             if( callClientOnCreate )
             {
+                // We are not called by the deserializer constructor: it looks like we are simply initializing a
+                // new domain. However, OnDomainCreated may call Load to restore the domain from a persistent store.
+                // In such case, Load will overwrite the _initializingStatus to be Deserializing.
+                _initializingStatus = DomainInitializingStatus.Instantiating;
                 client?.OnDomainCreated( monitor, this, ref startTimer );
                 // If the secret has not been restored, initializes a new one.
                 if( _domainSecret == null ) _domainSecret = CreateSecret();
+                if( startTimer ) _timeManager.DoStartOrStop( monitor, true );
+                // Let the specialized types conclude.
+                if( isNakedDomain )
+                {
+                    _initializingStatus = DomainInitializingStatus.None;
+                    monitor.Info( $"ObservableDomain '{domainName}' created." );
+                }
             }
-            if( startTimer ) _timeManager.DoStartOrStop( monitor, true );
-            monitor.Info( $"ObservableDomain '{domainName}' created." );
+            else
+            {
+                Debug.Assert( !startTimer, "When deserializing, startTimer is initially false." );
+                _initializingStatus = DomainInitializingStatus.Deserializing;
+                // And let the deserialization constructors conclude.
+            }
         }
 
         static byte[] CreateSecret()
@@ -474,8 +517,11 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Empty transaction object: must be used during initialization (for <see cref="AddRoot{T}(InitializationTransaction)"/>
+        /// Empty transaction object: must be used during initialization (for <see cref="CreateAndAddRoot{T}(InitializationTransaction)"/>
         /// to be called).
+        /// <para>
+        /// This ensures that a transaction exists and the thread static is set.
+        /// </para>
         /// </summary>
         private protected class InitializationTransaction : IObservableTransaction
         {
@@ -486,13 +532,10 @@ namespace CK.Observable
             readonly IActivityMonitor _monitor;
             readonly bool _enterWriteLock;
 
-            /// <summary>
-            /// Initializes a new <see cref="InitializationTransaction"/> required
-            /// to call <see cref="AddRoot{T}(InitializationTransaction)"/>.
-            /// </summary>
+            /// <inheritdoc cref="InitializationTransaction"/>
             /// <param name="m">The monitor to use while this transaction is the current one.</param>
             /// <param name="d">The observable domain.</param>
-            /// <param name="enterWriteLock">False to not enter and exit the write lock.</param>
+            /// <param name="enterWriteLock">False to not enter and exit the write lock because it is already held).</param>
             public InitializationTransaction( IActivityMonitor m, ObservableDomain d, bool enterWriteLock = true )
             {
                 m.OpenDebug( $"Opening new InitializationTransaction on '{d.DomainName}'." );
@@ -539,7 +582,7 @@ namespace CK.Observable
         /// before adding roots (root constructors must execute in the context of this fake transaction).
         /// </param>
         /// <returns>The instance.</returns>
-        private protected T AddRoot<T>( InitializationTransaction initializationContext ) where T : ObservableRootObject
+        private protected T CreateAndAddRoot<T>( InitializationTransaction initializationContext ) where T : ObservableRootObject
         {
             var o = Activator.CreateInstance<T>();
             _roots.Add( o );
@@ -1240,10 +1283,10 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Called after a <see cref="Load(IActivityMonitor, Stream, string, bool, Encoding?, int, bool?)"/>.
+        /// Called by a deserializer's post action.
         /// Does nothing at this level.
         /// </summary>
-        protected internal virtual void OnLoaded()
+        private protected virtual void BindRoots()
         {
         }
 

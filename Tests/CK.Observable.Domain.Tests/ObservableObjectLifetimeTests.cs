@@ -70,7 +70,7 @@ namespace CK.Observable.Domain.Tests
                 using( d.BeginTransaction( TestHelper.Monitor ) )
                 {
                     d.Invoking( sut => sut.ExportToString() )
-                     .Should().Throw<System.Threading.LockRecursionException>();
+                     .Should().Throw<LockRecursionException>();
                 }
             }
         }

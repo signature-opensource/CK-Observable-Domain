@@ -19,7 +19,7 @@ namespace CK.Observable
         internal ActionRegistrar<PostActionContext>? _postActions;
         internal ActionRegistrar<PostActionContext>? _domainPostActions;
 
-        string _domainName;
+        string? _domainName;
         TaskCompletionSource<ActionRegistrar<PostActionContext>?>? _forDomainPostActionsExecutor;
         TaskCompletionSource<Exception?>? _domainPostActionsErrorSource;
 
@@ -207,6 +207,7 @@ namespace CK.Observable
                 var ctx = new PostActionContext( m, l, this );
                 try
                 {
+                    Debug.Assert( _domainName != null, "TransactionResult on valid result constructor sets this." );
                     _postActionsError = await ctx.ExecuteAsync( throwException, name: $"domain '{_domainName}' (PostActions)" ).ConfigureAwait( false );
                     if( !parallelDomainPostActions )
                     {
