@@ -266,6 +266,9 @@ namespace CK.Observable
                             Monitor.Error( "Error in DomainClient.OnTransactionFailure.", ex );
                             _result.SetClientError( ex );
                         }
+                        // During a rollback, Load may have trigger events.
+                        // We forget here such events.
+                        _domain._changeTracker.Reset();
                     }
                 }
                 else

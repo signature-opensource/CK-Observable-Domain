@@ -85,6 +85,7 @@ namespace CK.Observable
                                  bool? startTimer = null )
             : base( monitor, domainName, client, s, serviceProvider, startTimer )
         {
+            Debug.Assert( _initializingStatus == DomainInitializingStatus.Deserializing );
             Debug.Assert( Root1 == AllRoots[0] && Root2 == AllRoots[1] && Root3 == AllRoots[2], "Binding has been done." );
             _initializingStatus = DomainInitializingStatus.None;
         }

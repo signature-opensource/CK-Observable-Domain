@@ -149,6 +149,7 @@ namespace CK.Observable
         {
             Debug.Assert( _lock.IsWriteLockHeld );
             _deserializeOrInitializing = true;
+            var prevInitializingStatus = _initializingStatus;
             try
             {
                 var r = BinaryDeserializer.Deserialize( s, _deserializerContext, d => DeserializeAndGetTimerState( monitor, expectedName, d ) );
@@ -160,7 +161,8 @@ namespace CK.Observable
                 Debug.Assert( _currentTran is Transaction || _currentTran is InitializationTransaction );
                 if( _currentTran is Transaction && _sidekickManager.HasWaitingSidekick )
                 {
-                    // The sidekicks will initialize themselves in a "normal" context. The changes will be collected
+                    // The sidekicks will initialize themselves in a "normal" context. Events will be available in the domain
+                    // but will not exported.
                     // and the ObservableEvents will be available.
                     _deserializeOrInitializing = false;
                     if( !_sidekickManager.CreateWaitingSidekicks( monitor, Util.ActionVoid, true ) )
@@ -179,14 +181,16 @@ namespace CK.Observable
             finally
             {
                 _deserializeOrInitializing = false;
+                _initializingStatus = prevInitializingStatus;
             }
         }
 
         bool DeserializeAndGetTimerState( IActivityMonitor monitor, string expectedName, IBinaryDeserializer d )
         {
+            bool firstPass = !d.StreamInfo.SecondPass;
             // We call unload on the current objects only on the first pass.
             // On the second pass (if it happens), we just forget all the result of the first pass.
-            UnloadDomain( monitor, !d.StreamInfo.SecondPass );
+            UnloadDomain( monitor, firstPass );
 
             // This is where specialized typed ObservableDomain bind their roots:
             // this must be called before any PostActions added by the objects.
@@ -199,6 +203,30 @@ namespace CK.Observable
             var loaded = d.Reader.ReadString();
             if( loaded != expectedName ) Throw.InvalidDataException( $"Domain name mismatch: loading domain named '{loaded}' but expected '{expectedName}'." );
 
+            if( firstPass )
+            {
+                Debug.Assert( _initializingStatus is DomainInitializingStatus.Instantiating or DomainInitializingStatus.Deserializing or DomainInitializingStatus.None );
+                // Either we come from the domain's deserialization constructor (Deserializing), or from a constructor with a client.OnDomainCreated that wants to
+                // load this domain (Instantiating) or none of this (None):
+                //  - This can be a direct call of the Load() methods.
+                //  - This can be a Load from a client that rollbacks the current transaction because it is on error.
+                // To keep things and the DomainInitializingStatus as simple as possible:
+                //  - Instantiating and None transition to Deserializing (because we ARE deserializing!).
+                //  - If we are deserializing the same number: it's a RollingBack.
+                //  - If we are deserializing an older version: it's a DangerousRollingback.
+                //  - If we are deserializing a newer version, no change, it's Deserializing.
+                //
+                // This works in all cases because the very first transaction number that can be saved is 1
+                // and _transactionSerialNumber is let to 0 by the constructors (Instantiating will always be Deserializing).
+                // And it makes perfect sense that RollingBack/DangerousRollingback/Deserializing also apply to the explicit call to
+                // Load on an existing domain.
+                //
+                var t = d.Reader.ReadInt32();
+                if( _transactionSerialNumber == t ) _initializingStatus = DomainInitializingStatus.Rollingback;
+                else if( _transactionSerialNumber > t ) _initializingStatus = DomainInitializingStatus.DangerousRollingback;
+                else _initializingStatus = DomainInitializingStatus.Deserializing;
+                _transactionSerialNumber = t;
+            }
             _transactionSerialNumber = d.Reader.ReadInt32();
             _transactionCommitTimeUtc = d.Reader.ReadDateTime();
             _actualObjectCount = d.Reader.ReadInt32();

@@ -29,7 +29,7 @@ namespace CK.Observable
         /// reflect of the domain before the failing transaction started.
         /// </para>
         /// </summary>
-        UnsafeRollingback,
+        DangerousRollingback,
 
         /// <summary>
         /// The domain is being reloaded from a persistent state.

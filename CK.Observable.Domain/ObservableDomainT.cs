@@ -47,11 +47,10 @@ namespace CK.Observable
                                  IServiceProvider? serviceProvider = null )
             : base( monitor, domainName, startTimer, client, serviceProvider )
         {
-            // Either the client.OnDomainCreated:
-            //  - has load the domain: we have nothing to do.
-            //  - has done nothing: we must create and add it.
+            // If we have been deserialized by the client.OnDomainCreated, we have nothing to do.
+            // Otherwise (no OnDomainCreated load) we must create and add our Root.
             //
-            // This pattern is the same for the other ObservableDomain<T1...> generics.
+            // This pattern is the same for the other ObservableDomain<T1, T2...> generics.
             //
             if( AllRoots.Count == 0 )
             {
@@ -85,6 +84,7 @@ namespace CK.Observable
                                  bool? startTimer = null )
             : base( monitor, domainName, client, stream, serviceProvider, startTimer )
         {
+            Debug.Assert( _initializingStatus == DomainInitializingStatus.Deserializing );
             Debug.Assert( Root == AllRoots[0], "Binding has been done." );
             _initializingStatus = DomainInitializingStatus.None;
         }
