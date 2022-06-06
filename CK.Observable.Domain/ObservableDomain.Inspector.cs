@@ -213,6 +213,7 @@ namespace CK.Observable
         /// <inheritdoc />
         public async Task<bool> GarbageCollectAsync( IActivityMonitor monitor, int millisecondsTimeout = -1 )
         {
+            Throw.CheckNotNullArgument( monitor );
             CheckDisposed();
             using( monitor.OpenInfo( $"Garbage collecting." ) )
             {

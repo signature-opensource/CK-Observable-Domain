@@ -38,6 +38,8 @@ namespace CK.Observable.Domain.Tests
 
                 using( var t = d.BeginTransaction( TestHelper.Monitor ) )
                 {
+                    Debug.Assert( t != null );
+
                     new Car( "Hello" );
                     var result = t.Commit();
 

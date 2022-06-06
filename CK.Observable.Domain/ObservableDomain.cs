@@ -3,14 +3,11 @@ using CK.Core;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
-using System.Net.NetworkInformation;
-using System.Net.WebSockets;
-using System.Text;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -150,7 +147,6 @@ namespace CK.Observable
 
         private protected CurrentTransactionStatus _transactionStatus;
         bool _deserializeOrInitializing;
-        bool _disposed;
 
         /// <summary>
         /// Exposes the non null objects in _objects as a collection.
@@ -213,7 +209,7 @@ namespace CK.Observable
             readonly DateTime _startTime;
             CKExceptionData[] _errors;
             TransactionResult? _result;
-            bool _fromModifyAsync;
+            readonly bool _fromModifyAsync;
 
             public Transaction( ObservableDomain d, IActivityMonitor monitor, DateTime startTime, IDisposableGroup g, bool fromModifyAsync )
             {
@@ -340,6 +336,8 @@ namespace CK.Observable
             {
                 if( _domain._currentTran == this )
                 {
+                    // Disposing the transaction without a Commit
+                    // is an error (that may trigger a rollback is an appropriate .
                     AddError( UncomittedTransaction );
                     Commit();
                 }
@@ -642,7 +640,7 @@ namespace CK.Observable
         /// <summary>
         /// Gets whether this domain has been disposed.
         /// </summary>
-        public bool IsDisposed => _disposed;
+        public bool IsDisposed => _transactionStatus == CurrentTransactionStatus.Disposing;
 
         // This is an internal only getter.
         internal CurrentTransactionStatus CurrentTransactionStatus => _transactionStatus;
@@ -791,7 +789,7 @@ namespace CK.Observable
         /// </remarks>
         public IObservableTransaction? BeginTransaction( IActivityMonitor monitor, int millisecondsTimeout = -1 )
         {
-            if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
+            Throw.CheckNotNullArgument( monitor );
             CheckDisposed();
             return DoBeginTransaction( monitor, millisecondsTimeout, fromModifyAsync: false );
         }
@@ -887,6 +885,10 @@ namespace CK.Observable
             {
                 if( _sidekickManager.HasWaitingSidekick )
                 {
+                    // Starting a transaction with waiting sidekicks means that we have just deserialized or initialized the domain.
+                    // If a rollback occurred (even a Dangerous one) the sidekicks instantiation have been already handled
+                    // by Load() method.
+                    // 
                     // If sidekick instantiation fails, this is a serious error: the transaction will fail on error.
                     _sidekickManager.CreateWaitingSidekicks( t.Monitor, ex => t.AddError( CKExceptionData.CreateFrom( ex ) ), false );
                 }
@@ -949,7 +951,7 @@ namespace CK.Observable
                     t.AddError( CKExceptionData.CreateFrom( ex ) );
                     if( exOnUnhandled != null )
                     {
-                        t.Monitor.Error( exOnUnhandled );
+                        t.Monitor.Error( "Unhandled exception while calling DomainClient.OnUnhandledError with the previous exception.", exOnUnhandled );
                         t.AddError( CKExceptionData.CreateFrom( exOnUnhandled ) );
                     }
                 }
@@ -1059,7 +1061,7 @@ namespace CK.Observable
         /// </returns>
         public Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> ModifyNoThrowAsync( IActivityMonitor monitor, Action actions, int millisecondsTimeout = -1, bool parallelDomainPostActions = true )
         {
-            if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
+            Throw.CheckNotNullArgument( monitor );
             CheckDisposed();
             return DoModifyNoThrowAsync( monitor, actions, millisecondsTimeout, false, parallelDomainPostActions );
         }
@@ -1312,7 +1314,7 @@ namespace CK.Observable
         {
             if( CurrentThreadDomain == null )
             {
-                throw new InvalidOperationException( "A transaction is required (Observable objects can be created only inside a transaction)." );
+                Throw.InvalidOperationException( "A transaction is required (Observable objects can be created only inside a transaction)." );
             }
             return CurrentThreadDomain;
         }
@@ -1450,9 +1452,15 @@ namespace CK.Observable
             return _domainMonitor;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void CheckDisposed()
         {
-            if( _disposed ) throw new ObservableDomainDisposedException( DomainName );
+            if( _transactionStatus == CurrentTransactionStatus.Disposing ) ThrowOnDisposedDomain();
+        }
+
+        void ThrowOnDisposedDomain()
+        {
+            throw new ObservableDomainDisposedException( DomainName );
         }
 
 
@@ -1464,11 +1472,11 @@ namespace CK.Observable
         /// </summary>
         public void Dispose()
         {
-            if( !_disposed )
+            if( _transactionStatus != CurrentTransactionStatus.Disposing )
             {
                 _timeManager.Timer.QuickStopBeforeDispose();
                 _lock.EnterWriteLock();
-                if( !_disposed )
+                if( _transactionStatus != CurrentTransactionStatus.Disposing )
                 {
                     using( var monitor = ObtainDomainMonitor() )
                     {
@@ -1489,11 +1497,11 @@ namespace CK.Observable
         public void Dispose( IActivityMonitor monitor )
         {
             Throw.CheckNotNullArgument( monitor );
-            if( !_disposed )
+            if( _transactionStatus != CurrentTransactionStatus.Disposing )
             {
                 _timeManager.Timer.QuickStopBeforeDispose();
                 _lock.EnterWriteLock();
-                if( !_disposed )
+                if( _transactionStatus != CurrentTransactionStatus.Disposing )
                 {
                     DoDispose( monitor );
                 }
@@ -1502,7 +1510,7 @@ namespace CK.Observable
 
         void DoDispose( IActivityMonitor monitor )
         {
-            Debug.Assert( !_disposed );
+            Debug.Assert( _transactionStatus != CurrentTransactionStatus.Disposing );
             Debug.Assert( _lock.IsWriteLockHeld );
             using( monitor.OpenInfo( $"Disposing domain '{DomainName}'." ) )
             {
@@ -1513,7 +1521,6 @@ namespace CK.Observable
                 }
                 DomainClient?.OnDomainDisposed( monitor, this );
                 DomainClient = null;
-                _disposed = true;
                 _transactionStatus = CurrentTransactionStatus.Disposing;
 
                 // We call OnUnload on all the Observable and Internal objects
@@ -1729,7 +1736,11 @@ namespace CK.Observable
         /// </summary>
         /// <param name="monitor">Monitor to use. Cannot be null.</param>
         /// <param name="domain">The domain to check. Must not be null.</param>
-        /// <param name="restoreSidekicks">True to restore sidekicks (sidekicks instantiation can have side effects).</param>
+        /// <param name="restoreSidekicks">
+        /// True to restore sidekicks. This is done outside of any transaction and should be avoided as much as possible:
+        /// Sidekicks instantiation can have side effects that make no sense if a transaction is not available as it is
+        /// always the case anywhere else but here.
+        /// </param>
         /// <param name="milliSecondsTimeout">Optional timeout to wait for read or write lock.</param>
         /// <param name="useDebugMode">False to not activate <see cref="BinarySerializer.IsDebugMode"/>.</param>
         /// <returns>The current <see cref="LostObjectTracker"/>.</returns>

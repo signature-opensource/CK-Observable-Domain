@@ -20,8 +20,8 @@ namespace CK.Observable
                           bool debugMode = false,
                           int millisecondsTimeout = -1 )
         {
-            if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
-            if( stream == null ) throw new ArgumentNullException( nameof( stream ) );
+            Throw.CheckNotNullArgument( monitor );
+            Throw.CheckNotNullArgument( stream );
             CheckDisposed();
 
             // Since we only need the read lock, whenever multiple threads Save() concurrently,

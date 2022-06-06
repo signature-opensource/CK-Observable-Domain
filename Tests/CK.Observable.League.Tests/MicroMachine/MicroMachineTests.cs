@@ -21,7 +21,8 @@ namespace CK.Observable.League.Tests.MicroMachine
             d.Modify( TestHelper.Monitor, () =>
             {
                 d.Root.Machine.Clock.IsActive = true;
-                // CumulateUnloadedTime changes the CumulativeOffset at reload: serialization cannot be idempotent.
+                // CumulateUnloadedTime changes the CumulativeOffset at reload: serialization cannot be idempotent
+                // so we disable it.
                 d.Root.Machine.Clock.CumulateUnloadedTime = false;
                 d.Root.Machine.IsRunning.Should().BeTrue();
                 d.Root.Machine.CreateThing( 1 );
@@ -31,6 +32,9 @@ namespace CK.Observable.League.Tests.MicroMachine
 
             // No Identification appears: => IdentificationTimeout.
             Thread.Sleep( 250 );
+            // We must set restoreSidekicks to true here because the MicroMachine sidekick registers
+            // itself to the Device's OnDestroyed event and a null when handler is saved (event registered
+            // to sidekick is skipped). If the second write has no sidekick, the null will be missing...
             ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d, restoreSidekicks: true );
             d.Modify( TestHelper.Monitor, () =>
             {
