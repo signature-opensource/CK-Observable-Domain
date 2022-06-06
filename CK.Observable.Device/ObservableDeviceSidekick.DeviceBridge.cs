@@ -142,18 +142,28 @@ namespace CK.Observable.Device
             /// Called whenever the <see cref="Device"/> became not null.
             /// The <see cref="Object"/> (and any other objects of the domain) can be safely modified
             /// since the domain's write lock is held.
+            /// <para>
+            /// Does nothing at this level.
+            /// </para>
             /// </summary>
             /// <param name="monitor">The monitor to use.</param>
-            protected abstract void OnDeviceAppeared( IActivityMonitor monitor );
+            protected virtual void OnDeviceAppeared( IActivityMonitor monitor )
+            {
+            }
 
             /// <summary>
             /// Called whenever the <see cref="Device"/> is no more available in the host: it is
             /// still not null here and events unregistering should be done.
             /// The observable <see cref="Object"/> (and any other objects of the domain) can
             /// be safely modified since the domain's write lock is held.
+            /// <para>
+            /// Does nothing at this level.
+            /// </para>
             /// </summary>
             /// <param name="monitor">The monitor to use.</param>
-            protected abstract void OnDeviceDisappearing( IActivityMonitor monitor );
+            protected virtual void OnDeviceDisappearing( IActivityMonitor monitor )
+            {
+            }
 
             /// <summary>
             /// Called whenever the <see cref="ObservableDeviceObject"/> is unloaded or destroyed.

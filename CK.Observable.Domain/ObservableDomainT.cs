@@ -60,7 +60,7 @@ namespace CK.Observable
                 }
             }
             Debug.Assert( Root == AllRoots[0], "Binding has been done." );
-            _initializingStatus = DomainInitializingStatus.None;
+            _transactionStatus = CurrentTransactionStatus.None;
             monitor.Info( $"ObservableDomain<{typeof(T)}> '{domainName}' created." );
         }
 
@@ -84,9 +84,9 @@ namespace CK.Observable
                                  bool? startTimer = null )
             : base( monitor, domainName, client, stream, serviceProvider, startTimer )
         {
-            Debug.Assert( _initializingStatus == DomainInitializingStatus.Deserializing );
+            Debug.Assert( _transactionStatus == CurrentTransactionStatus.Deserializing );
             Debug.Assert( Root == AllRoots[0], "Binding has been done." );
-            _initializingStatus = DomainInitializingStatus.None;
+            _transactionStatus = CurrentTransactionStatus.None;
         }
 
         /// <summary>

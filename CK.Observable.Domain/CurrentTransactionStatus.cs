@@ -3,7 +3,7 @@ namespace CK.Observable
     /// <summary>
     /// Synthetic description of the current state of a domain.
     /// </summary>
-    public enum DomainInitializingStatus
+    public enum CurrentTransactionStatus
     {
         /// <summary>
         /// The domain is executing a regular transaction.
@@ -16,7 +16,7 @@ namespace CK.Observable
         Instantiating,
 
         /// <summary>
-        /// An error occurred during the last transaction and the domain is being
+        /// An error occurred during the current transaction and the domain is being
         /// rolled back by deserializing its last snapshot. 
         /// </summary>
         Rollingback,
@@ -34,6 +34,11 @@ namespace CK.Observable
         /// <summary>
         /// The domain is being reloaded from a persistent state.
         /// </summary>
-        Deserializing
+        Deserializing,
+
+        /// <summary>
+        /// The domain is being disposed.
+        /// </summary>
+        Disposing
     }
 }

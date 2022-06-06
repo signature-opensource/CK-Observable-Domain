@@ -5,6 +5,12 @@ using System.Text;
 
 namespace CK.Observable.League.Tests.MicroMachine
 {
+
+    /// <summary>
+    /// Caution: This is a bare sidekick implementation for tests.
+    ///          Actual sidekicks for devices (ObservableDeviceSidekick)
+    ///          are more complex and have more functionalities.
+    /// </summary>
     public class MachineSideKick : ObservableDomainSidekick
     {
         readonly Dictionary<string, MicroBridge> _objects;
@@ -27,7 +33,7 @@ namespace CK.Observable.League.Tests.MicroMachine
             _objects = new Dictionary<string, MicroBridge>();
         }
 
-        protected override void OnDomainCleared( IActivityMonitor monitor )
+        protected override void OnUnload( IActivityMonitor monitor )
         {
         }
 

@@ -148,7 +148,7 @@ namespace CK.Observable
         // the potential fake transaction that is used when saving.
         readonly object _saveLock;
 
-        private protected DomainInitializingStatus _initializingStatus;
+        private protected CurrentTransactionStatus _transactionStatus;
         bool _deserializeOrInitializing;
         bool _disposed;
 
@@ -402,7 +402,7 @@ namespace CK.Observable
             Throw.CheckData( stream.IsValid );
 
             // This has been initialized and checked by the central constructor.
-            Debug.Assert( _initializingStatus == DomainInitializingStatus.Deserializing );
+            Debug.Assert( _transactionStatus == CurrentTransactionStatus.Deserializing );
             Debug.Assert( GetType() == typeof( ObservableDomain )
                          || new[] { typeof(ObservableDomain<> ), typeof( ObservableDomain<,> ), typeof( ObservableDomain<,,> ), typeof( ObservableDomain<,,,> ) }
                                 .Contains( GetType().GetGenericTypeDefinition() ) );
@@ -491,7 +491,7 @@ namespace CK.Observable
                 // We are not called by the deserializer constructor: it looks like we are simply initializing a
                 // new domain. However, OnDomainCreated may call Load to restore the domain from a persistent store.
                 // In such case, Load will overwrite the _initializingStatus to be Deserializing.
-                _initializingStatus = DomainInitializingStatus.Instantiating;
+                _transactionStatus = CurrentTransactionStatus.Instantiating;
                 client?.OnDomainCreated( monitor, this, ref startTimer );
                 // If the secret has not been restored, initializes a new one.
                 if( _domainSecret == null ) _domainSecret = CreateSecret();
@@ -499,14 +499,14 @@ namespace CK.Observable
                 // Let the specialized types conclude.
                 if( isNakedDomain )
                 {
-                    _initializingStatus = DomainInitializingStatus.None;
+                    _transactionStatus = CurrentTransactionStatus.None;
                     monitor.Info( $"ObservableDomain '{domainName}' created." );
                 }
             }
             else
             {
                 Debug.Assert( !startTimer, "When deserializing, startTimer is initially false." );
-                _initializingStatus = DomainInitializingStatus.Deserializing;
+                _transactionStatus = CurrentTransactionStatus.Deserializing;
                 // And let the deserialization constructors conclude.
             }
         }
@@ -618,12 +618,12 @@ namespace CK.Observable
 
         /// <summary>
         /// Gets the current transaction number.
-        /// Incremented each time a transaction successfully ended, default to 0 until the first transaction commit.
+        /// Incremented each time a transaction successfully ended, default to 0 until the first transaction is successfully committed.
         /// </summary>
         public int TransactionSerialNumber => _transactionSerialNumber;
 
         /// <summary>
-        /// Gets the last commit time. Defaults to <see cref="DateTime.UtcNow"/> at the very beginning,
+        /// Gets the current commit time. Defaults to <see cref="DateTime.UtcNow"/> at the very beginning,
         /// when no transaction has been committed yet (and <see cref="TransactionSerialNumber"/> is 0).
         /// </summary>
         public DateTime TransactionCommitTimeUtc => _transactionCommitTimeUtc;
@@ -643,6 +643,9 @@ namespace CK.Observable
         /// Gets whether this domain has been disposed.
         /// </summary>
         public bool IsDisposed => _disposed;
+
+        // This is an internal only getter.
+        internal CurrentTransactionStatus CurrentTransactionStatus => _transactionStatus;
 
         /// <summary>
         /// Gets whether one or more sidekick are waiting to be instantiated.
@@ -1511,6 +1514,7 @@ namespace CK.Observable
                 DomainClient?.OnDomainDisposed( monitor, this );
                 DomainClient = null;
                 _disposed = true;
+                _transactionStatus = CurrentTransactionStatus.Disposing;
 
                 // We call OnUnload on all the Observable and Internal objects
                 // so they can free any external resources.

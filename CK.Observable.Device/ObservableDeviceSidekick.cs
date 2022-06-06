@@ -204,7 +204,7 @@ namespace CK.Observable.Device
         /// This is sealed and calls the protected virtual <see cref="OnDispose(IActivityMonitor)"/> that
         /// can be overridden.
         /// </remarks>
-        protected sealed override void OnDomainCleared( IActivityMonitor monitor )
+        protected sealed override void OnUnload( IActivityMonitor monitor )
         {
             if( _deviceTracking )
             {

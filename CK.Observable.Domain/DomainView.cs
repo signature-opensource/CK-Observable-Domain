@@ -31,12 +31,23 @@ namespace CK.Observable
         /// </summary>
         public IActivityMonitor Monitor => _d.CurrentMonitor;
 
+
         /// <summary>
-        /// Gets the current transaction number: the very first one is 1.
-        /// Note that if this transaction fails, the <see cref="ObservableDomain.TransactionSerialNumber"/> will not
-        /// be set to this number.
+        /// Gets the current transaction status.
         /// </summary>
-        public int CurrentTransactionNumber => _d.TransactionSerialNumber + 1;
+        public CurrentTransactionStatus CurrentTransactionStatus => _d.CurrentTransactionStatus;
+
+        /// <summary>
+        /// Gets the current transaction number (the very first one is 0).
+        /// This will be incremented at the end of the current transaction if it succeeds.
+        /// </summary>
+        public int TransactionNumber => _d.TransactionSerialNumber;
+
+        /// <summary>
+        /// Gets the current commit time. Defaults to <see cref="DateTime.UtcNow"/> at the very beginning,
+        /// when no transaction has been committed yet (and <see cref="TransactionSerialNumber"/> is 0).
+        /// </summary>
+        public DateTime TransactionCommitTimeUtc => _d.TransactionCommitTimeUtc;
 
         /// <summary>
         /// Sends a <see cref="ObservableDomainCommand"/> to the external world. Commands are enlisted

@@ -119,6 +119,8 @@ namespace CK.Observable
         /// </summary>
         public bool HasWaitingSidekick => _hasWaitingSidekick;
 
+        internal bool IsEmpty => _sidekicks.Count == 0 && _alreadyHandled.Count == 0 && _toAutoregister.Count == 0;
+
         /// <summary>
         /// Instantiates sidekicks that have been discovered by <see cref="DiscoverSidekicks(IActivityMonitor, IDestroyable)"/>.
         /// This never throws, but when false is returned, it means that (at least) one required sidekick failed
@@ -259,7 +261,7 @@ namespace CK.Observable
                     var h = (ObservableDomainSidekick?)SimpleObjectActivator.Create( monitor, type, _serviceProvider, false, new object[] { monitor, _domain } );
                     if( h == null )
                     {
-                        throw new Exception( $"Unable to instantiate '{type}' type." );
+                        Throw.Exception( $"Unable to instantiate '{type}' type." );
                     }
                     _alreadyHandled.Add( type, h );
                     _sidekicks.Add( h );
@@ -445,27 +447,30 @@ namespace CK.Observable
         /// Clears the registered sidekicks information and disposes all existing sidekick instances.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
-        public void Clear( IActivityMonitor monitor )
+        public void OnUnload( IActivityMonitor monitor )
         {
             _alreadyHandled.Clear();
             _toInstantiate.Clear();
             _toAutoregister.Clear();
-            using( monitor.OpenInfo( $"Disposing {_sidekicks.Count} sidekicks." ) )
+            if( _sidekicks.Count > 0 )
             {
-                // Reverse the disposing... Doesn't cost a lot and, who knows,
-                // disposing first a sidekick that has been activated after another one
-                // may help...
-                int i = _sidekicks.Count;
-                while( i > 0 )
+                using( monitor.OpenInfo( $"Unloading {_sidekicks.Count} sidekicks." ) )
                 {
-                    var h = _sidekicks[--i];
-                    try
+                    // Reverse the disposing... Doesn't cost a lot and, who knows,
+                    // disposing first a sidekick that has been activated after another one
+                    // may help...
+                    int i = _sidekicks.Count;
+                    while( i > 0 )
                     {
-                        h.OnDomainCleared( monitor );
-                    }
-                    catch( Exception ex )
-                    {
-                        monitor.Error( $"While disposing '{h}'.", ex );
+                        var h = _sidekicks[--i];
+                        try
+                        {
+                            h.OnUnload( monitor );
+                        }
+                        catch( Exception ex )
+                        {
+                            monitor.Error( $"While unloading '{h}'.", ex );
+                        }
                     }
                 }
             }

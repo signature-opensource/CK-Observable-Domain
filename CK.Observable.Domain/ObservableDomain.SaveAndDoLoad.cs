@@ -149,7 +149,7 @@ namespace CK.Observable
         {
             Debug.Assert( _lock.IsWriteLockHeld );
             _deserializeOrInitializing = true;
-            var prevInitializingStatus = _initializingStatus;
+            var prevInitializingStatus = _transactionStatus;
             try
             {
                 var r = BinaryDeserializer.Deserialize( s, _deserializerContext, d => DeserializeAndGetTimerState( monitor, expectedName, d ) );
@@ -181,16 +181,13 @@ namespace CK.Observable
             finally
             {
                 _deserializeOrInitializing = false;
-                _initializingStatus = prevInitializingStatus;
+                _transactionStatus = prevInitializingStatus;
             }
         }
 
         bool DeserializeAndGetTimerState( IActivityMonitor monitor, string expectedName, IBinaryDeserializer d )
         {
             bool firstPass = !d.StreamInfo.SecondPass;
-            // We call unload on the current objects only on the first pass.
-            // On the second pass (if it happens), we just forget all the result of the first pass.
-            UnloadDomain( monitor, firstPass );
 
             // This is where specialized typed ObservableDomain bind their roots:
             // this must be called before any PostActions added by the objects.
@@ -198,14 +195,14 @@ namespace CK.Observable
 
             d.Reader.ReadByte(); // Local version.
             d.DebugReadMode();
-            _currentObjectUniquifier = d.Reader.ReadInt32();
-            _domainSecret = d.Reader.ReadBytes( DomainSecretKeyLength );
-            var loaded = d.Reader.ReadString();
-            if( loaded != expectedName ) Throw.InvalidDataException( $"Domain name mismatch: loading domain named '{loaded}' but expected '{expectedName}'." );
-
             if( firstPass )
             {
-                Debug.Assert( _initializingStatus is DomainInitializingStatus.Instantiating or DomainInitializingStatus.Deserializing or DomainInitializingStatus.None );
+                var currentObjectUniquifier = d.Reader.ReadInt32();
+                var domainSecret = d.Reader.ReadBytes( DomainSecretKeyLength );
+                var loaded = d.Reader.ReadString();
+                if( loaded != expectedName ) Throw.InvalidDataException( $"Domain name mismatch: loading domain named '{loaded}' but expected '{expectedName}'." );
+
+                Debug.Assert( _transactionStatus is CurrentTransactionStatus.Instantiating or CurrentTransactionStatus.Deserializing or CurrentTransactionStatus.None );
                 // Either we come from the domain's deserialization constructor (Deserializing), or from a constructor with a client.OnDomainCreated that wants to
                 // load this domain (Instantiating) or none of this (None):
                 //  - This can be a direct call of the Load() methods.
@@ -218,17 +215,41 @@ namespace CK.Observable
                 //
                 // This works in all cases because the very first transaction number that can be saved is 1
                 // and _transactionSerialNumber is let to 0 by the constructors (Instantiating will always be Deserializing).
-                // And it makes perfect sense that RollingBack/DangerousRollingback/Deserializing also apply to the explicit call to
-                // Load on an existing domain.
+                // And it makes perfect sense that RollingBack/DangerousRollingback/Deserializing also apply to the explicit
+                // call to Load() on an existing domain.
                 //
-                var t = d.Reader.ReadInt32();
-                if( _transactionSerialNumber == t ) _initializingStatus = DomainInitializingStatus.Rollingback;
-                else if( _transactionSerialNumber > t ) _initializingStatus = DomainInitializingStatus.DangerousRollingback;
-                else _initializingStatus = DomainInitializingStatus.Deserializing;
-                _transactionSerialNumber = t;
+                var tNumber = d.Reader.ReadInt32();
+                var tTime = d.Reader.ReadDateTime();
+                if( _transactionSerialNumber == tNumber ) _transactionStatus = CurrentTransactionStatus.Rollingback;
+                else if( _transactionSerialNumber > tNumber ) _transactionStatus = CurrentTransactionStatus.DangerousRollingback;
+                else _transactionStatus = CurrentTransactionStatus.Deserializing;
+
+                _transactionSerialNumber = tNumber;
+                _transactionCommitTimeUtc = tTime;
+                _domainSecret = domainSecret;
+
+                // We call unload on the current objects only on the first pass and
+                // the InitializingStatus is up to date.
+                UnloadDomain( monitor, true );
+
+                Debug.Assert( _transactionSerialNumber == tNumber
+                              && _transactionCommitTimeUtc == tTime
+                              && _domainSecret.AsSpan().SequenceEqual( domainSecret ), "OnUnload doesn't change these." );
+                _currentObjectUniquifier = currentObjectUniquifier;
             }
-            _transactionSerialNumber = d.Reader.ReadInt32();
-            _transactionCommitTimeUtc = d.Reader.ReadDateTime();
+            else
+            {
+                // On the second pass (if it happens), we just forget all the result of the first pass.
+                UnloadDomain( monitor, false );
+                _currentObjectUniquifier = d.Reader.ReadInt32();
+                // Skips domain secret, domain name, transaction number and transaction date: they have
+                // been initialized (or checked for the name) by first pass and are not modified by UnloadDomain.
+                d.Reader.ReadBytes( DomainSecretKeyLength );
+                d.Reader.ReadString();
+                d.Reader.ReadInt32();
+                d.Reader.ReadDateTime();
+            }
+
             _actualObjectCount = d.Reader.ReadInt32();
 
             d.DebugCheckSentinel();
@@ -300,6 +321,7 @@ namespace CK.Observable
         /// <summary>
         /// Unloads this domain by clearing all internal state: it is ready to be reloaded
         /// or to be forgotten.
+        /// The CurrentTransactionStatus is up to date when this method is called.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="callUnload">Whether <see cref="ObservableObject.Unload(bool)"/> and
@@ -307,19 +329,22 @@ namespace CK.Observable
         void UnloadDomain( IActivityMonitor monitor, bool callUnload )
         {
             Debug.Assert( _lock.IsWriteLockHeld );
+            Debug.Assert( callUnload || _sidekickManager.IsEmpty, "callUnload == false => sidekicks have already been unloaded." );
 
             using( monitor.OpenTrace( $"Unloading domain '{DomainName}'{(callUnload ? "" : " NOT")} calling OnUnlaod methods." ) )
             {
                 if( callUnload )
                 {
-                    // Call Unload( false ) on all objects.
+                    _sidekickManager.OnUnload( monitor );
+
+                    // Call Unload( gc: false ) on all objects.
                     for( int i = 0; i < _objectsListCount; ++i )
                     {
                         var o = _objects[i];
                         if( o != null )
                         {
                             Debug.Assert( !o.IsDestroyed );
-                            o.Unload( false );
+                            o.Unload( gc: false );
                         }
                     }
                 }
@@ -333,7 +358,6 @@ namespace CK.Observable
 
                 // Free sidekicks and IObservableDomainActionTracker.
                 _trackers.Clear();
-                _sidekickManager.Clear( monitor );
 
                 // Clears any internal objects.
                 if( callUnload )
@@ -341,7 +365,7 @@ namespace CK.Observable
                     var internalObj = _firstInternalObject;
                     while( internalObj != null )
                     {
-                        internalObj.Unload( false );
+                        internalObj.Unload( gc: false );
                         internalObj = internalObj.Next;
                     }
                 }

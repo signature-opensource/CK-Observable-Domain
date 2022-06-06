@@ -136,9 +136,12 @@ namespace CK.Observable
         /// <summary>
         /// Called when the <see cref="Domain"/> is being cleared, either because it will be reloaded or because it is definitely disposed.
         /// In both case, the domain lock is held.
+        /// <para>
+        /// The reason is available in <see cref="DomainView.CurrentTransactionStatus">Domain.CurrentTransactionStatus</see>.
+        /// </para>
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
-        protected internal abstract void OnDomainCleared( IActivityMonitor monitor );
+        protected internal abstract void OnUnload( IActivityMonitor monitor );
 
     }
 

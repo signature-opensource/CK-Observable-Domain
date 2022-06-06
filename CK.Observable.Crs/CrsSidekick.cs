@@ -35,7 +35,7 @@ namespace CK.Observable
             return false;
         }
 
-        protected override void OnDomainCleared( IActivityMonitor monitor )
+        protected override void OnUnload( IActivityMonitor monitor )
         {
         }
 
