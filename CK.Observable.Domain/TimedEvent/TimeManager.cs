@@ -17,24 +17,26 @@ namespace CK.Observable
     {
         // The min heap is stored in an array.
         // The ObservableTimedEventBase.ActiveIndex is the index in this heap: 0 index is not used.
+        ObservableTimedEventBase?[] _activeEvents;
         int _activeCount;
-        ObservableTimedEventBase[] _activeEvents;
         int _count;
         int _timerCount;
-        // Tracking is basic: any change are tracked with a simple hash set.
+        int _totalEventRaised;
+        // Tracking is basic: any change is tracked with a simple hash set.
         readonly HashSet<ObservableTimedEventBase> _changed;
         readonly TimedEventCollection _exposedTimedEvents;
         readonly TimerCollection _exposedTimers;
         readonly ReminderCollection _exposedReminders;
+        ObservableReminder? _firstFreeReminder;
+
         ObservableTimedEventBase? _first;
         ObservableTimedEventBase? _last;
         AutoTimer _autoTimer;
-        int _totalEventRaised;
 
         internal TimeManager( ObservableDomain domain )
         {
             Domain = domain;
-            _activeEvents = new ObservableTimedEventBase[16];
+            _activeEvents = new ObservableTimedEventBase?[16];
             _changed = new HashSet<ObservableTimedEventBase>();
             _autoTimer = new AutoTimer( Domain );
             _exposedTimedEvents = new TimedEventCollection( this );
@@ -184,12 +186,10 @@ namespace CK.Observable
             r.SuspendableClock = clock;
         }
 
-        ObservableReminder _firstFreeReminder;
-
         ObservableReminder GetPooledReminder()
         {
             var r = _firstFreeReminder;
-            if( _firstFreeReminder == null ) return new ObservableReminder();
+            if( r == null ) return new ObservableReminder();
             _firstFreeReminder = r.NextFreeReminder;
             return r;
         }
@@ -227,7 +227,11 @@ namespace CK.Observable
             Debug.Assert( t.Prev == null && t.Next == null );
 
             if( (t.Prev = _last) == null ) _first = t;
-            else _last.Next = t;
+            else
+            {
+                Debug.Assert( _last != null );
+                _last.Next = t;
+            }
             _last = t;
             if( addOnChange ) _changed.Add( t );
             ++_count;
@@ -243,9 +247,17 @@ namespace CK.Observable
         internal void OnDestroyed( ObservableTimedEventBase t )
         {
             if( _first == t ) _first = t.Next;
-            else t.Prev.Next = t.Next;
+            else
+            {
+                Debug.Assert( t.Prev != null );
+                t.Prev.Next = t.Next;
+            }
             if( _last == t ) _last = t.Prev;
-            else t.Next.Prev = t.Prev;
+            else
+            {
+                Debug.Assert( t.Next != null );
+                t.Next.Prev = t.Prev;
+            }
             _changed.Add( t );
             --_count;
             if( t is ObservableTimer ) --_timerCount;
@@ -356,7 +368,7 @@ namespace CK.Observable
                 if( start )
                 {
                     UpdateMinHeap();
-                    if( _activeCount > 0 ) next = _activeEvents[1].ExpectedDueTimeUtc;
+                    if( _activeCount > 0 ) next = _activeEvents[1]!.ExpectedDueTimeUtc;
                 }
                 IsRunning = start;
                 _autoTimer.SetNextDueTimeUtc( monitor, next );
@@ -371,8 +383,8 @@ namespace CK.Observable
             int i = 1;
             while( i <= _activeCount )
             {
-                Debug.Assert( _activeEvents[i].ActiveIndex == i );
-                Debug.Assert( _activeEvents[i].IsActive );
+                Debug.Assert( _activeEvents[i]!.ActiveIndex == i );
+                Debug.Assert( _activeEvents[i]!.IsActive );
                 ++i;
             }
             while( i < _activeEvents.Length )
@@ -407,8 +419,7 @@ namespace CK.Observable
         internal bool IsRaising { get; private set; }
 
         /// <summary>
-        /// Raises all timers' event for which <see cref="ObservableTimedEventBase.ExpectedDueTimeUtc"/> is below <paramref name="current"/>
-        /// and returns the number of timers that have fired. 
+        /// Raises all timers' event for which <see cref="ObservableTimedEventBase.ExpectedDueTimeUtc"/> is below <paramref name="current"/>.
         /// </summary>
         /// <param name="m">The monitor: should be the Domain.Monitor that has been obtained by the AutoTimer.</param>
         /// <param name="current">The current time.</param>
@@ -434,6 +445,7 @@ namespace CK.Observable
                     do
                     {
                         var first = _activeEvents[1];
+                        Debug.Assert( first != null );
                         if( first.ExpectedDueTimeUtc > current )
                         {
                             if( fromTimer && count == 0 )
@@ -520,7 +532,7 @@ namespace CK.Observable
         {
             // MoveDown will be called if timer is the current root.
             int parentIndex = timer.ActiveIndex >> 1;
-            if( parentIndex > 0 && IsBefore( timer, _activeEvents[parentIndex] ) )
+            if( parentIndex > 0 && IsBefore( timer, _activeEvents[parentIndex]! ) )
             {
                 MoveUp( timer );
             }
@@ -544,6 +556,7 @@ namespace CK.Observable
             }
             // Swap the event with the last one.
             var last = _activeEvents[_activeCount];
+            Debug.Assert( last != null );
             _activeEvents[ev.ActiveIndex] = last;
             last.ActiveIndex = ev.ActiveIndex;
             _activeEvents[_activeCount] = null;
@@ -560,6 +573,7 @@ namespace CK.Observable
             {
                 parent = timer.ActiveIndex >> 1;
                 var parentNode = _activeEvents[parent];
+                Debug.Assert( parentNode != null );
                 if( IsBefore( parentNode, timer ) )
                 {
                     return;
@@ -576,6 +590,7 @@ namespace CK.Observable
             {
                 parent >>= 1;
                 var parentNode = _activeEvents[parent];
+                Debug.Assert( parentNode != null );
                 if( IsBefore( parentNode, timer ) )
                 {
                     break;
@@ -602,6 +617,7 @@ namespace CK.Observable
             // Check if the left-child is before the current timer.
             int childRightIndex = childLeftIndex + 1;
             var childLeft = _activeEvents[childLeftIndex];
+            Debug.Assert( childLeft != null );
             if( IsBefore( childLeft, ev ) )
             {
                 // Check if there is a right child. If not, swap and finish.
@@ -615,6 +631,7 @@ namespace CK.Observable
                 }
                 // Check if the left-child is before the right-child.
                 var childRight = _activeEvents[childRightIndex];
+                Debug.Assert( childRight != null );
                 if( IsBefore( childLeft, childRight ) )
                 {
                     // Left is before: move it up and continue.
@@ -639,6 +656,7 @@ namespace CK.Observable
             {
                 // Check if the right-child is higher-priority than the current node
                 var childRight = _activeEvents[childRightIndex];
+                Debug.Assert( childRight != null );
                 if( IsBefore( childRight, ev ) )
                 {
                     childRight.ActiveIndex = finalActiveIndex;
@@ -667,6 +685,7 @@ namespace CK.Observable
                 // Check if the left-child is before than the current timer.
                 childRightIndex = childLeftIndex + 1;
                 childLeft = _activeEvents[childLeftIndex];
+                Debug.Assert( childLeft != null );
                 if( IsBefore( childLeft, ev ) )
                 {
                     // Check if there is a right child. If not, swap and finish.
@@ -680,6 +699,7 @@ namespace CK.Observable
                     }
                     // Check if the left-child is before than the right-child.
                     var childRight = _activeEvents[childRightIndex];
+                    Debug.Assert( childRight != null );
                     if( IsBefore( childLeft, childRight ) )
                     {
                         // Left is before: move it up and continue.
@@ -706,6 +726,7 @@ namespace CK.Observable
                 {
                     // Check if the right-child is before than the current timer.
                     var childRight = _activeEvents[childRightIndex];
+                    Debug.Assert( childRight != null );
                     if( IsBefore( childRight, ev ) )
                     {
                         childRight.ActiveIndex = finalActiveIndex;
