@@ -45,12 +45,13 @@ namespace CK.Observable.Domain.Tests
                 result = SampleDomain.TransactedSetPaulMincLastName( d, "Minc" );
                 result.Errors.Should().BeEmpty();
                 d.TransactionSerialNumber.Should().Be( 3 );
-                SampleDomain.CheckSampleGarage1( d );
+                SampleDomain.CheckSampleGarage( d );
 
                 result = SampleDomain.TransactedSetPaulMincLastName( d, "No-More-Minc", throwException: true );
                 result.Errors.Should().NotBeEmpty();
                 d.TransactionSerialNumber.Should().Be( 3 );
-                SampleDomain.CheckSampleGarage1( d );
+
+                SampleDomain.CheckSampleGarage( d );
             }
         }
 

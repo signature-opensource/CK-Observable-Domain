@@ -226,7 +226,7 @@ namespace CK.Observable
                 }
                 c.DumpLog( monitor, false );
                 int count = 0;
-                var (ex, result) = await ModifyNoThrowAsync( monitor, () =>
+                var result = await ModifyNoThrowAsync( monitor, () =>
                 {
                     Debug.Assert( c != null );
 
@@ -257,20 +257,15 @@ namespace CK.Observable
                             ++count;
                         }
                     }
-                    //// Pool reminders may have been added/removed to the pool by transactions
-                    //// before we enter this ModifyAsync.
-                    //// We should theoretically reanalyze the data but since we ask to
-                    //// remove only half of the unused (at most), we do it directly.
+                    // Pool reminders may have been added/removed to the pool by transactions
+                    // before we enter this ModifyAsync.
+                    // We should theoretically reanalyze the data but since we ask to
+                    // remove only half of the unused (at most), we do it directly.
                     if( c.ShouldTrimPooledReminders )
                     {
                         TimeManager.TrimPooledReminders( monitor, c.UnusedPooledReminderCount / 2 );
                     }
-                }, millisecondsTimeout );
-                if( ex != null )
-                {
-                    monitor.Error( ex );
-                    return false;
-                }
+                }, millisecondsTimeout: millisecondsTimeout );
                 monitor.CloseGroup( $"Removed {count} objects." );
                 return result.Success;
             }

@@ -12,7 +12,7 @@ namespace CK.Observable
         /// Default implementation that is available on <see cref="Timer"/> and can be specialized
         /// and replaced as needed... Well... If you really need it, that I strongly doubt.
         /// </summary>
-        public class AutoTimer : IDisposable
+        public sealed class AutoTimer : IDisposable
         {
             static readonly TimerCallback _timerCallback = new TimerCallback( OnTime );
             static readonly WaitCallback _waitCallback = new WaitCallback( OnTime );
@@ -48,7 +48,7 @@ namespace CK.Observable
                 public TrampolineWorkItem( AutoTimer t ) => Timer = t;
             }
 
-            static void OnTime( object state )
+            static void OnTime( object? state )
             {
                 Debug.Assert( state is AutoTimer || state is TrampolineWorkItem );
 
@@ -58,8 +58,8 @@ namespace CK.Observable
                 if( t._nextDueTime == Util.UtcMinValue || t._onTimeLostFlag < 0 ) return;
 
                 var domain = t.Domain;
-                var m = domain.ObtainDomainMonitor( 10, createAutonomousOnTimeout: false );
-                if( m != null )
+                var monitor = domain.ObtainDomainMonitor( 10, createAutonomousOnTimeout: false );
+                if( monitor != null )
                 {
                     // All this stuff is to do exactly what must be done. No more.
                     // This ensures that only ONE trampoline is active at a time and
@@ -68,17 +68,17 @@ namespace CK.Observable
                     {
                         if( Interlocked.CompareExchange( ref t._onTimeLostFlag, 0, 1 ) == 1 )
                         {
-                            m.OpenDebug( $"Executing OnTime while a trampoline is pending on Domain '{domain.DomainName}'." );
+                            monitor.OpenDebug( $"Executing OnTime while a trampoline is pending on Domain '{domain.DomainName}'." );
                         }
                         else
                         {
                             if( t._onTimeLostFlag < 0 )
                             {
-                                m.Debug( $"Skipped OnTime on disposed timer for '{domain.DomainName}'." );
-                                m.Dispose();
+                                monitor.Debug( $"Skipped OnTime on disposed timer for '{domain.DomainName}'." );
+                                monitor.Dispose();
                                 return;
                             }
-                            m.OpenDebug( $"Executing OnTime on Domain '{domain.DomainName}'." );
+                            monitor.OpenDebug( $"Executing OnTime on Domain '{domain.DomainName}'." );
                         }
                     }
                     else
@@ -87,36 +87,43 @@ namespace CK.Observable
                         {
                             if( t._onTimeLostFlag == 0 )
                             {
-                                m.Debug( $"Skipped useless OnTime trampoline on Domain '{domain.DomainName}'." );
+                                monitor.Debug( $"Skipped useless OnTime trampoline on Domain '{domain.DomainName}'." );
                             }
                             else
                             {
-                                m.Debug( $"Skipped useless OnTime trampoline on dispose Domain '{domain.DomainName}'." );
+                                monitor.Debug( $"Skipped useless OnTime trampoline on dispose Domain '{domain.DomainName}'." );
                             }
-                            m.Dispose();
+                            monitor.Dispose();
                             return;
                         }
-                        m.OpenDebug( $"Executing trampoline OnTime on Domain '{domain.DomainName}'." );
+                        monitor.OpenDebug( $"Executing trampoline OnTime on Domain '{domain.DomainName}'." );
                     }
                     int eventRaisedCount = domain.TimeManager._totalEventRaised;
-                    t.OnDueTimeAsync( m ).ContinueWith( r =>
-                    {
-                        // On success, unhandled exception or cancellation, we do nothing.
-                        // We only handle one case: if the write lock obtention failed we need the trampoline
-                        // to retry asap.
-                        if( r.IsFaulted ) m.Fatal( "Unhandled exception from AutoTimer.OnDueTimeAsync.", r.Exception );
-                        else
-                        {
-                            if( r.IsCanceled ) m.Warn( "Async operation canceled." );
-                            else if( r.Result.OnStartTransactionError == null && r.Result.Transaction == TransactionResult.Empty )
-                            {
-                                // Failed to obtain the write lock.
-                                trampolineRequired = true;
-                            }
-                        }
-                        m.Dispose();
-                        if( domain.TimeManager._totalEventRaised != eventRaisedCount ) t.RaiseWait();
-                    }, TaskContinuationOptions.ExecuteSynchronously );
+                    _ = domain.ModifyAsync( monitor,
+                                            null,
+                                            throwException: false,
+                                            millisecondsTimeout: 10,
+                                            considerRolledbackAsFailure: false,
+                                            parallelDomainPostActions: true,
+                                            waitForDomainPostActionsCompletion: false )
+                              .ContinueWith( r =>
+                              {
+                                  // On success, unhandled exception or cancellation, we do nothing.
+                                  // We only handle one case: if the write lock obtention failed we need the trampoline
+                                  // to retry asap.
+                                  if( r.IsFaulted ) monitor.Fatal( "Unhandled exception from domain.ModifyAsync.", r.Exception );
+                                  else
+                                  {
+                                      if( r.IsCanceled ) monitor.Warn( "Async operation canceled." );
+                                      else if( r.Result == TransactionResult.Empty )
+                                      {
+                                          // Failed to obtain the write lock.
+                                          trampolineRequired = true;
+                                      }
+                                  }
+                                  monitor.Dispose();
+                                  if( domain.TimeManager._totalEventRaised != eventRaisedCount ) t.RaiseWait();
+                              }, default, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default );
                 }
                 else trampolineRequired = true;
 
@@ -124,16 +131,16 @@ namespace CK.Observable
                 // active trampoline.
                 if( trampolineRequired && (ts != null || Interlocked.CompareExchange( ref t._onTimeLostFlag, 1, 0 ) == 0) )
                 {
-                    ThreadPool.QueueUserWorkItem( _waitCallback, t._fromWorkItem );
+                    ThreadPool.UnsafeQueueUserWorkItem( _waitCallback, t._fromWorkItem );
                 }
             }
 
             /// <summary>
-            /// Waits until the next call to <see cref="OnDueTimeAsync(IActivityMonitor)"/> from the internal timer finished.
+            /// Waits until the next call to the Domain.ModifyAsync from the internal timer finished.
             /// </summary>
             /// <param name="millisecondsTimeout">The number of milliseconds to wait before giving up.</param>
             /// <returns>
-            /// True if a call to <see cref="OnDueTimeAsync(IActivityMonitor)"/> from the internal timer finished before the timeout.
+            /// True if a call to Domain.ModifyAsync from the internal timer finished before the timeout.
             /// False otherwise.
             /// </returns>
             public bool WaitForNext( int millisecondsTimeout = Timeout.Infinite )
@@ -164,13 +171,6 @@ namespace CK.Observable
             public DateTime NextDueTime => _nextDueTime;
 
             /// <summary>
-            /// Calls an internal version of <see cref="ObservableDomain.ModifyNoThrowAsync"/> with the shared <see cref="ObservableDomain.ObtainDomainMonitor(int, bool)"/>, null actions
-            /// and 10 ms timeout: pending timed events are handled if any and if there is no current transaction: <see cref="TransactionResult.Empty"/> is
-            /// returned if the write lock failed to be obtained.
-            /// </summary>
-            protected virtual Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> OnDueTimeAsync( IActivityMonitor m ) => Domain.DoModifyNoThrowAsync( m, null, 10, true, true );
-
-            /// <summary>
             /// Must do whatever is needed to call back this <see cref="OnDueTimeAsync(IActivityMonitor)"/> at <paramref name="nextDueTimeUtc"/> (or
             /// right after but not before!).
             /// This is called while the domain's write lock is held.
@@ -179,9 +179,9 @@ namespace CK.Observable
             /// <param name="nextDueTimeUtc">
             /// The expected callback time. <see cref="Util.UtcMinValue"/> pauses the timer (just like when <see cref="IsActive"/> is false).
             /// </param>
-            public virtual void SetNextDueTimeUtc( IActivityMonitor monitor, DateTime nextDueTimeUtc )
+            public void SetNextDueTimeUtc( IActivityMonitor monitor, DateTime nextDueTimeUtc )
             {
-                // Fast path (nonetheless, normalizing max to min).
+                // Fast path (nonetheless normalizing max to min).
                 if( nextDueTimeUtc == Util.UtcMaxValue ) nextDueTimeUtc = Util.UtcMinValue;
                 if( nextDueTimeUtc == _nextDueTime ) return;
 
@@ -191,7 +191,7 @@ namespace CK.Observable
                     monitor.Warn( _onTimeLostFlag == -1 ? "Domain is being disposed." : "Domain has been disposed." );
                     nextDueTimeUtc = Util.UtcMinValue;
                 }
-                if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
+                Throw.CheckNotNullArgument( monitor );
                 _nextDueTime = nextDueTimeUtc;
                 if( nextDueTimeUtc == Util.UtcMinValue )
                 {

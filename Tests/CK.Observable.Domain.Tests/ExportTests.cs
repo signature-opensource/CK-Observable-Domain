@@ -16,7 +16,7 @@ namespace CK.Observable.Domain.Tests
     [TestFixture]
     public class ExportTests
     {
-        static JsonEventCollector.TransactionEvent LastEvent = null;
+        static JsonEventCollector.TransactionEvent? LastEvent = null;
         static void TrackLastEvent( IActivityMonitor m, JsonEventCollector.TransactionEvent e ) => LastEvent = e;
 
         [Test]

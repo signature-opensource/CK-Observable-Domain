@@ -168,28 +168,20 @@ namespace CK.Observable.Domain.Tests
         [Test]
         public void sample_graph_serialization_inside_read_or_write_locks()
         {
-            using( var domain = Sample.SampleDomain.CreateSample() )
+            using( var domain = SampleDomain.CreateSample() )
             {
                 using( var d2 = TestHelper.SaveAndLoad( domain, skipDomainDispose: true ) )
                 {
-                    Sample.SampleDomain.CheckSampleGarage1( d2 );
+                    SampleDomain.CheckSampleGarage( d2 );
                 }
 
                 using( domain.AcquireReadLock() )
                 {
                     using( var d = TestHelper.SaveAndLoad( domain, skipDomainDispose: true ) )
                     {
-                        Sample.SampleDomain.CheckSampleGarage1( d );
+                        SampleDomain.CheckSampleGarage( d );
                     }
                 }
-
-                domain.Modify( TestHelper.Monitor, () =>
-                {
-                    using( var d = TestHelper.SaveAndLoad( domain, skipDomainDispose: true ) )
-                    {
-                        Sample.SampleDomain.CheckSampleGarage1( d );
-                    }
-                } );
             }
         }
 
@@ -223,7 +215,7 @@ namespace CK.Observable.Domain.Tests
         public void persisting_disposed_objects_reference_tracking()
         {
             // Will be disposed by SaveAndLoad.
-            var d = new ObservableDomain( TestHelper.Monitor, nameof( loadHooks_can_skip_the_TimedEvents_update ), startTimer: true );
+            var d = new ObservableDomain( TestHelper.Monitor, nameof( Load_can_disable_TimeManager ), startTimer: true );
             d.Modify( TestHelper.Monitor, () =>
             {
                 var list = new ObservableList<object>();
@@ -270,37 +262,53 @@ namespace CK.Observable.Domain.Tests
             d2.CurrentLostObjectTracker.ReferencedDestroyed.Should().HaveCount( 4 );
         }
 
-
         [Test]
-        public void loadHooks_can_skip_the_TimedEvents_update()
+        public void Load_can_disable_TimeManager()
         {
             ElapsedFired = false;
 
-            using var d = new ObservableDomain( TestHelper.Monitor, nameof( loadHooks_can_skip_the_TimedEvents_update ), startTimer: true );
+            var d = new ObservableDomain( TestHelper.Monitor, nameof( Load_can_disable_TimeManager ), startTimer: true );
             d.Modify( TestHelper.Monitor, () =>
             {
                 var r = new ObservableReminder( DateTime.UtcNow.AddMilliseconds( 100 ) );
                 r.Elapsed += OnElapsedFire;
+                d.TimeManager.IsRunning.Should().BeTrue();
                 d.TimeManager.Reminders.Single().Should().BeSameAs( r );
                 r.IsActive.Should().BeTrue();
             } );
+
             using var d2 = TestHelper.SaveAndLoad( d, startTimer: false, pauseMilliseconds: 150 );
-            d.IsDisposed.Should().BeTrue();
+            d.IsDisposed.Should().BeTrue( "Initial domain has been disposed.");
 
             using( d2.AcquireReadLock() )
             {
+                d2.TimeManager.IsRunning.Should().BeFalse();
                 d2.TimeManager.Reminders.Single().IsActive.Should().BeTrue( "Not triggered by Load." );
             }
             Thread.Sleep( 100 );
             using( d2.AcquireReadLock() )
             {
-                d2.TimeManager.Reminders.Single().IsActive.Should().BeTrue( "Will be triggered at the start of the next Modify." );
+                d2.TimeManager.IsRunning.Should().BeFalse();
+                d2.TimeManager.Reminders.Single().IsActive.Should().BeTrue( "Waiting for TimeManager.Start()." );
+                ElapsedFired.Should().BeFalse();
             }
             d2.Modify( TestHelper.Monitor, () =>
             {
-                d2.TimeManager.Reminders.Single().IsActive.Should().BeFalse();
-                ElapsedFired.Should().BeTrue();
-            } );
+                d2.TimeManager.IsRunning.Should().BeFalse();
+                d2.TimeManager.Reminders.Single().IsActive.Should().BeTrue();
+            } ).Success.Should().BeTrue();
+
+            ElapsedFired.Should().BeFalse( "Still waiting." );
+
+            d2.Modify( TestHelper.Monitor, () =>
+            {
+                d2.TimeManager.Start();
+                d2.TimeManager.IsRunning.Should().BeTrue();
+                d2.TimeManager.Reminders.Single().IsActive.Should().BeTrue( "Will be raised at the end of the transaction." );
+            } ).Success.Should().BeTrue();
+
+            ElapsedFired.Should().BeTrue( "TimeManager.IsRunning: reminder has fired." );
+
         }
 
         static bool ElapsedFired = false;

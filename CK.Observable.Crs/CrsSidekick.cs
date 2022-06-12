@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using CK.Core;
 using CK.Crs;
 using CK.Crs.CommandDiscoverer.Attributes;
@@ -16,8 +16,13 @@ namespace CK.Observable
     {
         readonly ICommandDispatcher _commandDispatcher;
 
-        public CrsSidekick( ObservableDomain domain, ICommandDispatcher commandDispatcher )
-            : base( domain )
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="manager">The domain's sidekick manager.</param>
+        /// <param name="commandDispatcher"></param>
+        public CrsSidekick( IObservableDomainSidekickManager manager, ICommandDispatcher commandDispatcher )
+            : base( manager )
         {
             _commandDispatcher = commandDispatcher;
         }

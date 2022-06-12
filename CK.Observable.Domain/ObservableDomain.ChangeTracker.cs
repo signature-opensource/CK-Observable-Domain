@@ -1,4 +1,4 @@
-﻿using CK.Core;
+using CK.Core;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -50,8 +50,10 @@ namespace CK.Observable
             public SuccessfulTransactionEventArgs Commit( ObservableDomain domain,
                                                           Func<string, ObservablePropertyChangedEventArgs> ensurePropertInfo,
                                                           DateTime startTime,
-                                                          int tranNum )
+                                                          int tranNum,
+                                                          RolledbackTransactionInfo? rollbacked )
             {
+                Debug.Assert( rollbacked == null || !rollbacked.Failure.Success );
                 _changeEvents.RemoveAll( e => e is ICollectionEvent c && c.Object.IsDestroyed );
                 foreach( var p in _propChanged.Values )
                 {
@@ -76,7 +78,13 @@ namespace CK.Observable
                         _changeEvents.Add( new PropertyChangedEvent( kv.Key, pInfo.PropertyId, pInfo.PropertyName, propValue ) );
                     }
                 }
-                var result = new SuccessfulTransactionEventArgs( domain, domain.FindPropertyId, _changeEvents.ToArray(), _commands, startTime, tranNum );
+                var result = new SuccessfulTransactionEventArgs( domain,
+                                                                 domain.FindPropertyId,
+                                                                 _changeEvents.ToArray(),
+                                                                 _commands,
+                                                                 startTime,
+                                                                 tranNum,
+                                                                 rollbacked );
                 Reset();
                 return result;
             }

@@ -146,7 +146,6 @@ namespace CK.Observable
         readonly object _saveLock;
 
         private protected CurrentTransactionStatus _transactionStatus;
-        bool _deserializeOrInitializing;
 
         /// <summary>
         /// Exposes the non null objects in _objects as a collection.
@@ -196,152 +195,6 @@ namespace CK.Observable
                                                                                .GetEnumerator();
 
             IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-        }
-
-        /// <summary>
-        /// Implements <see cref="IObservableTransaction"/>.
-        /// </summary>
-        class Transaction : IObservableTransaction
-        {
-            readonly ObservableDomain? _previous;
-            readonly ObservableDomain _domain;
-            readonly IDisposableGroup _monitorGroup;
-            readonly DateTime _startTime;
-            CKExceptionData[] _errors;
-            TransactionResult? _result;
-            readonly bool _fromModifyAsync;
-
-            public Transaction( ObservableDomain d, IActivityMonitor monitor, DateTime startTime, IDisposableGroup g, bool fromModifyAsync )
-            {
-                _domain = d;
-                Monitor = monitor;
-                _previous = CurrentThreadDomain;
-                CurrentThreadDomain = d;
-                _startTime = startTime;
-                _monitorGroup = g;
-                _errors = Array.Empty<CKExceptionData>();
-                _fromModifyAsync = fromModifyAsync;
-            }
-
-            public DateTime StartTime => _startTime;
-
-            public IActivityMonitor Monitor { get; }
-
-            public IReadOnlyList<CKExceptionData> Errors => _errors;
-
-            public void AddError( CKExceptionData d )
-            {
-                Debug.Assert( d != null );
-                Array.Resize( ref _errors, _errors.Length + 1 );
-                _errors[_errors.Length - 1] = d;
-            }
-
-            public TransactionResult Commit()
-            {
-                // If result has already been initialized, we exit immediately.
-                if( _result != null ) return _result;
-
-                Debug.Assert( _domain._currentTran == this );
-                Debug.Assert( _domain._lock.IsWriteLockHeld );
-
-                SuccessfulTransactionEventArgs? ctx = null;
-                if( _errors.Length != 0 )
-                {
-                    using( Monitor.OpenWarn( "Committing a Transaction on error. Calling DomainClient.OnTransactionFailure." ) )
-                    {
-                        // On errors, resets the change tracker, sends the errors to the Clients
-                        // and creates an error TransactionResult. 
-                        _result = new TransactionResult( _errors, _startTime );
-                        _domain._changeTracker.Reset();
-                        try
-                        {
-                            _domain.DomainClient?.OnTransactionFailure( Monitor, _domain, _errors );
-                        }
-                        catch( Exception ex )
-                        {
-                            Monitor.Error( "Error in DomainClient.OnTransactionFailure.", ex );
-                            _result.SetClientError( ex );
-                        }
-                        // During a rollback, Load may have trigger events.
-                        // We forget here such events.
-                        _domain._changeTracker.Reset();
-                    }
-                }
-                else
-                {
-                    using( Monitor.OpenDebug( "Transaction has no error. Calling DomainClient.OnTransactionCommit." ) )
-                    {
-                        ctx = _domain._changeTracker.Commit( _domain, _domain.EnsurePropertyInfo, _startTime, ++_domain._transactionSerialNumber );
-                        _domain._transactionCommitTimeUtc = ctx.CommitTimeUtc;
-                        _result = new TransactionResult( ctx );
-                        try
-                        {
-                            _domain.DomainClient?.OnTransactionCommit( ctx );
-                        }
-                        catch( Exception ex )
-                        {
-                            Monitor.Fatal( "Error in IObservableDomainClient.OnTransactionCommit. This is a Critical error since the Domain state integrity may be compromised.", ex );
-                            _result.SetClientError( ex );
-                            ctx = null;
-                        }
-                    }
-                }
-
-                CurrentThreadDomain = _previous;
-                _monitorGroup.Dispose();
-                _domain._currentTran = null;
-
-                using( Monitor.OpenDebug( "Leaving WriteLock. Raising SuccessfulTransaction event." ) )
-                {
-                    _domain._lock.ExitWriteLock();
-                    // Back to Readable lock: publishes SuccessfulTransaction.
-                    if( _result.Success )
-                    {
-                        Debug.Assert( ctx != null );
-
-                        var errors = _domain.RaiseOnSuccessfulTransaction( ctx );
-                        if( errors != null ) _result.SetSuccessfulTransactionErrors( errors );
-                    }
-                }
-                // Before leaving the read lock (nobody can start a new transaction), let's enqueue
-                // the transaction result.
-                // This is why we must know here if we are called by ModifyAsync (handling is guaranteed) or by
-                // a direct Modify in which case, the domain post actions are lost.
-                // Since no post actions will be executed if an error occurs, we skip this.
-                if( _result.Success && _fromModifyAsync )
-                {
-                    _result.Initialize( true );
-                    _domain._domainPostActionExecutor.Enqueue( _result );
-                }
-                else
-                {
-                    _result.Initialize( false );
-                }
-                _domain._lock.ExitUpgradeableReadLock();
-                // Outside of the lock: on success, sidekicks execute the Command objects.
-                if( _result.Success )
-                {
-                    using( Monitor.OpenDebug( "Leaving UpgradeableReadLock and no error so far: submitting Commands to sidekicks." ) )
-                    {
-                        Debug.Assert( _result._postActions != null && _result._domainPostActions != null );
-                        var errors = _domain._sidekickManager.ExecuteCommands( Monitor, _result, _result._postActions, _result._domainPostActions );
-                        if( errors != null ) _result.SetCommandHandlingErrors( errors );
-                    }
-                }
-                Monitor.Debug( $"Committed: {_result}" );
-                return _result;
-            }
-
-            public void Dispose()
-            {
-                if( _domain._currentTran == this )
-                {
-                    // Disposing the transaction without a Commit
-                    // is an error (that may trigger a rollback is an appropriate .
-                    AddError( UncomittedTransaction );
-                    Commit();
-                }
-            }
         }
 
         /// <summary>
@@ -407,19 +260,12 @@ namespace CK.Observable
 
             using( monitor.OpenInfo( $"Loading new {GetType()} '{domainName}' from stream." ) )
             {
-                try
+                // DoLoad will create an InitializationTransaction.
+                DoLoad( monitor, stream, domainName, startTimer, mustStartTimer =>
                 {
-                    _currentTran = new InitializationTransaction( monitor, this );
-                    DoLoad( monitor, stream, domainName, startTimer, mustStartTimer =>
-                    {
-                        client?.OnDomainCreated( monitor, this, ref mustStartTimer );
-                        return mustStartTimer;
-                    } );
-                }
-                finally
-                {
-                    _currentTran?.Dispose();
-                }
+                    client?.OnDomainCreated( monitor, this, ref mustStartTimer );
+                    return mustStartTimer;
+                } );
             }
         }
 
@@ -488,7 +334,7 @@ namespace CK.Observable
             {
                 // We are not called by the deserializer constructor: it looks like we are simply initializing a
                 // new domain. However, OnDomainCreated may call Load to restore the domain from a persistent store.
-                // In such case, Load will overwrite the _initializingStatus to be Deserializing.
+                // In such case, Load will temporarily overwrite the _transactionStatus to be Deserializing, RollingBack or DangerousRollingBack.
                 _transactionStatus = CurrentTransactionStatus.Instantiating;
                 client?.OnDomainCreated( monitor, this, ref startTimer );
                 // If the secret has not been restored, initializes a new one.
@@ -497,7 +343,7 @@ namespace CK.Observable
                 // Let the specialized types conclude.
                 if( isNakedDomain )
                 {
-                    _transactionStatus = CurrentTransactionStatus.None;
+                    _transactionStatus = CurrentTransactionStatus.Regular;
                     monitor.Info( $"ObservableDomain '{domainName}' created." );
                 }
             }
@@ -524,7 +370,7 @@ namespace CK.Observable
         /// This ensures that a transaction exists and the thread static is set.
         /// </para>
         /// </summary>
-        private protected class InitializationTransaction : IObservableTransaction
+        private protected sealed class InitializationTransaction : IObservableTransaction
         {
             readonly ObservableDomain _d;
             readonly ObservableDomain? _previousThreadDomain;
@@ -548,13 +394,12 @@ namespace CK.Observable
                 d._currentTran = this;
                 _previousThreadDomain = CurrentThreadDomain;
                 CurrentThreadDomain = d;
-                d._deserializeOrInitializing = true;
             }
             IActivityMonitor IObservableTransaction.Monitor => _monitor;
 
             DateTime IObservableTransaction.StartTime => _startTime;
 
-            void IObservableTransaction.AddError( CKExceptionData d ) { }
+            void IObservableTransaction.AddError( Exception ex ) { }
 
             TransactionResult IObservableTransaction.Commit() => TransactionResult.Empty;
 
@@ -566,7 +411,6 @@ namespace CK.Observable
             public void Dispose()
             {
                 _monitor.CloseGroup();
-                _d._deserializeOrInitializing = false;
                 CurrentThreadDomain = _previousThreadDomain;
                 _d._currentTran = _previousTran;
                 if( _enterWriteLock ) _d._lock.ExitWriteLock();
@@ -585,6 +429,7 @@ namespace CK.Observable
         /// <returns>The instance.</returns>
         private protected T CreateAndAddRoot<T>( InitializationTransaction initializationContext ) where T : ObservableRootObject
         {
+            Debug.Assert( _currentTran == initializationContext );
             var o = Activator.CreateInstance<T>();
             _roots.Add( o );
             return o;
@@ -741,7 +586,7 @@ namespace CK.Observable
         /// <para>
         /// Acquires a single-threaded read lock on this <see cref="ObservableDomain"/>:
         /// until the returned disposable is disposed, objects can safely be read, and any attempt
-        /// to call <see cref="BeginTransaction"/> from other threads will be blocked.
+        /// to call one of the ModifyAsync methods from other threads will be blocked.
         /// This immediately returns null if this domain is disposed.
         /// </para>
         /// <para>
@@ -749,7 +594,7 @@ namespace CK.Observable
         /// will throw a <see cref="SynchronizationLockException"/>.
         /// </para>
         /// <para>
-        /// Any attempt to call <see cref="BeginTransaction"/> from this thread will throw a <see cref="LockRecursionException"/>.
+        /// Any attempt to call one of the ModifyAsync methods from this thread will throw a <see cref="LockRecursionException"/>.
         /// </para>
         /// </summary>
         /// <param name="millisecondsTimeout">
@@ -757,7 +602,7 @@ namespace CK.Observable
         /// Wait indefinitely by default.
         /// </param>
         /// <exception cref="LockRecursionException">
-        /// When <see cref="BeginTransaction"/> is being called from the same thread inside the read lock.
+        /// When one of the ModifyAsync methods is being called from the same thread inside the read lock.
         /// </exception>
         /// <exception cref="SynchronizationLockException">
         /// When the current thread has not entered the lock in read mode.
@@ -771,335 +616,16 @@ namespace CK.Observable
             return Util.CreateDisposableAction( () => _lock.ExitReadLock() );
         }
 
-        /// <summary>
-        /// Starts a new transaction that must be <see cref="IObservableTransaction.Commit"/>, otherwise
-        /// all changes are canceled.
-        /// This must not be called twice (without disposing or committing the existing one) otherwise
-        /// an <see cref="InvalidOperationException"/> is thrown.
-        /// Any exceptions raised by <see cref="IObservableDomainClient.OnTransactionStart(IActivityMonitor, ObservableDomain, DateTime)"/> are thrown
-        /// by this method.
-        /// </summary>
-        /// <param name="monitor">Monitor to use. Cannot be null.</param>
-        /// <param name="millisecondsTimeout">
-        /// The maximum number of milliseconds to wait for a write access before giving up.
-        /// Wait indefinitely by default.
-        /// </param>
-        /// <returns>The transaction object or null if the lock has not been taken.</returns>
-        /// <remarks>
-        /// </remarks>
         public IObservableTransaction? BeginTransaction( IActivityMonitor monitor, int millisecondsTimeout = -1 )
         {
-            Throw.CheckNotNullArgument( monitor );
-            CheckDisposed();
-            return DoBeginTransaction( monitor, millisecondsTimeout, fromModifyAsync: false );
+            throw new NotSupportedException();
         }
 
-        IObservableTransaction? DoBeginTransaction( IActivityMonitor monitor, int millisecondsTimeout, bool fromModifyAsync )
-        {
-            if( !TryEnterUpgradeableReadAndWriteLockAtOnce( millisecondsTimeout ) )
-            {
-                monitor.Warn( $"Write lock not obtained in less than {millisecondsTimeout} ms." );
-                return null;
-            }
-            return DoCreateObservableTransaction( monitor, throwException: true, fromModifyAsync ).Item1;
-        }
-
-
-        /// <summary>
-        /// Returns the created IObservableTransaction XOR an IObservableDomainClient.OnTransactionStart exception.
-        /// Write lock must be held before the call and kept until (but released on error).
-        /// </summary>
-        /// <param name="m">The monitor to use.</param>
-        /// <param name="throwException">Whether to throw or return the potential IObservableDomainClient.OnTransactionStart exception.</param>
-        /// <returns>The transaction XOR the IObservableDomainClient.OnTransactionStart exception.</returns>
-        (IObservableTransaction?, Exception?) DoCreateObservableTransaction( IActivityMonitor m, bool throwException, bool fromModifyAsync )
-        {
-            Debug.Assert( m != null && _lock.IsWriteLockHeld );
-            var group = m.OpenTrace( "Starting transaction." );
-            var startTime = DateTime.UtcNow;
-            try
-            {
-                // This could throw and be handled just like other pre-transaction errors (when a buggy client throws during OnTransactionStart).
-                // Depending on throwException parameter, it will be re-thrown or returned (returning the exception is for MofifyNoThrow).
-                // See DoDispose method for the discussion about disposal...
-                CheckDisposed();
-                DomainClient?.OnTransactionStart( m, this, startTime );
-            }
-            catch( Exception ex )
-            {
-                m.Error( "While calling IObservableDomainClient.OnTransactionStart().", ex );
-                group.Dispose();
-                _lock.ExitWriteLock();
-                if( throwException ) throw;
-                return (null, ex);
-            }
-            // No OnTransactionStart error.
-            return (_currentTran = new Transaction( this, m, startTime, group, fromModifyAsync ), null);
-        }
-
-        /// <summary>
-        /// Enables modifications to be done inside a transaction and a try/catch block.
-        /// Any exceptions raised by <see cref="IObservableDomainClient.OnTransactionStart(IActivityMonitor,ObservableDomain, DateTime)"/> are thrown
-        /// by this method, but any other exceptions are caught, logged, and appears in <see cref="TransactionResult"/>.
-        /// <para>
-        /// Please note that, being synchronous, this method doesn't execute the post actions or domain post actions.
-        /// If there are post action or domain post actions, they won't be executed.
-        /// </para>
-        /// </summary>
-        /// <param name="monitor">Monitor to use. Cannot be null.</param>
-        /// <param name="actions">
-        /// The actions to execute inside the ObservableDomain's current transaction.
-        /// Can be null: only pending timed events are executed if any.
-        /// </param>
-        /// <param name="millisecondsTimeout">
-        /// The maximum number of milliseconds to wait for a read access before giving up.
-        /// Wait indefinitely by default.
-        /// </param>
-        /// <returns>The transaction result. <see cref="TransactionResult.Empty"/> when the lock has not been taken.</returns>
         public TransactionResult Modify( IActivityMonitor monitor, Action? actions, int millisecondsTimeout = -1 )
         {
-            return DoModify( monitor, actions, millisecondsTimeout, fromModifyAsync: false );
+            throw new NotSupportedException();
         }
 
-        TransactionResult DoModify( IActivityMonitor monitor, Action? actions, int millisecondsTimeout, bool fromModifyAsync )
-        {
-            using( var t = DoBeginTransaction( monitor, millisecondsTimeout, fromModifyAsync ) )
-            {
-                if( t == null ) return TransactionResult.Empty;
-                return DoModifyAndCommit( actions, t, fromTimer: false );
-            }
-        }
-
-        /// <summary>
-        /// Modify the domain once a transaction has been opened and calls the <see cref="IObservableDomainClient"/>
-        /// that have been registered: all this occurs in the lock and it is released at the end.
-        /// This never throws since the transaction result contains the errors.
-        /// </summary>
-        /// <param name="actions">The actions to execute. Can be null.</param>
-        /// <param name="t">The observable transaction. Cannot be null.</param>
-        /// <returns>The transaction result. Will never be null.</returns>
-        TransactionResult DoModifyAndCommit( Action? actions, IObservableTransaction t, bool fromTimer )
-        {
-            Debug.Assert( t != null );
-            try
-            {
-                if( _sidekickManager.HasWaitingSidekick )
-                {
-                    // Starting a transaction with waiting sidekicks means that we have just deserialized or initialized the domain.
-                    // If a rollback occurred (even a Dangerous one) the sidekicks instantiation have been already handled
-                    // by Load() method.
-                    // 
-                    // If sidekick instantiation fails, this is a serious error: the transaction will fail on error.
-                    _sidekickManager.CreateWaitingSidekicks( t.Monitor, ex => t.AddError( CKExceptionData.CreateFrom( ex ) ), false );
-                }
-                if( _timeManager.IsRunning )
-                {
-                    _timeManager.RaiseElapsedEvent( t.Monitor, t.StartTime, fromTimer );
-                }
-                bool skipped = false;
-                foreach( var tracker in _trackers )
-                {
-                    if( !tracker.BeforeModify( t.Monitor, t.StartTime ) )
-                    {
-                        skipped = true;
-                        break;
-                    }
-                }
-                bool updatedMinHeapDone = false;
-                if( !skipped && actions != null )
-                {
-                    actions();
-                    // Always call the "final call".
-                    if( _sidekickManager.CreateWaitingSidekicks( t.Monitor, ex => t.AddError( CKExceptionData.CreateFrom( ex ) ), true ) )
-                    {
-                        var now = DateTime.UtcNow;
-                        foreach( var tracker in _trackers ) tracker.AfterModify( t.Monitor, t.StartTime, now - t.StartTime );
-                        if( _timeManager.IsRunning )
-                        {
-                            updatedMinHeapDone = true;
-                            _timeManager.RaiseElapsedEvent( t.Monitor, now, fromTimer );
-                        }
-                    }
-                }
-                if( !updatedMinHeapDone )
-                {
-                    // If the time manager is not running, we must
-                    // handle the changed timed events so that the
-                    // active timed event min heap is up to date.
-                    _timeManager.UpdateMinHeap();
-                }
-            }
-            catch( Exception ex )
-            {
-                bool swallowError = false;
-                Exception? exOnUnhandled = null;
-                if( DomainClient != null )
-                {
-                    try
-                    {
-                        DomainClient?.OnUnhandledError( t.Monitor, this, ex, ref swallowError );
-                    }
-                    catch( Exception ex2 )
-                    {
-                        swallowError = false;
-                        exOnUnhandled = ex2;
-                    }
-                }
-                if( !swallowError )
-                {
-                    t.Monitor.Error( ex );
-                    t.AddError( CKExceptionData.CreateFrom( ex ) );
-                    if( exOnUnhandled != null )
-                    {
-                        t.Monitor.Error( "Unhandled exception while calling DomainClient.OnUnhandledError with the previous exception.", exOnUnhandled );
-                        t.AddError( CKExceptionData.CreateFrom( exOnUnhandled ) );
-                    }
-                }
-            }
-            return t.Commit();
-        }
-
-        /// <summary>
-        /// Modifies this ObservableDomain, and on success executes the <see cref="SuccessfulTransactionEventArgs.PostActions"/> and
-        /// send the <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/> to <see cref="ObservableDomainPostActionExecutor"/>.
-        /// <para>
-        /// Any exceptions raised by <see cref="IObservableDomainClient.OnTransactionStart(IActivityMonitor,ObservableDomain, DateTime)"/> (at the start of the process)
-        /// and by any post actions (after the successful commit) are thrown by this method.
-        /// </para>
-        /// </summary>
-        /// <param name="monitor">The monitor to use.</param>
-        /// <param name="actions">
-        /// The actions to execute inside the ObservableDomain's current transaction.
-        /// Can be null: only timed events that have elapsed are executed if any.
-        /// </param>
-        /// <param name="millisecondsTimeout">
-        /// The maximum number of milliseconds to wait for a write access before giving up.
-        /// Wait indefinitely by default.
-        /// </param>
-        /// <param name="parallelDomainPostActions">
-        /// False to wait for the success of the <see cref="SuccessfulTransactionEventArgs.PostActions"/> before
-        /// allowing the <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/> to run: when PostActions fail, all domain post actions are skipped.
-        /// <para>
-        /// By default, post actions are executed and domain post actions can immediately be executed by the <see cref="ObservableDomainPostActionExecutor"/> (as
-        /// soon as all previous transaction's domain post actions have ran of course).
-        /// </para>
-        /// </param>
-        /// <returns>
-        /// The transaction result from <see cref="ObservableDomain.Modify"/>. <see cref="TransactionResult.Empty"/> when the
-        /// lock has not been taken before <paramref name="millisecondsTimeout"/>.
-        /// </returns>
-        public async Task<TransactionResult> ModifyAsync( IActivityMonitor monitor, Action actions, int millisecondsTimeout = -1, bool parallelDomainPostActions = true )
-        {
-            var tr = DoModify( monitor, actions, millisecondsTimeout, fromModifyAsync: true );
-            await tr.ExecutePostActionsAsync( monitor, parallelDomainPostActions, throwException: true ).ConfigureAwait( false );
-            return tr;
-        }
-
-        /// <summary>
-        /// Same as <see cref="ModifyAsync(IActivityMonitor, Action, int, bool)"/> but calls <see cref="TransactionResult.ThrowOnFailure()"/>:
-        /// this methods always throw on any error (except the error of the <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/>
-        /// since it may happen later).
-        /// </summary>
-        /// <param name="monitor">The monitor to use.</param>
-        /// <param name="actions">
-        /// The actions to execute inside the ObservableDomain's current transaction.
-        /// Can be null: only pending timed events are executed if any.
-        /// </param>
-        /// <param name="millisecondsTimeout">
-        /// The maximum number of milliseconds to wait for a write access before giving up.
-        /// Wait indefinitely by default.
-        /// </param>
-        /// <param name="parallelDomainPostActions">
-        /// False to wait for the success of the <see cref="SuccessfulTransactionEventArgs.PostActions"/> before
-        /// allowing the <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/> to run: when PostActions fail, all domain post actions are skipped.
-        /// <para>
-        /// By default, post actions are executed and domain post actions can immediately be executed by the <see cref="ObservableDomainPostActionExecutor"/> (as
-        /// soon as all previous transaction's domain post actions have ran of course).
-        /// </para>
-        /// </param>
-        /// <returns>
-        /// The transaction result from <see cref="ObservableDomain.Modify"/>. <see cref="TransactionResult.Empty"/> when the
-        /// lock has not been taken before <paramref name="millisecondsTimeout"/>.
-        /// This is necessarily a successful result since otherwise an exception is thrown (note that the domain post actions
-        /// are executed later by the <see cref="ObservableDomainPostActionExecutor"/>).
-        /// </returns>
-        public async Task<TransactionResult> ModifyThrowAsync( IActivityMonitor monitor, Action actions, int millisecondsTimeout = -1, bool parallelDomainPostActions = true )
-        {
-            var r = await ModifyAsync( monitor, actions, millisecondsTimeout, parallelDomainPostActions ).ConfigureAwait( false );
-            r.ThrowOnFailure();
-            return r;
-        }
-
-        /// <summary>
-        /// Safe version of <see cref="ModifyAsync(IActivityMonitor, Action, int, bool)"/> that will never throw: any exception raised
-        /// by <see cref="IObservableDomainClient.OnTransactionStart(IActivityMonitor, ObservableDomain, DateTime)"/>
-        /// or by post actions execution is logged and returned in the <see cref="TransactionResult"/>.
-        /// <para>
-        /// If this method can, of course, be called from the application code, it has been designed to be called from background threads,
-        /// typically from the <see cref="TimeManager.AutoTimer"/>.
-        /// </para>
-        /// </summary>
-        /// <param name="monitor">The monitor to use.</param>
-        /// <param name="actions">
-        /// The actions to execute inside the ObservableDomain's current transaction.
-        /// Can be null: only pending timed events are executed if any.
-        /// </param>
-        /// <param name="millisecondsTimeout">
-        /// The maximum number of milliseconds to wait for a write access before giving up.
-        /// Wait indefinitely by default.
-        /// </param>
-        /// <param name="parallelDomainPostActions">
-        /// False to wait for the success of the <see cref="SuccessfulTransactionEventArgs.PostActions"/> before
-        /// allowing the <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/> to run: when PostActions fail, all domain post actions are skipped.
-        /// <para>
-        /// By default, post actions are executed and domain post actions can immediately be executed by the <see cref="ObservableDomainPostActionExecutor"/> (as
-        /// soon as all previous transaction's domain post actions have ran of course).
-        /// </para>
-        /// </param>
-        /// <returns>
-        /// Returns any initial exception, the transaction result (that may be <see cref="TransactionResult.Empty"/>).
-        /// </returns>
-        public Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> ModifyNoThrowAsync( IActivityMonitor monitor, Action actions, int millisecondsTimeout = -1, bool parallelDomainPostActions = true )
-        {
-            Throw.CheckNotNullArgument( monitor );
-            CheckDisposed();
-            return DoModifyNoThrowAsync( monitor, actions, millisecondsTimeout, false, parallelDomainPostActions );
-        }
-
-        internal async Task<(Exception?, TransactionResult)> DoModifyNoThrowAsync( IActivityMonitor monitor, Action actions, int millisecondsTimeout, bool fromTimer, bool parallelDomainPostActions )
-        {
-            TransactionResult tr = TransactionResult.Empty;
-            if( TryEnterUpgradeableReadAndWriteLockAtOnce( millisecondsTimeout ) )
-            {
-                var tEx = DoCreateObservableTransaction( monitor, throwException: false, fromModifyAsync: true );
-                Debug.Assert( (tEx.Item1 != null) != (tEx.Item2 != null), "The IObservableTransaction XOR IObservableDomainClient.OnTransactionStart() exception." );
-                if( tEx.Item2 != null ) return (tEx.Item2, tr);
-
-                tr = DoModifyAndCommit( actions, tEx.Item1!, fromTimer );
-                await tr.ExecutePostActionsAsync( monitor, parallelDomainPostActions, throwException: false ).ConfigureAwait( false );
-            }
-            else monitor.Warn( $"WriteLock not obtained in {millisecondsTimeout} ms (returning TransactionResult.Empty)." );
-            return (null, tr);
-        }
-
-        bool TryEnterUpgradeableReadAndWriteLockAtOnce( int millisecondsTimeout )
-        {
-            var start = DateTime.UtcNow;
-            if( _lock.TryEnterUpgradeableReadLock( millisecondsTimeout ) )
-            {
-                if( millisecondsTimeout > 0 )
-                {
-                    millisecondsTimeout -= ((int)(DateTime.UtcNow.Ticks - start.Ticks) / (int)TimeSpan.TicksPerMillisecond);
-                    if( millisecondsTimeout < 0 ) millisecondsTimeout = 0;
-                }
-                if( _lock.TryEnterWriteLock( millisecondsTimeout ) )
-                {
-                    return true;
-                }
-                _lock.ExitUpgradeableReadLock();
-            }
-            return false;
-        }
 
         /// <summary>
         /// Exports this domain as a JSON object with the <see cref="TransactionSerialNumber"/>,
@@ -1129,7 +655,7 @@ namespace CK.Observable
                 target.EmitStartObject( -1, ObjectExportedKind.List );
                 foreach( var p in _properties )
                 {
-                    target.EmitString( p.Value.PropertyName );
+                    target.EmitString( p.Value.PropertyName! );
                 }
                 target.EmitEndObject( -1, ObjectExportedKind.List );
 
@@ -1172,14 +698,13 @@ namespace CK.Observable
         /// this <see cref="DomainName"/> or another name but it must match the name in the stream otherwise an <see cref="InvalidDataException"/>
         /// is thrown.
         /// <para>
-        /// This can be called directly or inside a <see cref="Modify(IActivityMonitor, Action?, int)"/> or one of the
-        /// <see cref="ModifyAsync(IActivityMonitor, Action, int, bool)"/> methods:
+        /// This can be called directly or inside one of the ModifyAsync methods:
         /// <list type="bullet">
         ///     <item>
-        ///     When called directly, sidekicks are not instantiated and <see cref="HasWaitingSidekicks"/> is true. 
+        ///     When called directly, sidekicks are not instantiated and <see cref="HasWaitingSidekicks"/> is true.
         ///     </item>
         ///     <item>
-        ///     When called in a Modify context, sidekicks are instantiated and their side effects occur, changes
+        ///     When called in a ModifyAsync context, sidekicks are instantiated and their side effects occur, changes
         ///     are tracked and events are available.
         ///     </item>
         /// </list>
@@ -1218,9 +743,15 @@ namespace CK.Observable
             using( monitor.OpenInfo( $"Reloading domain '{DomainName}' (using {(needFakeTran ? "fake" : "current")} transaction) from rewindable '{stream.Kind}'." ) )
             {
                 if( needFakeTran ) new InitializationTransaction( monitor, this, false );
+                Debug.Assert( _currentTran != null );
+                var realTran = _currentTran as Transaction;
+                // Resets the flag to kindly handle totally stupid more than one Load in a transaction:
+                // only the last successful one will be considered.
+                if( realTran != null ) realTran._lastLoadStatus = CurrentTransactionStatus.Regular;
                 try
                 {
-                    DoLoad( monitor, stream, expectedLoadedName, startTimer );
+                    var status = DoLoad( monitor, stream, expectedLoadedName, startTimer );
+                    if( realTran != null ) realTran._lastLoadStatus = status;
                     return true;
                 }
                 finally
@@ -1235,37 +766,16 @@ namespace CK.Observable
             }
         }
 
-        void DoLoad( IActivityMonitor monitor, RewindableStream stream, string expectedLoadedName, bool? startTimer, Func<bool,bool>? beforeTimer = null )
-        {
-            Debug.Assert( stream.IsValid );
-            try
-            {
-                monitor.Trace( $"Stream's Serializer version is {stream.SerializerVersion}." );
-                bool mustStartTimer = DoRealLoad( monitor, stream, expectedLoadedName, startTimer );
-                if( beforeTimer != null ) mustStartTimer = beforeTimer( mustStartTimer );
-                if( mustStartTimer )
-                {
-                    _timeManager.DoStartOrStop( monitor, true );
-                }
-            }
-            catch( Exception ex )
-            {
-                monitor.Error( ex );
-                throw;
-            }
-        }
-
         /// <summary>
         /// Loads previously <see cref="Save"/>d objects into this domain.
         /// <para>
-        /// This can be called directly or inside a <see cref="Modify(IActivityMonitor, Action?, int)"/> or one of the
-        /// <see cref="ModifyAsync(IActivityMonitor, Action, int, bool)"/> methods:
+        /// This can be called directly or inside one of the ModifyAsync methods:
         /// <list type="bullet">
         ///     <item>
-        ///     When called directly, sidekicks are not instantiated and <see cref="HasWaitingSidekicks"/> is true. 
+        ///     When called directly, sidekicks are not instantiated and <see cref="HasWaitingSidekicks"/> is true.
         ///     </item>
         ///     <item>
-        ///     When called in a Modify context, sidekicks are instantiated and their side effects occur, changes
+        ///     When called in a ModifyAsync context, sidekicks are instantiated and their side effects occur, changes
         ///     are tracked and events are available.
         ///     </item>
         /// </list>
@@ -1292,7 +802,7 @@ namespace CK.Observable
 
         /// <summary>
         /// Called by a deserializer's post action.
-        /// Does nothing at this level.
+        /// Does nothing at this level (since we have no roots).
         /// </summary>
         private protected virtual void BindRoots()
         {
@@ -1318,8 +828,6 @@ namespace CK.Observable
             }
             return CurrentThreadDomain;
         }
-
-        internal bool IsDeserializing => _deserializeOrInitializing;
 
         internal void Register( InternalObject o )
         {
@@ -1366,7 +874,7 @@ namespace CK.Observable
             _objects[idx] = o;
 
             var id = CreateId( idx );
-            if( !_deserializeOrInitializing )
+            if( _transactionStatus == CurrentTransactionStatus.Regular )
             {
                 // Deserialization ctors don't call this Register method, BUT this Register
                 // can be called when initializing a domain (for Root objects): in such case we don't want
@@ -1414,7 +922,7 @@ namespace CK.Observable
 
         internal void Unregister( ObservableObject o )
         {
-            if( !_deserializeOrInitializing ) _changeTracker.OnDisposeObject( o );
+            if( _transactionStatus == CurrentTransactionStatus.Regular ) _changeTracker.OnDisposeObject( o );
             _objects[o.OId.Index] = null;
             _freeList.Add( o.OId.Index );
             --_actualObjectCount;
@@ -1588,10 +1096,11 @@ namespace CK.Observable
 
         internal void SendCommand( IDestroyable o, in ObservableDomainCommand command )
         {
-            if( _deserializeOrInitializing )
+            if( _transactionStatus != CurrentTransactionStatus.Regular )
             {
                 Debug.Assert( _currentTran != null );
-                _currentTran.Monitor.Warn( $"Command '{command}' is sent while deserializing. It is ignored. Use Domain.IsDeserializing property to avoid side effect during deserialization." );
+                Debug.Assert( nameof( DomainView.CurrentTransactionStatus ) == "CurrentTransactionStatus" );
+                _currentTran.Monitor.Warn( $"Command '{command}' is sent while CurrentTransactionStatus is {_transactionStatus}. It is ignored." );
             }
             else
             {
@@ -1606,31 +1115,31 @@ namespace CK.Observable
         /// </summary>
         public void SendSnapshotCommand()
         {
-            if( _deserializeOrInitializing )
-            {
-                Debug.Assert( _currentTran != null );
-                _currentTran.Monitor.Warn( "SendSnapshotCommand() called while deserializing. It is ignored. Use Domain.IsDeserializing property to avoid side effect during deserialization." );
-            }
-            else
+            if( CurrentTransactionStatus.IsRegular() )
             {
                 CheckWriteLock( null );
                 _changeTracker.OnSendCommand( new ObservableDomainCommand( SnapshotDomainCommand ) );
             }
+            else
+            {
+                Debug.Assert( _currentTran != null );
+                _currentTran.Monitor.Warn( $"SendSnapshotCommand() called while CurrentTransactionStatus is {CurrentTransactionStatus}. It is ignored." );
+            }
         }
 
-        internal bool EnsureSidekicks( IDestroyable o )
+        internal void EnsureSidekicks( IDestroyable o )
         {
-            CheckWriteLock( o ).CheckDestroyed();
-            Debug.Assert( _currentTran != null );
-            return _sidekickManager.CreateWaitingSidekicks( _currentTran.Monitor, ex => _currentTran.AddError( CKExceptionData.CreateFrom( ex ) ), false );
+            if( CurrentTransactionStatus.IsRegular() )
+            {
+                CheckWriteLock( o ).CheckDestroyed();
+                Debug.Assert( _currentTran != null );
+                _sidekickManager.CreateWaitingSidekicks( _currentTran.Monitor, _currentTran.AddError, false );
+            }
         }
 
         internal ObservablePropertyChangedEventArgs? OnPropertyChanged( ObservableObject o, string propertyName, object? after )
         {
-            if( _deserializeOrInitializing )
-            {
-                return null;
-            }
+            if( !CurrentTransactionStatus.IsRegular() ) return null;
             CheckWriteLock( o ).CheckDestroyed();
             ObservablePropertyChangedEventArgs p = EnsurePropertyInfo( propertyName );
             if( o._exporter != null && o._exporter.ExportableProperties.Any( prop => prop.Name == propertyName ) )
@@ -1661,49 +1170,49 @@ namespace CK.Observable
 
         internal ListRemoveAtEvent? OnListRemoveAt( ObservableObject o, int index )
         {
-            if( _deserializeOrInitializing ) return null;
+            if( !CurrentTransactionStatus.IsRegular() ) return null;
             CheckWriteLock( o ).CheckDestroyed();
             return _changeTracker.OnListRemoveAt( o, index );
         }
 
         internal ListSetAtEvent? OnListSetAt( ObservableObject o, int index, object value )
         {
-            if( _deserializeOrInitializing ) return null;
+            if( !CurrentTransactionStatus.IsRegular() ) return null;
             CheckWriteLock( o ).CheckDestroyed();
             return _changeTracker.OnListSetAt( o, index, value );
         }
 
         internal CollectionClearEvent? OnCollectionClear( ObservableObject o )
         {
-            if( _deserializeOrInitializing ) return null;
+            if( !CurrentTransactionStatus.IsRegular() ) return null;
             CheckWriteLock( o ).CheckDestroyed();
             return _changeTracker.OnCollectionClear( o );
         }
 
         internal ListInsertEvent? OnListInsert( ObservableObject o, int index, object? item )
         {
-            if( _deserializeOrInitializing ) return null;
+            if( !CurrentTransactionStatus.IsRegular() ) return null;
             CheckWriteLock( o ).CheckDestroyed();
             return _changeTracker.OnListInsert( o, index, item );
         }
 
         internal CollectionMapSetEvent? OnCollectionMapSet( ObservableObject o, object key, object? value )
         {
-            if( _deserializeOrInitializing ) return null;
+            if( !CurrentTransactionStatus.IsRegular() ) return null;
             CheckWriteLock( o ).CheckDestroyed();
             return _changeTracker.OnCollectionMapSet( o, key, value );
         }
 
         internal CollectionRemoveKeyEvent? OnCollectionRemoveKey( ObservableObject o, object key )
         {
-            if( _deserializeOrInitializing ) return null;
+            if( !CurrentTransactionStatus.IsRegular() ) return null;
             CheckWriteLock( o ).CheckDestroyed();
             return _changeTracker.OnCollectionRemoveKey( o, key );
         }
 
         internal CollectionAddKeyEvent? OnCollectionAddKey( ObservableObject o, object key )
         {
-            if( _deserializeOrInitializing ) return null;
+            if( !CurrentTransactionStatus.IsRegular() ) return null;
             CheckWriteLock( o ).CheckDestroyed();
             return _changeTracker.OnCollectionAddKey( o, key );
         }
@@ -1722,6 +1231,7 @@ namespace CK.Observable
         {
             if( !_lock.IsWriteLockHeld )
             {
+                if( _transactionStatus == CurrentTransactionStatus.Disposing ) throw new ObjectDisposedException( $"Domain {DomainName}" );
                 if( _currentTran == null ) throw new InvalidOperationException( "A transaction is required." );
                 if( _lock.IsReadLockHeld ) throw new InvalidOperationException( "Concurrent access: only Read lock has been acquired." );
                 throw new InvalidOperationException( "Concurrent access: write lock must be acquired." );

@@ -1,4 +1,5 @@
 using System;
+using CK.Core;
 
 namespace CK.Observable
 {
@@ -25,7 +26,7 @@ namespace CK.Observable
         public ObjectExportedKind ExportedKind { get;}
 
         /// <summary>
-        /// Intializes a new <see cref="NewObjectEvent"/>.
+        /// Initializes a new <see cref="NewObjectEvent"/>.
         /// When this constructor is called the new object identifier that has been computed is not yet
         /// made available on the object (this occurs during the construction of the <see cref="ObservableObject"/>).
         /// </summary>
@@ -61,6 +62,6 @@ namespace CK.Observable
         /// Overridden to provide the type and detail about this event.
         /// </summary>
         /// <returns>A readable string.</returns>
-        public override string ToString() => $"{EventType} {ObjectId} ({Object.GetType().Name}).";
+        public override string ToString() => $"{EventType} {ObjectId} ({Object.GetType().ToCSharpName( withNamespace:false )}).";
     }
 }

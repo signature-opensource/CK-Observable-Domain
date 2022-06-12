@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace CK.Observable.League
 {
     /// <summary>
-    /// Default league service.
+    /// Default league singleton service.
     /// </summary>
     public class DefaultObservableLeague : IObservableLeague, IHostedService, ISingletonAutoService
     {

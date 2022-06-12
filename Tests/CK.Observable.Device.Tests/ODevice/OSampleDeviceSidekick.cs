@@ -9,8 +9,8 @@ namespace CK.Observable.Device.Tests
 {
     public class OSampleDeviceSidekick : ObservableDeviceSidekick<SampleDeviceHost, OSampleDevice, OSampleDeviceHost>
     {
-        public OSampleDeviceSidekick( ObservableDomain domain, SampleDeviceHost host )
-            : base( domain, host )
+        public OSampleDeviceSidekick( IObservableDomainSidekickManager manager, SampleDeviceHost host )
+            : base( manager, host )
         {
         }
 

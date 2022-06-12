@@ -58,7 +58,7 @@ namespace CK.Observable
         /// Setting this to true will silently swallow the exception (this is up to this implementation
         /// to log it) and generate a call to <see cref="OnTransactionCommit"/> with a <see cref="SuccessfulTransactionEventArgs"/>.
         /// </param>
-        void OnUnhandledError( IActivityMonitor monitor, ObservableDomain d, Exception ex, ref bool swallowError );
+        void OnUnhandledException( IActivityMonitor monitor, ObservableDomain d, Exception ex, ref bool swallowError );
 
         /// <summary>
         /// Called when an error occurred in a transaction.

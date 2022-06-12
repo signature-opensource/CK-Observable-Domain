@@ -31,7 +31,6 @@ namespace CK.Observable
         /// </summary>
         public IActivityMonitor Monitor => _d.CurrentMonitor;
 
-
         /// <summary>
         /// Gets the current transaction status.
         /// </summary>
@@ -50,9 +49,10 @@ namespace CK.Observable
         public DateTime TransactionCommitTimeUtc => _d.TransactionCommitTimeUtc;
 
         /// <summary>
-        /// Sends a <see cref="ObservableDomainCommand"/> to the external world. Commands are enlisted
-        /// into <see cref="TransactionResult.Commands"/> (when the transaction succeeds)
-        /// and will be processed by one (or more) <see cref="ObservableDomainSidekick"/>.
+        /// Sends a <see cref="ObservableDomainCommand"/> to the external world only if <see cref="CurrentTransactionStatus"/>
+        /// is <see cref="CurrentTransactionStatus.Regular"/> (otherwise the command is ignored and a warning is emitted).
+        /// Commands are enlisted into <see cref="TransactionResult.Commands"/>  and will be processed by one (or more)
+        /// <see cref="ObservableDomainSidekick"/> when and if the transaction succeeded.
         /// </summary>
         /// <param name="command">The command to send.</param>
         public void SendCommand( in ObservableDomainCommand command )
@@ -64,7 +64,8 @@ namespace CK.Observable
         /// Sends a command to a sidekick via a locator (a sidekick is its own <see cref="ISidekickLocator"/>).
         /// By default, the target sidekick must handle the command: see <paramref name="isOptionalExecution"/>.
         /// <para>
-        /// This is just a helper that calls <see cref="SendCommand(in ObservableDomainCommand)"/>.
+        /// This is a helper that calls <see cref="SendCommand(in ObservableDomainCommand)"/>: the <see cref="CurrentTransactionStatus"/>
+        /// must be <see cref="CurrentTransactionStatus.Regular"/> otherwise the command is ignored (and a warning is emitted).
         /// </para>
         /// </summary>
         /// <param name="command">The command payload.</param>
@@ -83,7 +84,8 @@ namespace CK.Observable
         /// Sends a command to a known sidekick type. By default, a sidekick instance must exist AND handle the command:
         /// see <paramref name="isOptionalExecution"/>.
         /// <para>
-        /// This is just a helper that calls <see cref="SendCommand(in ObservableDomainCommand)"/>.
+        /// This is a helper that calls <see cref="SendCommand(in ObservableDomainCommand)"/>: the <see cref="CurrentTransactionStatus"/>
+        /// must be <see cref="CurrentTransactionStatus.Regular"/> otherwise the command is ignored (and a warning is emitted).
         /// </para>
         /// </summary>
         /// <param name="command">The command payload.</param>
@@ -100,16 +102,17 @@ namespace CK.Observable
 
         /// <summary>
         /// Sends a command in "broadcast mode": all existing sidekicks will have the opportunity to handle it.
-        /// In this "broadcast mode", if all <see cref="ObservableDomainSidekick.ExecuteCommand(Core.IActivityMonitor, in SidekickCommand)"/>
+        /// In this "broadcast mode", if all <see cref="ObservableDomainSidekick.ExecuteCommand(IActivityMonitor, in SidekickCommand)"/>
         /// return false, the command is considered unhandled and by default this is an error: see <paramref name="isOptionalExecution"/>.
         /// <para>
-        /// This is just a helper that calls <see cref="SendCommand(in ObservableDomainCommand)"/>.
+        /// This is a helper that calls <see cref="SendCommand(in ObservableDomainCommand)"/>: the <see cref="CurrentTransactionStatus"/>
+        /// must be <see cref="CurrentTransactionStatus.Regular"/> otherwise the command is ignored (and a warning is emitted).
         /// </para>
         /// </summary>
         /// <param name="command">The command payload.</param>
         /// <param name="isOptionalExecution">
         /// By default, at least one sidekick must handle the command
-        /// (at least one <see cref="ObservableDomainSidekick.ExecuteCommand(Core.IActivityMonitor, in SidekickCommand)"/> must return true).
+        /// (at least one <see cref="ObservableDomainSidekick.ExecuteCommand(IActivityMonitor, in SidekickCommand)"/> must return true).
         /// When set to true, a simple warning is emitted if the command failed to be handled.
         /// </param>
         public void SendCommand( object command, bool isOptionalExecution = false )
@@ -153,20 +156,18 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Gets whether the domain is being deserialized.
-        /// </summary>
-        public bool IsDeserializing => _d.IsDeserializing;
-
-        /// <summary>
         /// Ensures that required sidekicks are instantiated and that any required <see cref="ObservableDomainSidekick.RegisterClientObject(IActivityMonitor, IDestroyable)"/>
         /// have been called.
-        /// When this method returns false, it means that an error occurred and that the current transaction cannot be committed.
         /// <para>
-        /// This should typically called at the end of a final constructor code of a <see cref="ISidekickClientObject{TSidekick}"/> object.
+        /// This should typically called at the end of a final constructor code of a <see cref="ISidekickClientObject{TSidekick}"/> (or decorated
+        /// with a <see cref="UseSidekickAttribute"/>) object.
+        /// </para>
+        /// <para>
+        /// When <see cref="DomainView.CurrentTransactionStatus"/> is not <see cref="CurrentTransactionStatus.Regular"/> (we are deserializing or initializing),
+        /// nothing is done: <see cref="ObservableDomain.HasWaitingSidekicks"/> is true and the sidekicks will kick in at the start of the next transaction.
         /// </para>
         /// </summary>
-        /// <returns>True on success, false if one required sidekick failed to be instantiated.</returns>
-        public bool EnsureSidekicks() => _d.EnsureSidekicks( _o );
+        public void EnsureSidekicks() => _d.EnsureSidekicks( _o );
 
         /// <summary>
         /// Gets a central domain simple random number generator.

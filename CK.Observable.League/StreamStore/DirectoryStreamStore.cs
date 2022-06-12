@@ -71,7 +71,7 @@ namespace CK.Observable
         {
             var path = GetFullWritePath( ref name );
             bool exists = File.Exists( path );
-            if( !exists && !allowCreate ) throw new ArgumentException( $"'{name}' does not exist in store '{_path}'.", nameof( name ) );
+            if( !exists && !allowCreate ) Throw.ArgumentException( $"'{name}' does not exist in store '{_path}'.", nameof( name ) );
             if( exists )
             {
                 if( checkLastWriteTimeUtc != default && checkLastWriteTimeUtc != File.GetLastWriteTimeUtc( path ) )

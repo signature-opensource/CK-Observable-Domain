@@ -66,10 +66,6 @@ namespace CK.Observable
         /// Gets or sets the <see cref="AutoTimer"/> that must be used to ensure that <see cref="ObservableTimedEventBase{T}.Elapsed"/> events
         /// are raised even when no activity occur on the domain.
         /// </summary>
-        /// <remarks>
-        /// Setting this to another timer than the default one must be motivated by reasons that we (the authors) can hardly imagine.
-        /// If it happens, do not hesitate to contact us!
-        /// </remarks>
         public AutoTimer Timer
         {
             get => _autoTimer;
@@ -421,11 +417,10 @@ namespace CK.Observable
         /// <summary>
         /// Raises all timers' event for which <see cref="ObservableTimedEventBase.ExpectedDueTimeUtc"/> is below <paramref name="current"/>.
         /// </summary>
-        /// <param name="m">The monitor: should be the Domain.Monitor that has been obtained by the AutoTimer.</param>
+        /// <param name="monitor">The monitor: should be the Domain.Monitor that has been obtained by the AutoTimer.</param>
         /// <param name="current">The current time.</param>
         /// <param name="checkChanges">True to check timed event next due time.</param>
-        /// <param name="fromTimer">True if this is called from the timer.</param>
-        internal void RaiseElapsedEvent( IActivityMonitor m, DateTime current, bool fromTimer )
+        internal void RaiseElapsedEvent( IActivityMonitor monitor, DateTime current )
         {
             Debug.Assert( IsRunning );
             UpdateMinHeap();
@@ -448,10 +443,6 @@ namespace CK.Observable
                         Debug.Assert( first != null );
                         if( first.ExpectedDueTimeUtc > current )
                         {
-                            if( fromTimer && count == 0 )
-                            {
-                                m.Debug( "Timer raised too early. Reset it." );
-                            }
                             nextFire = first.ExpectedDueTimeUtc;
                             break;
                         }
@@ -461,13 +452,13 @@ namespace CK.Observable
                             _changed.Remove( first );
                             try
                             {
-                                first.DoRaise( m, current, !IgnoreTimedEventException );
+                                first.DoRaise( monitor, current, !IgnoreTimedEventException );
                             }
                             finally
                             {
                                 if( !_changed.Remove( first ) )
                                 {
-                                    first.OnAfterRaiseUnchanged( current, m );
+                                    first.OnAfterRaiseUnchanged( current, monitor );
                                 }
                                 if( !first.IsDestroyed )
                                 {
@@ -480,13 +471,12 @@ namespace CK.Observable
                                         if( first.ExpectedDueTimeUtc <= current )
                                         {
                                             // 10 ms is a "very minimal" step: it is smaller than the approximate thread time slice (20 ms). 
-                                            first.ForwardExpectedDueTime( m, current.AddMilliseconds( 10 ) );
+                                            first.ForwardExpectedDueTime( monitor, current.AddMilliseconds( 10 ) );
                                         }
                                         OnNextDueTimeUpdated( first );
                                     }
                                 }
                             }
-                            m.Debug( $"{first}: ActiveIndex={first.ActiveIndex}." );
                             ++count;
                         }
                     }
@@ -499,9 +489,9 @@ namespace CK.Observable
                         UpdateMinHeap();
                         goto again;
                     }
-                    m.Warn( $"Too many Timer or Reminder update cycles. Possible culprits are: {_changed.Select( c => c.ToString() ).Concatenate()}" );
+                    monitor.Warn( $"Too many Timer or Reminder update cycles. Possible culprits are: {_changed.Select( c => c.ToString() ).Concatenate()}" );
                 }
-                _autoTimer.SetNextDueTimeUtc( m, nextFire );
+                _autoTimer.SetNextDueTimeUtc( monitor, nextFire );
             }
             finally
             {

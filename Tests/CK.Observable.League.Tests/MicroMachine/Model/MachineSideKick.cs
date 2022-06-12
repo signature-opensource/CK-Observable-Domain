@@ -27,8 +27,8 @@ namespace CK.Observable.League.Tests.MicroMachine
             }
         }
 
-        public MachineSideKick( ObservableDomain d )
-            : base( d )
+        public MachineSideKick( IObservableDomainSidekickManager manager )
+            : base( manager )
         {
             _objects = new Dictionary<string, MicroBridge>();
         }

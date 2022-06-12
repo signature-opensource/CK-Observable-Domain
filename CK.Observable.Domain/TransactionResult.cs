@@ -11,7 +11,7 @@ namespace CK.Observable
     /// Encapsulates the result of a <see cref="ObservableDomain.Transaction.Commit"/>
     /// and <see cref="ObservableDomain.Modify(IActivityMonitor, Action, int)"/>.
     /// </summary>
-    public class TransactionResult
+    public sealed class TransactionResult
     {
         static readonly Task<Exception?> _noErrorResult = Task.FromResult((Exception?)null );
 
@@ -24,7 +24,7 @@ namespace CK.Observable
         TaskCompletionSource<Exception?>? _domainPostActionsErrorSource;
 
         Exception? _postActionsError;
-        Task<Exception?>? _domainPostActionsError;
+        Task<Exception?> _domainPostActionsError;
 
         /// <summary>
         /// The empty transaction result is used when absolutely nothing happened. It has no events and no commands,
@@ -34,17 +34,21 @@ namespace CK.Observable
 
         /// <summary>
         /// Gets whether <see cref="Errors"/> is empty, <see cref="ClientError"/> is null, both <see cref="SuccessfulTransactionErrors"/>
-        /// and <see cref="CommandHandlingErrors"/> are empty, <see cref="PostActionsError"/> is null.
+        /// and <see cref="CommandHandlingErrors"/> are empty and <see cref="PostActionsError"/> is null and <see cref="DomainPostActionsError"/> must not
+        /// yet be resolved or has a null exception.
+        /// </para>
         /// <para>
-        /// Note that any error during domain post actions execution (executed by the <see cref="ObservableDomainPostActionExecutor"/>) is outside
-        /// of this scope. 
+        /// The domain post actions execution are asynchronously executed by the <see cref="ObservableDomainPostActionExecutor"/>.
+        /// If needed the <see cref="DomainPostActionsError"/> task can be used to await for the completion of the domain post actions 
+        /// emitted by this transaction.
         /// </para>
         /// </summary>
         public bool Success => Errors.Count == 0
                                && ClientError == null
                                && SuccessfulTransactionErrors.Count == 0
                                && CommandHandlingErrors.Count == 0
-                               && _postActionsError == null;
+                               && _postActionsError == null
+                               && (!_domainPostActionsError.IsCompleted || _domainPostActionsError.Result == null );
 
         /// <summary>
         /// Gets whether the <see cref="ClientError"/> is critical: it is the call to <see cref="IObservableDomainClient.OnTransactionCommit(in SuccessfulTransactionEventArgs)"/>
@@ -61,9 +65,21 @@ namespace CK.Observable
         public bool IsCriticalError => Errors.Count == 0 && ClientError != null;
 
         /// <summary>
-        /// Checks that <see cref="Success"/> is true otherwise throws an exception.
+        /// Checks that <see cref="Success"/> is true (and optionally that this is not a successful rollback)
+        /// otherwise throws an exception.
         /// </summary>
-        public void ThrowOnFailure()
+        /// <param name="considerRolledbackAsFailure">
+        /// True to consider that a non null <see cref="RollbackedInfo"/> must be considered a failure: an exception will be thrown.
+        /// </param>
+        public void ThrowOnFailure( bool considerRolledbackAsFailure )
+        {
+            if( (considerRolledbackAsFailure && RollbackedInfo != null) || !Success )
+            {
+                Throw.Exception( GetErrorMessage( considerRolledbackAsFailure ) );
+            }
+        }
+
+        string? GetErrorMessage( bool considerRolledbackAsFailure )
         {
             if( !Success )
             {
@@ -71,29 +87,35 @@ namespace CK.Observable
                 {
                     if( Errors.Count > 0 )
                     {
-                        throw new Exception( $"There has been {Errors.Count} error(s) during the transaction and one of the domain client failed during the OnTransactionFailure call. See logs for details." );
+                        return $"There has been {Errors.Count} error(s) during the transaction and one of the domain client failed during the OnTransactionFailure call. See logs for details.";
                     }
-                    throw new Exception( $"An exception has been thrown by a domain client during the OnTransactionCommit call. See logs for details." );
+                    return $"An exception has been thrown by a domain client during the OnTransactionCommit call. See logs for details.";
                 }
                 if( Errors.Count > 0 )
                 {
-                    throw new Exception( $"There has been {Errors.Count} error(s) during the transaction. See logs for details." );
+                    return $"There has been {Errors.Count} error(s) during the transaction. See logs for details.";
                 }
                 if( SuccessfulTransactionErrors.Count > 0 )
                 {
-                    throw new Exception( $"There has been {SuccessfulTransactionErrors.Count} error(s) during the transaction OnSuccessful event. See logs for details." );
+                    return $"There has been {SuccessfulTransactionErrors.Count} error(s) during the transaction OnSuccessful event. See logs for details.";
                 }
                 if( CommandHandlingErrors.Count > 0 )
                 {
-                    throw new Exception( $"There has been {CommandHandlingErrors.Count} error(s) raised by sidekicks handling the commands. See logs for details." );
+                    return $"There has been {CommandHandlingErrors.Count} error(s) raised by sidekicks handling the commands. See logs for details.";
                 }
                 if( _postActionsError != null )
                 {
-                    throw new Exception( $"A post action failed. See logs for details." );
+                    return $"A post action failed. See logs for details: {_postActionsError.Message}";
                 }
-                Debug.Assert( _domainPostActionsError != null && _domainPostActionsError.IsCompleted && _domainPostActionsError.Result != null );
-                throw new Exception( $"A domain post action eventually failed. See logs for details." );
+                Debug.Assert( _domainPostActionsError.IsCompleted && _domainPostActionsError.Result != null, "Success property has tested this." );
+                return $"A domain post action eventually failed. See logs for details: : {_domainPostActionsError.Result.Message}";
             }
+            if( considerRolledbackAsFailure && RollbackedInfo != null )
+            {
+                Debug.Assert( !RollbackedInfo.Failure.Success );
+                return $"A failed transaction rolled back: {RollbackedInfo.Failure.GetErrorMessage(false)}";
+            }
+            return null;
         }
 
         /// <summary>
@@ -115,6 +137,17 @@ namespace CK.Observable
         public int TransactionNumber { get; }
 
         /// <summary>
+        /// Gets the information of the rolled back if this successful transaction has recovered
+        /// a transaction failure.
+        /// <para>
+        /// It happens when a transaction fails and has been reloaded by one of the <see cref="ObservableDomain.DomainClient"/>
+        /// and one or more sidekicks are waiting to be instantiated.
+        /// This successful transaction result captures the impacts of the rollback that may be triggered by the sidekicks instantiation.
+        /// </para>
+        /// </summary>
+        public RolledbackTransactionInfo? RollbackedInfo { get; }
+
+        /// <summary>
         /// Gets the commands that the transaction generated (all the commands
         /// sent via <see cref="DomainView.SendCommand(in ObservableDomainCommand)"/> or <see cref="SuccessfulTransactionEventArgs.SendCommand(in ObservableDomainCommand)"/>.
         /// Can be empty (and always empty if there are <see cref="Errors"/>).
@@ -126,7 +159,13 @@ namespace CK.Observable
         public IReadOnlyList<ObservableDomainCommand> Commands { get; }
 
         /// <summary>
-        /// Gets the errors that actually aborted the transaction.
+        /// Gets the initial error if the transaction failed to start because a
+        /// <see cref="IObservableDomainClient.OnTransactionStart(IActivityMonitor, ObservableDomain, DateTime)"/> failed.
+        /// </summary>
+        public CKExceptionData? OnClientStartError { get; }
+
+        /// <summary>
+        /// Gets the errors that aborted the transaction (or the <see cref="OnClientStartError"/> if the transaction couldn't start).
         /// This is empty on success but this doesn't mean that everything went well: a <see cref="ClientError"/> may have occurred
         /// (and that is critical), or <see cref="SuccessfulTransactionErrors"/> or <see cref="CommandHandlingErrors"/> may have been
         /// thrown by sidekicks (this is less critical since the domain's transaction itself is fine).
@@ -158,7 +197,8 @@ namespace CK.Observable
 
         /// <summary>
         /// Gets the future or resolved error of the <see cref="ObservableDomainPostActionExecutor"/> if any.
-        /// Awaiting this enables to wait for the processing of <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/>.
+        /// Awaiting this enables to wait for the processing of <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/>
+        /// emitted by this transaction.
         /// </summary>
         public Task<Exception?> DomainPostActionsError => _domainPostActionsError ?? _noErrorResult;
 
@@ -168,15 +208,18 @@ namespace CK.Observable
         /// <returns>The success or error detail.</returns>
         public override string ToString()
         {
-            if( Success ) return $"Success ({(_postActions?.ActionCount ?? 0) + (_domainPostActions?.ActionCount ?? 0)} post actions waiting).";
+            if( Success )
+            {
+                return $"Success ({(_postActions?.ActionCount ?? 0) + (_domainPostActions?.ActionCount ?? 0)} post actions waiting).";
+            }
             return $"{Errors.Count} transaction errors, {(IsCriticalError ? "with a" : "no" )} Critical Error, {SuccessfulTransactionErrors.Count} OnSuccessfulTransaction errors, {CommandHandlingErrors.Count} command errors handling.";
         }
 
-        internal async Task ExecutePostActionsAsync( IActivityMonitor m, bool parallelDomainPostActions, bool throwException = true )
+        internal Task ExecutePostActionsAsync( IActivityMonitor m, bool parallelDomainPostActions )
         {
             // Do this only once.
             var l = Interlocked.Exchange( ref _postActions, null );
-            if( l == null ) return;
+            if( l == null ) return Task.CompletedTask;
 
             // We keep the reference to the domain post actions (this may be useful one day).
             var d = _domainPostActions;
@@ -192,7 +235,7 @@ namespace CK.Observable
                     _forDomainPostActionsExecutor.SetResult( null );
                     _domainPostActionsErrorSource.SetResult( null );
                 }
-                return;
+                return Task.CompletedTask;
             }
             Debug.Assert( _forDomainPostActionsExecutor != null, "This result has been submitted to the Domain executor." );
 
@@ -204,11 +247,19 @@ namespace CK.Observable
             }
             if( l.ActionCount > 0 )
             {
+                return Execute();
+            }
+            if( !parallelDomainPostActions ) _forDomainPostActionsExecutor.SetResult( d );
+
+            return Task.CompletedTask;
+
+            async Task Execute()
+            {
                 var ctx = new PostActionContext( m, l, this );
                 try
                 {
                     Debug.Assert( _domainName != null, "TransactionResult on valid result constructor sets this." );
-                    _postActionsError = await ctx.ExecuteAsync( throwException, name: $"domain '{_domainName}' (PostActions)" ).ConfigureAwait( false );
+                    _postActionsError = await ctx.ExecuteAsync( throwException: false, name: $"domain '{_domainName}' (PostActions)" ).ConfigureAwait( false );
                     if( !parallelDomainPostActions )
                     {
                         if( _postActionsError != null )
@@ -231,11 +282,6 @@ namespace CK.Observable
                     await ctx.DisposeAsync().ConfigureAwait( false );
                 }
             }
-            else
-            {
-                if( !parallelDomainPostActions ) _forDomainPostActionsExecutor.SetResult( d );
-            }
-            return;
 
             void ForgetDomainActions()
             {
@@ -260,6 +306,7 @@ namespace CK.Observable
 
         internal TransactionResult( SuccessfulTransactionEventArgs c )
         {
+            Debug.Assert( c.RollbackedInfo?.Failure.RollbackedInfo == null, "A rollback is not rolled back." );
             _domainName = c.Domain.DomainName;
             StartTimeUtc = c.StartTimeUtc;
             CommitTimeUtc = c.CommitTimeUtc;
@@ -270,6 +317,10 @@ namespace CK.Observable
             _postActions = c._localPostActions;
             SuccessfulTransactionErrors = Array.Empty<CKExceptionData>();
             CommandHandlingErrors = Array.Empty<(object, CKExceptionData)>();
+            RollbackedInfo = c.RollbackedInfo;
+            // Will be changed by InitializeOnSuccess to the _domainPostActionsErrorSource.Task
+            // that will be set by the ObservableDomainPostActionExecutor.
+            _domainPostActionsError = _noErrorResult;
         }
 
         internal TransactionResult( IReadOnlyList<CKExceptionData> errors, DateTime startTime )
@@ -283,23 +334,28 @@ namespace CK.Observable
             Commands = Array.Empty<ObservableDomainCommand>();
             SuccessfulTransactionErrors = Array.Empty<CKExceptionData>();
             CommandHandlingErrors = Array.Empty<(object, CKExceptionData)>();
+            _domainPostActionsError = _noErrorResult;
         }
 
-        internal void Initialize( bool domainExecutorEnqueud )
+        internal TransactionResult( Exception onStartClientError )
         {
-            if( domainExecutorEnqueud )
-            {
-                Debug.Assert( _postActions != null, "This result was initially successful." );
-                _forDomainPostActionsExecutor = new TaskCompletionSource<ActionRegistrar<PostActionContext>?>( TaskCreationOptions.RunContinuationsAsynchronously );
-                _domainPostActionsErrorSource = new TaskCompletionSource<Exception?>( TaskCreationOptions.RunContinuationsAsynchronously );
-                _domainPostActionsError = _domainPostActionsErrorSource.Task;
-            }
-            else
-            {
-                Debug.Assert( _forDomainPostActionsExecutor == null, "Useless since the domain executor will never call us." );
-                Debug.Assert( _postActionsError == null, "Non execution leads to non error." );
-                _domainPostActionsError = _noErrorResult;
-            }
+            Debug.Assert( onStartClientError != null );
+            Debug.Assert( _postActions == null, "Leave the _postActions null as if the ExecutePostActions has been already called." );
+            StartTimeUtc = CommitTimeUtc = DateTime.UtcNow;
+            Errors = new[] { OnClientStartError = CKExceptionData.CreateFrom( onStartClientError ) };
+            Debug.Assert( TransactionNumber == 0 );
+            Commands = Array.Empty<ObservableDomainCommand>();
+            SuccessfulTransactionErrors = Array.Empty<CKExceptionData>();
+            CommandHandlingErrors = Array.Empty<(object, CKExceptionData)>();
+            _domainPostActionsError = _noErrorResult;
+        }
+
+        internal void InitializeOnSuccess()
+        {
+            Debug.Assert( _postActions != null, "This result was initially successful." );
+            _forDomainPostActionsExecutor = new TaskCompletionSource<ActionRegistrar<PostActionContext>?>( TaskCreationOptions.RunContinuationsAsynchronously );
+            _domainPostActionsErrorSource = new TaskCompletionSource<Exception?>( TaskCreationOptions.RunContinuationsAsynchronously );
+            _domainPostActionsError = _domainPostActionsErrorSource.Task;
         }
 
         internal void SetClientError( Exception ex )

@@ -175,19 +175,14 @@ namespace CK.Observable
 
                         if( File.Exists( _filePath ) )
                         {
-                            File.Replace(
-                                _tmpFilePath,
-                                _filePath,
-                                _bakFilePath,
-                                true
-                            );
+                            File.Replace( _tmpFilePath,
+                                          _filePath,
+                                          _bakFilePath,
+                                          true );
                         }
                         else
                         {
-                            File.Move(
-                                _tmpFilePath,
-                                _filePath
-                            );
+                            File.Move( _tmpFilePath, _filePath );
                         }
 
                         _fileTransactionNumber = CurrentSerialNumber;

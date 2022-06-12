@@ -27,10 +27,12 @@ namespace CK.Observable.Domain.Tests.Sample
 
         void OnCurrentCarChanged( object before, object after )
         {
-            if( Domain.IsDeserializing ) return;
-            Domain.Monitor.Info( $"{ToString()} has a new Car: {CurrentCar?.ToString() ?? "null"}." );
-            if( CurrentCar != null ) CurrentCar.CurrentMechanic = this;
-            else ((Car)before).CurrentMechanic = null;
+            if( Domain.CurrentTransactionStatus.IsRegular() )
+            {
+                Domain.Monitor.Info( $"{ToString()} has a new Car: {CurrentCar?.ToString() ?? "null"}." );
+                if( CurrentCar != null ) CurrentCar.CurrentMechanic = this;
+                else ((Car)before).CurrentMechanic = null;
+            }
         }
 
         public override string ToString() => $"'Mechanic {FirstName} {LastName}'";

@@ -70,8 +70,8 @@ namespace CK.Observable.Domain.Tests
 
         public class SimpleSidekick : ObservableDomainSidekick
         {
-            public SimpleSidekick( ObservableDomain d )
-                : base( d )
+            public SimpleSidekick( IObservableDomainSidekickManager manager )
+                : base( manager )
             {
             }
 
@@ -371,7 +371,7 @@ namespace CK.Observable.Domain.Tests
             {
                 try
                 {
-                    await d.ModifyAsync( monitor, () => RunLoop( d ) );
+                    await d.ModifyThrowAsync( monitor, () => RunLoop( d ) );
                 }
                 catch( Exception )
                 {

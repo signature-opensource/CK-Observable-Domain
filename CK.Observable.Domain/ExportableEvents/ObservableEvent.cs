@@ -8,7 +8,7 @@ namespace CK.Observable
     /// These events must be handled by <see cref="IObservableDomainClient.OnTransactionCommit(in SuccessfulTransactionEventArgs)"/> (write lock held),
     /// or by <see cref="ObservableDomainSidekick.OnSuccessfulTransaction(in SuccessfulTransactionEventArgs)"/> (read lock held), directly after the
     /// modifications because direct domain objects are exposed by these events (for example the <see cref="PropertyChangedEvent.Value"/>): these
-    /// events CANNOT be correclty handled outside of these 2 extension points.
+    /// events CANNOT be correctly handled outside of these 2 extension points.
     /// </summary>
     public abstract class ObservableEvent : EventArgs
     {

@@ -48,7 +48,7 @@ namespace CK.Observable
         /// will be the same as disposing this transaction without committing: a <see cref="TransactionResult"/>
         /// with only <see cref="Errors"/> will be obtained.
         /// </summary>
-        /// <param name="d">An exception data.</param>
-        void AddError( CKExceptionData d );
+        /// <param name="ex">An exception.</param>
+        void AddError( Exception ex );
     }
 }

@@ -18,7 +18,7 @@ namespace CK.Observable
         readonly List<TransactionEvent> _events;
         readonly StringWriter _buffer;
         readonly ObjectExporter _exporter;
-        ObservableDomain _domain;
+        ObservableDomain? _domain;
         int _lastTranNum;
         TimeSpan _keepDuration;
         int _keepLimit;
@@ -135,7 +135,7 @@ namespace CK.Observable
         /// Called whenever a new transaction event is available.
         /// Note that the first transaction is visible: see <see cref="TransactionEvent.TransactionNumber"/>.
         /// </summary>
-        public event Action<IActivityMonitor, TransactionEvent> LastEventChanged;
+        public event Action<IActivityMonitor, TransactionEvent>? LastEventChanged;
 
         /// <summary>
         /// Gets the last transaction event that has been seen (the first one can appear
@@ -146,6 +146,7 @@ namespace CK.Observable
         /// <summary>
         /// Associates this collector to a domain. There must not be any existing associated domain
         /// otherwise an <see cref="InvalidOperationException"/> is thrown.
+        /// Use <see cref="Detach()"/> to stop collecting events from a domain.
         /// </summary>
         /// <param name="domain">The domain from which transaction events must be collected.</param>
         /// <param name="clearEvents">True to clear any existing transactions events.</param>

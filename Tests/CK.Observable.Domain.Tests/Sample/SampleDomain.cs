@@ -7,7 +7,7 @@ namespace CK.Observable.Domain.Tests.Sample
 {
     public static class SampleDomain
     {
-        public static ObservableDomain CreateSample( IObservableDomainClient tm = null )
+        public static ObservableDomain CreateSample( IObservableDomainClient? tm = null )
         {
             var d = new ObservableDomain(TestHelper.Monitor, "TEST", startTimer: false, client: tm );
             d.Modify( TestHelper.Monitor, () =>
@@ -29,7 +29,7 @@ namespace CK.Observable.Domain.Tests.Sample
                 new Mechanic( g2 ) { FirstName = "Olivier", LastName = "Spinelli" };
                 g2.Cars.AddRange( Enumerable.Range( 0, 10 ).Select( i => new Car( $"Volvo n°{i}" ) ) );
             } );
-            CheckSampleGarage1( d );
+            CheckSampleGarage( d );
             return d;
         }
 
@@ -42,7 +42,7 @@ namespace CK.Observable.Domain.Tests.Sample
             } );
         }
 
-        public static void CheckSampleGarage1( ObservableDomain d )
+        public static void CheckSampleGarage( ObservableDomain d )
         {
             var g1 = d.AllObjects.OfType<Garage>().Where( x => x.CompanyName == "Boite" ).Single();
             g1.Cars.Select( c => c.Name ).Should().BeEquivalentTo( Enumerable.Range( 0, 10 ).Select( i => $"Renault n°{i}" ) );

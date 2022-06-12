@@ -1,5 +1,4 @@
 using CK.Core;
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
@@ -49,21 +48,26 @@ namespace CK.Observable
         /// <summary>
         /// Initializes a new sidekick for a domain.
         /// <para>
-        /// This is called after an external modification of the domain where an object with a [UseSidekick( ... )] attribute or a <see cref="ISidekickClientObject{TSidekick}"/>
-        /// interface marker has been instantiated.
-        /// If the sidekick type has not any instance yet, this is called just before soliciting the <see cref="ObservableDomain.DomainClient"/>.
+        /// This is called when an object with a [UseSidekick( ... )] attribute or a <see cref="ISidekickClientObject{TSidekick}"/>
+        /// interface marker has been instantiated and we are in a regular transaction.
         /// The domain has the write lock held and this constructor can interact with the domain objects (its interaction is part of the transaction).
         /// </para>
         /// <para>
-        /// A <see cref="IActivityMonitor"/> can appear in the parameters (and must be used only in the constructor and not kept) of the constructor and
-        /// all other parameters MUST be singletons.
+        /// A <see cref="IActivityMonitor"/> can appear in the parameters of the constructor (and must be used only in the constructor and not kept) and
+        /// all other parameters MUST be singletons services.
         /// </para>
         /// </summary>
-        /// <param name="domain">The domain.</param>
-        protected ObservableDomainSidekick( ObservableDomain domain )
+        /// <param name="manager">The domain's sidekick manager.</param>
+        protected ObservableDomainSidekick( IObservableDomainSidekickManager manager )
         {
-            Domain = domain;
+            Manager = manager;
+            Domain = manager.Domain;
         }
+
+        /// <summary>
+        /// Gets the domain's sidekick manager.
+        /// </summary>
+        protected IObservableDomainSidekickManager Manager { get; }
 
         /// <summary>
         /// Gets the domain.
@@ -79,20 +83,21 @@ namespace CK.Observable
         /// <summary>
         /// Must register the provided <see cref="InternalObject"/> or <see cref="ObservableObject"/> as a client
         /// of this sidekick.
-        /// The semantics of this registration, what a "client" actually means, is specific to each sidekick.
         /// <para>
-        /// When this method is called (from <see cref="DomainView.EnsureSidekicks"/> or at the end of a <see cref="ObservableDomain.Modify"/> call
-        /// or after the deserialization of the graph by <see cref="ObservableDomain.Load(IActivityMonitor, System.IO.Stream, bool, System.Text.Encoding?, int, bool?)"/>),
-        /// the domain lock is held, any interaction can take place.
+        /// The semantics of this registration and what a "client" actually means, is specific to each sidekick.
+        /// </para>
+        /// <para>
+        /// When this method is called the domain lock is held, any interaction can take place.
         /// After that registering phase, interactions must be protected in <see cref="ObservableDomain.AcquireReadLock(int)"/> or one of the Modify method.
         /// </para>
         /// <para>
         /// When a sidekick keeps a reference on a client object, it should either check <see cref="IDestroyable.IsDestroyed"/> (in the context of
-        /// a read or modify lock) or registers to <see cref="IDestroyable.Destroyed"/> event.
+        /// a read or modify lock) or registers to <see cref="IDestroyable.Destroyed"/> event or, even better if the objects share a base class, implement
+        /// internal OnDestroyed callbacks (the ObservableDeviceObject and ObservableDeviceSidekick do this).
         /// </para>
         /// </summary>
-        /// <param name="monitor"></param>
-        /// <param name="o"></param>
+        /// <param name="monitor">The monitor to use.</param>
+        /// <param name="o">The object that uses this sidekick.</param>
         protected internal abstract void RegisterClientObject( IActivityMonitor monitor, IDestroyable o );
 
         /// <summary>

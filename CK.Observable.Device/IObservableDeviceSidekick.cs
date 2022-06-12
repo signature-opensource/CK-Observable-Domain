@@ -2,6 +2,9 @@ using CK.DeviceModel;
 
 namespace CK.Observable.Device
 {
+    /// <summary>
+    /// Untyped abstraction for <see cref="ObservableDeviceSidekick{THost, TDeviceObject, TDeviceHostObject}"/>.
+    /// </summary>
     public interface IObservableDeviceSidekick
     {
         /// <summary>

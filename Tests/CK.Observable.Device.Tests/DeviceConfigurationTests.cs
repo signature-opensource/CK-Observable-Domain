@@ -124,7 +124,15 @@ namespace CK.Observable.Device.Tests
 
             using( obs.AcquireReadLock() )
             {
-                obs.Root.OHost.Devices.Should().NotBeEmpty();
+                obs.Root.OHost.Devices.Should().BeEmpty( "Sidekick instantiation is deferred to the first transaction." );
+            }
+            obs.HasWaitingSidekicks.Should().BeTrue( "This indicates that at least one sidekick should be handled." );
+
+            await obs.ModifyThrowAsync( TestHelper.Monitor, null );
+
+            using( obs.AcquireReadLock() )
+            {
+                obs.Root.OHost.Devices.Should().NotBeEmpty( "Sidekick instantiation done." );
             }
 
         }

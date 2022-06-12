@@ -165,7 +165,9 @@ namespace CK.Observable
 
         internal void SetDeserializedClock( SuspendableClock clock )
         {
-            Debug.Assert( _clock == null && TimeManager != null && TimeManager.Domain.IsDeserializing );
+            Debug.Assert( _clock == null
+                          && TimeManager != null
+                          && TimeManager.Domain.CurrentTransactionStatus.IsDeserializing() );
             _clock = clock;
         }
 

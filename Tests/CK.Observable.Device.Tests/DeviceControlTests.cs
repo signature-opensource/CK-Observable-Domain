@@ -86,6 +86,12 @@ namespace CK.Observable.Device.Tests
             using var d1 = new ObservableDomain<Root>( TestHelper.Monitor, "Domain n°1", false, serviceProvider: sp );
             using var d2 = new ObservableDomain<Root>( TestHelper.Monitor, "Domain n°2", false, serviceProvider: sp );
 
+            d1.HasWaitingSidekicks.Should().BeTrue();
+            await d1.ModifyThrowAsync( TestHelper.Monitor, null );
+
+            d2.HasWaitingSidekicks.Should().BeTrue();
+            await d2.ModifyThrowAsync( TestHelper.Monitor, null );
+
             // Nobody controls the device.
             CheckStatus( d1, DeviceControlStatus.HasSharedControl );
             CheckStatus( d2, DeviceControlStatus.HasSharedControl );
@@ -165,6 +171,12 @@ namespace CK.Observable.Device.Tests
             using( var d1 = new ObservableDomain<Root>( TestHelper.Monitor, "Domain n°1", false, serviceProvider: sp ) )
             using( var d2 = new ObservableDomain<Root>( TestHelper.Monitor, "Domain n°2", false, serviceProvider: sp ) )
             {
+
+                d1.HasWaitingSidekicks.Should().BeTrue();
+                await d1.ModifyThrowAsync( TestHelper.Monitor, null );
+
+                d2.HasWaitingSidekicks.Should().BeTrue();
+                await d2.ModifyThrowAsync( TestHelper.Monitor, null );
 
                 CheckStatus( d1, DeviceControlStatus.HasOwnership );
                 CheckStatus( d2, DeviceControlStatus.OutOfControlByConfiguration );
