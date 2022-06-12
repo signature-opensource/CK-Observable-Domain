@@ -93,42 +93,86 @@ namespace CK.Observable.League
         }
 
         #region Coordinator: IObservableDomainAccess<Coordinator>.
-        void IObservableDomainAccess<Coordinator>.Read( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<Coordinator>> reader, int millisecondsTimeout )
+        bool IObservableDomainAccess<Coordinator>.TryRead( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<Coordinator>> reader, int millisecondsTimeout )
         {
-            using( Domain.AcquireReadLock( millisecondsTimeout ) )
-            {
-                reader.Invoke( monitor, Domain );
-            }
+            var d = Domain;
+            return d.TryRead( monitor, () => reader( monitor, d ), millisecondsTimeout );
         }
 
-        T IObservableDomainAccess<Coordinator>.Read<T>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<Coordinator>, T> reader, int millisecondsTimeout )
+        bool IObservableDomainAccess<Coordinator>.TryRead<T>( IActivityMonitor monitor,
+                                                              Func<IActivityMonitor, IObservableDomain<Coordinator>, T> reader,
+                                                              [MaybeNullWhen(false)]out T result,
+                                                              int millisecondsTimeout )
         {
-            using( Domain.AcquireReadLock( millisecondsTimeout ) )
-            {
-                return reader( monitor, Domain );
-            }
+            var d = Domain;
+            return d.TryRead( monitor, () => reader( monitor, d ), out result, millisecondsTimeout );
         }
 
-        Task<TransactionResult> IObservableDomainAccess<Coordinator>.ModifyAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<Coordinator>> actions, int millisecondsTimeout, bool parallelDomainPostActions )
+        Task<TransactionResult> IObservableDomainAccess<Coordinator>.ModifyAsync( IActivityMonitor monitor,
+                                                                                  Action<IActivityMonitor,
+                                                                                  IObservableDomain<Coordinator>> actions,
+                                                                                  bool throwException,
+                                                                                  int millisecondsTimeout,
+                                                                                  bool considerRolledbackAsFailure,
+                                                                                  bool parallelDomainPostActions,
+                                                                                  bool waitForDomainPostActionsCompletion )
         {
-            return Domain.ModifyAsync( monitor, () => actions.Invoke( monitor, Domain ), millisecondsTimeout, considerRolledbackAsFailure: parallelDomainPostActions );
+            var d = Domain;
+            return d.ModifyAsync( monitor,
+                                  () => actions.Invoke( monitor, d ),
+                                  throwException,
+                                  millisecondsTimeout,
+                                  considerRolledbackAsFailure,
+                                  parallelDomainPostActions,
+                                  waitForDomainPostActionsCompletion );
         }
         
-        Task<TransactionResult> IObservableDomainAccess<Coordinator>.ModifyThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<Coordinator>> actions, int millisecondsTimeout, bool parallelDomainPostActions )
+        Task<TransactionResult> IObservableDomainAccess<Coordinator>.ModifyThrowAsync( IActivityMonitor monitor,
+                                                                                       Action<IActivityMonitor, IObservableDomain<Coordinator>> actions,
+                                                                                       int millisecondsTimeout,
+                                                                                       bool considerRolledbackAsFailure,
+                                                                                       bool parallelDomainPostActions,
+                                                                                       bool waitForDomainPostActionsCompletion )
         {
-            return Domain.ModifyThrowAsync( monitor, () => actions.Invoke( monitor, Domain ), parallelDomainPostActions, millisecondsTimeout );
+            var d = Domain;
+            return d.ModifyThrowAsync( monitor,
+                                       () => actions.Invoke( monitor, d ),
+                                       millisecondsTimeout,
+                                       considerRolledbackAsFailure,
+                                       parallelDomainPostActions,
+                                       waitForDomainPostActionsCompletion );
         }
 
-        async Task<(TResult, TransactionResult)> IObservableDomainAccess<Coordinator>.ModifyThrowAsync<TResult>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<Coordinator>, TResult> actions, int millisecondsTimeout, bool parallelDomainPostActions )
+        Task<TResult> IObservableDomainAccess<Coordinator>.ModifyThrowAsync<TResult>( IActivityMonitor monitor,
+                                                                                      Func<IActivityMonitor, IObservableDomain<Coordinator>, TResult> actions,
+                                                                                      int millisecondsTimeout,
+                                                                                      bool considerRolledbackAsFailure,
+                                                                                      bool parallelDomainPostActions,
+                                                                                      bool waitForDomainPostActionsCompletion )
         {
-            TResult r = default;
-            var tr = await Domain.ModifyThrowAsync( monitor, () => r = actions.Invoke( monitor, Domain ), parallelDomainPostActions, millisecondsTimeout );
-            return (r,tr);
+            var d = Domain;
+            return d.ModifyThrowAsync( monitor,
+                                       () => actions.Invoke( monitor, d ),
+                                       millisecondsTimeout,
+                                       considerRolledbackAsFailure,
+                                       parallelDomainPostActions,
+                                       waitForDomainPostActionsCompletion );
         }
 
-        Task<(Exception? OnStartTransactionError, TransactionResult Transaction)> IObservableDomainAccess<Coordinator>.ModifyNoThrowAsync( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<Coordinator>> actions, int millisecondsTimeout, bool parallelDomainPostActions )
+        Task<TransactionResult> IObservableDomainAccess<Coordinator>.ModifyNoThrowAsync( IActivityMonitor monitor,
+                                                                                         Action<IActivityMonitor, IObservableDomain<Coordinator>> actions,
+                                                                                         int millisecondsTimeout,
+                                                                                         bool considerRolledbackAsFailure,
+                                                                                         bool parallelDomainPostActions,
+                                                                                         bool waitForDomainPostActionsCompletion )
         {
-            return Domain.ModifyNoThrowAsync( monitor, () => actions.Invoke( monitor, Domain ), parallelDomainPostActions, millisecondsTimeout );
+            var d = Domain;
+            return d.ModifyNoThrowAsync( monitor,
+                                         () => actions.Invoke( monitor, d ),
+                                         millisecondsTimeout,
+                                         considerRolledbackAsFailure,
+                                         parallelDomainPostActions,
+                                         waitForDomainPostActionsCompletion );
         }
         #endregion
 
