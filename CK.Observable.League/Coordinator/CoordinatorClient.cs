@@ -41,22 +41,37 @@ namespace CK.Observable.League
         public override void OnTransactionCommit( in SuccessfulTransactionEventArgs c )
         {
             base.OnTransactionCommit( c );
-            if( !_optionsPropertyId.HasValue ) _optionsPropertyId = c.FindPropertyId( nameof( CK.Observable.League.Domain.Options ) );
-            HashSet<Domain>? touched = null;
-            foreach( var e in c.Events )
+
+            IEnumerable<Domain>? touched = null;
+            if( c.RollbackedInfo != null )
             {
-                if( e is NewObjectEvent n && n.Object is Domain dN )
+                // We don't have any sidekick that may have interfered with our domains.
+                // We have nothing to do.
+                if( c.RollbackedInfo.IsSafeRollback ) return;
+                Debug.Assert( c.RollbackedInfo.IsDangerousRollback );
+                // Resynchronize all.
+                touched = Domain.AllObjects.OfType<Domain>();
+            }
+            else
+            {
+                HashSet<Domain>? hashTouched = null;
+                if( !_optionsPropertyId.HasValue ) _optionsPropertyId = c.FindPropertyId( nameof( CK.Observable.League.Domain.Options ) );
+                foreach( var e in c.Events )
                 {
-                    if( touched == null ) touched = new HashSet<Domain>();
-                    touched.Add( dN );
-                    break;
+                    if( e is NewObjectEvent n && n.Object is Domain dN )
+                    {
+                        if( hashTouched == null ) hashTouched = new HashSet<Domain>();
+                        hashTouched.Add( dN );
+                        break;
+                    }
+                    if( _optionsPropertyId.HasValue && e is PropertyChangedEvent p && p.PropertyId == _optionsPropertyId.Value && p.Object is Domain dP )
+                    {
+                        if( hashTouched == null ) hashTouched = new HashSet<Domain>();
+                        hashTouched.Add( dP );
+                        break;
+                    }
                 }
-                if( _optionsPropertyId.HasValue && e is PropertyChangedEvent p && p.PropertyId == _optionsPropertyId.Value && p.Object is Domain dP )
-                {
-                    if( touched == null ) touched = new HashSet<Domain>();
-                    touched.Add( dP );
-                    break;
-                }
+                touched = hashTouched;
             }
             if( touched != null )
             {

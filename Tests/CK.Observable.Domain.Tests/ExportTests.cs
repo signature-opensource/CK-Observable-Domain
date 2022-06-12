@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Contracts;
 using System.Linq;
+using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
 
 namespace CK.Observable.Domain.Tests
@@ -20,25 +21,25 @@ namespace CK.Observable.Domain.Tests
         static void TrackLastEvent( IActivityMonitor m, JsonEventCollector.TransactionEvent e ) => LastEvent = e;
 
         [Test]
-        public void doc_demo()
+        public async Task doc_demo_Async()
         {
             var eventCollector = new JsonEventCollector();
-            using( var d = new ObservableDomain(TestHelper.Monitor, nameof(doc_demo), startTimer: true ) )
+            using( var d = new ObservableDomain(TestHelper.Monitor, nameof(doc_demo_Async), startTimer: true ) )
             {
                 eventCollector.CollectEvent( d, false );
-                Car car = null;
-                d.Modify( TestHelper.Monitor, () =>
+                Car car = null!;
+                await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     car = new Car( "Titine" );
                 } );
-                string initial = d.ExportToString();
+                var initial = d.ExportToString();
 
-                d.Modify( TestHelper.Monitor, () =>
+                await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     car.Destroy();
                 } );
 
-                d.Modify( TestHelper.Monitor, () =>
+                await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     var g = new Garage();
                     var m = new Mechanic( g ) { FirstName = "Paul" };
@@ -52,13 +53,13 @@ namespace CK.Observable.Domain.Tests
 
                 Console.WriteLine( initial );
 
-                string last = d.ExportToString();
+                var last = d.ExportToString();
                 Console.WriteLine( last );
             }
         }
 
         [Test]
-        public void exporting_and_altering_simple()
+        public async Task exporting_and_altering_simple_Async()
         {
             var eventCollector = new JsonEventCollector();
 
@@ -68,11 +69,9 @@ namespace CK.Observable.Domain.Tests
                 eventCollector.LastEventChanged += TrackLastEvent;
                 d.TransactionSerialNumber.Should().Be( 0, "Nothing happened yet." );
 
-                string initial = d.ExportToString();
+                var initial = d.ExportToString();
 
-                d.Modify( TestHelper.Monitor, () =>
-                {
-                } ).Success.Should().BeTrue();
+                await d.ModifyThrowAsync( TestHelper.Monitor, null );
 
                 d.TransactionSerialNumber.Should().Be( 1, "Even if nothing changed, TransactionNumber is incremented." );
                 LastEvent.TransactionNumber.Should().Be( 1 );
@@ -86,63 +85,63 @@ namespace CK.Observable.Domain.Tests
                 r2.TransactionNumber.Should().Be( 0 );
                 r2.Events.Should().BeEmpty();
 
-                d.Modify( TestHelper.Monitor, () =>
+                await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     new Car( "Hello!" );
-                } ).Success.Should().BeTrue();
+                } );
 
                 LastEvent.TransactionNumber.Should().Be( 2 );
                 string t2 = LastEvent.ExportedEvents;
 
-                d.Modify( TestHelper.Monitor, () =>
+                await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     d.AllObjects.Single().Destroy();
-                } ).Should().NotBeNull();
+                } );
 
                 string t3 = LastEvent.ExportedEvents;
 
-                d.Modify( TestHelper.Monitor, () =>
+                await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     new MultiPropertyType();
 
-                } ).Should().NotBeNull();
+                } );
 
                 string t4 = LastEvent.ExportedEvents;
 
-                d.Modify( TestHelper.Monitor, () =>
+                await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     var m = d.AllObjects.OfType<MultiPropertyType>().Single();
                     m.ChangeAll( "Pouf", 3, new Guid( "{B681AD83-A276-4A5C-A11A-4A22469B6A0D}" ) );
 
-                } ).Should().NotBeNull();
+                } );
 
                 string t5 = LastEvent.ExportedEvents;
 
-                d.Modify( TestHelper.Monitor, () =>
+                await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     var m = d.AllObjects.OfType<MultiPropertyType>().Single();
                     m.SetDefaults();
 
-                } ).Should().NotBeNull();
+                } );
 
                 string t6 = LastEvent.ExportedEvents;
 
-                d.Modify( TestHelper.Monitor, () =>
+                await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     d.AllObjects.OfType<MultiPropertyType>().Single().Destroy();
                     var l = new ObservableList<string>();
                     l.Add( "One" );
                     l.Add( "Two" );
 
-                } ).Should().NotBeNull();
+                } );
 
                 string t7 = LastEvent.ExportedEvents;
 
-                d.Modify( TestHelper.Monitor, () =>
+                await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     var l = d.AllObjects.OfType<ObservableList<string>>().Single();
                     l[0] = "Three";
-                } ).Should().NotBeNull();
+                } );
 
                 string t8 = LastEvent.ExportedEvents;
 
@@ -151,7 +150,7 @@ namespace CK.Observable.Domain.Tests
 
 
         [Test]
-        public void GetTransactionEvents_semantics()
+        public async Task GetTransactionEvents_semantics_Async()
         {
             using( var d = new ObservableDomain(TestHelper.Monitor, "TEST", startTimer: true ) )
             {
@@ -170,11 +169,11 @@ namespace CK.Observable.Domain.Tests
                 r2.Events.Should().BeEmpty();
 
                 ObservableList<int>? oneObject = null;
-                d.Modify( TestHelper.Monitor, () =>
+                await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     oneObject = new ObservableList<int>();
 
-                } ).Success.Should().BeTrue();
+                } );
                 Debug.Assert( oneObject != null );
 
                 d.TransactionSerialNumber.Should().Be( 1, "TransactionNumber is incremented." );
@@ -189,11 +188,11 @@ namespace CK.Observable.Domain.Tests
                 r2 = eventCollector.GetTransactionEvents( 2 );
                 r2.Events.Should().BeEmpty();
 
-                d.Modify( TestHelper.Monitor, () =>
+                await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     oneObject.Add( 1 );
 
-                } ).Success.Should().BeTrue();
+                } );
                 d.TransactionSerialNumber.Should().Be( 2, "TransactionNumber is incremented." );
                 LastEvent.TransactionNumber.Should().Be( 2 );
                 LastEvent.ExportedEvents.Should().Be( "[\"I\",0,0,1]" );
@@ -207,11 +206,11 @@ namespace CK.Observable.Domain.Tests
                 r2 = eventCollector.GetTransactionEvents( 2 );
                 r2.Events.Should().BeEmpty();
 
-                d.Modify( TestHelper.Monitor, () =>
+                await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     oneObject.Destroy();
 
-                } ).Success.Should().BeTrue();
+                } );
 
                 d.TransactionSerialNumber.Should().Be( 3, "TransactionNumber is incremented." );
                 LastEvent.TransactionNumber.Should().Be( 3 );
@@ -228,29 +227,32 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
-        public void exporting_and_altering_sample()
+        public async Task exporting_and_altering_sample_Async()
         {
             var eventCollector = new JsonEventCollector();
             eventCollector.LastEventChanged += TrackLastEvent;
 
-            using( var d = SampleDomain.CreateSample() )
+            using( var d = await SampleDomain.CreateSampleAsync() )
             {
                 eventCollector.CollectEvent( d, false );
                 d.TransactionSerialNumber.Should().Be( 1 );
 
-                string initial = d.ExportToString();
+                var initial = d.ExportToString();
+                Debug.Assert( initial != null );
 
                 TestHelper.Monitor.Info( initial );
-                d.Modify( TestHelper.Monitor, () =>
+                await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     var g2 = d.AllObjects.OfType<Garage>().Single( g => g.CompanyName == null );
                     g2.CompanyName = "Signature Code";
                 } );
+                Debug.Assert( LastEvent != null );
+
                 LastEvent.TransactionNumber.Should().Be( 2 );
                 string t1 = LastEvent.ExportedEvents;
                 t1.Should().Be( "[\"C\",16,0,\"Signature Code\"]" );
 
-                d.Modify( TestHelper.Monitor, () =>
+                await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     var g2 = d.AllObjects.OfType<Garage>().Single( g => g.CompanyName == "Signature Code" );
                     g2.Cars.Clear();
@@ -259,7 +261,7 @@ namespace CK.Observable.Domain.Tests
                 LastEvent.TransactionNumber.Should().Be( 3 );
                 string t2 = LastEvent.ExportedEvents;
 
-                d.Modify( TestHelper.Monitor, () =>
+                await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     var spi = d.AllObjects.OfType<Mechanic>().Single( m => m.LastName == "Spinelli" );
                     spi.Destroy();
@@ -268,7 +270,7 @@ namespace CK.Observable.Domain.Tests
                 string t3 = LastEvent.ExportedEvents;
                 t3.Should().Be( "[\"R\",17,5],[\"D\",25]" );
 
-                d.Modify( TestHelper.Monitor, () =>
+                await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     var g1 = d.AllObjects.OfType<Garage>().Single( g => g.CompanyName == "Boite" );
                     g1.ReplacementCar.Remove( g1.Cars[0] );
@@ -281,7 +283,7 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
-        public void exporting_and_altering_ApplicationState()
+        public async Task exporting_and_altering_ApplicationState_Async()
         {
             var eventCollector = new JsonEventCollector();
             eventCollector.LastEventChanged += TrackLastEvent;
@@ -292,7 +294,7 @@ namespace CK.Observable.Domain.Tests
                                                                               client: new Clients.ConcreteMemoryTransactionProviderClient() ) )
             {
                 eventCollector.CollectEvent( d, false );
-                d.Modify( TestHelper.Monitor, () =>
+                await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     var p1 = new RootSample.ProductInfo( "Name n°1", 12 );
                     p1.ExtraData.Add( "Toto", "TVal" );
@@ -301,14 +303,16 @@ namespace CK.Observable.Domain.Tests
                     d.Root.ProductStateList.Add( new RootSample.Product( p1 ) { Name = "Product n°1" } );
                     d.Root.CurrentProductState = d.Root.ProductStateList[0];
                 } );
+                Debug.Assert( LastEvent != null );
+
                 d.Root.ProductStateList[0].OId.Index.Should().Be( 7, "Product n°1 OId.Index is 7." );
                 d.TransactionSerialNumber.Should().Be( 1 );
 
-                string initial = d.ExportToString();
+                var initial = d.ExportToString();
                 initial.Should().ContainAll( "Name n°1", "Product n°1", @"""CurrentProductState"":{"">"":7}" );
                 initial.Should().Contain( @"[""Toto"",""TVal""]" );
                 initial.Should().Contain( @"[""Tata"",""TVal""]" );
-                d.Modify( TestHelper.Monitor, () =>
+                await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     var p2 = new RootSample.ProductInfo( "Name n°2", 22 );
                     d.Root.Products.Add( p2.Name, p2 );
@@ -326,8 +330,9 @@ namespace CK.Observable.Domain.Tests
                 // ApplicationState.CurrentProduct is p2:
                 t1.Should().Contain( @"[""C"",0,1,{""="":6}]" );
 
-                d.Modify( TestHelper.Monitor, () =>
+                await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
+                    Debug.Assert( d.Root.CurrentProductState != null );
                     d.Root.CurrentProductState.Name.Should().Be( "Product n°2" );
                     d.Root.SkipToNextProduct();
                     d.Root.CurrentProductState.Name.Should().Be( "Product n°1" );
@@ -403,37 +408,37 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
-        public void ObservableDomain_and_DomainView_is_NotExportable_and_any_other_types_can_be()
+        public async Task ObservableDomain_and_DomainView_is_NotExportable_and_any_other_types_can_be_Async()
         {
-            using var d = new ObservableDomain(TestHelper.Monitor, nameof(ObservableDomain_and_DomainView_is_NotExportable_and_any_other_types_can_be), startTimer: true );
+            using var d = new ObservableDomain(TestHelper.Monitor, nameof(ObservableDomain_and_DomainView_is_NotExportable_and_any_other_types_can_be_Async), startTimer: true );
             var eventCollector = new JsonEventCollector( d );
-            d.Modify( TestHelper.Monitor, () =>
+            await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 d.TransactionSerialNumber.Should().Be( 0 );
                 new TryingToExportNotExportableProperties1();
 
-            } ).Success.Should().BeTrue();
+            } );
 
             d.Invoking( x => x.ExportToString() )
                 .Should().Throw<CKException>()
                 .WithMessage( "Exporting 'ObservableDomain' is forbidden: No interaction with the ObservableDomain must be made from the observable objects." );
 
-            d.Modify( TestHelper.Monitor, () =>
+            await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 d.AllObjects.Single().Destroy();
                 new TryingToExportNotExportableProperties2();
 
-            } ).Success.Should().BeTrue();
+            } );
 
             d.Invoking( x => x.ExportToString() )
                 .Should().Throw<CKException>()
                 .WithMessage( "Exporting 'DomainView' is forbidden: DomainView must not be exposed. Only the protected Domain should be used." );
 
-            d.Modify( TestHelper.Monitor, () =>
+            await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 d.AllObjects.Single().Destroy();
                 new TryingToExportNotExportableProperties3();
-            } ).Success.Should().BeTrue();
+            } );
 
             d.Invoking( x => x.ExportToString() )
                 .Should().Throw<CKException>()
@@ -469,20 +474,20 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
-        public void timers_and_reminders_are_NotExportable()
+        public async Task timers_and_reminders_are_NotExportable_Async()
         {
-            using var d = new ObservableDomain(TestHelper.Monitor, nameof(timers_and_reminders_are_NotExportable), startTimer: true );
+            using var d = new ObservableDomain(TestHelper.Monitor, nameof(timers_and_reminders_are_NotExportable_Async), startTimer: true );
             var eventCollector = new JsonEventCollector( d );
             // To skip the initial transaction where no events are collectable.
-            d.Modify( TestHelper.Monitor, null );
+            await d.ModifyThrowAsync( TestHelper.Monitor, null );
 
-            TransactionResult t = d.Modify( TestHelper.Monitor, () =>
+            await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 d.TransactionSerialNumber.Should().Be( 1, "Not incremented yet (still inside the transaction n°2)." );
                 new TimerAndRemiderProperties();
             } );
             d.ExportToString().Should().NotContainAny( "Timer", "Reminder" ).And.Contain( "ThisIsExported" );
-            var events = eventCollector.GetTransactionEvents( 1 ).Events.Single().ExportedEvents;
+            var events = eventCollector.GetTransactionEvents( 1 ).Events!.Single().ExportedEvents;
             events.Should().NotContainAny( "Timer", "Reminder" ).And.Contain( "ThisIsExported" );
         }
 

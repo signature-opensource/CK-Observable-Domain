@@ -109,16 +109,19 @@ namespace CK.Observable
         public override void OnTransactionCommit( in SuccessfulTransactionEventArgs c )
         {
             base.OnTransactionCommit( c );
-            if( _minimumDueTimeMs == 0 )
+            if( c.RollbackedInfo == null )
             {
-                // Write every snapshot
-                WriteFileIfNeeded();
-            }
-            else if( _minimumDueTimeMs > 0 && c.CommitTimeUtc > _nextDueTimeUtc )
-            {
-                // Write snapshot if due, then reschedule it.
-                WriteFileIfNeeded();
-                RescheduleDueTime( c.CommitTimeUtc );
+                if( _minimumDueTimeMs == 0 )
+                {
+                    // Write every snapshot
+                    WriteFileIfNeeded();
+                }
+                else if( _minimumDueTimeMs > 0 && c.CommitTimeUtc > _nextDueTimeUtc )
+                {
+                    // Write snapshot if due, then reschedule it.
+                    WriteFileIfNeeded();
+                    RescheduleDueTime( c.CommitTimeUtc );
+                }
             }
         }
 

@@ -4,6 +4,7 @@ using NUnit.Framework;
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
 
 namespace CK.Observable.Domain.Tests
@@ -35,10 +36,10 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
-        public void serializable_but_not_exportable()
+        public async Task serializable_but_not_exportable_Async()
         {
-            using var d = new ObservableDomain(TestHelper.Monitor, nameof(serializable_but_not_exportable), startTimer: true );
-            d.Modify( TestHelper.Monitor, () =>
+            var d = new ObservableDomain(TestHelper.Monitor, nameof(serializable_but_not_exportable_Async), startTimer: true );
+            await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 new SerializableOnly() { Name = "Albert" };
             } );

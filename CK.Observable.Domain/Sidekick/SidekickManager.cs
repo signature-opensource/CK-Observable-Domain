@@ -501,7 +501,7 @@ namespace CK.Observable
             _currentDeserilalizationInfo = this;
         }
 
-        internal void Save( IBinarySerializer d )
+        internal void Save( IActivityMonitor monitor, IBinarySerializer d )
         {
             d.Writer.Write( (byte)0 );
         }

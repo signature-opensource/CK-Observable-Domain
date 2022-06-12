@@ -111,7 +111,7 @@ namespace CK.Observable
                                   // On success, unhandled exception or cancellation, we do nothing.
                                   // We only handle one case: if the write lock obtention failed we need the trampoline
                                   // to retry asap.
-                                  if( r.IsFaulted ) monitor.Fatal( "Unhandled exception from domain.ModifyAsync.", r.Exception );
+                                  if( r.IsFaulted ) monitor.Fatal( "Unhandled exception from domain.ModifyAsync with throwException: false. This cannot happen.", r.Exception );
                                   else
                                   {
                                       if( r.IsCanceled ) monitor.Warn( "Async operation canceled." );
@@ -185,13 +185,14 @@ namespace CK.Observable
                 if( nextDueTimeUtc == Util.UtcMaxValue ) nextDueTimeUtc = Util.UtcMinValue;
                 if( nextDueTimeUtc == _nextDueTime ) return;
 
+                Throw.CheckNotNullArgument( monitor );
                 // Allow Dispose to have been called here.
                 if( _onTimeLostFlag < 0 )
                 {
-                    monitor.Warn( _onTimeLostFlag == -1 ? "Domain is being disposed." : "Domain has been disposed." );
+                    monitor.Warn( _onTimeLostFlag == -1 ? "Timer is being disposed." : "Timer has been disposed." );
                     nextDueTimeUtc = Util.UtcMinValue;
+                    return;
                 }
-                Throw.CheckNotNullArgument( monitor );
                 _nextDueTime = nextDueTimeUtc;
                 if( nextDueTimeUtc == Util.UtcMinValue )
                 {
@@ -224,9 +225,9 @@ namespace CK.Observable
             }
 
             /// <summary>
-            /// Disposes the internal <see cref="System.Threading.Timer"/> object.
+            /// Disposes the internal <see cref="System.Threading.Timer"/> object and makes this AutoTimer silent.
             /// This is automatically called by <see cref="ObservableDomain.Dispose()"/> on the <see cref="TimeManager.Timer"/>:
-            /// this must be called only when explicit AutoTimer are created/assigned.
+            /// this must be called only to disable the real timer (testing should be the only context where it makes sense).
             /// </summary>
             public void Dispose()
             {

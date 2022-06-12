@@ -25,6 +25,8 @@ namespace CK.Observable.League
             public override void OnTransactionCommit( in SuccessfulTransactionEventArgs c )
             {
                 base.OnTransactionCommit( c );
+                // To update the shell knowledge of the NextActiveTime, knowing if we have rolled back or not
+                // is useless.
                 DateTime nextActiveTime = c.Domain.TimeManager.NextActiveTime;
                 c.DomainPostActions.Add( ctx =>
                 {

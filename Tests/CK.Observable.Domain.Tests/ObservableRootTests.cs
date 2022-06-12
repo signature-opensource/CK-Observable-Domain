@@ -6,6 +6,7 @@ using System.IO;
 using CK.Core;
 using static CK.Testing.MonitorTestHelper;
 using CK.BinarySerialization;
+using System.Threading.Tasks;
 
 namespace CK.Observable.Domain.Tests
 {
@@ -28,17 +29,17 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
-        public void initializing_and_persisting_domain()
+        public async Task initializing_and_persisting_domain_Async()
         {
             var eventCollector = new JsonEventCollector();
             eventCollector.LastEventChanged += TrackLastEvent;
 
-            using( var d = new ObservableDomain<ApplicationState>(TestHelper.Monitor, "TEST", startTimer: true ) )
+            using( var d = new ObservableDomain<ApplicationState>(TestHelper.Monitor, nameof( initializing_and_persisting_domain_Async ), startTimer: true ) )
             {
                 eventCollector.CollectEvent( d, false );
                 d.Root.ToDoNumbers.Should().BeEmpty();
 
-                d.Modify( TestHelper.Monitor, () =>
+                await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     d.Root.ToDoNumbers.Add( 42 );
                 } );
@@ -56,11 +57,11 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
-        public void serialization_tests()
+        public async Task serialization_tests_Async()
         {
-            using( var d = new ObservableDomain<ApplicationState>(TestHelper.Monitor, nameof( serialization_tests ), startTimer: true ) )
+            using( var d = new ObservableDomain<ApplicationState>(TestHelper.Monitor, nameof( serialization_tests_Async ), startTimer: true ) )
             {
-                d.Modify( TestHelper.Monitor, () =>
+                await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     d.Root.ToDoNumbers.AddRange( Enumerable.Range( 10, 20 ) );
                     for( int i = 0; i < 30; ++i )
@@ -71,9 +72,9 @@ namespace CK.Observable.Domain.Tests
                         d.Root.ProductInfos.Add( pInfo );
                     }
                 } );
-                var ctx = new BinarySerialization.BinaryDeserializerContext();
-                ctx.Services.Add<ObservableDomain>( new ObservableDomain<ApplicationState>(TestHelper.Monitor, nameof( serialization_tests ), startTimer: true ) );
-                BinarySerialization.BinarySerializer.IdempotenceCheck( d.Root, deserializerContext: ctx );
+                var ctx = new BinaryDeserializerContext();
+                ctx.Services.Add<ObservableDomain>( new ObservableDomain<ApplicationState>(TestHelper.Monitor, nameof( serialization_tests_Async ), startTimer: true ) );
+                BinarySerializer.IdempotenceCheck( d.Root, deserializerContext: ctx );
             }
         }
 

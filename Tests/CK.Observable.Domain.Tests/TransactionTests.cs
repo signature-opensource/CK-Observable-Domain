@@ -4,6 +4,7 @@ using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
 
 namespace CK.Observable.Domain.Tests
@@ -12,12 +13,12 @@ namespace CK.Observable.Domain.Tests
     public class TransactionManagerTests
     {
         [Test]
-        public void transaction_works_for_the_very_first_one()
+        public async Task transaction_works_for_the_very_first_one_Async()
         {
             using( var d = new ObservableDomain(TestHelper.Monitor, "TEST", startTimer: true, client: new Clients.ConcreteMemoryTransactionProviderClient()))
             {
                 d.TransactionSerialNumber.Should().Be( 0 );
-                var result = d.Modify( TestHelper.Monitor, () =>
+                var result = await d.ModifyNoThrowAsync( TestHelper.Monitor, () =>
                 {
                     new Car( "V1" );
                     new Car( "V2" );
@@ -32,33 +33,30 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
-        public void transaction_manager_with_rollbacks()
+        public async Task transaction_manager_with_rollbacks_Async()
         {
-            using( var d = SampleDomain.CreateSample( new Clients.ConcreteMemoryTransactionProviderClient() ) )
+            using( var d = await SampleDomain.CreateSampleAsync( new Clients.ConcreteMemoryTransactionProviderClient() ) )
             {
                 d.TransactionSerialNumber.Should().Be( 1 );
-                TransactionResult result = SampleDomain.TransactedSetPaulMincLastName( d, "No-More-Minc" );
-                result.Errors.Should().BeEmpty();
+                var r = await SampleDomain.SetPaulMincLastNameNoThrowAsync( d, "No-More-Minc" );
+                r.Success.Should().BeTrue();
                 d.TransactionSerialNumber.Should().Be( 2 );
                 d.AllObjects.OfType<Person>().Single( x => x.FirstName == "Paul" ).LastName.Should().Be( "No-More-Minc" );
 
-                result = SampleDomain.TransactedSetPaulMincLastName( d, "Minc" );
-                result.Errors.Should().BeEmpty();
+                r = await SampleDomain.SetPaulMincLastNameNoThrowAsync( d, "Minc" );
+                r.Success.Should().BeTrue();
                 d.TransactionSerialNumber.Should().Be( 3 );
+
                 SampleDomain.CheckSampleGarage( d );
 
-                result = SampleDomain.TransactedSetPaulMincLastName( d, "No-More-Minc", throwException: true );
-                result.Errors.Should().NotBeEmpty();
+                r = await SampleDomain.SetPaulMincLastNameNoThrowAsync( d, "No-More-Minc", throwException: true );
+                r.Success.Should().BeFalse();
+                r.Errors.Should().NotBeEmpty();
                 d.TransactionSerialNumber.Should().Be( 3 );
 
+                // The domain has been rolled back.
                 SampleDomain.CheckSampleGarage( d );
             }
-        }
-
-        static void Check( IReadOnlyList<ObservableEvent> events, params string[] e )
-        {
-            events.Should().HaveCount( e.Length );
-            events.Select( ev => ev.ToString() ).Should().ContainInOrder( e );
         }
     }
 }

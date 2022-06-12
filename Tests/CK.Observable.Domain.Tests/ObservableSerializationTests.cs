@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
 
 namespace CK.Observable.Domain.Tests
@@ -18,12 +19,12 @@ namespace CK.Observable.Domain.Tests
         [TestCase( "Timer" )]
         [TestCase( "Reminder" )]
         [TestCase( "AutoCounter" )]
-        public void one_object_serialization( string type )
+        public async Task one_object_serialization_Async( string type )
         {
-            using var handler = TestHelper.CreateDomainHandler( $"{nameof( one_object_serialization )}-{type}", startTimer: false, serviceProvider: null );
+            using var handler = TestHelper.CreateDomainHandler( $"{nameof( one_object_serialization_Async )}-{type}", startTimer: false, serviceProvider: null );
 
-            object o = null;
-            handler.Domain.Modify( TestHelper.Monitor, () =>
+            object o = null!;
+            await handler.Domain.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 switch( type )
                 {
@@ -31,10 +32,10 @@ namespace CK.Observable.Domain.Tests
                     case "SuspendableClock": o = new SuspendableClock(); break;
                     case "Timer": o = new ObservableTimer( DateTime.UtcNow.AddDays( 1 ) ); break;
                     case "Reminder": o = new ObservableReminder( DateTime.UtcNow.AddDays( 1 ) ); break;
-                    case "AutoCounter": o = new TimedEvents.AutoCounter( 10000 ); break;
+                    case "AutoCounter": o = new TimedEvents.StupidAutoCounter( 10000 ); break;
                 }
 
-            } ).Success.Should().BeTrue();
+            } );
 
             handler.ReloadNewDomain( TestHelper.Monitor, idempotenceCheck: type != "SuspendableClock" );
 
@@ -62,21 +63,21 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
-        public void simple_idempotence_checks()
+        public async Task simple_idempotence_checks_Async()
         {
-            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( simple_idempotence_checks ), startTimer: true ) )
+            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( simple_idempotence_checks_Async ), startTimer: true ) )
             {
                 TestHelper.Monitor.Info( "Test 1" );
-                d.Modify( TestHelper.Monitor, () => new Sample.Car( "Zoé" ) );
+                await d.ModifyThrowAsync( TestHelper.Monitor, () => new Sample.Car( "Zoé" ) );
                 d.AllObjects.Should().HaveCount( 1 );
                 ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
 
                 TestHelper.Monitor.Info( "Test 2" );
-                d.Modify( TestHelper.Monitor, () => d.AllObjects.Single().Destroy() );
+                await d.ModifyThrowAsync( TestHelper.Monitor, () => d.AllObjects.Single().Destroy() );
                 ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
 
                 TestHelper.Monitor.Info( "Test 3" );
-                d.Modify( TestHelper.Monitor, () => new Sample.Car( "Zoé is back!" ) );
+                await d.ModifyThrowAsync( TestHelper.Monitor, () => new Sample.Car( "Zoé is back!" ) );
                 ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
             }
         }
@@ -104,11 +105,11 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
-        public void jagged_arrays_of_ObservableObjects_idempotence_checks()
+        public async Task jagged_arrays_of_ObservableObjects_idempotence_checks_Async()
         {
-            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( jagged_arrays_of_ObservableObjects_idempotence_checks ), startTimer: false ) )
+            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( jagged_arrays_of_ObservableObjects_idempotence_checks_Async ), startTimer: false ) )
             {
-                d.Modify( TestHelper.Monitor, () =>
+                await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     var ketru = new ObservableWithJaggedArrays();
                     ketru.Cars = new[]
@@ -118,9 +119,9 @@ namespace CK.Observable.Domain.Tests
                     };
                 } );
                 ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
-                d.Modify( TestHelper.Monitor, () =>
+                await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
-                    var ketru = (ObservableWithJaggedArrays)d.AllObjects[0];
+                    var ketru = d.AllObjects.OfType<ObservableWithJaggedArrays>().Single();
                     ketru.Cars[0].Should().HaveCount( 2 );
                     ketru.Cars[1].Should().HaveCount( 3 );
                     ketru.Cars[1][2].Name.Should().Be( "O3" );
@@ -131,11 +132,11 @@ namespace CK.Observable.Domain.Tests
 
 
         [Test]
-        public void immutable_string_serialization_test()
+        public async Task immutable_string_serialization_test_Async()
         {
-            using( var od = new ObservableDomain<CustomRoot>( TestHelper.Monitor, nameof( immutable_string_serialization_test ), startTimer: false) )
+            using( var od = new ObservableDomain<CustomRoot>( TestHelper.Monitor, nameof( immutable_string_serialization_test_Async ), startTimer: false) )
             {
-                od.Modify( TestHelper.Monitor, () =>
+                await od.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     od.Root.ImmutablesById = new ObservableDictionary<string, CustomImmutable>();
 
@@ -148,12 +149,12 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
-        public void created_then_disposed_event_test()
+        public async Task created_then_disposed_event_test_Async()
         {
-            using( var od = new ObservableDomain<CustomRoot>( TestHelper.Monitor, nameof( created_then_disposed_event_test ), startTimer: true ) )
+            using( var od = new ObservableDomain<CustomRoot>( TestHelper.Monitor, nameof( created_then_disposed_event_test_Async ), startTimer: true ) )
             {
                 // Prepare initial state
-                od.Modify( TestHelper.Monitor, () =>
+                await od.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     od.Root.CustomObservableList = new ObservableList<CustomObservable>();
                 } );
@@ -161,7 +162,7 @@ namespace CK.Observable.Domain.Tests
                 var initialState = od.ExportToString();
 
                 // Add some events for good measure
-                var events = od.Modify( TestHelper.Monitor, () =>
+                await od.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     // Create Observable and immutables
                     var myImmutable = new CustomImmutable( "ABC000", "My object" );
@@ -188,12 +189,12 @@ namespace CK.Observable.Domain.Tests
 
         [TestCase( true )]
         [TestCase( false )]
-        public void IdempotenceSerializationCheck_works_on_disposing_Observables( bool alwaysDisposeChild )
+        public async Task IdempotenceSerializationCheck_works_on_disposing_Observables_Async( bool alwaysDisposeChild )
         {
-            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( IdempotenceSerializationCheck_works_on_disposing_Observables ), startTimer: true ) )
+            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( IdempotenceSerializationCheck_works_on_disposing_Observables_Async ), startTimer: true ) )
             {
                 TestDisposableObservableObject oldObject = null;
-                d.Modify( TestHelper.Monitor, () =>
+                await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     oldObject = new TestDisposableObservableObject( alwaysDisposeChild );
                 } );
@@ -323,7 +324,6 @@ namespace CK.Observable.Domain.Tests
             }
         }
 
-
         [SerializationVersion( 0 )]
         public class ReminderAndTimerBag : InternalObject
         {
@@ -378,11 +378,11 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
-        public void lot_of_timed_events_test()
+        public async Task lot_of_timed_events_test_Async()
         {
-            using( var od = new ObservableDomain( TestHelper.Monitor, nameof( lot_of_timed_events_test ), startTimer: true ) )
+            using( var od = new ObservableDomain( TestHelper.Monitor, nameof( lot_of_timed_events_test_Async ), startTimer: true ) )
             {
-                od.Modify( TestHelper.Monitor, () =>
+                await od.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     new ReminderAndTimerBag( 1 ).Create( 1 );
 
@@ -391,7 +391,7 @@ namespace CK.Observable.Domain.Tests
                 od.TimeManager.AllObservableTimedEvents.Should().HaveCount( 4 );
                 ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, od );
 
-                od.Modify( TestHelper.Monitor, () =>
+                await od.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     new ReminderAndTimerBag( 2 ).Create( 20 );
 

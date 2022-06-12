@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
 
 namespace CK.Observable.Domain.Tests
@@ -44,14 +45,14 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
-        public void simple_serialization()
+        public async Task simple_serialization_Async()
         {
             using var domain = new ObservableDomain( TestHelper.Monitor, "TEST", startTimer: false );
-            domain.Modify( TestHelper.Monitor, () =>
+            await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 var car = new Car( "Hello" );
                 car.TestSpeed = 10;
-            } ).Success.Should().BeTrue();
+            } );
 
             using var d2 = TestHelper.SaveAndLoad( domain );
             domain.IsDisposed.Should().BeTrue( "SaveAndLoad disposed it." );
@@ -63,19 +64,19 @@ namespace CK.Observable.Domain.Tests
             c.Name.Should().Be( "Hello" );
             c.TestSpeed.Should().Be( 10 );
 
-            d2.Modify( TestHelper.Monitor, () =>
+            await d2.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 c.TestSpeed = 10000;
-            } ).Success.Should().BeTrue();
+            } );
             events.Should().HaveCount( 1 );
         }
 
         [Test]
-        public void serialization_with_mutiple_types()
+        public async Task serialization_with_mutiple_types_Async()
         {
-            using var domain = new ObservableDomain( TestHelper.Monitor, nameof( serialization_with_mutiple_types ), startTimer: true );
+            using var domain = new ObservableDomain( TestHelper.Monitor, nameof( serialization_with_mutiple_types_Async ), startTimer: true );
             MultiPropertyType defValue = null!;
-            domain.Modify( TestHelper.Monitor, () =>
+            await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 defValue = new MultiPropertyType();
                 var other = new MultiPropertyType();
@@ -86,7 +87,7 @@ namespace CK.Observable.Domain.Tests
             using var d2 = TestHelper.SaveAndLoad( domain );
             d2.AllObjects.OfType<MultiPropertyType>().All( o => o.Equals( defValue ) );
 
-            d2.Modify( TestHelper.Monitor, () =>
+            await d2.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 var other = d2.AllObjects.OfType<MultiPropertyType>().ElementAt( 1 );
                 other.ChangeAll( "Changed", 3, Guid.NewGuid() );
@@ -102,10 +103,10 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
-        public void with_cycle_serialization()
+        public async Task with_cycle_serialization_Async()
         {
-            using var domain = new ObservableDomain( TestHelper.Monitor, nameof( with_cycle_serialization ), startTimer: true );
-            domain.Modify( TestHelper.Monitor, () =>
+            using var domain = new ObservableDomain( TestHelper.Monitor, nameof( with_cycle_serialization_Async ), startTimer: true );
+            await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 var g = new Garage();
                 g.CompanyName = "Hello";
@@ -125,10 +126,10 @@ namespace CK.Observable.Domain.Tests
 
 
         [Test]
-        public void with_cycle_serialization_between_2_objects()
+        public async Task with_cycle_serialization_between_2_objects_Async()
         {
-            using var domain = new ObservableDomain( TestHelper.Monitor, nameof( with_cycle_serialization_between_2_objects ), startTimer: true );
-            domain.Modify( TestHelper.Monitor, () =>
+            using var domain = new ObservableDomain( TestHelper.Monitor, nameof( with_cycle_serialization_between_2_objects_Async ), startTimer: true );
+            await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 var p1 = new Person() { FirstName = "A" };
                 var p2 = new Person() { FirstName = "B", Friend = p1 };
@@ -149,10 +150,10 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
-        public void ultimate_cycle_serialization()
+        public async Task ultimate_cycle_serialization_Async()
         {
-            using var domain = new ObservableDomain( TestHelper.Monitor, nameof( ultimate_cycle_serialization ), startTimer: true );
-            domain.Modify( TestHelper.Monitor, () =>
+            using var domain = new ObservableDomain( TestHelper.Monitor, nameof( ultimate_cycle_serialization_Async ), startTimer: true );
+            await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 var p = new Person() { FirstName = "P" };
                 p.Friend = p;
@@ -166,9 +167,9 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
-        public void sample_graph_serialization_inside_read_or_write_locks()
+        public async Task sample_graph_serialization_inside_read_or_write_locks_Async()
         {
-            using( var domain = SampleDomain.CreateSample() )
+            using( var domain = await SampleDomain.CreateSampleAsync() )
             {
                 using( var d2 = TestHelper.SaveAndLoad( domain, skipDomainDispose: true ) )
                 {
@@ -212,11 +213,11 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
-        public void persisting_disposed_objects_reference_tracking()
+        public async Task persisting_disposed_objects_reference_tracking_Async()
         {
             // Will be disposed by SaveAndLoad.
-            var d = new ObservableDomain( TestHelper.Monitor, nameof( Load_can_disable_TimeManager ), startTimer: true );
-            d.Modify( TestHelper.Monitor, () =>
+            var d = new ObservableDomain( TestHelper.Monitor, nameof( Load_can_disable_TimeManager_Async ), startTimer: true );
+            await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 var list = new ObservableList<object>();
                 var timer = new ObservableTimer( DateTime.UtcNow.AddDays( 1 ) );
@@ -236,7 +237,7 @@ namespace CK.Observable.Domain.Tests
             // This disposes the domain and returns a brand new one. This doesn't throw.
             using var d2 = TestHelper.SaveAndLoad( d );
 
-            d2.Modify( TestHelper.Monitor, () =>
+            await d2.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 var list = d2.AllObjects.OfType<ObservableList<object>>().Single();
 
@@ -248,7 +249,7 @@ namespace CK.Observable.Domain.Tests
             } );
             ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d2 );
 
-            d2.Modify( TestHelper.Monitor, () =>
+            await d2.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 var list = d2.AllObjects.OfType<ObservableList<object>>().Single();
                 list.Count.Should().Be( 4 );
@@ -256,19 +257,19 @@ namespace CK.Observable.Domain.Tests
                 {
                     o.IsDestroyed.Should().BeTrue();
                 }
-            } ).Success.Should().BeTrue();
+            } );
 
             Debug.Assert( d2.CurrentLostObjectTracker != null );
             d2.CurrentLostObjectTracker.ReferencedDestroyed.Should().HaveCount( 4 );
         }
 
         [Test]
-        public void Load_can_disable_TimeManager()
+        public async Task Load_can_disable_TimeManager_Async()
         {
             ElapsedFired = false;
 
-            var d = new ObservableDomain( TestHelper.Monitor, nameof( Load_can_disable_TimeManager ), startTimer: true );
-            d.Modify( TestHelper.Monitor, () =>
+            var d = new ObservableDomain( TestHelper.Monitor, nameof( Load_can_disable_TimeManager_Async ), startTimer: true );
+            await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 var r = new ObservableReminder( DateTime.UtcNow.AddMilliseconds( 100 ) );
                 r.Elapsed += OnElapsedFire;
@@ -292,20 +293,20 @@ namespace CK.Observable.Domain.Tests
                 d2.TimeManager.Reminders.Single().IsActive.Should().BeTrue( "Waiting for TimeManager.Start()." );
                 ElapsedFired.Should().BeFalse();
             }
-            d2.Modify( TestHelper.Monitor, () =>
+            await d2.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 d2.TimeManager.IsRunning.Should().BeFalse();
                 d2.TimeManager.Reminders.Single().IsActive.Should().BeTrue();
-            } ).Success.Should().BeTrue();
+            } );
 
             ElapsedFired.Should().BeFalse( "Still waiting." );
 
-            d2.Modify( TestHelper.Monitor, () =>
+            await d2.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 d2.TimeManager.Start();
                 d2.TimeManager.IsRunning.Should().BeTrue();
                 d2.TimeManager.Reminders.Single().IsActive.Should().BeTrue( "Will be raised at the end of the transaction." );
-            } ).Success.Should().BeTrue();
+            } );
 
             ElapsedFired.Should().BeTrue( "TimeManager.IsRunning: reminder has fired." );
 

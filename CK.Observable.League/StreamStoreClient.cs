@@ -91,10 +91,13 @@ namespace CK.Observable.League
         /// <param name="c"></param>
         public override void OnTransactionCommit( in SuccessfulTransactionEventArgs c )
         {
-            CreateSnapshot( c.Monitor, c.Domain, false, c.HasSaveCommand );
-            // We save the snapshot if we must (and there is no compensation for this of course).
-            bool doHouseKeeping = c.HasSaveCommand;
-            if( doHouseKeeping || c.CommitTimeUtc >= _nextSave ) c.PostActions.Add( ctx => SaveSnapshotAsync( ctx.Monitor, doHouseKeeping ) );
+            if( c.RollbackedInfo == null )
+            {
+                CreateSnapshot( c.Monitor, c.Domain, false, c.HasSaveCommand );
+                // We save the snapshot if we must (and there is no compensation for this of course).
+                bool doHouseKeeping = c.HasSaveCommand;
+                if( doHouseKeeping || c.CommitTimeUtc >= _nextSave ) c.PostActions.Add( ctx => SaveSnapshotAsync( ctx.Monitor, doHouseKeeping ) );
+            }
             Next?.OnTransactionCommit( c );
         }
 

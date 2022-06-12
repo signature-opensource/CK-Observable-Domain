@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
 
 namespace CK.Observable.Domain.Tests
@@ -86,7 +87,7 @@ namespace CK.Observable.Domain.Tests
 
         [TestCase( "UseSidekickAttribute" )]
         [TestCase( "ISidekickClientObject<>" )]
-        public void sidekick_with_ExternalService( string mode )
+        public async Task sidekick_with_ExternalService_Async( string mode )
         {
             var services = new ServiceCollection()
                                 .AddSingleton<ExternalService>()
@@ -94,18 +95,17 @@ namespace CK.Observable.Domain.Tests
 
             IReadOnlyList<ActivityMonitorSimpleCollector.Entry> logs = null!;
 
-            using var obs = new ObservableDomain( TestHelper.Monitor, nameof( sidekick_with_ExternalService ) + '_' + mode, startTimer: true, serviceProvider: services );
+            using var obs = new ObservableDomain( TestHelper.Monitor, nameof( sidekick_with_ExternalService_Async ) + '_' + mode, startTimer: true, serviceProvider: services );
 
             using( TestHelper.Monitor.CollectEntries( entries => logs = entries, LogLevelFilter.Info ) )
             {
-                TransactionResult t = obs.Modify( TestHelper.Monitor, () =>
+                await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     ObjWithSKBase o = mode == "UseSidekickAttribute"
                                             ? (ObjWithSKBase)new ObjWithSKWithDependencies()
                                             : new ObjWithSKWithDependenciesViaInterface();
                     o.CommandMessage = "Hello!";
                 } );
-                t.Success.Should().BeTrue();
             }
             logs.Select( l => l.Text ).Should().Contain( "Initializing SKWithDependencies." );
             logs.Select( l => l.Text ).Should().Contain( "SKWithDependencies[Formatted by ExternalService: 'Hello!'.]" );

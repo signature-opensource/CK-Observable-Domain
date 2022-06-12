@@ -1,4 +1,4 @@
-﻿using CK.BinarySerialization;
+using CK.BinarySerialization;
 using CK.Core;
 using FluentAssertions;
 using NUnit.Framework;
@@ -48,7 +48,7 @@ namespace CK.Observable.League.Tests
                     // Cleanup at each N saves.
                     housekeepingRate: housekeepingRate );
 
-            await league.Coordinator.ModifyAsync( TestHelper.Monitor, ( m, d ) => d.Root.CreateDomain( domainName, rootTypes, options ) );
+            await league.Coordinator.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) => d.Root.CreateDomain( domainName, rootTypes, options ) );
             var loader = league.Find( domainName );
             Debug.Assert( loader != null, nameof( loader ) + " != null" );
 
@@ -58,7 +58,7 @@ namespace CK.Observable.League.Tests
                 await using( var shell = await loader.LoadAsync<Model.School>( TestHelper.Monitor ) )
                 {
                     Debug.Assert( shell != null, nameof( shell ) + " != null" );
-                    await shell.ModifyAsync( TestHelper.Monitor, ( m, d ) =>
+                    await shell.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) =>
                     {
                         d.Root.Persons.Add( new Model.Person() { FirstName = "X", LastName = "Y", Age = 22 } );
                     } );
@@ -74,8 +74,8 @@ namespace CK.Observable.League.Tests
             {
                 await using( var shell = await loader.LoadAsync<Model.School>( TestHelper.Monitor ) )
                 {
-                    Debug.Assert( shell != null, nameof( shell ) + " != null" );
-                    await shell.ModifyAsync( TestHelper.Monitor, ( m, d ) =>
+                    Debug.Assert( shell != null );
+                    await shell.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) =>
                     {
                         d.Root.Persons.Add( new Model.Person() { FirstName = "X", LastName = "Y", Age = 22 } );
                     } );
@@ -111,28 +111,27 @@ namespace CK.Observable.League.Tests
         {
             var store = BasicLeagueTests.CreateStore( nameof( housekeeping_based_on_time_and_size_Async ) );
             var league = (await ObservableLeague.LoadAsync( TestHelper.Monitor, store ))!;
-            await league.Coordinator.ModifyAsync( TestHelper.Monitor, ( m, coodinator ) =>
+            await league.Coordinator.ModifyThrowAsync( TestHelper.Monitor, ( m, coodinator ) =>
             {
                 var d = coodinator.Root.CreateDomain( "M" );
-                d.Options = new ManagedDomainOptions(
-                    // Keep the domain in memory.
-                    DomainLifeCycleOption.Always,
-                    // Don't compress since we want ~6KiB files.
-                    CompressionKind.None,
-                    // Default transactional mode. Each commit triggers a snapshot.
-                    skipTransactionCount: 0,
-                    // Snapshots are always saved.
-                    snapshotSaveDelay: TimeSpan.Zero,
-                    // Guaranty 300 milliseconds of backups. 
-                    snapshotKeepDuration: TimeSpan.FromMilliseconds( 300 ),
-                    // Keep only 10 KiB cumulated max.
-                    snapshotMaximalTotalKiB: 10,
-                    // We don't care of events here.
-                    eventKeepDuration: TimeSpan.Zero,
-                    // Minimum value is 1.
-                    eventKeepLimit: 1,
-                    // Cleanup on every save.
-                    housekeepingRate: 1
+                d.Options = new ManagedDomainOptions( // Keep the domain in memory.
+                                                      DomainLifeCycleOption.Always,
+                                                      // Don't compress since we want ~6KiB files.
+                                                      CompressionKind.None,
+                                                      // Default transactional mode. Each commit triggers a snapshot.
+                                                      skipTransactionCount: 0,
+                                                      // Snapshots are always saved.
+                                                      snapshotSaveDelay: TimeSpan.Zero,
+                                                      // Guaranty 300 milliseconds of backups. 
+                                                      snapshotKeepDuration: TimeSpan.FromMilliseconds( 300 ),
+                                                      // Keep only 10 KiB cumulated max.
+                                                      snapshotMaximalTotalKiB: 10,
+                                                      // We don't care of events here.
+                                                      eventKeepDuration: TimeSpan.Zero,
+                                                      // Minimum value is 1.
+                                                      eventKeepLimit: 1,
+                                                      // Cleanup on every save.
+                                                      housekeepingRate: 1
                 );
             } );
             

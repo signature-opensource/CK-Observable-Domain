@@ -15,10 +15,10 @@ namespace CK.Observable.League.Tests.MicroMachine
     {
         [Test]
         [Explicit( "Unfortunately this test fails on CI. Timed tests are a mess..." )]
-        public void AutoDisposed_works_accross_serialization()
+        public async Task AutoDisposed_works_accross_serialization_Async()
         {
             using var d = new ObservableDomain<Root>(TestHelper.Monitor, "TEST", startTimer: true );
-            d.Modify( TestHelper.Monitor, () =>
+            await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 d.Root.Machine.Clock.IsActive = true;
                 // CumulateUnloadedTime changes the CumulativeOffset at reload: serialization cannot be idempotent
@@ -28,7 +28,7 @@ namespace CK.Observable.League.Tests.MicroMachine
                 d.Root.Machine.CreateThing( 1 );
                 d.Root.Machine.Things.Should().HaveCount( 1 );
 
-            } ).Success.Should().BeTrue();
+            } );
 
             // No Identification appears: => IdentificationTimeout.
             Thread.Sleep( 250 );
@@ -36,22 +36,21 @@ namespace CK.Observable.League.Tests.MicroMachine
             // itself to the Device's OnDestroyed event and a null when handler is saved (event registered
             // to sidekick is skipped). If the second write has no sidekick, the null will be missing...
             ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d, restoreSidekicks: true );
-            d.Modify( TestHelper.Monitor, () =>
+            await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 d.Root.Machine.Things.Should().HaveCount( 1 );
                 d.Root.Machine.Things[0].IdentifiedId.Should().BeNull();
                 d.Root.Machine.Things[0].Error.Should().Be( "IdentificationTimeout" );
 
-            } ).Success.Should().BeTrue();
+            } );
 
             ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d, restoreSidekicks: true );
             // AutoDisposed fired.
             Thread.Sleep( 200 );
-            d.Modify( TestHelper.Monitor, () =>
+            using( d.AcquireReadLock() )
             {
                 d.Root.Machine.Things.Should().BeEmpty();
-
-            } ).Success.Should().BeTrue();
+            }
         }
 
         [TestCase( 10 )]
@@ -63,7 +62,7 @@ namespace CK.Observable.League.Tests.MicroMachine
         {
             var store = BasicLeagueTests.CreateStore( nameof( initial_configuration_and_subsequent_work_Async ) );
             var league = (await ObservableLeague.LoadAsync( TestHelper.Monitor, store ))!;
-            await league.Coordinator.ModifyAsync( TestHelper.Monitor, ( m, coodinator ) =>
+            await league.Coordinator.ModifyThrowAsync( TestHelper.Monitor, ( m, coodinator ) =>
             {
                 var d = coodinator.Root.CreateDomain( "M", typeof( Root ).AssemblyQualifiedName! );
                 d.Options = d.Options.SetLifeCycleOption( DomainLifeCycleOption.Never )
@@ -102,7 +101,7 @@ namespace CK.Observable.League.Tests.MicroMachine
                         d.Root.Machine.CommandReceivedCount.Should().Be( 2 );
 
                     } );
-                    var result = await shell.ModifyAsync( TestHelper.Monitor, ( m, d ) =>
+                    var result = await shell.ModifyNoThrowAsync( TestHelper.Monitor, ( m, d ) =>
                     {
                         d.Root.Machine.CmdToTheMachine( "bug" );
                         d.Root.Machine.CommandReceivedCount.Should().Be( 3 );
@@ -110,7 +109,7 @@ namespace CK.Observable.League.Tests.MicroMachine
                     result.Success.Should().BeFalse();
                     result.CommandHandlingErrors.Should().NotBeEmpty();
 
-                    result = await shell.ModifyAsync( TestHelper.Monitor, ( m, d ) =>
+                    result = await shell.ModifyNoThrowAsync( TestHelper.Monitor, ( m, d ) =>
                     {
                         d.Root.Machine.CommandReceivedCount.Should().Be( 3, "This has been committed." );
                         d.Root.Machine.CmdToTheMachine( "bug in sending" );
@@ -119,7 +118,7 @@ namespace CK.Observable.League.Tests.MicroMachine
                     result.Success.Should().BeFalse();
                     result.Errors.Should().NotBeEmpty();
 
-                    result = await shell.ModifyAsync( TestHelper.Monitor, ( m, d ) =>
+                    result = await shell.ModifyNoThrowAsync( TestHelper.Monitor, ( m, d ) =>
                     {
                         d.Root.Machine.CommandReceivedCount.Should().Be( 3, "The 4th call has been rollbacked." );
                     } );
@@ -129,13 +128,13 @@ namespace CK.Observable.League.Tests.MicroMachine
         }
 
         [Test]
-        public void waiting_for_timeouts()
+        public async Task waiting_for_timeouts_Async()
         {
             const int thingCount = 50;
             const int waitTimeBetweenThings = 50;
 
             using var d = new ObservableDomain<Root>(TestHelper.Monitor, "TEST", startTimer: true );
-            d.Modify( TestHelper.Monitor, () =>
+            await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 d.Root.Machine.Configuration.IdentifyThingTimeout = TimeSpan.FromMilliseconds( 200 );
                 d.Root.Machine.Configuration.AutoDestroyedTimeout = TimeSpan.FromMilliseconds( 200 );
@@ -146,11 +145,11 @@ namespace CK.Observable.League.Tests.MicroMachine
                     d.Root.Machine.CreateThing( i );
                     Thread.Sleep( waitTimeBetweenThings );
                 }
-            } ).Success.Should().BeTrue();
+            } );
 
             // No Identification appears: => IdentificationTimeout.
             Thread.Sleep( 200 + (thingCount * waitTimeBetweenThings) );
-            d.Modify( TestHelper.Monitor, () =>
+            await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 int count = d.Root.Machine.Things.Count;
                 for( int i = 0; i < count; ++i )
@@ -158,15 +157,15 @@ namespace CK.Observable.League.Tests.MicroMachine
                     d.Root.Machine.Things[i].IdentifiedId.Should().BeNull();
                     d.Root.Machine.Things[i].Error.Should().Be( "IdentificationTimeout" );
                 }
-            } ).Success.Should().BeTrue();
+            } );
 
             // AutoDisposed fired.
             Thread.Sleep( (thingCount * waitTimeBetweenThings) );
-            d.Modify( TestHelper.Monitor, () =>
+            using( d.AcquireReadLock() )
             {
                 d.Root.Machine.Things.Should().BeEmpty();
 
-            } ).Success.Should().BeTrue();
+            }
         }
 
     }

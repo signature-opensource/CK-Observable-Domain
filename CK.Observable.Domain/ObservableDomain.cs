@@ -259,8 +259,8 @@ namespace CK.Observable
                                 .Contains( GetType().GetGenericTypeDefinition() ) );
 
             using( monitor.OpenInfo( $"Loading new {GetType()} '{domainName}' from stream." ) )
+            using( new InitializationTransaction( monitor, this, true ) )
             {
-                // DoLoad will create an InitializationTransaction.
                 DoLoad( monitor, stream, domainName, startTimer, mustStartTimer =>
                 {
                     client?.OnDomainCreated( monitor, this, ref mustStartTimer );
@@ -382,8 +382,8 @@ namespace CK.Observable
             /// <inheritdoc cref="InitializationTransaction"/>
             /// <param name="m">The monitor to use while this transaction is the current one.</param>
             /// <param name="d">The observable domain.</param>
-            /// <param name="enterWriteLock">False to not enter and exit the write lock because it is already held).</param>
-            public InitializationTransaction( IActivityMonitor m, ObservableDomain d, bool enterWriteLock = true )
+            /// <param name="enterWriteLock">False to not enter and exit the write lock because it is already held.</param>
+            public InitializationTransaction( IActivityMonitor m, ObservableDomain d, bool enterWriteLock )
             {
                 m.OpenDebug( $"Opening new InitializationTransaction on '{d.DomainName}'." );
                 _monitor = m;
@@ -582,39 +582,6 @@ namespace CK.Observable
             remove => _inspectorEvent -= value;
         }
 
-        /// <summary>
-        /// <para>
-        /// Acquires a single-threaded read lock on this <see cref="ObservableDomain"/>:
-        /// until the returned disposable is disposed, objects can safely be read, and any attempt
-        /// to call one of the ModifyAsync methods from other threads will be blocked.
-        /// This immediately returns null if this domain is disposed.
-        /// </para>
-        /// <para>
-        /// Changing threads (typically by awaiting tasks) before the returned disposable is disposed
-        /// will throw a <see cref="SynchronizationLockException"/>.
-        /// </para>
-        /// <para>
-        /// Any attempt to call one of the ModifyAsync methods from this thread will throw a <see cref="LockRecursionException"/>.
-        /// </para>
-        /// </summary>
-        /// <param name="millisecondsTimeout">
-        /// The maximum number of milliseconds to wait for a read access before giving up.
-        /// Wait indefinitely by default.
-        /// </param>
-        /// <exception cref="LockRecursionException">
-        /// When one of the ModifyAsync methods is being called from the same thread inside the read lock.
-        /// </exception>
-        /// <exception cref="SynchronizationLockException">
-        /// When the current thread has not entered the lock in read mode.
-        /// Can be caused by other threads trying to use this lock (typically after awaiting a task).
-        /// </exception>
-        /// <returns>A disposable that releases the read lock when disposed, or null if a timeout occurred (or this is disposed).</returns>
-        public IDisposable? AcquireReadLock( int millisecondsTimeout = -1 )
-        {
-            CheckDisposed();
-            if( !_lock.TryEnterReadLock( millisecondsTimeout ) ) return null;
-            return Util.CreateDisposableAction( () => _lock.ExitReadLock() );
-        }
 
         public IObservableTransaction? BeginTransaction( IActivityMonitor monitor, int millisecondsTimeout = -1 )
         {
@@ -638,13 +605,17 @@ namespace CK.Observable
         /// The maximum number of milliseconds to wait for a read access before giving up.
         /// Wait indefinitely by default.
         /// </param>
-        /// <returns>True on success, false if timeout occurred.</returns>
+        /// <returns>True on success, false if timeout occurred or if this domain is disposed.</returns>
         public bool Export( TextWriter w, int milliSecondsTimeout = -1 )
         {
-            CheckDisposed();
-            if( !_lock.TryEnterReadLock( milliSecondsTimeout ) ) return false;
+            if( _transactionStatus == CurrentTransactionStatus.Disposing
+                || !_lock.TryEnterReadLock( milliSecondsTimeout ) )
+            {
+                return false;
+            }
             try
             {
+                if( _transactionStatus == CurrentTransactionStatus.Disposing ) return false;
                 var target = new JSONExportTarget( w );
                 target.EmitStartObject( -1, ObjectExportedKind.Object );
                 target.EmitPropertyName( "N" );
@@ -727,17 +698,18 @@ namespace CK.Observable
         /// Ensures that the <see cref="ObservableDomain.TimeManager"/> is running or stopped.
         /// When null, it keeps its previous state (it is initially stopped at domain creation) and then its current state is persisted.
         /// </param>
-        /// <returns>True on success, false if timeout occurred.</returns>
+        /// <returns>True on success, false if timeout occurred or if this domain is disposed.</returns>
         public bool Load( IActivityMonitor monitor, RewindableStream stream, string expectedLoadedName, int millisecondsTimeout = -1, bool? startTimer = null )
         {
             Throw.CheckNotNullArgument( monitor );
             Throw.CheckNotNullArgument( stream );
             Throw.CheckData( stream.IsValid );
-            Throw.CheckNotNullArgument( expectedLoadedName );            
-            CheckDisposed();
+            Throw.CheckNotNullArgument( expectedLoadedName );
+            if( _transactionStatus == CurrentTransactionStatus.Disposing ) return false;
 
             bool hasWriteLock = _lock.IsWriteLockHeld;
             if( !hasWriteLock && !_lock.TryEnterWriteLock( millisecondsTimeout ) ) return false;
+
             Debug.Assert( !hasWriteLock || _currentTran != null, "isWrite => _currentTran != null" );
             bool needFakeTran = _currentTran == null || _currentTran.Monitor != monitor;
             using( monitor.OpenInfo( $"Reloading domain '{DomainName}' (using {(needFakeTran ? "fake" : "current")} transaction) from rewindable '{stream.Kind}'." ) )
@@ -1018,8 +990,8 @@ namespace CK.Observable
 
         void DoDispose( IActivityMonitor monitor )
         {
-            Debug.Assert( _transactionStatus != CurrentTransactionStatus.Disposing );
             Debug.Assert( _lock.IsWriteLockHeld );
+            Debug.Assert( _transactionStatus != CurrentTransactionStatus.Disposing );
             using( monitor.OpenInfo( $"Disposing domain '{DomainName}'." ) )
             {
                 bool executorRun = _domainPostActionExecutor.Stop();
@@ -1050,7 +1022,7 @@ namespace CK.Observable
                 }
                 monitor.Info( $"Domain '{DomainName}' disposed." );
                 // There is a race condition here. AcquireReadLock, BeginTransaction (and others)
-                // may have also seen a false _disposed and then try to acquire the lock.
+                // may have also seen a false _transactionStatus and then try to acquire the lock.
                 // If the race is won by this Dispose() thread, then the write lock is taken, released and
                 // the lock itself should be disposed...
                 //
@@ -1061,11 +1033,11 @@ namespace CK.Observable
                 // 2 - If the other thread continue their execution after the following _lock.Dispose(), they will
                 //     try to acquire a disposed lock. An ObjectDisposedException should be thrown (that is somehow fine).
                 //
-                // The first solution seems be to accept 2 (the disposed exception of the lock) and to detect 1 by
-                // checking _disposed after each acquire: if _disposed then we must release the lock and
+                // The first solution seems to accept 2 (the disposed exception of the lock) and to detect 1 by
+                // checking _disposed after each acquire: if CurrentTransactionStatus.Disposing then we must release the lock and
                 // throw the ObjectDisposedException...
                 // However, the _lock.Dispose() call below MAY occur while a TryEnter has been successful and before
-                // the _disposed check and the release: this would result in an awful "Incorrect Lock Dispose" exception
+                // the _transactionStatus check and the release: this would result in an awful "Incorrect Lock Dispose" exception
                 // since disposing a lock while it is held is an error.
                 // ==> This solution that seems the cleanest and most reasonable one is eventually NOT an option... 
                 //
@@ -1077,18 +1049,15 @@ namespace CK.Observable
                 //
                 // A third solution is simply to...
                 //   - not Dispose the _lock (and rely on the Garbage Collector to clean it)...
-                //   - ...and to implement the checks of the first solution.
+                //   - ...and to call CheckDisposed each time the lock is taken.
                 // And we can notice that by doing this:
                 //  - there is no risk to acquire a disposed lock.
                 //  - the domain is 'technically' functional, except that:
                 //       - The AutoTimer has been disposed right above, it may throw an ObjectDisposedException and that is fine.
                 //       - The DomainClient has been set to null: no more side effect (like transaction rollback) can occur.
-                // ==> The domain doesn't act as expected anymore. We must throw an ObjectDisposedException to prevent such ambiguity.
+                // ==> As long as CheckDisposed is called right after each lock and throws an ObjectDisposedException, it's safe.
                 //
-                // Conclusion:
-                //   - We only protect, inside the lock, the Modify action: read only operations are free to run and end in this "in between".
-                //     The good place to call CheckDisposed() is in TryEnterUpgradeableReadAndWriteLockAtOnce().
-                //   - We comment the following line.
+                // Conclusion: We comment the following line.
                 //
                 //_lock.Dispose();
             }
@@ -1231,10 +1200,11 @@ namespace CK.Observable
         {
             if( !_lock.IsWriteLockHeld )
             {
+                // Since the lock is not held, we may be disposing or disposed.
                 if( _transactionStatus == CurrentTransactionStatus.Disposing ) throw new ObjectDisposedException( $"Domain {DomainName}" );
-                if( _currentTran == null ) throw new InvalidOperationException( "A transaction is required." );
-                if( _lock.IsReadLockHeld ) throw new InvalidOperationException( "Concurrent access: only Read lock has been acquired." );
-                throw new InvalidOperationException( "Concurrent access: write lock must be acquired." );
+                if( _currentTran == null ) Throw.InvalidOperationException( "A transaction is required." );
+                if( _lock.IsReadLockHeld ) Throw.InvalidOperationException( "Concurrent access: only Read lock has been acquired." );
+                Throw.InvalidOperationException( "Concurrent access: write lock must be acquired." );
             }
             return o;
         }

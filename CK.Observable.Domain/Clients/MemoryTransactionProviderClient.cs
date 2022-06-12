@@ -128,13 +128,17 @@ namespace CK.Observable
 
         /// <summary>
         /// Default behavior is FIRST to relay the call to the next client if any, and
-        /// THEN to create a snapshot (simply calls <see cref="CreateSnapshot"/> protected method).
+        /// THEN to create a snapshot (simply calls <see cref="CreateSnapshot"/> protected method)
+        /// if <see cref="SuccessfulTransactionEventArgs.RollbackedInfo"/> is null.
         /// </summary>
         /// <param name="c">The transaction context.</param>
         public virtual void OnTransactionCommit( in SuccessfulTransactionEventArgs c )
         {
             Next?.OnTransactionCommit( c );
-            CreateSnapshot( c.Monitor, c.Domain, false, c.HasSaveCommand );
+            if( c.RollbackedInfo == null )
+            {
+                CreateSnapshot( c.Monitor, c.Domain, false, c.HasSaveCommand );
+            }
         }
 
 

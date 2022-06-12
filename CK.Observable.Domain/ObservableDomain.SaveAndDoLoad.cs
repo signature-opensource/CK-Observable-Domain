@@ -42,6 +42,8 @@ namespace CK.Observable
             using( var s = BinarySerializer.Create( stream, _serializerContext ) )
             {
                 s.OnDestroyedObject += Track;
+
+                // Lock check are done here (as late as possible to minimize contention).
                 bool isWrite = _lock.IsWriteLockHeld;
                 bool isRead = _lock.IsReadLockHeld;
                 if( !isWrite && !isRead && !_lock.TryEnterReadLock( millisecondsTimeout ) )
@@ -49,6 +51,16 @@ namespace CK.Observable
                     Monitor.Exit( _saveLock );
                     return false;
                 }
+                // We cannot use CheckDisposed here: we must release the locks.
+                if( _transactionStatus == CurrentTransactionStatus.Disposing )
+                {
+                    Monitor.Exit( _saveLock );
+                    _lock.ExitReadLock();
+                    ThrowOnDisposedDomain();
+                }
+                // Either there is no current transaction or the provided monitor is not the one that the
+                // user wants to use: we create an InitializationTransaction with the right monitor that "hides"
+                // the current transaction one if any.
                 bool needFakeTran = _currentTran == null || _currentTran.Monitor != monitor;
                 if( needFakeTran ) new InitializationTransaction( monitor, this, false );
                 try
@@ -120,7 +132,7 @@ namespace CK.Observable
                         s.DebugWriteSentinel();
                         var (lostTimedObjects, unusedPooledReminders, pooledReminderCount) = _timeManager.Save( monitor, s, trackLostObjects );
                         s.DebugWriteSentinel();
-                        _sidekickManager.Save( s );
+                        _sidekickManager.Save( monitor, s );
                         var data = new LostObjectTracker( this,
                                                           lostObservableObjects,
                                                           lostInternalObjects,

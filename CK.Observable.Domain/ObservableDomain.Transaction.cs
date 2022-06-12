@@ -61,7 +61,7 @@ namespace CK.Observable
                 Debug.Assert( _domain._lock.IsWriteLockHeld );
 
                 SuccessfulTransactionEventArgs? ctx = null;
-                bool needPseudoSuccessTransaction = false;
+                bool rollbackHasSidekicks = false;
                 if( _errors.Length != 0 )
                 {
                     using( Monitor.OpenWarn( "Committing a Transaction on error. Calling DomainClient.OnTransactionFailure." ) )
@@ -73,29 +73,28 @@ namespace CK.Observable
                         try
                         {
                             _domain.DomainClient?.OnTransactionFailure( Monitor, _domain, _errors );
-                            // The fact that HasWaitingSidekick is true here is because an error occurred.
-                            // But this is not enough to know that a rollback has been made.
-                            // We don't want to create an automatic transaction here to create the waiting sidekicks if the transaction failed
-                            // and the domain is in a non rolled back dirty state or if the Load itself failed.
-                            if( _lastLoadStatus.IsDeserializing() && _domain._sidekickManager.HasWaitingSidekick )
+                            // Handle rollback.
+                            if( _lastLoadStatus.IsDeserializing() )
                             {
-                                using( Monitor.OpenWarn( "A rollback occurred. Instantiating sidekicks." ) )
+                                if( _domain._sidekickManager.HasWaitingSidekick )
                                 {
-                                    Exception? firstError = null;
-                                    int c = _errors.Length;
-                                    _domain._sidekickManager.CreateWaitingSidekicks( Monitor,
-                                                                                     ex => { if( firstError == null ) firstError = ex; },
-                                                                                     finalCall: true );
-                                    // If an error occurred, consider it a Client (critical) error.
-                                    if( firstError != null )
+                                    using( Monitor.OpenWarn( $"Rollback {_lastLoadStatus}: Instantiating sidekicks." ) )
                                     {
-                                        _result.SetClientError( firstError );
-                                    }
-                                    else
-                                    {
-                                        // We saved the day... But we need a somehow "successful" transaction to execute the
-                                        // impacts of the rollback.
-                                        needPseudoSuccessTransaction = true;
+                                        Exception? firstError = null;
+                                        int c = _errors.Length;
+                                        _domain._sidekickManager.CreateWaitingSidekicks( Monitor,
+                                                                                         ex => { if( firstError == null ) firstError = ex; },
+                                                                                         finalCall: true );
+                                        // If an error occurred, consider it a Client (critical) error.
+                                        if( firstError != null )
+                                        {
+                                            _result.SetClientError( firstError );
+                                            _lastLoadStatus = CurrentTransactionStatus.Regular;
+                                        }
+                                        else
+                                        {
+                                            rollbackHasSidekicks = true;
+                                        }
                                     }
                                 }
                             }
@@ -109,16 +108,25 @@ namespace CK.Observable
                     }
                 }
 
-                if( _result == null || needPseudoSuccessTransaction )
+                if( _result == null || _lastLoadStatus.IsDeserializing() )
                 {
-                    using( Monitor.OpenDebug( needPseudoSuccessTransaction
-                                                ? "Transaction rolled back: Handling sidekick instantiation side effects."
-                                                : "Transaction has no error. Calling DomainClient.OnTransactionCommit." ) )
+                    using( Monitor.OpenDebug( _result == null
+                                                ? "Transaction has no error. Calling DomainClient.OnTransactionCommit."
+                                                : rollbackHasSidekicks
+                                                    ? "Transaction rolled back: Handling sidekick instantiation side effects."
+                                                    : "Transaction rolled back." ) )
                     {
+                        // Should we always increment the transaction status (take the max of the previous and restored + 1)?
+                        // For the moment, we always increment the current or restored one...
+                        // except if no sidekicks have been instantiated: we stay on the restored one.
+                        if( _result == null || rollbackHasSidekicks )
+                        {
+                            ++_domain._transactionSerialNumber;
+                        }
                         ctx = _domain._changeTracker.Commit( _domain,
                                                              _domain.EnsurePropertyInfo,
                                                              _startTime,
-                                                             ++_domain._transactionSerialNumber,
+                                                             _domain._transactionSerialNumber,
                                                              _result != null
                                                                 ? new RolledbackTransactionInfo( _result, _lastLoadStatus == CurrentTransactionStatus.Rollingback )
                                                                 : null );

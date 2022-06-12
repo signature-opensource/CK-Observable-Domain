@@ -316,15 +316,15 @@ namespace CK.Observable.Domain.Tests
         [TestCase( "ISidekickClientObject<>", "ObservableObject" )]
         [TestCase( "UseSidekickAttribute", "InternalObject" )]
         [TestCase( "ISidekickClientObject<>", "InternalObject" )]
-        public void sidekick_simple_instantiation_and_serialization( string mode, string type )
+        public async Task sidekick_simple_instantiation_and_serialization_Async( string mode, string type )
         {
             // Will be disposed by TestHelper.SaveAndLoad at the end of this test.
-            var obs = new ObservableDomain( TestHelper.Monitor, nameof( sidekick_simple_instantiation_and_serialization ) + '-' + mode, startTimer: true );
+            var obs = new ObservableDomain( TestHelper.Monitor, nameof( sidekick_simple_instantiation_and_serialization_Async ) + '-' + mode, startTimer: true );
 
             IReadOnlyList<ActivityMonitorSimpleCollector.Entry> logs = null!;
             using( TestHelper.Monitor.CollectEntries( entries => logs = entries, LogLevelFilter.Info ) )
             {
-                TransactionResult t = obs.Modify( TestHelper.Monitor, () =>
+                await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     ISKSimpleObservableOrInternalObject o;
                     if( type == "ObservableObject" )
@@ -339,7 +339,6 @@ namespace CK.Observable.Domain.Tests
                     }
                     o.CommandMessage = "Hello!";
                 } );
-                t.Success.Should().BeTrue();
             }
             logs.SingleOrDefault( l => l.Text == "Handling [Hello!]" )
                 .Should().NotBeNull();
@@ -358,7 +357,7 @@ namespace CK.Observable.Domain.Tests
 
             using( TestHelper.Monitor.CollectEntries( entries => logs = entries, LogLevelFilter.Info ) )
             {
-                TransactionResult t = obs.Modify( TestHelper.Monitor, () =>
+                await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     if( type == "ObservableObject" )
                     {
@@ -381,7 +380,6 @@ namespace CK.Observable.Domain.Tests
                         another.CommandMessage = "FromA";
                     }
                 } );
-                t.Success.Should().BeTrue();
             }
             logs.SingleOrDefault( l => l.Text == "Handling [FromO]" ).Should().NotBeNull();
             logs.SingleOrDefault( l => l.Text == "Handling [FromA]" ).Should().NotBeNull();
@@ -400,7 +398,7 @@ namespace CK.Observable.Domain.Tests
             using( TestHelper.Monitor.CollectEntries( entries => logs = entries, LogLevelFilter.Info ) )
             using( var obs2 = TestHelper.SaveAndLoad( obs ) )
             {
-                TransactionResult t = obs2.Modify( TestHelper.Monitor, () =>
+                await obs2.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     if( type == "ObservableObject" )
                     {
@@ -417,7 +415,6 @@ namespace CK.Observable.Domain.Tests
                         a.CommandMessage = "A!";
                     }
                 } );
-                t.Success.Should().BeTrue();
             }
             obs.IsDisposed.Should().BeTrue( "SaveAndLoad disposed the original domain." );
 
@@ -438,12 +435,12 @@ namespace CK.Observable.Domain.Tests
 
 
         [Test]
-        public void sidekick_DeserializationInfo_Status_and_InactiveDelay()
+        public async Task sidekick_DeserializationInfo_Status_and_InactiveDelay_Async()
         {
             var rollbacker = new Clients.ConcreteMemoryTransactionProviderClient();
-            var dInitial = new ObservableDomain( TestHelper.Monitor, nameof( sidekick_DeserializationInfo_Status_and_InactiveDelay ), startTimer: false, rollbacker );
+            var dInitial = new ObservableDomain( TestHelper.Monitor, nameof( sidekick_DeserializationInfo_Status_and_InactiveDelay_Async ), startTimer: false, rollbacker );
 
-            dInitial.Modify( TestHelper.Monitor, () =>
+            await dInitial.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 var oI = new InternalObjWithSKSimple();
                 var oO = new ObjWithSKSimple();
@@ -452,7 +449,7 @@ namespace CK.Observable.Domain.Tests
                 oI.SidekickIsHere.Should().BeTrue();
                 oO.SidekickIsHere.Should().BeTrue();
 
-            } ).Success.Should().BeTrue();
+            } );
 
         }
 

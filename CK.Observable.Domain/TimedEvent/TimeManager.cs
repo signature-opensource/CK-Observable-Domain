@@ -267,7 +267,9 @@ namespace CK.Observable
         /// <param name="t">The timed event to add.</param>
         internal void OnChanged( ObservableTimedEventBase t ) => _changed.Add( t );
 
-        internal (List<ObservableTimedEventBase>? Lost, int UnusedPoolCount, int PooledReminderCount) Save( IActivityMonitor m, BinarySerialization.IBinarySerializer s, bool trackLostObjects )
+        internal (List<ObservableTimedEventBase>? Lost, int UnusedPoolCount, int PooledReminderCount) Save( IActivityMonitor monitor,
+                                                                                                            IBinarySerializer s,
+                                                                                                            bool trackLostObjects )
         {
             CheckMinHeapInvariant();
             List<ObservableTimedEventBase>? lostObjects = null;

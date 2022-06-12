@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
 
 namespace CK.Observable.Domain.Tests
@@ -15,21 +16,21 @@ namespace CK.Observable.Domain.Tests
     public class BasicEventsTests
     {
         [Test]
-        public void simple_property_changed_events()
+        public async Task simple_property_changed_events_Async()
         {
-            using( var domain = new ObservableDomain(TestHelper.Monitor, nameof(simple_property_changed_events), startTimer: true ))
+            using( var domain = new ObservableDomain(TestHelper.Monitor, nameof(simple_property_changed_events_Async), startTimer: true ))
             {
-                Car c0 = null;
-                Car c1 = null;
+                Car c0 = null!;
+                Car c1 = null!;
 
                 IReadOnlyList<ObservableEvent>? events = null;
                 domain.OnSuccessfulTransaction += ( d, ev ) => events = ev.Events;
 
-                domain.Modify( TestHelper.Monitor, () =>
+                await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     c0 = new Car( "First Car" );
                     c1 = new Car( "Second Car" );
-                } ).Success.Should().BeTrue();
+                } );
                 Debug.Assert( events != null );
 
                 Check( events, "NewObject 0 (Car).",
@@ -56,55 +57,56 @@ namespace CK.Observable.Domain.Tests
                                "PropertyChanged 1.IsDestroyed = False.",
                                "PropertyChanged 1.OId = 1." );
 
-                domain.Modify( TestHelper.Monitor, () =>
+                await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     c0.TestSpeed = 1;
-                } ).Success.Should().BeTrue();
+                } );
                 Check( events, "PropertyChanged 0.TestSpeed = 1." );
 
-                domain.Modify( TestHelper.Monitor, () =>
+                await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     c0.TestSpeed = 78;
                     c1.Position = new Position( 1.5, 2.3 );
-                } ).Success.Should().BeTrue();
+                } );
 
                 Check( events, "PropertyChanged 0.TestSpeed = 78.", "PropertyChanged 1.Position = (1.5,2.3)." );
             }
         }
 
         [Test]
-        public void property_changed_events_use_the_last_value()
+        public async Task property_changed_events_use_the_last_value_Async()
         {
-            using( var domain = new ObservableDomain(TestHelper.Monitor, nameof(property_changed_events_use_the_last_value), startTimer: true ) )
+            using( var domain = new ObservableDomain(TestHelper.Monitor, nameof(property_changed_events_use_the_last_value_Async), startTimer: true ) )
             {
                 IReadOnlyList<ObservableEvent>? events = null;
                 domain.OnSuccessfulTransaction += ( d, ev ) => events = ev.Events;
 
-                Car c = null;
+                Car c = null!;
 
-                domain.Modify( TestHelper.Monitor, () =>
+                await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     c = new Car( "First Car" );
-                } ).Success.Should().BeTrue();
+                } );
+                Debug.Assert( events != null );
 
-                domain.Modify( TestHelper.Monitor, () =>
+                await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     c.Position = new Position( 1.0, 2.0 );
                     c.TestSpeed = 1;
                     c.TestSpeed = 2;
                     c.TestSpeed = 3;
                     c.Position = new Position( 3.0, 4.0 );
-                } ).Success.Should().BeTrue();
+                } );
                 Check( events, "PropertyChanged 0.TestSpeed = 3.", "PropertyChanged 0.Position = (3,4)." );
             }
         }
 
         [Test]
-        public void INotifyPropertyChanged_is_supported_only_because_of_PropertyChanged_Fody_and_NotSupportedException_is_raised()
+        public async Task INotifyPropertyChanged_is_supported_only_because_of_PropertyChanged_Fody_and_NotSupportedException_is_raised_Async()
         {
-            using( var domain = new ObservableDomain(TestHelper.Monitor, nameof(INotifyPropertyChanged_is_supported_only_because_of_PropertyChanged_Fody_and_NotSupportedException_is_raised), startTimer: true ) )
+            using( var domain = new ObservableDomain(TestHelper.Monitor, nameof( INotifyPropertyChanged_is_supported_only_because_of_PropertyChanged_Fody_and_NotSupportedException_is_raised_Async ), startTimer: true ) )
             {
-                domain.Modify( TestHelper.Monitor, () =>
+                await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     TestCounter counter = new TestCounter();
                     Car c = new Car( "First Car" );
@@ -114,10 +116,10 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
-        public void the_way_PropertyChanged_Fody_works()
+        public async Task the_way_PropertyChanged_Fody_works_Async()
         {
-            using var d = new ObservableDomain(TestHelper.Monitor, nameof(the_way_PropertyChanged_Fody_works), startTimer: true ); 
-            d.Modify( TestHelper.Monitor, () =>
+            using var d = new ObservableDomain(TestHelper.Monitor, nameof(the_way_PropertyChanged_Fody_works_Async), startTimer: true ); 
+            await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 TestCounter counter = new TestCounter();
                 var c = new Car( "Fody" );
@@ -135,15 +137,15 @@ namespace CK.Observable.Domain.Tests
                 c.Power = 1;
                 counter.Count.Should().Be( 3 );
 
-            } ).Success.Should().BeTrue();
+            } );
         }
 
         [Test]
-        public void SafeEvent_automatically_cleanup_Disposed_targets()
+        public async Task SafeEvent_automatically_cleanup_Disposed_targets_Async()
         {
-            using( var domain = new ObservableDomain(TestHelper.Monitor, nameof(SafeEvent_automatically_cleanup_Disposed_targets), startTimer: true ) )
+            using( var domain = new ObservableDomain(TestHelper.Monitor, nameof(SafeEvent_automatically_cleanup_Disposed_targets_Async), startTimer: true ) )
             {
-                domain.Modify( TestHelper.Monitor, () =>
+                await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     TestCounter counter = new TestCounter();
 
@@ -183,7 +185,7 @@ namespace CK.Observable.Domain.Tests
 
                     counter.Count.Should().Be( 6 );
 
-                } ).Success.Should().BeTrue();
+                } );
             }
         }
 
@@ -191,11 +193,11 @@ namespace CK.Observable.Domain.Tests
         static void IncBang( object sender ) => Bang++;
 
         [Test]
-        public void explicit_property_changed_events_are_automatically_triggered()
+        public async Task explicit_property_changed_events_are_automatically_triggered_Async()
         {
-            using( var domain = new ObservableDomain(TestHelper.Monitor, nameof(explicit_property_changed_events_are_automatically_triggered), startTimer: true ) )
+            using( var domain = new ObservableDomain(TestHelper.Monitor, nameof(explicit_property_changed_events_are_automatically_triggered_Async), startTimer: true ) )
             {
-                domain.Modify( TestHelper.Monitor, () =>
+                await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     TestCounter counter = new TestCounter();
 
@@ -226,203 +228,260 @@ namespace CK.Observable.Domain.Tests
             }
         }
 
-        [Test]
-        public void ObservableList_is_observable_thanks_to_Item_Inserted_Set_RemovedAt_and_CollectionCleared_events()
-        {
-            using( var domain = new ObservableDomain(TestHelper.Monitor, nameof(ObservableList_is_observable_thanks_to_Item_Inserted_Set_RemovedAt_and_CollectionCleared_events), startTimer: true ) )
-            {
-                domain.Modify( TestHelper.Monitor, () =>
-                {
-                    Car c = new Car( "First Car" );
-                    Garage g = new Garage();
-                    using( var gS = g.Cars.Monitor() )
-                    {
-                        g.Cars.Add( c );
-                        gS.Should().Raise( "ItemInserted" )
-                            .WithSender( g.Cars )
-                            .WithArgs<ListInsertEvent>( ev => ev.Index == 0 && ev.Item == c && ev.Object == g.Cars );
-                    }
-                    using( var gS = g.Cars.Monitor() )
-                    {
-                        // Equality check: set is skipped, we detect the no-change.
-                        g.Cars[0] = c;
-                        gS.Should().NotRaise( "ItemInserted" );
-                        gS.Should().NotRaise( "ItemSet" );
-                    }
-                    using( var gS = g.Cars.Monitor() )
-                    {
-                        g.Cars[0] = null;
-                        gS.Should().Raise( "ItemSet" )
-                            .WithSender( g.Cars )
-                            .WithArgs<ListSetAtEvent>( ev => ev.Index == 0 && ev.Value == null && ev.Object == g.Cars );
-                    }
-                    using( var gS = g.Cars.Monitor() )
-                    {
-                        g.Cars.Remove( null );
-                        gS.Should().Raise( "ItemRemovedAt" )
-                            .WithSender( g.Cars )
-                            .WithArgs<ListRemoveAtEvent>( ev => ev.Index == 0 && ev.Object == g.Cars );
-                    }
-                    g.Cars.Add( c );
-                    g.Cars.Add( null );
-                    using( var gS = g.Cars.Monitor() )
-                    {
-                        g.Cars.Clear();
-                        gS.Should().Raise( "CollectionCleared" )
-                            .WithSender( g.Cars );
-                    }
-                    g.Cars.Should().BeEmpty();
-                    using( var gS = g.Cars.Monitor() )
-                    {
-                        g.Cars.Clear();
-                        gS.Should().NotRaise( "CollectionCleared" );
-                    }
 
-                } ).Should().NotBeNull();
-            }
-        }
 
         [Test]
-        public void list_changed_events()
+        public async Task list_changed_events_Async()
         {
-            using( var domain = new ObservableDomain(TestHelper.Monitor, nameof(list_changed_events), startTimer: true ) )
+            using( var domain = new ObservableDomain(TestHelper.Monitor, nameof(list_changed_events_Async), startTimer: true ) )
             {
-                Car c0 = null;
-                Car c1 = null;
-                Garage g = null;
+                Car c0 = null!;
+                Car c1 = null!;
+                Garage g = null!;
 
                 IReadOnlyList<ObservableEvent>? events = null;
                 domain.OnSuccessfulTransaction += ( d, ev ) => events = ev.Events;
 
-                domain.Modify( TestHelper.Monitor, () =>
+                await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     c0 = new Car( "C1" );
                     c1 = new Car( "C2" );
                     g = new Garage();
-                } ).Success.Should().BeTrue();
+                } );
+                Debug.Assert( events != null );
 
-                domain.Modify( TestHelper.Monitor, () =>
+                await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     g.Cars.Add( c0 );
                     g.Cars.Insert( 0, c1 );
                     g.Cars.Clear();
-                } ).Success.Should().BeTrue();
+                } );
 
                 Check( events, "ListInsert 4[0] = 'Car C1'.", "ListInsert 4[0] = 'Car C2'.", "CollectionClear 4." );
             }
         }
 
         [Test]
-        public void simple_reflexes()
+        public async Task simple_reflexes_Async()
         {
-            using( var domain = new ObservableDomain(TestHelper.Monitor, nameof(simple_reflexes), startTimer: true ) )
+            using( var domain = new ObservableDomain(TestHelper.Monitor, nameof(simple_reflexes_Async), startTimer: true ) )
             {
-                Car c = null;
-                Mechanic m = null;
-                Garage g = null;
+                Car c = null!;
+                Mechanic m = null!;
+                Garage g = null!;
 
                 IReadOnlyList<ObservableEvent>? events = null;
                 domain.OnSuccessfulTransaction += ( d, ev ) => events = ev.Events;
 
-                domain.Modify( TestHelper.Monitor, () =>
+                await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     g = new Garage();
                     c = new Car( "C" );
                     m = new Mechanic( g ) { FirstName = "Jon", LastName = "Doe" };
-                } ).Success.Should().BeTrue();
+                } );
+                Debug.Assert( events != null );
 
-                domain.Modify( TestHelper.Monitor, () =>
+                await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     m.CurrentCar = c;
-                } ).Success.Should().BeTrue();
+                } );
                 Check( events, "PropertyChanged 4.CurrentMechanic = 'Mechanic Jon Doe'.",
                                "PropertyChanged 5.CurrentCar = 'Car C'." );
-                domain.Modify( TestHelper.Monitor, () =>
+
+                await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     m.CurrentCar = null;
-                } ).Success.Should().BeTrue();
+                } );
                 Check( events, "PropertyChanged 4.CurrentMechanic = null.",
                                "PropertyChanged 5.CurrentCar = null." );
 
-                domain.Modify( TestHelper.Monitor, () =>
+                await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     c.CurrentMechanic = m;
-                } ).Success.Should().BeTrue();
+                } );
                 Check( events, "PropertyChanged 5.CurrentCar = 'Car C'.",
                                "PropertyChanged 4.CurrentMechanic = 'Mechanic Jon Doe'." );
 
             }
         }
 
-        [Test]
-        public void ObservableDictionary_is_observable_thanks_to_Item_Added_Set_Removed_and_CollectionCleared_events()
+        static List<ObservableEvent> _safeEvents = new List<ObservableEvent>();
+        static void CheckLastAndClear<T>( Action<T> match ) where T : ObservableEvent
         {
-            using( var domain = new ObservableDomain(TestHelper.Monitor, nameof(ObservableDictionary_is_observable_thanks_to_Item_Added_Set_Removed_and_CollectionCleared_events), startTimer: true ) )
-            {
-                domain.Modify( TestHelper.Monitor, () =>
-                {
-                    var d = new ObservableDictionary<string, int>();
-                    using( var dM = d.Monitor() )
-                    {
-                        d.Add( "One", 1 );
-                        dM.Should().Raise( "ItemAdded" )
-                            .WithSender( d )
-                            .WithArgs<CollectionMapSetEvent>( ev => ev.Key.Equals( "One" )
-                                                                    && ev.Value.Equals( 1 )
-                                                                    && ev.Object == d );
-                    }
-                    using( var dM = d.Monitor() )
-                    {
-                        d["This is added"] = 3712;
-                        dM.Should().Raise( "ItemAdded" )
-                            .WithSender( d )
-                            .WithArgs<CollectionMapSetEvent>( ev => ev.Key.Equals( "This is added" )
-                                                                    && ev.Value.Equals( 3712 )
-                                                                    && ev.Object == d );
-                    }
-                    using( var dM = d.Monitor() )
-                    {
-                        // Equality check: set is skipped.
-                        d["One"] = 1;
-                        dM.Should().NotRaise( "ItemAdded" );
-                        dM.Should().NotRaise( "ItemSet" );
-                    }
-                    using( var dM = d.Monitor() )
-                    {
-                        d["One"] = 0;
-                        dM.Should().Raise( "ItemSet" )
-                            .WithSender( d )
-                            .WithArgs<CollectionMapSetEvent>( ev => ev.Key.Equals( "One" )
-                                                                    && ev.Value.Equals( 0 )
-                                                                    && ev.Object == d );
-                    }
-                    using( var dM = d.Monitor() )
-                    {
-                        d.Remove( "One" );
-                        dM.Should().Raise( "ItemRemoved" )
-                            .WithSender( d )
-                            .WithArgs<CollectionRemoveKeyEvent>( ev => ev.Key.Equals( "One" ) && ev.Object == d );
-                    }
-                    using( var dM = d.Monitor() )
-                    {
-                        d.Remove( "One" ).Should().BeFalse( "No more 'One' item." );
-                        dM.Should().NotRaise( "ItemRemoved" );
-                    }
-                    d.Add( "Two", 2 );
-                    d.Add( "Three", 3 );
-                    using( var dM = d.Monitor() )
-                    {
-                        d.Clear();
-                        dM.Should().Raise( "CollectionCleared" ).WithSender( d );
-                    }
-                    d.Should().BeEmpty();
-                    using( var dM = d.Monitor() )
-                    {
-                        d.Clear();
-                        dM.Should().NotRaise( "CollectionCleared" );
-                    }
+            match( (T)_safeEvents[_safeEvents.Count - 1] );
+            _safeEvents.Clear();
+        }
+        static void OnSafeEvent( object sender, ObservableEvent e ) => _safeEvents.Add( e );
 
-                } ).Should().NotBeNull();
+
+        [Test]
+        public async Task ObservableList_is_observable_thanks_to_Item_Inserted_Set_RemovedAt_and_CollectionCleared_events_Async()
+        {
+            using( var domain = new ObservableDomain(TestHelper.Monitor, nameof(ObservableList_is_observable_thanks_to_Item_Inserted_Set_RemovedAt_and_CollectionCleared_events_Async), startTimer: true ) )
+            {
+                IReadOnlyList<ObservableEvent>? events = null;
+                domain.OnSuccessfulTransaction += ( d, ev ) => events = ev.Events;
+
+                Garage g = null!;
+                Car c = null!;
+                await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
+                {
+                    c = new Car( "First Car" );
+                    g = new Garage();
+                    g.Cars.ItemInserted += OnSafeEvent;
+                    g.Cars.CollectionCleared += OnSafeEvent;
+                    g.Cars.ItemRemovedAt += OnSafeEvent;
+                    g.Cars.ItemSet += OnSafeEvent;
+                } );
+                Debug.Assert( events != null );
+
+                await domain.ModifyThrowAsync( TestHelper.Monitor, () => g.Cars.Add( c ) );
+                Check( events, "ListInsert 3[0] = 'Car First Car'." );
+                CheckLastAndClear<ListInsertEvent>( e =>
+                {
+                    e.EventType.Should().Be( ObservableEventType.ListInsert );
+                    e.Index.Should().Be( 0 );
+                    e.Object.Should().BeSameAs( g.Cars );
+                    e.Item.Should().BeSameAs( c );
+                } );
+
+                await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
+                {
+                    g.Cars.Add( c );
+                    g.Cars.Add( c );
+                } );
+                Check( events, "ListInsert 3[1] = 'Car First Car'.", "ListInsert 3[2] = 'Car First Car'." );
+                CheckLastAndClear<ListInsertEvent>( e =>
+                {
+                    e.EventType.Should().Be( ObservableEventType.ListInsert );
+                    e.Index.Should().Be( 2 );
+                    e.Object.Should().BeSameAs( g.Cars );
+                    e.Item.Should().BeSameAs( c );
+                } );
+
+                // Equality check: set is skipped, we detect the no-change.
+                await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
+                {
+                    g.Cars[0] = c;
+                    g.Cars[1] = c;
+                    g.Cars[2] = c;
+                } );
+                Check( events );
+                _safeEvents.Should().BeEmpty();
+
+                await domain.ModifyThrowAsync( TestHelper.Monitor, () => g.Cars[0] = null! );
+                Check( events, "ListSetAt 3[0] = null." );
+                CheckLastAndClear<ListSetAtEvent>( e =>
+                {
+                    e.EventType.Should().Be( ObservableEventType.ListSetAt );
+                    e.Index.Should().Be( 0 );
+                    e.Object.Should().BeSameAs( g.Cars );
+                    e.Value.Should().BeNull();
+                } );
+
+                await domain.ModifyThrowAsync( TestHelper.Monitor, () => g.Cars.Remove( null! ) );
+                Check( events, "ListRemoveAt 3[0]." );
+                CheckLastAndClear<ListRemoveAtEvent>( e =>
+                {
+                    e.EventType.Should().Be( ObservableEventType.ListRemoveAt );
+                    e.Index.Should().Be( 0 );
+                    e.Object.Should().BeSameAs( g.Cars );
+                } );
+
+                await domain.ModifyThrowAsync( TestHelper.Monitor, () => g.Cars.Clear() );
+                Check( events, "CollectionClear 3." );
+                CheckLastAndClear<CollectionClearEvent>( e =>
+                {
+                    e.EventType.Should().Be( ObservableEventType.CollectionClear );
+                    e.Object.Should().BeSameAs( g.Cars );
+                } );
+
+                await domain.ModifyThrowAsync( TestHelper.Monitor, () => g.Cars.Clear() );
+                Check( events );
+                _safeEvents.Should().BeEmpty();
+            }
+        }
+
+        [Test]
+        public async Task ObservableDictionary_is_observable_thanks_to_Item_Added_Set_Removed_and_CollectionCleared_events_Async()
+        {
+            using( var domain = new ObservableDomain(TestHelper.Monitor, nameof(ObservableDictionary_is_observable_thanks_to_Item_Added_Set_Removed_and_CollectionCleared_events_Async), startTimer: true ) )
+            {
+                IReadOnlyList<ObservableEvent>? events = null;
+                domain.OnSuccessfulTransaction += ( d, ev ) => events = ev.Events;
+
+                ObservableDictionary<string, int> dick = null!;
+                await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
+                {
+                    dick = new ObservableDictionary<string, int>();
+                    dick.ItemAdded += OnSafeEvent;
+                    dick.ItemRemoved += OnSafeEvent;
+                    dick.ItemSet += OnSafeEvent;
+                    dick.CollectionCleared += OnSafeEvent;
+                });
+                Debug.Assert( events != null );
+
+                await domain.ModifyThrowAsync( TestHelper.Monitor, () => dick.Add( "One", 1 ) );
+                Check( events, "CollectionMapSet 0[One] = 1" );
+                CheckLastAndClear<CollectionMapSetEvent>( e =>
+                {
+                    e.EventType.Should().Be( ObservableEventType.CollectionMapSet );
+                    e.Key.Should().Be( "One" );
+                    e.Object.Should().BeSameAs( dick );
+                    e.Value.Should().Be( 1 );
+                } );
+
+                await domain.ModifyThrowAsync( TestHelper.Monitor, () => dick["This is added"] = 3712 );
+                Check( events, "CollectionMapSet 0[This is added] = 3712" );
+                CheckLastAndClear<CollectionMapSetEvent>( e =>
+                {
+                    e.EventType.Should().Be( ObservableEventType.CollectionMapSet );
+                    e.Key.Should().Be( "This is added" );
+                    e.Object.Should().BeSameAs( dick );
+                    e.Value.Should().Be( 3712 );
+                } );
+
+                // Equality check: set is skipped.
+                await domain.ModifyThrowAsync( TestHelper.Monitor, () => dick["One"] = 1 );
+                Check( events );
+                _safeEvents.Should().BeEmpty();
+
+                await domain.ModifyThrowAsync( TestHelper.Monitor, () => dick["One"] = 0 );
+                Check( events, "CollectionMapSet 0[One] = 0" );
+
+                await domain.ModifyThrowAsync( TestHelper.Monitor, () => dick.Remove( "One" ) );
+                Check( events, "CollectionRemoveKey 0[One]" );
+                CheckLastAndClear<CollectionRemoveKeyEvent>( e =>
+                {
+                    e.EventType.Should().Be( ObservableEventType.CollectionRemoveKey );
+                    e.Key.Should().Be( "One" );
+                    e.Object.Should().BeSameAs( dick );
+                } );
+
+                await domain.ModifyThrowAsync( TestHelper.Monitor, () => dick.Remove( "One" ).Should().BeFalse( "No more 'One' item." ) );
+                Check( events );
+                _safeEvents.Should().BeEmpty();
+
+                await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
+                {
+                    dick.Add( "Two", 2 );
+                    dick.Add( "Three", 3 );
+                } );
+                await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
+                {
+                    dick.Clear();
+                    dick.Should().BeEmpty();
+                } );
+                Check( events, "CollectionClear 0." );
+                CheckLastAndClear<CollectionClearEvent>( e =>
+                {
+                    e.EventType.Should().Be( ObservableEventType.CollectionClear );
+                    e.Object.Should().BeSameAs( dick );
+                } );
+
+                await domain.ModifyThrowAsync( TestHelper.Monitor, () => dick.Clear() );
+                Check( events );
+                _safeEvents.Should().BeEmpty();
             }
         }
 

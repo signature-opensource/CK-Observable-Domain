@@ -54,7 +54,7 @@ namespace CK.Observable
             //
             if( AllRoots.Count == 0 )
             {
-                using( var initialization = new InitializationTransaction( monitor, this ) )
+                using( var initialization = new InitializationTransaction( monitor, this, true ) )
                 {
                     Root = CreateAndAddRoot<T>( initialization );
                 }

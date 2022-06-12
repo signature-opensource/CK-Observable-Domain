@@ -20,6 +20,7 @@ namespace CK.Observable
     public abstract class ObservableTimedEventBase : IDestroyableObject, BinarySerialization.ICKSlicedSerializable
     {
         internal TimeManager? TimeManager;
+
         /// <summary>
         /// The ActiveIndex is the index of this object in the heap managed by the TimeManager.
         /// When 0, this is "out of the heap": this is not active.
@@ -138,7 +139,7 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Gets whether this object has been disposed.
+        /// Gets whether this object has been destroyed.
         /// </summary>
         public bool IsDestroyed => TimeManager == null;
 
