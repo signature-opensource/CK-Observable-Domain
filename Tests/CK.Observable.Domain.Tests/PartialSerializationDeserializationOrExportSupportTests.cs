@@ -43,7 +43,7 @@ namespace CK.Observable.Domain.Tests
             {
                 new SerializableOnly() { Name = "Albert" };
             } );
-            using( var d2 = TestHelper.SaveAndLoad( d ) )
+            using( var d2 = TestHelper.CloneDomain( d ) )
             {
                 d2.AllObjects.OfType<SerializableOnly>().Single().Name.Should().Be( "Albert" );
 

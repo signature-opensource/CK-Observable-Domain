@@ -2,6 +2,7 @@ using CK.Core;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace CK.Observable.League
 {
@@ -24,6 +25,6 @@ namespace CK.Observable.League
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="d">The domain to initialize.</param>
-        void Initialize( IActivityMonitor monitor, ObservableDomain d );
+        Task InitializeAsync( IActivityMonitor monitor, ObservableDomain d );
     }
 }

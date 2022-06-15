@@ -270,7 +270,7 @@ namespace CK.Observable.Device
                                                      waitForDomainPostActionsCompletion );
             }
 
-            /// <inheritdoc cref="ObservableDomain.ModifyNoThrowAsync(IActivityMonitor, Action?, int, bool, bool, bool)"/>.
+            /// <inheritdoc cref="ObservableDomain.TryModifyAsync(IActivityMonitor, Action?, int, bool, bool, bool)"/>.
             protected Task<TransactionResult> ModifyNoThrowAsync( IActivityMonitor monitor,
                                                                   Action actions,
                                                                   int millisecondsTimeout = -1,
@@ -278,7 +278,7 @@ namespace CK.Observable.Device
                                                                   bool parallelDomainPostActions = true,
                                                                   bool waitForDomainPostActionsCompletion = false )
             {
-                return _sidekick.Domain.ModifyNoThrowAsync( monitor,
+                return _sidekick.Domain.TryModifyAsync( monitor,
                                                             actions,
                                                             millisecondsTimeout,
                                                             considerRolledbackAsFailure,
@@ -302,18 +302,16 @@ namespace CK.Observable.Device
                                                           waitForDomainPostActionsCompletion );
             }
 
-            /// <inheritdoc cref="ObservableDomain.ModifyThrowAsync{TResult}(IActivityMonitor, Func{TResult}, int, bool, bool, bool)"/>.
+            /// <inheritdoc cref="ObservableDomain.ModifyThrowAsync{TResult}(IActivityMonitor, Func{TResult}, int, bool, bool)"/>.
             protected Task<TResult> ModifyThrowAsync<TResult>( IActivityMonitor monitor,
                                                                Func<TResult> actions,
                                                                int millisecondsTimeout = -1,
-                                                               bool considerRolledbackAsFailure = true,
                                                                bool parallelDomainPostActions = true,
                                                                bool waitForDomainPostActionsCompletion = false )
             {
                 return _sidekick.Domain.ModifyThrowAsync( monitor,
                                                           actions,
                                                           millisecondsTimeout,
-                                                          considerRolledbackAsFailure,
                                                           parallelDomainPostActions,
                                                           waitForDomainPostActionsCompletion );
             }

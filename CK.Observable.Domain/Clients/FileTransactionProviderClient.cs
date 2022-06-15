@@ -106,7 +106,7 @@ namespace CK.Observable
         }
 
         /// <inheritdoc />
-        public override void OnTransactionCommit( in SuccessfulTransactionEventArgs c )
+        public override void OnTransactionCommit( in TransactionDoneEventArgs c )
         {
             base.OnTransactionCommit( c );
             if( c.RollbackedInfo == null )
@@ -146,7 +146,7 @@ namespace CK.Observable
             }
             catch( Exception e )
             {
-                monitor.Error( "Caught when writing ObservableDomain file", e );
+                monitor.Error( "When writing ObservableDomain snapshot", e );
                 return false;
             }
         }

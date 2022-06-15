@@ -7,9 +7,9 @@ using System.Threading.Tasks;
 namespace CK.Observable.League
 {
     /// <summary>
-    /// Internal interface: this is what a managed <see cref="Domain"/> (in the <see cref="Coordinator"/> domain) sees.
+    /// Internal interface: this is what a managed <see cref="ODomain"/> (in the <see cref="OCoordinatorRoot"/> domain) sees.
     /// </summary>
-    interface IManagedDomain
+    interface IInternalManagedDomain
     {
         /// <summary>
         /// Gets whether the domain can be loaded, at least because the domain type can be resolved.
@@ -33,11 +33,13 @@ namespace CK.Observable.League
         ManagedDomainOptions Options { get; }
 
         /// <summary>
-        /// Applies the <see cref="Domain.Options"/>. This is called
-        /// after the domain has been created and on each change of its Options from the <see cref="Coordinator"/> domain
-        /// or at the end of each transaction from the domain itself.
-        /// Parameters are captured immutables: <see cref="ObservableLeague.DomainClient.OnTransactionCommit(in SuccessfulTransactionEventArgs)"/>
-        /// can safely defer the execution via <see cref="SuccessfulTransactionEventArgs.PostActions"/>.
+        /// Synchronizes the ODomain and the actual domain.
+        /// This is called:
+        ///  - Right after the load of the league to initializes Client and decide whether the domain must be initially loaded or not.
+        ///  - By each Coordinators' domain commit if the corresponding ODomain.Options changed.
+        ///  - By domain's commit to update the ODomain.NextActiveTime. 
+        /// Parameters are captured immutables: <see cref="ObservableLeague.DomainClient.OnTransactionCommit(in TransactionDoneEventArgs)"/>
+        /// can safely defer the execution via <see cref="TransactionDoneEventArgs.PostActions"/>.
         /// </summary>
         /// <remarks>
         /// The only case where <paramref name="options"/> and <paramref name="nextActiveTime"/> are both non null
@@ -45,7 +47,7 @@ namespace CK.Observable.League
         /// </remarks>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="options">
-        /// The updated options if called by the <see cref="Coordinator"/> domain or
+        /// The updated options if called by the <see cref="OCoordinatorRoot"/> domain or
         /// by the initial <see cref="ObservableLeague.LoadAsync"/>, null otherwise.
         /// </param>
         /// <param name="nextActiveTime">
@@ -56,7 +58,7 @@ namespace CK.Observable.League
         Task SynchronizeOptionsAsync( IActivityMonitor monitor, ManagedDomainOptions? options, DateTime? nextActiveTime );
 
         /// <summary>
-        /// Destroys the managed domain: the managed <see cref="Domain"/> has been destroyed.
+        /// Destroys the managed domain: the managed <see cref="ODomain"/> has been destroyed.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="league">The containing league.</param>

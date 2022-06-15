@@ -39,13 +39,13 @@ namespace CK.Observable.Device.Tests
             protected override void OnDeviceAppeared( IActivityMonitor monitor )
             {
                 Debug.Assert( Device != null );
-                Device.MessageChanged.Async += OnMessageChanged;
+                Device.MessageChanged.Async += OnMessageChangedAsync;
                 Object.Message = Device.DangerousCurrentMessage;
             }
 
-            Task OnMessageChanged( IActivityMonitor monitor, SampleDevice sender, string e )
+            Task OnMessageChangedAsync( IActivityMonitor monitor, SampleDevice sender, string e )
             {  
-                return ModifyAsync( monitor, () =>
+                return Sidekick.Domain.ModifyThrowAsync( monitor, () =>
                 {
                     Object.Message = e;
                 } );
@@ -55,7 +55,7 @@ namespace CK.Observable.Device.Tests
             protected override void OnDeviceDisappearing( IActivityMonitor monitor )
             {
                 Debug.Assert( Device != null );
-                Device.MessageChanged.Async -= OnMessageChanged;
+                Device.MessageChanged.Async -= OnMessageChangedAsync;
                 Object.Message = null;
             }
 
@@ -63,7 +63,7 @@ namespace CK.Observable.Device.Tests
             {
                 if( Device != null )
                 {
-                    Device.MessageChanged.Async -= OnMessageChanged;
+                    Device.MessageChanged.Async -= OnMessageChangedAsync;
                 }
             }
 

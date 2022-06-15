@@ -30,7 +30,7 @@ namespace CK.Observable
     {
         /// <summary>
         /// An artificial <see cref="CKExceptionData"/> that is added to
-        /// <see cref="IObservableTransaction.Errors"/> whenever a transaction
+        /// <see cref="TransactionResult.Errors"/> whenever a transaction
         /// has not been committed.
         /// </summary>
         public static readonly CKExceptionData UncomittedTransaction = CKExceptionData.Create( "Uncommitted transaction." );
@@ -60,7 +60,7 @@ namespace CK.Observable
         readonly SidekickManager _sidekickManager;
         readonly ObservableDomainPostActionExecutor _domainPostActionExecutor;
         internal readonly Random _random;
-        Action<ISuccessfulTransactionEvent>? _inspectorEvent;
+        Action<ITransactionDoneEvent>? _inspectorEvent;
         BinarySerializerContext _serializerContext;
         BinaryDeserializerContext _deserializerContext;
 
@@ -130,7 +130,7 @@ namespace CK.Observable
         /// </summary>
         List<ObservableRootObject> _roots;
 
-        IObservableTransaction? _currentTran;
+        IInternalTransaction? _currentTran;
         int _transactionSerialNumber;
         DateTime _transactionCommitTimeUtc;
 
@@ -199,19 +199,29 @@ namespace CK.Observable
 
         /// <summary>
         /// Initializes a new <see cref="ObservableDomain"/> without any <see cref="DomainClient"/>.
+        /// <para>
+        /// Sidekicks are NOT instantiated by the constructors. If <see cref="HasWaitingSidekicks"/> is true, a null transaction
+        /// can be done that will instantiate the required sidekicks (and initialize them with the <see cref="ISidekickClientObject{TSidekick}"/> objects
+        /// if any).
+        /// </para>
         /// </summary>
         /// <param name="monitor">The monitor used to log the construction of this domain. Cannot be null.</param>
         /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
         /// <param name="startTimer">Whether to initially start the <see cref="TimeManager"/>.</param>
         /// <param name="serviceProvider">The service providers that will be used to resolve the <see cref="ObservableDomainSidekick"/> objects.</param>
         public ObservableDomain( IActivityMonitor monitor, string domainName, bool startTimer, IServiceProvider? serviceProvider = null )
-            : this( monitor, domainName, startTimer, null, serviceProvider )
+            : this( monitor, domainName, startTimer, client: null, serviceProvider )
         {
         }
 
         /// <summary>
         /// Initializes a new <see cref="ObservableDomain"/> with a <see cref="DomainClient"/> an optionals explicit exporter, serializer
         /// and deserializer handlers.
+        /// <para>
+        /// Sidekicks are NOT instantiated by the constructors. If <see cref="HasWaitingSidekicks"/> is true, a null transaction
+        /// can be done that will instantiate the required sidekicks (and initialize them with the <see cref="ISidekickClientObject{TSidekick}"/> objects
+        /// if any).
+        /// </para>
         /// </summary>
         /// <param name="monitor">The monitor used to log the construction of this domain. Cannot be null.</param>
         /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
@@ -223,12 +233,17 @@ namespace CK.Observable
                                  bool startTimer,
                                  IObservableDomainClient? client,
                                  IServiceProvider? serviceProvider = null )
-            : this( monitor, domainName, startTimer, client, callClientOnCreate: true, serviceProvider, exporters: null )
+            : this( monitor, domainName, startTimer, client, CurrentTransactionStatus.Instantiating, serviceProvider, exporters: null )
         {
         }
 
         /// <summary>
         /// Initializes a previously <see cref="Save"/>d domain.
+        /// <para>
+        /// Sidekicks are NOT instantiated by the constructors. If <see cref="HasWaitingSidekicks"/> is true, a null transaction
+        /// can be done that will instantiate the required sidekicks (and initialize them with the <see cref="ISidekickClientObject{TSidekick}"/> objects
+        /// if any).
+        /// </para>
         /// </summary>
         /// <param name="monitor">The monitor used to log the construction of this domain. Cannot be null.</param>
         /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
@@ -237,7 +252,7 @@ namespace CK.Observable
         /// <param name="serviceProvider">The service providers that will be used to resolve the <see cref="ObservableDomainSidekick"/> objects.</param>
         /// <param name="startTimer">
         /// Ensures that the <see cref="ObservableDomain.TimeManager"/> is running or stopped.
-        /// When null, it keeps its previous state (it is initially stopped at domain creation) and then its current state is persisted.
+        /// When null, it keeps its restored state.
         /// </param>
         /// <param name="exporters">Optional exporters handler.</param>
         public ObservableDomain( IActivityMonitor monitor,
@@ -247,18 +262,23 @@ namespace CK.Observable
                                  IServiceProvider? serviceProvider = null,
                                  bool? startTimer = null,
                                  IExporterResolver? exporters = null )
-            : this( monitor, domainName, startTimer: false, client, callClientOnCreate: false, serviceProvider, exporters )
+            : this( monitor, domainName, startTimer: false, client, CurrentTransactionStatus.Deserializing, serviceProvider, exporters )
         {
             Throw.CheckNotNullArgument( stream );
             Throw.CheckData( stream.IsValid );
 
+            var runtimeType = GetType();
+            bool isNakedDomain = runtimeType == typeof( ObservableDomain );
             // This has been initialized and checked by the central constructor.
             Debug.Assert( _transactionStatus == CurrentTransactionStatus.Deserializing );
-            Debug.Assert( GetType() == typeof( ObservableDomain )
-                         || new[] { typeof(ObservableDomain<> ), typeof( ObservableDomain<,> ), typeof( ObservableDomain<,,> ), typeof( ObservableDomain<,,,> ) }
-                                .Contains( GetType().GetGenericTypeDefinition() ) );
+            Debug.Assert( isNakedDomain 
+                          || new[] { typeof(ObservableDomain<> ), typeof( ObservableDomain<,> ), typeof( ObservableDomain<,,> ), typeof( ObservableDomain<,,,> ) }
+                                .Contains( runtimeType.GetGenericTypeDefinition() ) );
 
-            using( monitor.OpenInfo( $"Loading new {GetType()} '{domainName}' from stream." ) )
+            // Whether we are the naked domain or not, we deserialize from here:
+            // specialized deserialization constructors will have their roots bound
+            // by the deserialization and everything is in place.
+            using( monitor.OpenInfo( $"Loading new {runtimeType} '{domainName}' from stream." ) )
             using( new InitializationTransaction( monitor, this, true ) )
             {
                 DoLoad( monitor, stream, domainName, startTimer, mustStartTimer =>
@@ -267,19 +287,21 @@ namespace CK.Observable
                     return mustStartTimer;
                 } );
             }
+            _transactionStatus = CurrentTransactionStatus.Regular;
         }
 
         ObservableDomain( IActivityMonitor monitor,
                           string domainName,
                           bool startTimer,
                           IObservableDomainClient? client,
-                          bool callClientOnCreate,
+                          CurrentTransactionStatus instantionKind,
                           IServiceProvider? serviceProvider,
                           IExporterResolver? exporters )
         {
             Throw.CheckNotNullArgument( monitor );
             // DomainName can be empty.
             Throw.CheckNotNullArgument( domainName );
+            Debug.Assert( instantionKind == CurrentTransactionStatus.Instantiating || instantionKind == CurrentTransactionStatus.Deserializing );
 
             // This class should be sealed for the external world. But since ObservableDomain<T>...<T1,T2,T3,T4>
             // that are defined in this assembly needs to extend it, it cannot be sealed.
@@ -330,28 +352,23 @@ namespace CK.Observable
             _deserializerContext = new BinaryDeserializerContext( BinaryDeserializer.DefaultSharedContext, serviceProvider );
             _deserializerContext.Services.Add( this );
 
-            if( callClientOnCreate )
+            // If we are deserializing, we let the deserialization constructor conclude
+            // and do nothing here.
+            if( (_transactionStatus = instantionKind) == CurrentTransactionStatus.Instantiating )
             {
-                // We are not called by the deserializer constructor: it looks like we are simply initializing a
-                // new domain. However, OnDomainCreated may call Load to restore the domain from a persistent store.
-                // In such case, Load will temporarily overwrite the _transactionStatus to be Deserializing, RollingBack or DangerousRollingBack.
-                _transactionStatus = CurrentTransactionStatus.Instantiating;
-                client?.OnDomainCreated( monitor, this, ref startTimer );
+                // We are not called by the deserializer constructors: we are simply initializing a
+                // new domain. However, OnDomainCreated may call Load() to restore the domain from a persistent store.
+                // In such case, Load will temporarily overwrite the _transactionStatus to be Deserializing.
+                // If a Load is done, the secret is restored.
+                DomainClient?.OnDomainCreated( monitor, this, ref startTimer );
                 // If the secret has not been restored, initializes a new one.
                 if( _domainSecret == null ) _domainSecret = CreateSecret();
                 if( startTimer ) _timeManager.DoStartOrStop( monitor, true );
-                // Let the specialized types conclude.
                 if( isNakedDomain )
                 {
                     _transactionStatus = CurrentTransactionStatus.Regular;
-                    monitor.Info( $"ObservableDomain '{domainName}' created." );
+                    monitor.Info( $"ObservableDomain '{DomainName}' created." );
                 }
-            }
-            else
-            {
-                Debug.Assert( !startTimer, "When deserializing, startTimer is initially false." );
-                _transactionStatus = CurrentTransactionStatus.Deserializing;
-                // And let the deserialization constructors conclude.
             }
         }
 
@@ -370,11 +387,11 @@ namespace CK.Observable
         /// This ensures that a transaction exists and the thread static is set.
         /// </para>
         /// </summary>
-        private protected sealed class InitializationTransaction : IObservableTransaction
+        private protected sealed class InitializationTransaction : IInternalTransaction
         {
             readonly ObservableDomain _d;
             readonly ObservableDomain? _previousThreadDomain;
-            readonly IObservableTransaction? _previousTran;
+            readonly IInternalTransaction? _previousTran;
             readonly DateTime _startTime;
             readonly IActivityMonitor _monitor;
             readonly bool _enterWriteLock;
@@ -395,16 +412,14 @@ namespace CK.Observable
                 _previousThreadDomain = CurrentThreadDomain;
                 CurrentThreadDomain = d;
             }
-            IActivityMonitor IObservableTransaction.Monitor => _monitor;
+            IActivityMonitor IInternalTransaction.Monitor => _monitor;
 
-            DateTime IObservableTransaction.StartTime => _startTime;
+            DateTime IInternalTransaction.StartTime => _startTime;
 
-            void IObservableTransaction.AddError( Exception ex ) { }
+            void IInternalTransaction.AddError( Exception ex ) { }
 
-            TransactionResult IObservableTransaction.Commit() => TransactionResult.Empty;
-
-            IReadOnlyList<CKExceptionData> IObservableTransaction.Errors => Array.Empty<CKExceptionData>();
-
+            TransactionResult IInternalTransaction.Commit() => TransactionResult.EmptySuccess;
+            
             /// <summary>
             /// Releases locks and restores initialization context.
             /// </summary>
@@ -438,24 +453,21 @@ namespace CK.Observable
         /// <summary>
         /// Gets all the observable objects that this domain contains (roots included).
         /// These exposed objects are out of any transactions or reentrancy checks: they should not 
-        /// be used outside of <see cref="BeginTransaction"/> (or other <see cref="Modify"/>, <see cref="ModifyAsync"/> methods)
-        /// or <see cref="AcquireReadLock"/> scopes.
+        /// be used outside of ModifyAsync methods or <see cref="AcquireReadLock(int)"/> scopes.
         /// </summary>
         public IObservableAllObjectsCollection AllObjects => _exposedObjects;
 
         /// <summary>
         /// Gets all the internal objects that this domain contains.
         /// These exposed objects are out of any transactions or reentrancy checks: they should not 
-        /// be used outside of <see cref="BeginTransaction"/> (or other <see cref="Modify"/>, <see cref="ModifyAsync"/> methods)
-        /// or <see cref="AcquireReadLock"/> scopes.
+        /// be used outside of ModifyAsync methods or <see cref="AcquireReadLock(int)"/> scopes.
         /// </summary>
         public IReadOnlyCollection<InternalObject> AllInternalObjects => _exposedInternalObjects;
 
         /// <summary>
         /// Gets the root observable objects that this domain contains.
         /// These exposed objects are out of any transactions or reentrancy checks: they should not 
-        /// be used outside of <see cref="BeginTransaction"/> (or other <see cref="Modify"/>, <see cref="ModifyAsync"/> methods)
-        /// or <see cref="AcquireReadLock"/> scopes.
+        /// be used outside of ModifyAsync methods or <see cref="AcquireReadLock(int)"/> scopes.
         /// </summary>
         public IReadOnlyList<ObservableRootObject> AllRoots => _roots;
 
@@ -541,28 +553,32 @@ namespace CK.Observable
         /// <para>
         /// When this is called, the <see cref="Domain"/>'s lock is held in read mode: objects can be read (but no write/modifications
         /// should occur). A typical implementation is to capture any required domain object's state and use
-        /// <see cref="SuccessfulTransactionEventArgs.PostActions"/> or <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/>
-        /// to post asynchronous actions (or to send commands thanks to <see cref="SuccessfulTransactionEventArgs.SendCommand(ObservableDomainCommand)"/>
+        /// <see cref="TransactionDoneEventArgs.PostActions"/> or <see cref="TransactionDoneEventArgs.DomainPostActions"/>
+        /// to post asynchronous actions (or to send commands thanks to <see cref="TransactionDoneEventArgs.SendCommand(ObservableDomainCommand)"/>
         /// that will be processed by the sidekicks).
         /// </para>
         /// <para>
-        /// Exceptions raised by this method are collected in <see cref="TransactionResult.SuccessfulTransactionErrors"/>.
+        /// Note that this is called on a successfully failed roll backed transaction: use <see cref="TransactionDoneEventArgs.RollbackedInfo"/>
+        /// for information on the rolled back transaction.
+        /// </para>
+        /// <para>
+        /// Exceptions raised by this method are collected in <see cref="TransactionResult.TransactionDoneErrors"/>.
         /// </para>
         /// </summary>
-        public event EventHandler<SuccessfulTransactionEventArgs>? OnSuccessfulTransaction;
+        public event EventHandler<TransactionDoneEventArgs>? TransactionDone;
 
-        List<CKExceptionData>? RaiseOnSuccessfulTransaction( in SuccessfulTransactionEventArgs result )
+        List<CKExceptionData>? RaiseTransactionEventResult( in TransactionDoneEventArgs result )
         {
             List<CKExceptionData>? errors = null;
             _inspectorEvent?.Invoke( result );
-            var h = OnSuccessfulTransaction;
+            var h = TransactionDone;
             if( h != null )
             {
                 foreach( var d in h.GetInvocationList() )
                 {
                     try
                     {
-                        ((EventHandler<SuccessfulTransactionEventArgs>)d).Invoke( this, result );
+                        ((EventHandler<TransactionDoneEventArgs>)d).Invoke( this, result );
                     }
                     catch( Exception ex )
                     {
@@ -572,25 +588,14 @@ namespace CK.Observable
                     }
                 }
             }
-            _sidekickManager.OnSuccessfulTransaction( result, ref errors );
+            _sidekickManager.OnTransactionDoneEvent( result, ref errors );
             return errors;
         }
 
-        event Action<ISuccessfulTransactionEvent>? IObservableDomainInspector.OnSuccessfulTransaction
+        event Action<ITransactionDoneEvent>? IObservableDomainInspector.TransactionDone
         {
             add => _inspectorEvent += value;
             remove => _inspectorEvent -= value;
-        }
-
-
-        public IObservableTransaction? BeginTransaction( IActivityMonitor monitor, int millisecondsTimeout = -1 )
-        {
-            throw new NotSupportedException();
-        }
-
-        public TransactionResult Modify( IActivityMonitor monitor, Action? actions, int millisecondsTimeout = -1 )
-        {
-            throw new NotSupportedException();
         }
 
 
@@ -788,8 +793,7 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Gets the active domain on the current thread (the last one for which a <see cref="BeginTransaction"/>
-        /// has been done an not yet disposed) or throws an <see cref="InvalidOperationException"/> if there is none.
+        /// Gets the active domain on the current thread or throws an <see cref="InvalidOperationException"/> if there is none.
         /// </summary>
         /// <returns>The current domain.</returns>
         internal static ObservableDomain GetCurrentActiveDomain()
@@ -1021,7 +1025,7 @@ namespace CK.Observable
                     _domainPostActionExecutor.WaitStopped();
                 }
                 monitor.Info( $"Domain '{DomainName}' disposed." );
-                // There is a race condition here. AcquireReadLock, BeginTransaction (and others)
+                // There is a race condition here. AcquireReadLock, ModifyAsync (and others)
                 // may have also seen a false _transactionStatus and then try to acquire the lock.
                 // If the race is won by this Dispose() thread, then the write lock is taken, released and
                 // the lock itself should be disposed...
@@ -1101,7 +1105,7 @@ namespace CK.Observable
             if( CurrentTransactionStatus.IsRegular() )
             {
                 CheckWriteLock( o ).CheckDestroyed();
-                Debug.Assert( _currentTran != null );
+                Debug.Assert( _currentTran != null && _currentTran is not InitializationTransaction );
                 _sidekickManager.CreateWaitingSidekicks( _currentTran.Monitor, _currentTran.AddError, false );
             }
         }

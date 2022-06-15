@@ -106,22 +106,22 @@ namespace CK.Observable
         /// <para>
         /// When this is called, the <see cref="Domain"/>'s lock is held in read mode: objects can be read (but no write/modifications
         /// should occur). A typical implementation is to capture any required domain object's state and use
-        /// <see cref="SuccessfulTransactionEventArgs.PostActions"/> or <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/>
-        /// to post asynchronous actions (or to send commands thanks to <see cref="SuccessfulTransactionEventArgs.SendCommand(in ObservableDomainCommand)"/>
+        /// <see cref="TransactionDoneEventArgs.PostActions"/> or <see cref="TransactionDoneEventArgs.DomainPostActions"/>
+        /// to post asynchronous actions (or to send commands thanks to <see cref="TransactionDoneEventArgs.SendCommand(in ObservableDomainCommand)"/>
         /// that will be processed by this or other sidekicks).
         /// </para>
         /// <para>
-        /// Exceptions raised by this method are collected in <see cref="TransactionResult.SuccessfulTransactionErrors"/>.
+        /// Exceptions raised by this method are collected in <see cref="TransactionResult.TransactionDoneErrors"/>.
         /// </para>
         /// </summary>
-        /// <param name="result">The <see cref="SuccessfulTransactionEventArgs"/> event argument.</param>
-        protected internal virtual void OnSuccessfulTransaction( in SuccessfulTransactionEventArgs result )
+        /// <param name="result">The <see cref="TransactionDoneEventArgs"/> event argument.</param>
+        protected internal virtual void OnTransactionResult( in TransactionDoneEventArgs result )
         {
         }
 
         /// <summary>
         /// Called when a successful transaction has been successfully handled by the <see cref="ObservableDomain.DomainClient"/>
-        /// and <see cref="ObservableDomain.OnSuccessfulTransaction"/> event and <see cref="OnSuccessfulTransaction(in SuccessfulTransactionEventArgs)"/>
+        /// and <see cref="ObservableDomain.TransactionDone"/> event and <see cref="OnTransactionResult(in TransactionDoneEventArgs)"/>
         /// did not raise any error.
         /// <para>
         /// When this is called, the <see cref="Domain"/> MUST NOT BE touched in any way: this occurs outside of the domain lock.

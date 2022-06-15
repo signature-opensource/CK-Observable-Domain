@@ -110,7 +110,7 @@ namespace CK.Observable.Device
 
         Task OnAllDevicesLifetimeEventAsync( IActivityMonitor monitor, IDeviceHost sender, DeviceLifetimeEvent e )
         {
-            return Domain.ModifyNoThrowAsync( monitor, () =>
+            return Domain.TryModifyAsync( monitor, () =>
             {
                 var bridge = _bridges.GetValueOrDefault( e.Device.Name );
                 // No bridge (no observable object) and no host: this sidekick is "empty", it is not

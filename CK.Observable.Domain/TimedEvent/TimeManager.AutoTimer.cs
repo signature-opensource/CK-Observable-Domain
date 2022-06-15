@@ -115,7 +115,7 @@ namespace CK.Observable
                                   else
                                   {
                                       if( r.IsCanceled ) monitor.Warn( "Async operation canceled." );
-                                      else if( r.Result == TransactionResult.Empty )
+                                      else if( r.Result.IsStartTimeoutError )
                                       {
                                           // Failed to obtain the write lock.
                                           trampolineRequired = true;

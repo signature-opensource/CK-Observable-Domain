@@ -164,7 +164,8 @@ namespace CK.Observable
         /// </para>
         /// <para>
         /// When <see cref="DomainView.CurrentTransactionStatus"/> is not <see cref="CurrentTransactionStatus.Regular"/> (we are deserializing or initializing),
-        /// nothing is done: <see cref="ObservableDomain.HasWaitingSidekicks"/> is true and the sidekicks will kick in at the start of the next transaction.
+        /// nothing is done: <see cref="ObservableDomain.HasWaitingSidekicks"/> is true and the sidekicks will kick in at the start of the next transaction
+        /// (or during the roll back if a <see cref="IObservableDomainClient"/> can do it).
         /// </para>
         /// </summary>
         public void EnsureSidekicks() => _d.EnsureSidekicks( _o );

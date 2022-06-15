@@ -24,7 +24,7 @@ namespace CK.Observable.Domain.Tests
                 Car c1 = null!;
 
                 IReadOnlyList<ObservableEvent>? events = null;
-                domain.OnSuccessfulTransaction += ( d, ev ) => events = ev.Events;
+                domain.TransactionDone += ( d, ev ) => events = ev.Events;
 
                 await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
@@ -79,7 +79,7 @@ namespace CK.Observable.Domain.Tests
             using( var domain = new ObservableDomain(TestHelper.Monitor, nameof(property_changed_events_use_the_last_value_Async), startTimer: true ) )
             {
                 IReadOnlyList<ObservableEvent>? events = null;
-                domain.OnSuccessfulTransaction += ( d, ev ) => events = ev.Events;
+                domain.TransactionDone += ( d, ev ) => events = ev.Events;
 
                 Car c = null!;
 
@@ -240,7 +240,7 @@ namespace CK.Observable.Domain.Tests
                 Garage g = null!;
 
                 IReadOnlyList<ObservableEvent>? events = null;
-                domain.OnSuccessfulTransaction += ( d, ev ) => events = ev.Events;
+                domain.TransactionDone += ( d, ev ) => events = ev.Events;
 
                 await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
@@ -271,7 +271,7 @@ namespace CK.Observable.Domain.Tests
                 Garage g = null!;
 
                 IReadOnlyList<ObservableEvent>? events = null;
-                domain.OnSuccessfulTransaction += ( d, ev ) => events = ev.Events;
+                domain.TransactionDone += ( d, ev ) => events = ev.Events;
 
                 await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
@@ -320,7 +320,7 @@ namespace CK.Observable.Domain.Tests
             using( var domain = new ObservableDomain(TestHelper.Monitor, nameof(ObservableList_is_observable_thanks_to_Item_Inserted_Set_RemovedAt_and_CollectionCleared_events_Async), startTimer: true ) )
             {
                 IReadOnlyList<ObservableEvent>? events = null;
-                domain.OnSuccessfulTransaction += ( d, ev ) => events = ev.Events;
+                domain.TransactionDone += ( d, ev ) => events = ev.Events;
 
                 Garage g = null!;
                 Car c = null!;
@@ -408,7 +408,7 @@ namespace CK.Observable.Domain.Tests
             using( var domain = new ObservableDomain(TestHelper.Monitor, nameof(ObservableDictionary_is_observable_thanks_to_Item_Added_Set_Removed_and_CollectionCleared_events_Async), startTimer: true ) )
             {
                 IReadOnlyList<ObservableEvent>? events = null;
-                domain.OnSuccessfulTransaction += ( d, ev ) => events = ev.Events;
+                domain.TransactionDone += ( d, ev ) => events = ev.Events;
 
                 ObservableDictionary<string, int> dick = null!;
                 await domain.ModifyThrowAsync( TestHelper.Monitor, () =>

@@ -9,9 +9,9 @@ namespace CK.Observable
     public partial class ObservableDomain
     {
         /// <summary>
-        /// Implements <see cref="IObservableTransaction"/>.
+        /// Implements <see cref="IInternalTransaction"/>.
         /// </summary>
-        sealed class Transaction : IObservableTransaction
+        sealed class Transaction : IInternalTransaction
         {
             readonly ObservableDomain? _previous;
             readonly ObservableDomain _domain;
@@ -60,7 +60,7 @@ namespace CK.Observable
                 Debug.Assert( _domain._currentTran == this );
                 Debug.Assert( _domain._lock.IsWriteLockHeld );
 
-                SuccessfulTransactionEventArgs? ctx = null;
+                TransactionDoneEventArgs? ctx = null;
                 bool rollbackHasSidekicks = false;
                 if( _errors.Length != 0 )
                 {
@@ -131,6 +131,8 @@ namespace CK.Observable
                                                                 ? new RolledbackTransactionInfo( _result, _lastLoadStatus == CurrentTransactionStatus.Rollingback )
                                                                 : null );
                         _domain._transactionCommitTimeUtc = ctx.CommitTimeUtc;
+                        // Swaps the result (if it was not null - on error, it has been captured in the TransactionDoneEventArgs ctx...
+                        // But from now on, this result is the "real" transaction and may have any number of side effects triggered by a roll back).
                         _result = new TransactionResult( ctx );
                         try
                         {
@@ -151,19 +153,19 @@ namespace CK.Observable
 
                 Monitor.Debug( "Leaving WriteLock." );
                 _domain._lock.ExitWriteLock();
-                // Back to Readable lock: publishes SuccessfulTransaction.
+                // Back to Readable lock: publishes SuccessfulTransaction
                 if( _result.Success )
                 {
                     Debug.Assert( ctx != null );
 
-                    using( Monitor.OpenDebug( "Raising SuccessfulTransaction event." ) )
+                    using( Monitor.OpenDebug( "Raising TransactionDone event." ) )
                     {
-                        var errors = _domain.RaiseOnSuccessfulTransaction( ctx );
+                        var errors = _domain.RaiseTransactionEventResult( ctx );
                         if( errors != null ) _result.SetSuccessfulTransactionErrors( errors );
                     }
                 }
                 // Before leaving the read lock (nobody can start a new transaction), let's enqueue
-                // the transaction result.
+                // the transaction result (if no error have been added by RaiseTransactionResult above).
                 if( _result.Success  )
                 {
                     _result.InitializeOnSuccess();

@@ -13,34 +13,34 @@ namespace CK.Observable.League
     /// a <see cref="ObservableLeague"/> and allows to manage them.
     /// </summary>
     [SerializationVersion( 0 )]
-    public sealed class Coordinator : ObservableRootObject
+    public sealed class OCoordinatorRoot : ObservableRootObject
     {
-        readonly ObservableDictionary<string, Domain> _domains;
+        readonly ObservableDictionary<string, ODomain> _domains;
         IManagedLeague? _league;
 
         /// <summary>
-        /// Initializes a new <see cref="Coordinator"/>.
+        /// Initializes a new <see cref="OCoordinatorRoot"/>.
         /// </summary>
-        public Coordinator()
+        public OCoordinatorRoot()
         {
-            _domains = new ObservableDictionary<string, Domain>();
+            _domains = new ObservableDictionary<string, ODomain>();
         }
 
-        Coordinator( IBinaryDeserializer r, ITypeReadInfo info )
+        OCoordinatorRoot( IBinaryDeserializer r, ITypeReadInfo info )
                 : base( Sliced.Instance )
         {
-            _domains = r.ReadObject<ObservableDictionary<string, Domain>>();
+            _domains = r.ReadObject<ObservableDictionary<string, ODomain>>();
         }
 
-        public static void Write( IBinarySerializer w, in Coordinator o )
+        public static void Write( IBinarySerializer w, in OCoordinatorRoot o )
         {
             w.WriteObject( o._domains );
         }
 
         /// <summary>
-        /// Gets the map of the existing <see cref="Domain"/>.
+        /// Gets the map of the existing <see cref="ODomain"/>.
         /// </summary>
-        public IObservableReadOnlyDictionary<string, Domain> Domains => _domains;
+        public IObservableReadOnlyDictionary<string, ODomain> Domains => _domains;
 
         /// <summary>
         /// Creates a new domain with a unique name.
@@ -51,17 +51,17 @@ namespace CK.Observable.League
         /// </summary>
         /// <param name="domainName">The new domain name.</param>
         /// <param name="rootTypes">The root types (can be empty: a basic <see cref="ObservableDomain"/> is created).</param>
-        /// <param name="initialOptions">The optional initial <see cref="Domain.Options"/>.</param>
+        /// <param name="initialOptions">The optional initial <see cref="ODomain.Options"/>.</param>
         /// <returns>The new domain.</returns>
-        public Domain CreateDomain(string domainName, IEnumerable<string>? rootTypes, ManagedDomainOptions? initialOptions = null)
+        public ODomain CreateDomain( string domainName, IEnumerable<string>? rootTypes, ManagedDomainOptions? initialOptions = null )
         {
             if( String.IsNullOrWhiteSpace( domainName ) ) throw new ArgumentOutOfRangeException( nameof( domainName ) );
             Debug.Assert( _league != null );
             var roots = rootTypes?.ToArray() ?? Array.Empty<string>();
-            IManagedDomain shell = _league.CreateDomain( Domain.Monitor, domainName, roots );
+            IInternalManagedDomain shell = _league.CreateDomain( Domain.Monitor, domainName, roots );
             // Default options are provided by the shell: their default values are provided by the
             // Client and JsonEventCollector code.
-            var d = new Domain( this, shell, roots, initialOptions ); 
+            var d = new ODomain( this, shell, roots, initialOptions );
             _domains.Add( domainName, d );
             return d;
         }
@@ -76,10 +76,10 @@ namespace CK.Observable.League
         /// <param name="domainName">The new domain name.</param>
         /// <param name="rootTypes">The root types (can be empty: a basic <see cref="ObservableDomain"/> is created).</param>
         /// <returns>The new domain.</returns>
-        public Domain CreateDomain( string domainName, params string[] rootTypes ) => CreateDomain( domainName, (IEnumerable<string>)rootTypes );
+        public ODomain CreateDomain( string domainName, params string[] rootTypes ) => CreateDomain( domainName, (IEnumerable<string>)rootTypes );
 
 
-        internal void OnDestroyDomain( Domain domain )
+        internal void OnDestroyDomain( ODomain domain )
         {
             _domains.Remove( domain.DomainName );
         }
@@ -95,7 +95,7 @@ namespace CK.Observable.League
         {
             Debug.Assert( _domains.Values.All( d => d.Shell == null ) );
             _league = league;
-            List<Domain>? failed = null;
+            List<ODomain>? failed = null;
             foreach( var d in _domains.Values )
             {
                 try
@@ -105,7 +105,7 @@ namespace CK.Observable.League
                 catch( Exception ex )
                 {
                     monitor.Error( $"Unable to bind to domain '{d.DomainName}'.", ex );
-                    if( failed == null ) failed = new List<Domain>();
+                    if( failed == null ) failed = new List<ODomain>();
                     failed.Add( d );
                 }
             }

@@ -396,7 +396,7 @@ namespace CK.Observable.Domain.Tests
             }
 
             using( TestHelper.Monitor.CollectEntries( entries => logs = entries, LogLevelFilter.Info ) )
-            using( var obs2 = TestHelper.SaveAndLoad( obs ) )
+            using( var obs2 = TestHelper.CloneDomain( obs ) )
             {
                 await obs2.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {

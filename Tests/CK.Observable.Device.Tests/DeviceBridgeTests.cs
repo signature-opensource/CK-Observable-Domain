@@ -142,9 +142,9 @@ namespace CK.Observable.Device.Tests
 
         [Test]
         [Timeout( 2 * 1000 )]
-        public async Task Start_and_Stop_commands()
+        public async Task Start_and_Stop_commands_Async()
         {
-            using var gLog = TestHelper.Monitor.OpenInfo( nameof( Start_and_Stop_commands ) );
+            using var gLog = TestHelper.Monitor.OpenInfo( nameof( Start_and_Stop_commands_Async ) );
             DeviceIsRunningChanged = false;
 
             var host = new SampleDeviceHost();
@@ -159,7 +159,7 @@ namespace CK.Observable.Device.Tests
             };
             (await host.EnsureDeviceAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.CreateAndStartSucceeded );
 
-            using var obs = new ObservableDomain(TestHelper.Monitor, nameof(Start_and_Stop_commands), true, serviceProvider: sp );
+            using var obs = new ObservableDomain(TestHelper.Monitor, nameof(Start_and_Stop_commands_Async), true, serviceProvider: sp );
 
 
             OSampleDevice? device = null;
@@ -304,11 +304,11 @@ namespace CK.Observable.Device.Tests
             await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 device = new OSampleDevice( "n°1" );
-                Debug.Assert( device.IsRunning == true, "ConfigurationStatus is RunnableStarted." );
+                device.DeviceControlStatus.Should().Be( DeviceControlStatus.HasSharedControl );
+                device.IsRunning.Should().BeTrue( "ConfigurationStatus is RunnableStarted." );
                 device.SendSimpleCommand( "NEXT" );
             } );
             Debug.Assert( device != null );
-            Debug.Assert( device.IsRunning != null );
 
             System.Threading.Thread.Sleep( 90 );
             using( obs.AcquireReadLock() )
@@ -325,7 +325,7 @@ namespace CK.Observable.Device.Tests
                 if( !obs.Load( TestHelper.Monitor, RewindableStream.FromStream( s ) ) ) throw new Exception( "Reload failed." );
             }
             obs.HasWaitingSidekicks.Should().BeTrue();
-            obs.Modify( TestHelper.Monitor, null );
+            await obs.ModifyThrowAsync( TestHelper.Monitor, null );
             obs.HasWaitingSidekicks.Should().BeFalse();
 
             device = obs.AllObjects.OfType<OSampleDevice>().Single();

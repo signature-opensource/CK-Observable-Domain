@@ -15,13 +15,13 @@ namespace CK.Core
         public static bool CheckObjectReferences = true;
 
         public static T SaveAndLoad<T>( this IBasicTestHelper @this, in T o,
-                                                                     Action<T, BinarySerialization.IBinarySerializer> w,
-                                                                     Func<BinarySerialization.IBinaryDeserializer, T> r,
+                                                                     Action<T, IBinarySerializer> w,
+                                                                     Func<IBinaryDeserializer, T> r,
                                                                      BinarySerializerContext? serializerContext = null,
                                                                      BinaryDeserializerContext? deserializerContext = null )
         {
             using( var s = new MemoryStream() )
-            using( var writer = BinarySerialization.BinarySerializer.Create( s, serializerContext ?? new BinarySerializerContext() ) )
+            using( var writer = BinarySerializer.Create( s, serializerContext ?? new BinarySerializerContext() ) )
             {
                 writer.DebugWriteMode( true );
 
@@ -43,7 +43,7 @@ namespace CK.Core
                     writer.WriteAny( o2 );
                 }
                 s.Position = 0;
-                return BinarySerialization.BinaryDeserializer.Deserialize( s, deserializerContext ?? new BinaryDeserializerContext(), d =>
+                return BinaryDeserializer.Deserialize( s, deserializerContext ?? new BinaryDeserializerContext(), d =>
                 {
                     d.DebugReadMode();
 
@@ -69,19 +69,19 @@ namespace CK.Core
             }
         }
 
-        public static void SaveAndLoad( this IBasicTestHelper @this, Action<BinarySerialization.IBinarySerializer> w,
-                                                                     Action<BinarySerialization.IBinaryDeserializer> r,
+        public static void SaveAndLoad( this IBasicTestHelper @this, Action<IBinarySerializer> w,
+                                                                     Action<IBinaryDeserializer> r,
                                                                      BinarySerializerContext? serializerContext = null,
                                                                      BinaryDeserializerContext? deserializerContext = null )
         {
             using( var s = new MemoryStream() )
-            using( var writer = BinarySerialization.BinarySerializer.Create( s, serializerContext ?? new BinarySerializerContext() ) )
+            using( var writer = BinarySerializer.Create( s, serializerContext ?? new BinarySerializerContext() ) )
             {
                 writer.DebugWriteSentinel();
                 w( writer );
                 writer.DebugWriteSentinel();
                 s.Position = 0;
-                BinarySerialization.BinaryDeserializer.Deserialize( s, deserializerContext ?? new BinaryDeserializerContext(), d =>
+                BinaryDeserializer.Deserialize( s, deserializerContext ?? new BinaryDeserializerContext(), d =>
                 {
                     d.DebugCheckSentinel();
                     r( d );
@@ -93,13 +93,13 @@ namespace CK.Core
 
         public class DomainTestHandler : IDisposable
         {
-            public DomainTestHandler( IActivityMonitor m, string domainName, IServiceProvider serviceProvider, bool startTimer )
+            public DomainTestHandler( IActivityMonitor m, string domainName, IServiceProvider? serviceProvider, bool startTimer )
             {
                 ServiceProvider = serviceProvider;
                 Domain = new ObservableDomain( m, domainName, startTimer, serviceProvider );
             }
 
-            public IServiceProvider ServiceProvider { get; set; }
+            public IServiceProvider? ServiceProvider { get; set; }
 
             public ObservableDomain Domain { get; private set; }
 
@@ -112,7 +112,7 @@ namespace CK.Core
             public void ReloadNewDomain( IActivityMonitor m, bool idempotenceCheck = false, int pauseReloadMilliseconds = 0 )
             {
                 if( idempotenceCheck ) ObservableDomain.IdempotenceSerializationCheck( m, Domain );
-                Domain = MonitorTestHelper.TestHelper.SaveAndLoad( Domain, serviceProvider: ServiceProvider, debugMode: true, pauseMilliseconds: pauseReloadMilliseconds );
+                Domain = MonitorTestHelper.TestHelper.CloneDomain( Domain, serviceProvider: ServiceProvider, debugMode: true, pauseMilliseconds: pauseReloadMilliseconds );
             }
 
             public void Dispose()
@@ -126,37 +126,99 @@ namespace CK.Core
             return new DomainTestHandler( @this.Monitor, domainName, serviceProvider, startTimer );
         }
 
-        static ObservableDomain SaveAndLoad( IActivityMonitor m,
-                                             ObservableDomain domain,
-                                             string? renamed,
-                                             IServiceProvider? serviceProvider,
-                                             bool debugMode,
-                                             bool? startTimer,
-                                             int pauseMilliseconds,
-                                             bool skipDomainDispose )
+        public static ObservableDomain CloneDomain( this IMonitorTestHelper @this,
+                                                    ObservableDomain initial,
+                                                    IServiceProvider? serviceProvider = null,
+                                                    IObservableDomainClient? client = null,
+                                                    bool? startTimer = null,
+                                                    string? newName = null,
+                                                    bool debugMode = true,
+                                                    int pauseMilliseconds = 0,
+                                                    bool initialDomainDispose = true )
+        {
+            return DoCloneDomain( @this,
+                                  initial,
+                                  ( monitor, newName, startTimer, c, s ) => new ObservableDomain( monitor, newName, startTimer, client, serviceProvider ),
+                                  serviceProvider,
+                                  client,
+                                  startTimer,
+                                  newName,
+                                  debugMode,
+                                  pauseMilliseconds,
+                                  initialDomainDispose );
+        }
+
+        public static ObservableDomain<T> CloneDomain<T>( this IMonitorTestHelper @this,
+                                                          ObservableDomain<T> initial,
+                                                          IServiceProvider? serviceProvider = null,
+                                                          IObservableDomainClient? client = null,
+                                                          bool? startTimer = null,
+                                                          string? newName = null,
+                                                          bool debugMode = true,
+                                                          int pauseMilliseconds = 0,
+                                                          bool initialDomainDispose = true )
+            where T : ObservableRootObject
+        {
+            return (ObservableDomain<T>)DoCloneDomain( @this,
+                                                       initial,
+                                                       ( monitor, newName, startTimer, c, s ) => new ObservableDomain<T>( monitor, newName, startTimer, c, s ),
+                                                       serviceProvider,
+                                                       client,
+                                                       startTimer,
+                                                       newName,
+                                                       debugMode,
+                                                       pauseMilliseconds,
+                                                       initialDomainDispose );
+        }
+
+        public static ObservableDomain<T1,T2> CloneDomain<T1,T2>( this IMonitorTestHelper @this,
+                                                              ObservableDomain<T1,T2> initial,
+                                                              IServiceProvider? serviceProvider = null,
+                                                              IObservableDomainClient? client = null,
+                                                              bool? startTimer = null,
+                                                              string? newName = null,
+                                                              bool debugMode = true,
+                                                              int pauseMilliseconds = 0,
+                                                              bool initialDomainDispose = true )
+            where T1 : ObservableRootObject
+            where T2 : ObservableRootObject
+        {
+            return (ObservableDomain<T1,T2>)DoCloneDomain( @this,
+                                                           initial,
+                                                           (monitor, newName, startTimer, c, s ) => new ObservableDomain<T1,T2>( monitor, newName, startTimer, c, s ),
+                                                           serviceProvider,
+                                                           client,
+                                                           startTimer,
+                                                           newName,
+                                                           debugMode,
+                                                           pauseMilliseconds,
+                                                           initialDomainDispose );
+        }
+
+        static ObservableDomain DoCloneDomain( this IMonitorTestHelper @this,
+                                               ObservableDomain initial,
+                                               Func<IActivityMonitor, string, bool, IObservableDomainClient?, IServiceProvider?, ObservableDomain> factory,
+                                               IServiceProvider? serviceProvider = null,
+                                               IObservableDomainClient? client = null,
+                                               bool? startTimer = null,
+                                               string? newName = null,
+                                               bool debugMode = true,
+                                               int pauseMilliseconds = 0,
+                                               bool initialDomainDispose = true )
         {
             using( var s = new MemoryStream() )
             {
-                domain.Save( m, s, debugMode: debugMode );
-                if( !skipDomainDispose ) domain.Dispose();
+                initial.Save( @this.Monitor, s, debugMode: debugMode );
+                if( initialDomainDispose ) initial.Dispose();
                 System.Threading.Thread.Sleep( pauseMilliseconds );
-                var d = new ObservableDomain( m, renamed ?? domain.DomainName, false, serviceProvider );
+                var d = factory( @this.Monitor, newName ?? initial.DomainName, false, client, serviceProvider );
                 s.Position = 0;
-                d.Load( m, RewindableStream.FromStream( s ), domain.DomainName, startTimer: startTimer );
+                using( var r = RewindableStream.FromStream( s ) )
+                {
+                    d.Load( @this.Monitor, r, initial.DomainName, startTimer: startTimer );
+                }
                 return d;
             }
-        }
-
-        public static ObservableDomain SaveAndLoad( this IMonitorTestHelper @this,
-                                                    ObservableDomain domain,
-                                                    string? renamed = null,
-                                                    IServiceProvider? serviceProvider = null,
-                                                    bool debugMode = true,
-                                                    bool? startTimer = null,
-                                                    int pauseMilliseconds = 0,
-                                                    bool skipDomainDispose = false )
-        {
-            return SaveAndLoad( @this.Monitor, domain, renamed, serviceProvider, debugMode, startTimer, pauseMilliseconds, skipDomainDispose );
         }
 
     }

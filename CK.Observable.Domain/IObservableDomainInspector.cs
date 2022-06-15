@@ -45,6 +45,6 @@ namespace CK.Observable
         /// <summary>
         /// Called on each successful transaction on this domain: provides a way to inspect the <see cref="ObservableEvent"/> emitted by a transaction.
         /// </summary>
-        event Action<ISuccessfulTransactionEvent>? OnSuccessfulTransaction;
+        event Action<ITransactionDoneEvent>? TransactionDone;
     }
 }

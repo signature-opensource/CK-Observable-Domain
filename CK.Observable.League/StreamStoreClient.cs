@@ -89,7 +89,7 @@ namespace CK.Observable.League
         /// Overridden to FIRST create a snapshot and THEN call the next client.
         /// </summary>
         /// <param name="c"></param>
-        public override void OnTransactionCommit( in SuccessfulTransactionEventArgs c )
+        public override void OnTransactionCommit( in TransactionDoneEventArgs c )
         {
             if( c.RollbackedInfo == null )
             {
@@ -133,8 +133,13 @@ namespace CK.Observable.League
         /// <param name="factory">The domain factory to use if no stream exists in the store.</param>
         /// <param name="startTimer">Whether to start the <see cref="TimeManager"/>.</param>
         /// <returns>The awaitable.</returns>
-        public async Task<ObservableDomain> InitializeAsync( IActivityMonitor monitor, bool? startTimer, bool createOnLoadError, Func<IActivityMonitor,bool,ObservableDomain> factory )
+        public async Task<ObservableDomain> InitializeAsync( IActivityMonitor monitor,
+                                                             bool? startTimer,
+                                                             bool createOnLoadError,
+                                                             Func<IActivityMonitor,bool,ObservableDomain> factory,
+                                                             IObservableDomainInitializer? initializer )
         {
+            string action = "Loaded";
             ObservableDomain? result = null;
             await using( var s = await _streamStore.OpenReadAsync( _storeName ) )
             {
@@ -161,25 +166,36 @@ namespace CK.Observable.League
 
             if( result == null )
             {
-                monitor.Info( $"Creating store '{_storeName}'." );
-                result = await Create( monitor, startTimer, factory );
+                action = "Created";
+                using( monitor.OpenInfo( $"Creating store '{_storeName}'." ) )
+                {
+                    result = factory( monitor, startTimer ?? false );
+                    _eventCollector.CollectEvent( result, clearEvents: true );
+                    if( initializer != null )
+                    {
+                        using( monitor.OpenInfo( $"Calling Domain Initializer." ) )
+                        {
+                            await initializer.InitializeAsync( monitor, result );
+                        }
+                    }
+                    // Calling CreateSnapshot so that
+                    // the initial snapshot can be saved to the Store: this initializes
+                    // the Store for this domain. From now on, it will be reloaded.
+                    CreateSnapshot( monitor, result, true, true );
+                    if( !await SaveSnapshotAsync( monitor, false ) )
+                    {
+                        throw new Exception( $"Unable to initialize the store for '{_storeName}'." );
+                    }
+                }
+            }
+            if( result.HasWaitingSidekicks )
+            {
+                using( monitor.OpenInfo( $"{action} domain '{DomainName}' has waiting sidekicks." ) )
+                {
+                    await result.ModifyThrowAsync( monitor, null );
+                }
             }
             return result;
-
-            async Task<ObservableDomain> Create( IActivityMonitor monitor, bool? startTimer, Func<IActivityMonitor, bool, ObservableDomain> factory )
-            {
-                ObservableDomain result = factory( monitor, startTimer ?? false );
-                _eventCollector.CollectEvent( result, clearEvents: true );
-                // Calling CreateSnapshot so that
-                // the initial snapshot can be saved to the Store: this initializes
-                // the Store for this domain. From now on, it will be reloaded.
-                CreateSnapshot( monitor, result, true, true );
-                if( !await SaveSnapshotAsync( monitor, false ) )
-                {
-                    throw new Exception( $"Unable to initialize the store for '{_storeName}'." );
-                }
-                return result;
-            }
         }
 
         /// <summary>

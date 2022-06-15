@@ -31,6 +31,6 @@
         /// <summary>
         /// Gets the access to the Coordinator domain.
         /// </summary>
-        public IObservableDomainAccess<Coordinator> Coordinator { get; }
+        public IObservableDomainAccess<OCoordinatorRoot> Coordinator { get; }
     }
 }

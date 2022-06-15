@@ -63,8 +63,7 @@ namespace CK.Observable
 
         /// <summary>
         /// Constructor for specialized instance.
-        /// The current domain is retrieved automatically: it is the last one on the current thread
-        /// that has started a transaction (see <see cref="ObservableDomain.BeginTransaction"/>).
+        /// The current domain is retrieved automatically.
         /// </summary>
         protected ObservableObject()
             : this( ObservableDomain.GetCurrentActiveDomain() )

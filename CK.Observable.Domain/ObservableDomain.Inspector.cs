@@ -226,7 +226,7 @@ namespace CK.Observable
                 }
                 c.DumpLog( monitor, false );
                 int count = 0;
-                var result = await ModifyNoThrowAsync( monitor, () =>
+                var result = await TryModifyAsync( monitor, () =>
                 {
                     Debug.Assert( c != null );
 
@@ -266,7 +266,7 @@ namespace CK.Observable
                         TimeManager.TrimPooledReminders( monitor, c.UnusedPooledReminderCount / 2 );
                     }
                 }, millisecondsTimeout: millisecondsTimeout );
-                monitor.CloseGroup( $"Removed {count} objects." );
+                monitor.CloseGroup( result.Success ? $"Removed {count} objects." : "Failed." );
                 return result.Success;
             }
         }

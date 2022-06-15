@@ -12,12 +12,12 @@ namespace CK.Observable.League
     /// Describes a domain available in the <see cref="ObservableLeague"/>.
     /// </summary>
     [SerializationVersion(1)]
-    public sealed class Domain : ObservableObject
+    public sealed class ODomain : ObservableObject
     {
-        IManagedDomain? _shell;
+        IInternalManagedDomain? _shell;
         string? _displayName;
 
-        internal Domain( Coordinator coordinator, IManagedDomain shell, string[] rootTypes, ManagedDomainOptions? initialOptions )
+        internal ODomain( OCoordinatorRoot coordinator, IInternalManagedDomain shell, string[] rootTypes, ManagedDomainOptions? initialOptions )
         {
             Coordinator = coordinator;
             DomainName = shell.DomainName;
@@ -28,10 +28,10 @@ namespace CK.Observable.League
             NextActiveTime = Util.UtcMinValue;
         }
 
-        Domain( IBinaryDeserializer r, ITypeReadInfo info )
+        ODomain( IBinaryDeserializer r, ITypeReadInfo info )
             : base( Sliced.Instance )
         {
-            Coordinator = r.ReadObject<Coordinator>();
+            Coordinator = r.ReadObject<OCoordinatorRoot>();
             DomainName = r.Reader.ReadString();
             _displayName = r.Reader.ReadNullableString();
             RootTypes = r.ReadObject<string[]>();
@@ -39,7 +39,7 @@ namespace CK.Observable.League
             NextActiveTime = r.Reader.ReadDateTime();
         }
 
-        public static void Write( IBinarySerializer w, in Domain o )
+        public static void Write( IBinarySerializer w, in ODomain o )
         {
             w.WriteObject( o.Coordinator );
             w.Writer.Write( o.DomainName );
@@ -49,14 +49,14 @@ namespace CK.Observable.League
             w.Writer.Write( o.NextActiveTime );
         }
 
-        internal IManagedDomain Shell => _shell!;
+        internal IInternalManagedDomain Shell => _shell!;
 
         /// <summary>
         /// This is called when the League is initially loaded
         /// or reloaded from its snapshot.
         /// </summary>
         /// <param name="shell">The associated shell.</param>
-        internal void Initialize( IManagedDomain shell )
+        internal void Initialize( IInternalManagedDomain shell )
         {
             _shell = shell;
         }
@@ -64,7 +64,7 @@ namespace CK.Observable.League
         /// <summary>
         /// Gets the coordinator.
         /// </summary>
-        public Coordinator Coordinator { get; }
+        public OCoordinatorRoot Coordinator { get; }
 
         /// <summary>
         /// Gets whether the domain type can be resolved.
@@ -72,7 +72,7 @@ namespace CK.Observable.League
         public bool IsLoadable => Shell.IsLoadable;
 
         /// <summary>
-        /// Gets whether this domain is currently loaded.
+        /// Gets whether this domain is currently in memory.
         /// </summary>
         public bool IsLoaded { get; internal set; }
 
@@ -101,7 +101,7 @@ namespace CK.Observable.League
         /// This supports the <see cref="ManagedDomainOptions.LifeCycleOption"/> when <see cref="DomainLifeCycleOption.Default"/>.
         /// This is serialized so that when reloading a League, we know that the actual ObservableDomain
         /// must be preloaded. When the ObservableDomain is loaded, this is updated by
-        /// <see cref="ObservableLeague.DomainClient.OnTransactionCommit(in SuccessfulTransactionEventArgs)"/>.
+        /// <see cref="ObservableLeague.DomainClient.OnTransactionCommit(in TransactionDoneEventArgs)"/>.
         /// </summary>
         internal DateTime NextActiveTime;
 
@@ -112,7 +112,7 @@ namespace CK.Observable.League
         public IReadOnlyList<string> RootTypes { get; }
 
         /// <summary>
-        /// Destroys this domain: it is removed from the <see cref="Coordinator.Domains"/>
+        /// Destroys this domain: it is removed from the <see cref="OCoordinatorRoot.Domains"/>
         /// and the real domain is removed from the <see cref="ObservableLeague"/>.
         /// </summary>
         protected override void OnDestroy()

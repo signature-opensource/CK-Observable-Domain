@@ -137,7 +137,7 @@ namespace CK.Observable
             await _lock.WaitAsync();
             try
             {
-                IObservableDomainLoader loader;
+                IObservableDomainLoader? loader;
                 var idx = _watched.IndexOf( loader => loader.D.DomainName == domainName );
                 if( idx >= 0 )
                 {
@@ -218,7 +218,7 @@ namespace CK.Observable
         /// Stops watching a domain.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
-        /// <param name="domainName">The domain that should be watched.</param>
+        /// <param name="domainName">The domain that should not be watched anymore.</param>
         /// <returns>
         /// Whether the <paramref name="domainName"/> has been found: false is the domain doesn't exist or was not watched.
         /// </returns>

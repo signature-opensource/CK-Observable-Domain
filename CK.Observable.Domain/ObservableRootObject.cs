@@ -21,8 +21,7 @@ namespace CK.Observable
         public static bool AllowRootObjectDestroying { get; set; } = false;
 
         /// <summary>
-        /// Initializes a new root for the current domain that is retrieved automatically: it
-        /// is the last one on the current thread that has started a transaction (see <see cref="ObservableDomain.BeginTransaction"/>).
+        /// Initializes a new root for the current domain that is retrieved automatically.
         /// </summary>
         protected ObservableRootObject()
         {

@@ -36,7 +36,7 @@ namespace CK.Observable.League
         public IObservableDomainLoader? this[string domainName] => _default!.Find( domainName );
 
         /// <inheritdoc />
-        public IObservableDomainAccess<Coordinator> Coordinator => _default!.Coordinator;
+        public IObservableDomainAccess<OCoordinatorRoot> Coordinator => _default!.Coordinator;
 
         /// <inheritdoc />
         public IObservableDomainLoader? Find( string domainName ) => _default!.Find( domainName );

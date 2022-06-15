@@ -142,7 +142,7 @@ namespace CK.Observable
         /// errors that cancel the whole transaction.
         /// <para>
         /// This is called when <see cref="DomainView.EnsureSidekicks()"/> is called in a regular transaction context (typically from
-        /// a <see cref="ISidekickClientObject{TSidekick}"/> object's constructor) or at the start or end the Modify session (in the latter
+        /// a <see cref="ISidekickClientObject{TSidekick}"/> object's constructor) or at the start or end of the Modify session (in the latter
         /// case only if no transaction error occurred).
         /// </para>
         /// </summary>
@@ -317,17 +317,17 @@ namespace CK.Observable
             return true;
         }
 
-        internal void OnSuccessfulTransaction( in SuccessfulTransactionEventArgs result, ref List<CKExceptionData>? errors )
+        internal void OnTransactionDoneEvent( in TransactionDoneEventArgs result, ref List<CKExceptionData>? errors )
         {
             foreach( var h in _sidekicks )
             {
                 try
                 {
-                    h.OnSuccessfulTransaction( in result );
+                    h.OnTransactionResult( in result );
                 }
                 catch( Exception ex )
                 {
-                    result.Monitor.Error( "Error while calling ObservableDomainSideKick.OnSuccessfulTransaction.", ex );
+                    result.Monitor.Error( "Error while calling ObservableDomainSideKick.OnTransactionResult.", ex );
                     if( errors == null ) errors = new List<CKExceptionData>();
                     errors.Add( CKExceptionData.CreateFrom( ex ) );
                 }

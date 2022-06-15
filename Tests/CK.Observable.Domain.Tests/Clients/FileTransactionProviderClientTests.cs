@@ -185,7 +185,7 @@ namespace CK.Observable.Domain.Tests.Clients
             var client = CreateClient( 0, path );
             using var d = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, nameof( TransactionResult_has_ClientError_when_file_directory_does_not_exist_Async), startTimer: true, client: client );
 
-            var transactionResult = await d.ModifyNoThrowAsync( TestHelper.Monitor, () =>
+            var transactionResult = await d.TryModifyAsync( TestHelper.Monitor, () =>
             {
                 d.Root.Prop1 = "Hello";
                 d.Root.Prop2 = "World";

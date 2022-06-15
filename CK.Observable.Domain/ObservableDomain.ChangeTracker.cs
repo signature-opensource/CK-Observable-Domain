@@ -47,7 +47,7 @@ namespace CK.Observable
                 _commands = new List<ObservableDomainCommand>();
             }
 
-            public SuccessfulTransactionEventArgs Commit( ObservableDomain domain,
+            public TransactionDoneEventArgs Commit( ObservableDomain domain,
                                                           Func<string, ObservablePropertyChangedEventArgs> ensurePropertInfo,
                                                           DateTime startTime,
                                                           int tranNum,
@@ -78,7 +78,7 @@ namespace CK.Observable
                         _changeEvents.Add( new PropertyChangedEvent( kv.Key, pInfo.PropertyId, pInfo.PropertyName, propValue ) );
                     }
                 }
-                var result = new SuccessfulTransactionEventArgs( domain,
+                var result = new TransactionDoneEventArgs( domain,
                                                                  domain.FindPropertyId,
                                                                  _changeEvents.ToArray(),
                                                                  _commands,

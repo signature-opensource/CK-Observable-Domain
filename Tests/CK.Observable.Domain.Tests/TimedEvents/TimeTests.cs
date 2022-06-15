@@ -272,7 +272,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
 
                 } );
 
-                using( var d2 = TestHelper.SaveAndLoad( d, skipDomainDispose: true ) )
+                using( var d2 = TestHelper.CloneDomain( d, initialDomainDispose: false ) )
                 {
                     d2.TimeManager.Timers.Should().HaveCount( 8 );
                     d2.TimeManager.AllObservableTimedEvents.Where( o => !o.IsActive ).Should().HaveCount( 8 );
@@ -303,7 +303,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 int secondaryValue = 0;
                 using( TestHelper.Monitor.OpenInfo( "Having slept during 50 ms: now creating Secondary by Save/Load the primary domain." ) )
                 {
-                    using( var d2 = TestHelper.SaveAndLoad( d, "Secondary", skipDomainDispose: true ) )
+                    using( var d2 = TestHelper.CloneDomain( d, newName: "Secondary", initialDomainDispose: false ) )
                     {
                         using( d2.AcquireReadLock() )
                         {

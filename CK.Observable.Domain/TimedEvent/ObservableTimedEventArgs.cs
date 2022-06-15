@@ -25,7 +25,7 @@ namespace CK.Observable
 
         /// <summary>
         /// Gets the current, unified, time of this event: all timer handlers see the same time that is either
-        /// the <see cref="IObservableTransaction.StartTime"/> when activated at the start of <see cref="ObservableDomain.Modify"/>
+        /// the <see cref="IInternalTransaction.StartTime"/> when activated at the start of <see cref="ObservableDomain.Modify"/>
         /// or the time right after the Modify.
         /// </summary>
         public DateTime Current { get; internal set; }

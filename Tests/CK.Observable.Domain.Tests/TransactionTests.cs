@@ -18,7 +18,7 @@ namespace CK.Observable.Domain.Tests
             using( var d = new ObservableDomain(TestHelper.Monitor, "TEST", startTimer: true, client: new Clients.ConcreteMemoryTransactionProviderClient()))
             {
                 d.TransactionSerialNumber.Should().Be( 0 );
-                var result = await d.ModifyNoThrowAsync( TestHelper.Monitor, () =>
+                var result = await d.TryModifyAsync( TestHelper.Monitor, () =>
                 {
                     new Car( "V1" );
                     new Car( "V2" );

@@ -86,7 +86,7 @@ namespace CK.Core
         /// <returns>The first exception that occurred or null on success.</returns>
         public async Task<Exception?> ExecuteAsync( bool throwException = true, bool reverseInitialActions = false, string name = "(unnamed)" )
         {
-            if( _executing ) throw new InvalidOperationException( "ExecuteAsync reentrancy detected." );
+            Throw.CheckState( !_executing );
             var actions = _reg._actions;
             if( reverseInitialActions ) actions.Reverse();
             using( _monitor.OpenInfo( $"[{name}]: {actions.Count} initial actions{(reverseInitialActions ? " in reverse order" : "")}." ) )
@@ -149,7 +149,7 @@ namespace CK.Core
                     {
                         using( _monitor.OpenInfo( $"Calling {_reg._onFinally.Count} final handlers." ) )
                         {
-                            await RaiseFinallyAsync( _reg._onFinally, name );
+                            await RaiseFinallyAsync( _reg._onFinally, name ).ConfigureAwait( false );
                         }
                     }
                     _executing = false;

@@ -35,17 +35,17 @@ namespace CK.Observable
         void OnTransactionStart( IActivityMonitor monitor, ObservableDomain d, DateTime timeUtc );
 
         /// <summary>
-        /// Called when a transaction ends successfully. The domain's write lock is held while this is called.
+        /// Called when a transaction ends successfully or has been rolled back. The domain's write lock is held while this is called.
         /// Any exception raised by this method will set <see cref="TransactionResult.IsCriticalError"/> to true.
         /// <para>
         /// Implementations may capture any required domain object's state and use
-        /// <see cref="SuccessfulTransactionEventArgs.PostActions"/> or <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/>
-        /// to post asynchronous actions (or to send commands thanks to <see cref="SuccessfulTransactionEventArgs.SendCommand(in ObservableDomainCommand)"/>
+        /// <see cref="TransactionDoneEventArgs.PostActions"/> or <see cref="TransactionDoneEventArgs.DomainPostActions"/>
+        /// to post asynchronous actions (or to send commands thanks to <see cref="TransactionDoneEventArgs.SendCommand(in ObservableDomainCommand)"/>
         /// that will be processed by the sidekicks).
         /// </para>
         /// </summary>
         /// <param name="context">The successful context.</param>
-        void OnTransactionCommit( in SuccessfulTransactionEventArgs context );
+        void OnTransactionCommit( in TransactionDoneEventArgs context );
 
         /// <summary>
         /// Called from inside a transaction whenever an unhandled exception is thrown.
@@ -56,12 +56,14 @@ namespace CK.Observable
         /// <param name="swallowError">
         /// Defaults to false since by default the transaction will fail.
         /// Setting this to true will silently swallow the exception (this is up to this implementation
-        /// to log it) and generate a call to <see cref="OnTransactionCommit"/> with a <see cref="SuccessfulTransactionEventArgs"/>.
+        /// to log it) and generate a call to <see cref="OnTransactionCommit"/> with a <see cref="TransactionDoneEventArgs"/>.
         /// </param>
         void OnUnhandledException( IActivityMonitor monitor, ObservableDomain d, Exception ex, ref bool swallowError );
 
         /// <summary>
         /// Called when an error occurred in a transaction.
+        /// This can implement a roll back mechanism: <see cref="OnTransactionCommit(in TransactionDoneEventArgs)"/> will be called.
+        /// If no roll back is done, this is the last event that the client will see from the transaction.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="d">The associated domain.</param>

@@ -129,7 +129,7 @@ namespace CK.Observable.Device.Tests
             // Collects ObservableEvent emitted.
             IReadOnlyList<ObservableEvent>? lastEvents = null;
             var obs = new ObservableDomain<Root>( TestHelper.Monitor, nameof( deserialization_triggers_events_when_resynchronizing_Async ), false, serviceProvider: sp );
-            obs.OnSuccessfulTransaction += ( d, ev ) => lastEvents = ev.Events;
+            obs.TransactionDone += ( d, ev ) => lastEvents = ev.Events;
 
             obs.HasWaitingSidekicks.Should().BeTrue();
             await obs.ModifyThrowAsync( TestHelper.Monitor, () =>

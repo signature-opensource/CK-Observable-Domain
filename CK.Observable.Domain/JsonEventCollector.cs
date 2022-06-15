@@ -9,8 +9,8 @@ using System.Threading.Tasks;
 namespace CK.Observable
 {
     /// <summary>
-    /// Helpers that can be enlisted to the <see cref="ObservableDomain.OnSuccessfulTransaction"/> event that transforms
-    /// <see cref="SuccessfulTransactionEventArgs.Events"/> into <see cref="TransactionEvent"/> that captures, for each transaction,
+    /// Helpers that can be enlisted to the <see cref="ObservableDomain.TransactionDone"/> event that transforms
+    /// <see cref="TransactionDoneEventArgs.Events"/> into <see cref="TransactionEvent"/> that captures, for each transaction,
     /// all the transaction events as JSON string that describes them.
     /// </summary>
     public class JsonEventCollector
@@ -44,7 +44,7 @@ namespace CK.Observable
             public readonly DateTime TimeUtc;
 
             /// <summary>
-            /// The JSON description of the <see cref="SuccessfulTransactionEventArgs.Events"/>.
+            /// The JSON description of the <see cref="TransactionDoneEventArgs.Events"/>.
             /// </summary>
             public readonly string ExportedEvents;
 
@@ -157,7 +157,7 @@ namespace CK.Observable
             {
                 Throw.CheckState( _domain == null, "Event collector is already associated to a domain." );
                 _domain = domain;
-                domain.OnSuccessfulTransaction += OnSuccessfulTransaction;
+                domain.TransactionDone += OnSuccessfulTransaction;
                 if( clearEvents )
                 {
                     _events.Clear();
@@ -177,14 +177,14 @@ namespace CK.Observable
                 {
                     if( _domain != null )
                     {
-                        _domain.OnSuccessfulTransaction -= OnSuccessfulTransaction;
+                        _domain.TransactionDone -= OnSuccessfulTransaction;
                         _domain = null!;
                     }
                 }
             }
         }
 
-        void OnSuccessfulTransaction( object? sender, SuccessfulTransactionEventArgs c ) 
+        void OnSuccessfulTransaction( object? sender, TransactionDoneEventArgs c ) 
         {
             Debug.Assert( sender == _domain );
             // It's useless to capture the initial transaction: the full export will be more efficient.

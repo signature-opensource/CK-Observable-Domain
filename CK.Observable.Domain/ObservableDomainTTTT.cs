@@ -24,7 +24,12 @@ namespace CK.Observable
     {
         /// <summary>
         /// Initializes a new <see cref="ObservableDomain{T1,T2,T3,T4}"/> without any <see cref="ObservableDomain.DomainClient"/>.
-        /// The roots are initialized with new instances of their respective type (obtained by calling the constructor that accepts a ObservableDomain).
+        /// The roots are initialized with new instances of their respective type.
+        /// <para>
+        /// Sidekicks are NOT instantiated by the constructors. If <see cref="HasWaitingSidekicks"/> is true, a null transaction
+        /// can be done that will instantiate the required sidekicks (and initialize them with the <see cref="ISidekickClientObject{TSidekick}"/> objects
+        /// if any).
+        /// </para>
         /// </summary>
         /// <param name="monitor">The monitor used to log the construction of this domain. Cannot be null.</param>
         /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
@@ -37,7 +42,12 @@ namespace CK.Observable
 
         /// <summary>
         /// Initializes a new <see cref="ObservableDomain{T1,T2,T3,T4}"/>.
-        /// The roots are initialized with new instances of their respective type (obtained by calling the constructor that accepts a ObservableDomain).
+        /// The roots are initialized with new instances of their respective type.
+        /// <para>
+        /// Sidekicks are NOT instantiated by the constructors. If <see cref="HasWaitingSidekicks"/> is true, a null transaction
+        /// can be done that will instantiate the required sidekicks (and initialize them with the <see cref="ISidekickClientObject{TSidekick}"/> objects
+        /// if any).
+        /// </para>
         /// </summary>
         /// <param name="monitor">The monitor used to log the construction of this domain. Cannot be null.</param>
         /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
@@ -68,17 +78,20 @@ namespace CK.Observable
 
         /// <summary>
         /// Initializes a previously <see cref="ObservableDomain.Save"/>d domain.
+        /// <para>
+        /// Sidekicks are NOT instantiated by the constructors. If <see cref="HasWaitingSidekicks"/> is true, a null transaction
+        /// can be done that will instantiate the required sidekicks (and initialize them with the <see cref="ISidekickClientObject{TSidekick}"/> objects
+        /// if any).
+        /// </para>
         /// </summary>
-        /// <param name="monitor">The monitor used to log the construction of this domain. Cannot be null.</param>
+        /// <param name="monitor">The monitor used to log the construction of this domain.</param>
         /// <param name="domainName">Name of the domain. Must not be null but can be empty.</param>
-        /// <param name="client">The observable client (head of the Chain of Responsibility) to use. Can be null.</param>
+        /// <param name="client">The observable client (head of the Chain of Responsibility) to use.</param>
         /// <param name="s">The input stream.</param>
-        /// <param name="leaveOpen">True to leave the stream opened.</param>
-        /// <param name="encoding">Optional encoding for characters. Defaults to UTF-8.</param>
         /// <param name="serviceProvider">The service providers that will be used to resolve the <see cref="ObservableDomainSidekick"/> objects.</param>
         /// <param name="startTimer">
         /// Ensures that the <see cref="ObservableDomain.TimeManager"/> is running or stopped.
-        /// When null, it keeps its previous state (it is initially stopped at domain creation) and then its current state is persisted.
+        /// When null, it keeps its restored state.
         /// </param>
         public ObservableDomain( IActivityMonitor monitor,
                                  string domainName,
@@ -88,9 +101,8 @@ namespace CK.Observable
                                  bool? startTimer = null )
             : base( monitor, domainName, client, s, serviceProvider, startTimer )
         {
-            Debug.Assert( _transactionStatus == CurrentTransactionStatus.Deserializing );
+            Debug.Assert( _transactionStatus == CurrentTransactionStatus.Regular );
             Debug.Assert( Root1 == AllRoots[0] && Root2 == AllRoots[1] && Root3 == AllRoots[2] && Root4 == AllRoots[3], "Binding has been done." );
-            _transactionStatus = CurrentTransactionStatus.Regular;
         }
 
         /// <summary>

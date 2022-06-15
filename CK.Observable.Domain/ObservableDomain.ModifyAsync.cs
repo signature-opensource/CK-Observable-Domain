@@ -11,8 +11,8 @@ namespace CK.Observable
     public partial class ObservableDomain
     {
         /// <summary>
-        /// Allow modifications of this ObservableDomain, and on success executes the <see cref="SuccessfulTransactionEventArgs.PostActions"/> and
-        /// send the <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/> to a background executor so that they are executed in the same
+        /// Allow modifications of this ObservableDomain, and on success executes the <see cref="TransactionDoneEventArgs.PostActions"/> and
+        /// send the <see cref="TransactionDoneEventArgs.DomainPostActions"/> to a background executor so that they are executed in the same
         /// order as the transactions that emitted them.
         /// <para>
         /// This always throw on any error.
@@ -31,8 +31,8 @@ namespace CK.Observable
         /// True to throw, even if the failed transaction has been successfully rolled back.
         /// </param>
         /// <param name="parallelDomainPostActions">
-        /// False to wait for the success of the <see cref="SuccessfulTransactionEventArgs.PostActions"/> that are executed here before
-        /// allowing the <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/> to run: if any post action fails, domain post actions are skipped.
+        /// False to wait for the success of the <see cref="TransactionDoneEventArgs.PostActions"/> that are executed here before
+        /// allowing the <see cref="TransactionDoneEventArgs.DomainPostActions"/> to run: if any post action fails, domain post actions are skipped.
         /// <para>
         /// By default, post actions are executed and domain post actions can immediately be executed by the internal executor (as
         /// soon as all previous transaction's domain post actions have ran of course).
@@ -42,7 +42,7 @@ namespace CK.Observable
         /// True to wait for the completions of all the domain post actions emitted by the transaction.
         /// By default, only the transaction's post actions are awaited.
         /// </param>
-        /// <returns>The transaction result. <see cref="TransactionResult.Empty"/> when the lock has not been taken.</returns>
+        /// <returns>The transaction result.</returns>
         public Task<TransactionResult> ModifyThrowAsync( IActivityMonitor monitor,
                                                          Action? actions,
                                                          int millisecondsTimeout = -1,
@@ -74,12 +74,9 @@ namespace CK.Observable
         /// The maximum number of milliseconds to wait for a read access before throwing.
         /// Wait indefinitely by default.
         /// </param>
-        /// <param name="considerRolledbackAsFailure">
-        /// True to throw, even if the failed transaction has been successfully rolled back.
-        /// </param>
         /// <param name="parallelDomainPostActions">
-        /// False to wait for the success of the <see cref="SuccessfulTransactionEventArgs.PostActions"/> that are executed here before
-        /// allowing the <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/> to run: if any post action fails, domain post actions are skipped.
+        /// False to wait for the success of the <see cref="TransactionDoneEventArgs.PostActions"/> that are executed here before
+        /// allowing the <see cref="TransactionDoneEventArgs.DomainPostActions"/> to run: if any post action fails, domain post actions are skipped.
         /// <para>
         /// By default, post actions are executed and domain post actions can immediately be executed by the internal executor (as
         /// soon as all previous transaction's domain post actions have ran of course).
@@ -93,7 +90,6 @@ namespace CK.Observable
         public async Task<TResult> ModifyThrowAsync<TResult>( IActivityMonitor monitor,
                                                               Func<TResult> actions,
                                                               int millisecondsTimeout = -1,
-                                                              bool considerRolledbackAsFailure = true,
                                                               bool parallelDomainPostActions = true,
                                                               bool waitForDomainPostActionsCompletion = false )
         {
@@ -103,15 +99,15 @@ namespace CK.Observable
                                () => result = actions(),
                                false,
                                millisecondsTimeout,
-                               considerRolledbackAsFailure,
+                               true,
                                parallelDomainPostActions,
                                waitForDomainPostActionsCompletion );
             return result;
         }
 
         /// <summary>
-        /// Allow modifications of this ObservableDomain, and on success executes the <see cref="SuccessfulTransactionEventArgs.PostActions"/> and
-        /// send the <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/> to a background executor so that they are executed in the same
+        /// Allow modifications of this ObservableDomain, and on success executes the <see cref="TransactionDoneEventArgs.PostActions"/> and
+        /// send the <see cref="TransactionDoneEventArgs.DomainPostActions"/> to a background executor so that they are executed in the same
         /// order as the transactions that emitted them.
         /// <para>
         /// This never throw: the returned result captures all the possible errors.
@@ -127,28 +123,32 @@ namespace CK.Observable
         /// Wait indefinitely by default.
         /// </param>
         /// <param name="considerRolledbackAsFailure">
-        /// True to consider that a successful rollback is an error: it returns the <see cref="TransactionResult.RollbackedInfo"/>
-        /// instead of the successfully rolled back transaction.
+        /// False to consider that rolling back is "normal: the (hopefully successful) transaction is returned.
+        /// <para>
+        /// By default a successful rollback is an error: the <see cref="RolledbackTransactionInfo.Failure"/> of the
+        /// <see cref="TransactionResult.RollbackedInfo"/> is returned if the transaction has been successfully rolled back
+        /// (the successful roll back did its job and it cannot be observed since the failure is returned).
+        /// </para>
         /// </param>
         /// <param name="parallelDomainPostActions">
-        /// False to wait for the success of the <see cref="SuccessfulTransactionEventArgs.PostActions"/> that are executed here before
-        /// allowing the <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/> to run: if any post action fails, domain post actions are skipped.
+        /// False to wait for the success of the <see cref="TransactionDoneEventArgs.PostActions"/> that are executed here before
+        /// allowing the <see cref="TransactionDoneEventArgs.DomainPostActions"/> to run: if any post action fails, domain post actions are skipped.
         /// <para>
-        /// By default, post actions are executed and domain post actions can immediately be executed by the internal executor (as
+        /// By default, post actions are executed by this method and domain post actions can immediately be executed by the internal executor (as
         /// soon as all previous transaction's domain post actions have ran of course).
         /// </para>
         /// </param>
         /// <param name="waitForDomainPostActionsCompletion">
         /// True to wait for the completions of all the domain post actions emitted by the transaction.
-        /// By default, only the transaction's post actions are awaited.
+        /// By default, only the transaction's post actions that are executed by this method are awaited.
         /// </param>
-        /// <returns>The transaction result. <see cref="TransactionResult.Empty"/> when the lock has not been taken.</returns>
-        public Task<TransactionResult> ModifyNoThrowAsync( IActivityMonitor monitor,
-                                                           Action? actions,
-                                                           int millisecondsTimeout = -1,
-                                                           bool considerRolledbackAsFailure = true,
-                                                           bool parallelDomainPostActions = true,
-                                                           bool waitForDomainPostActionsCompletion = false )
+        /// <returns>The transaction result.</returns>
+        public Task<TransactionResult> TryModifyAsync( IActivityMonitor monitor,
+                                                       Action? actions,
+                                                       int millisecondsTimeout = -1,
+                                                       bool considerRolledbackAsFailure = true,
+                                                       bool parallelDomainPostActions = true,
+                                                       bool waitForDomainPostActionsCompletion = false )
         {
             return ModifyAsync( monitor,
                                 actions,
@@ -160,8 +160,8 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Allow modifications of this ObservableDomain, and on success executes the <see cref="SuccessfulTransactionEventArgs.PostActions"/> and
-        /// send the <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/> to a background executor so that they are executed in the same
+        /// Allow modifications of this ObservableDomain, and on success executes the <see cref="TransactionDoneEventArgs.PostActions"/> and
+        /// send the <see cref="TransactionDoneEventArgs.DomainPostActions"/> to a background executor so that they are executed in the same
         /// order as the transactions that emitted them.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
@@ -178,22 +178,26 @@ namespace CK.Observable
         /// Wait indefinitely by default.
         /// </param>
         /// <param name="considerRolledbackAsFailure">
-        /// True to consider that a successful rollback is an error: this throws if <paramref name="throwException"/> is true
-        /// or returns the <see cref="TransactionResult.RollbackedInfo"/> instead of the successfully rolled back transaction otherwise.
+        /// False to consider that rolling back is "normal: the (hopefully successful) transaction is returned.
+        /// <para>
+        /// By default a successful rollback is an error: the <see cref="RolledbackTransactionInfo.Failure"/> of the
+        /// <see cref="TransactionResult.RollbackedInfo"/> is returned if the transaction has been successfully rolled back
+        /// (the successful roll back did its job and it cannot be observed since the failure is returned).
+        /// </para>
         /// </param>
         /// <param name="parallelDomainPostActions">
-        /// False to wait for the success of the <see cref="SuccessfulTransactionEventArgs.PostActions"/> that are executed here before
-        /// allowing the <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/> to run: if any post action fails, domain post actions are skipped.
+        /// False to wait for the success of the <see cref="TransactionDoneEventArgs.PostActions"/> that are executed here before
+        /// allowing the <see cref="TransactionDoneEventArgs.DomainPostActions"/> to run: if any post action fails, domain post actions are skipped.
         /// <para>
-        /// By default, post actions are executed and domain post actions can immediately be executed by the internal executor (as
+        /// By default, post actions are executed by this method and domain post actions can immediately be executed by the internal executor (as
         /// soon as all previous transaction's domain post actions have ran of course).
         /// </para>
         /// </param>
         /// <param name="waitForDomainPostActionsCompletion">
         /// True to wait for the completions of all the domain post actions emitted by the transaction.
-        /// By default, only the transaction's post actions are awaited.
+        /// By default, only the transaction's post actions that are executed by this method are awaited.
         /// </param>
-        /// <returns>The transaction result. <see cref="TransactionResult.Empty"/> when the lock has not been taken.</returns>
+        /// <returns>The transaction result.</returns>
         public async Task<TransactionResult> ModifyAsync( IActivityMonitor monitor,
                                                           Action? actions,
                                                           bool throwException,
@@ -205,9 +209,10 @@ namespace CK.Observable
             Throw.CheckNotNullArgument( monitor );
             if( !TryEnterUpgradeableReadAndWriteLockAtOnce( millisecondsTimeout ) )
             {
-                if( throwException ) Throw.Exception( $"Write lock not obtained in less than {millisecondsTimeout} ms." );
-                monitor.Warn( $"Write lock not obtained in less than {millisecondsTimeout} ms." );
-                return TransactionResult.Empty;
+                var msg = $"Write lock not obtained in less than {millisecondsTimeout} ms.";
+                if( throwException ) Throw.Exception( msg );
+                monitor.Warn( msg );
+                return new TransactionResult( CKExceptionData.Create( msg ), isTimeout: true );
             }
             var (tx, ex) = DoCreateObservableTransaction( monitor, throwException, fromModifyAsync: true );
             Debug.Assert( (tx != null) != (ex != null), "The Transaction XOR IObservableDomainClient.OnTransactionStart() exception." );
@@ -215,10 +220,9 @@ namespace CK.Observable
             if( ex != null ) return new TransactionResult( ex );
             Debug.Assert( tx != null );
             var tr = DoModifyAndCommit( actions, tx );
-            await tr.ExecutePostActionsAsync( monitor, parallelDomainPostActions );
+            await tr.ExecutePostActionsAsync( monitor, parallelDomainPostActions ).ConfigureAwait( false );
             if( throwException ) tr.ThrowOnFailure( considerRolledbackAsFailure );
             return considerRolledbackAsFailure && tr.RollbackedInfo != null ? tr.RollbackedInfo.Failure : tr;
-
         }
 
         bool TryEnterUpgradeableReadAndWriteLockAtOnce( int millisecondsTimeout )

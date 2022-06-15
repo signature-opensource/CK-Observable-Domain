@@ -75,7 +75,7 @@ namespace CK.Observable.Domain.Tests
             {
             }
 
-            protected override void OnSuccessfulTransaction( in SuccessfulTransactionEventArgs result )
+            protected override void OnTransactionResult( in TransactionDoneEventArgs result )
             {
                 if( result.Events.Count > 0 && result.Events.Any( e => e.EventType == ObservableEventType.ListInsert ) )
                 {
@@ -355,7 +355,7 @@ namespace CK.Observable.Domain.Tests
             {
                 if( modifyNoThrowAsync )
                 {
-                    return d.ModifyNoThrowAsync( i == 0 ? TestHelper.Monitor : new ActivityMonitor(), () => RunLoop( d ) );
+                    return d.TryModifyAsync( i == 0 ? TestHelper.Monitor : new ActivityMonitor(), () => RunLoop( d ) );
                 }
                 else
                 {

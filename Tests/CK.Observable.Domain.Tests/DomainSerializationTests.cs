@@ -54,11 +54,11 @@ namespace CK.Observable.Domain.Tests
                 car.TestSpeed = 10;
             } );
 
-            using var d2 = TestHelper.SaveAndLoad( domain );
+            using var d2 = TestHelper.CloneDomain( domain );
             domain.IsDisposed.Should().BeTrue( "SaveAndLoad disposed it." );
 
             IReadOnlyList<ObservableEvent>? events = null;
-            d2.OnSuccessfulTransaction += ( d, ev ) => events = ev.Events;
+            d2.TransactionDone += ( d, ev ) => events = ev.Events;
 
             var c = d2.AllObjects.OfType<Car>().Single();
             c.Name.Should().Be( "Hello" );
@@ -84,7 +84,7 @@ namespace CK.Observable.Domain.Tests
                 domain.AllObjects.ElementAt( 1 ).Should().BeSameAs( other );
             } );
 
-            using var d2 = TestHelper.SaveAndLoad( domain );
+            using var d2 = TestHelper.CloneDomain( domain );
             d2.AllObjects.OfType<MultiPropertyType>().All( o => o.Equals( defValue ) );
 
             await d2.ModifyThrowAsync( TestHelper.Monitor, () =>
@@ -95,7 +95,7 @@ namespace CK.Observable.Domain.Tests
             d2.AllObjects.First().Should().Match( o => o.Equals( defValue ) );
             d2.AllObjects.ElementAt( 1 ).Should().Match( o => !o.Equals( defValue ) );
 
-            using( var d3 = TestHelper.SaveAndLoad( d2 ) )
+            using( var d3 = TestHelper.CloneDomain( d2 ) )
             {
                 d3.AllObjects.First().Should().Match( o => o.Equals( defValue ) );
                 d3.AllObjects.ElementAt( 1 ).Should().Match( o => !o.Equals( defValue ) );
@@ -118,7 +118,7 @@ namespace CK.Observable.Domain.Tests
             // Captures the Garage's OId since it is set to invalid.
             var g1OId = domain.AllObjects.OfType<Garage>().Single().OId;
 
-            using var d2 = TestHelper.SaveAndLoad( domain );
+            using var d2 = TestHelper.CloneDomain( domain );
             var g2 = d2.AllObjects.OfType<Garage>().Single();
             g2.CompanyName.Should().Be( "Hello" );
             g2.OId.Should().Be( g1OId );
@@ -141,7 +141,7 @@ namespace CK.Observable.Domain.Tests
             pA1.Friend.Should().BeSameAs( pB1 );
             pB1.Friend.Should().BeSameAs( pA1 );
 
-            using var d2 = TestHelper.SaveAndLoad( domain );
+            using var d2 = TestHelper.CloneDomain( domain );
             var pA2 = d2.AllObjects.OfType<Person>().Single( p => p.FirstName == "A" );
             var pB2 = d2.AllObjects.OfType<Person>().Single( p => p.FirstName == "B" );
 
@@ -161,7 +161,7 @@ namespace CK.Observable.Domain.Tests
             var p1 = domain.AllObjects.OfType<Person>().Single();
             p1.Friend.Should().BeSameAs( p1 );
 
-            using var d2 = TestHelper.SaveAndLoad( domain );
+            using var d2 = TestHelper.CloneDomain( domain );
             var p2 = d2.AllObjects.OfType<Person>().Single();
             p2.Friend.Should().BeSameAs( p2 );
         }
@@ -171,14 +171,14 @@ namespace CK.Observable.Domain.Tests
         {
             using( var domain = await SampleDomain.CreateSampleAsync() )
             {
-                using( var d2 = TestHelper.SaveAndLoad( domain, skipDomainDispose: true ) )
+                using( var d2 = TestHelper.CloneDomain( domain, initialDomainDispose: false ) )
                 {
                     SampleDomain.CheckSampleGarage( d2 );
                 }
 
                 using( domain.AcquireReadLock() )
                 {
-                    using( var d = TestHelper.SaveAndLoad( domain, skipDomainDispose: true ) )
+                    using( var d = TestHelper.CloneDomain( domain, initialDomainDispose: false ) )
                     {
                         SampleDomain.CheckSampleGarage( d );
                     }
@@ -235,7 +235,7 @@ namespace CK.Observable.Domain.Tests
             ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
 
             // This disposes the domain and returns a brand new one. This doesn't throw.
-            using var d2 = TestHelper.SaveAndLoad( d );
+            using var d2 = TestHelper.CloneDomain( d );
 
             await d2.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
@@ -278,7 +278,7 @@ namespace CK.Observable.Domain.Tests
                 r.IsActive.Should().BeTrue();
             } );
 
-            using var d2 = TestHelper.SaveAndLoad( d, startTimer: false, pauseMilliseconds: 150 );
+            using var d2 = TestHelper.CloneDomain( d, startTimer: false, pauseMilliseconds: 150 );
             d.IsDisposed.Should().BeTrue( "Initial domain has been disposed.");
 
             using( d2.AcquireReadLock() )

@@ -36,7 +36,7 @@ namespace CK.Observable.Domain.Tests.Sample
 
         public static Task<TransactionResult> SetPaulMincLastNameNoThrowAsync( ObservableDomain d, string newLastName, bool throwException = false )
         {
-            return d.ModifyNoThrowAsync( TestHelper.Monitor, () =>
+            return d.TryModifyAsync( TestHelper.Monitor, () =>
             {
                 d.AllObjects.OfType<Person>().Single( x => x.FirstName == "Paul" ).LastName = newLastName;
                 if( throwException ) throw new Exception( $"After Paul minc renamed to {newLastName}." );

@@ -95,14 +95,17 @@ namespace CK.Observable.Domain.Tests
 
             IReadOnlyList<ActivityMonitorSimpleCollector.Entry> logs = null!;
 
-            using var obs = new ObservableDomain( TestHelper.Monitor, nameof( sidekick_with_ExternalService_Async ) + '_' + mode, startTimer: true, serviceProvider: services );
+            using var obs = new ObservableDomain( TestHelper.Monitor,
+                                                  $"{nameof( sidekick_with_ExternalService_Async )}({mode})",
+                                                  startTimer: true,
+                                                  serviceProvider: services );
 
             using( TestHelper.Monitor.CollectEntries( entries => logs = entries, LogLevelFilter.Info ) )
             {
                 await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     ObjWithSKBase o = mode == "UseSidekickAttribute"
-                                            ? (ObjWithSKBase)new ObjWithSKWithDependencies()
+                                            ? new ObjWithSKWithDependencies()
                                             : new ObjWithSKWithDependenciesViaInterface();
                     o.CommandMessage = "Hello!";
                 } );
