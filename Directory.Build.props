@@ -17,6 +17,7 @@
     <SourceRoot Include="$(SolutionDir)" />
   </ItemGroup>
   <!--</BasicDefinitions>-->
+
   <!--<StandardProperties>-->
   <PropertyGroup>
     <RepositoryUrl>https://gitlab.com/Signature-Code/CK-Observable-Domain</RepositoryUrl>
@@ -37,32 +38,7 @@
     <None Include="$(SolutionDir)Common/PackageIcon.png" Pack="true" PackagePath="\" Visible="false" />
   </ItemGroup>
   <!--</StandardProperties>-->
-  <!--<ZeroVersion>: When not building from the CI, assemblies always use the ZeroVersion (see CSemVer.InformationalVersion).-->
-  <PropertyGroup Condition=" '$(ContinuousIntegrationBuild)' != 'true' ">
-    <Version>0.0.0-0</Version>
-    <AssemblyVersion>0.0.0</AssemblyVersion>
-    <FileVersion>0.0.0.0</FileVersion>
-    <InformationalVersion>0.0.0-0/0000000000000000000000000000000000000000/0001-01-01 00:00:00Z</InformationalVersion>
-  </PropertyGroup>
-  <!--</ZeroVersion>-->
-  <!--<GenerateDocumentation>: When in IsInTestsFolder and in Release or during ContinuousIntegrationBuild builds. Each project can override GenerateDocumentationFile property. -->
-  <PropertyGroup Condition=" '$(GenerateDocumentationFile)' == '' And '$(IsInTestsFolder)' != 'true' And ('$(ContinuousIntegrationBuild)' == 'true' Or '$(Configuration)' == 'Release') ">
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-  </PropertyGroup>
-  <!--</GenerateDocumentation>-->
-  <!--<SourceLinkDebuggingWorkaround>: See  https://github.com/dotnet/sdk/issues/1458#issuecomment-695119194 -->
-  <Target Name="_ResolveCopyLocalNuGetPackagePdbsAndXml" Condition="$(CopyLocalLockFileAssemblies) == true" AfterTargets="ResolveReferences">
-    <ItemGroup>
-      <ReferenceCopyLocalPaths Include="@(ReferenceCopyLocalPaths-&gt;'%(RootDir)%(Directory)%(Filename).pdb')" Condition="'%(ReferenceCopyLocalPaths.NuGetPackageId)' != '' and Exists('%(RootDir)%(Directory)%(Filename).pdb')" />
-      <ReferenceCopyLocalPaths Include="@(ReferenceCopyLocalPaths-&gt;'%(RootDir)%(Directory)%(Filename).xml')" Condition="'%(ReferenceCopyLocalPaths.NuGetPackageId)' != '' and Exists('%(RootDir)%(Directory)%(Filename).xml')" />
-    </ItemGroup>
-  </Target>
-  <!--</SourceLinkDebuggingWorkaround>-->
-  <!--<Analyzers>: This analyzer provides very welcome guidelines about async and threading issues.-->
-  <ItemGroup Condition=" '$(MSBuildProjectName)' != 'CodeCakeBuilder' ">
-    <PackageReference Include="Microsoft.VisualStudio.Threading.Analyzers" Version="17.2.32" PrivateAssets="All" IncludeAssets="runtime;build;native;contentfiles;analyzers" />
-  </ItemGroup>
-  <!--</Analyzers>-->
+
   <!--<ReproducibleBuilds>-->
   <!--Enable Deterministic build. https://github.com/dotnet/reproducible-builds. SourceLink is automatically managed by this package.-->
   <ItemGroup>
@@ -71,4 +47,34 @@
   <!--Guaranty that the build is isolated. https://github.com/dotnet/reproducible-builds#dotnetreproduciblebuildsisolated-documentation-and-nuget-package-->
   <Sdk Name="DotNet.ReproducibleBuilds.Isolated" Version="1.1.1" />
   <!--</ReproducibleBuilds>-->
+
+  <!--<ZeroVersion>: When not building from the CI, assemblies always use the ZeroVersion (see CSemVer.InformationalVersion).-->
+  <PropertyGroup Condition=" '$(ContinuousIntegrationBuild)' != 'true' ">
+    <Version>0.0.0-0</Version>
+    <AssemblyVersion>0.0.0</AssemblyVersion>
+    <FileVersion>0.0.0.0</FileVersion>
+    <InformationalVersion>0.0.0-0/0000000000000000000000000000000000000000/0001-01-01 00:00:00Z</InformationalVersion>
+  </PropertyGroup>
+  <!--</ZeroVersion>-->
+
+  <!--<Analyzers>: This analyzer provides very welcome guidelines about async and threading issues.-->
+  <ItemGroup Condition=" '$(MSBuildProjectName)' != 'CodeCakeBuilder' ">
+    <PackageReference Include="Microsoft.VisualStudio.Threading.Analyzers" Version="17.2.32" PrivateAssets="All" IncludeAssets="runtime;build;native;contentfiles;analyzers" />
+  </ItemGroup>
+  <!--</Analyzers>-->
+
+  <!--<GenerateDocumentation>: When in IsInTestsFolder and in Release or during ContinuousIntegrationBuild builds. Each project can override GenerateDocumentationFile property. -->
+  <PropertyGroup Condition=" '$(GenerateDocumentationFile)' == '' And '$(IsInTestsFolder)' != 'true' And ('$(ContinuousIntegrationBuild)' == 'true' Or '$(Configuration)' == 'Release') ">
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+  <!--</GenerateDocumentation>-->
+
+  <!--<SourceLinkDebuggingWorkaround>: See  https://github.com/dotnet/sdk/issues/1458#issuecomment-695119194 -->
+  <Target Name="_ResolveCopyLocalNuGetPackagePdbsAndXml" AfterTargets="ResolveReferences">
+    <ItemGroup>
+      <ReferenceCopyLocalPaths Include="@(ReferenceCopyLocalPaths-&gt;'%(RootDir)%(Directory)%(Filename).pdb')" Condition="'%(ReferenceCopyLocalPaths.NuGetPackageId)' != '' and Exists('%(RootDir)%(Directory)%(Filename).pdb')" />
+      <ReferenceCopyLocalPaths Include="@(ReferenceCopyLocalPaths-&gt;'%(RootDir)%(Directory)%(Filename).xml')" Condition="'%(ReferenceCopyLocalPaths.NuGetPackageId)' != '' and Exists('%(RootDir)%(Directory)%(Filename).xml')" />
+    </ItemGroup>
+  </Target>
+  <!--</SourceLinkDebuggingWorkaround>-->
 </Project>
