@@ -8,6 +8,6 @@
     <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="15.0.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
     <PackageReference Include="System.Threading.Channels" Version="6.0.0" />
-    <PackageReference Include="CK.BinarySerialization.Sliced" Version="1.0.0-r01-01-0004-develop" />
+    <PackageReference Include="CK.BinarySerialization.Sliced" Version="1.0.0" />
   </ItemGroup>
 </Project>
