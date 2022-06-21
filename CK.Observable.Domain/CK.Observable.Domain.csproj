@@ -1,17 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <Sdk Name="Microsoft.Build.CentralPackageVersions" Version="2.0.79" />
-  <Import Project="..\Common\Shared.props" />
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <Nullable>enable</Nullable>
     <LangVersion>Latest</LangVersion>
   </PropertyGroup>
-  
   <ItemGroup>
-    <PackageReference Include="CK.ActivityMonitor.SimpleSender" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
-    <PackageReference Include="System.Threading.Channels" />
-    <PackageReference Include="CK.BinarySerialization.Sliced" />
+    <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="15.0.0-r08-00-0016-develop" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
+    <PackageReference Include="System.Threading.Channels" Version="6.0.0" />
+    <PackageReference Include="CK.BinarySerialization.Sliced" Version="1.0.0-r01-01" />
   </ItemGroup>
-  
 </Project>

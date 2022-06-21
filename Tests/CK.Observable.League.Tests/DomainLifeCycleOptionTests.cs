@@ -41,7 +41,7 @@ namespace CK.Observable.League.Tests
 
             var tr = await league.Coordinator.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) =>
             {
-                Domain loaded = d.Root.Domains["AlwaysLoaded"];
+                ODomain loaded = d.Root.Domains["AlwaysLoaded"];
                 loaded.Options = loaded.Options.SetLifeCycleOption( DomainLifeCycleOption.Default );
             } );
             var domainError = await tr.DomainPostActionsError;

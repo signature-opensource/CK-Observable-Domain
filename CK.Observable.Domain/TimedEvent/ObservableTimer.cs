@@ -127,7 +127,7 @@ namespace CK.Observable
                     this.CheckDestroyed();
                     if( ExpectedDueTimeUtc == Util.UtcMinValue || ExpectedDueTimeUtc == Util.UtcMaxValue )
                     {
-                        Throw.CheckOutOfRangeArgument( nameof(IntervalMilliSeconds), value > 0 );
+                        Throw.CheckOutOfRangeArgument( value > 0 );
                         _milliSeconds = value;
                     }
                     else Reconfigure( DueTimeUtc, value );

@@ -1,16 +1,17 @@
 using FluentAssertions;
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
 
 namespace CK.Observable.Domain.Tests.Sample
 {
     public static class SampleDomain
     {
-        public static ObservableDomain CreateSample( IObservableDomainClient tm = null )
+        public static async Task<ObservableDomain> CreateSampleAsync( IObservableDomainClient? tm = null )
         {
             var d = new ObservableDomain(TestHelper.Monitor, "TEST", startTimer: false, client: tm );
-            d.Modify( TestHelper.Monitor, () =>
+            await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 var g1 = new Garage() { CompanyName = "Boite" };
                 g1.Cars.AddRange( Enumerable.Range( 0, 10 ).Select( i => new Car( $"Renault n°{i}" ) ) );
@@ -29,32 +30,35 @@ namespace CK.Observable.Domain.Tests.Sample
                 new Mechanic( g2 ) { FirstName = "Olivier", LastName = "Spinelli" };
                 g2.Cars.AddRange( Enumerable.Range( 0, 10 ).Select( i => new Car( $"Volvo n°{i}" ) ) );
             } );
-            CheckSampleGarage1( d );
+            CheckSampleGarage( d );
             return d;
         }
 
-        public static TransactionResult TransactedSetPaulMincLastName( ObservableDomain d, string newLastName, bool throwException = false )
+        public static Task<TransactionResult> SetPaulMincLastNameNoThrowAsync( ObservableDomain d, string newLastName, bool throwException = false )
         {
-            return d.Modify( TestHelper.Monitor, () =>
+            return d.TryModifyAsync( TestHelper.Monitor, () =>
             {
                 d.AllObjects.OfType<Person>().Single( x => x.FirstName == "Paul" ).LastName = newLastName;
                 if( throwException ) throw new Exception( $"After Paul minc renamed to {newLastName}." );
             } );
         }
 
-        public static void CheckSampleGarage1( ObservableDomain d )
+        public static void CheckSampleGarage( ObservableDomain d )
         {
-            var g1 = d.AllObjects.OfType<Garage>().Where( x => x.CompanyName == "Boite" ).Single();
-            g1.Cars.Select( c => c.Name ).Should().BeEquivalentTo( Enumerable.Range( 0, 10 ).Select( i => $"Renault n°{i}" ) );
-            var minc = d.AllObjects.OfType<Person>().Single( x => x.FirstName == "Paul" );
-            minc.LastName.Should().Be( "Minc" );
-            var scott = d.AllObjects.OfType<Mechanic>().Single( x => x.FirstName == "Scott" );
-            scott.CurrentCar.Should().BeSameAs( g1.Cars[2] );
-            scott.Garage.Should().BeSameAs( g1 );
-            g1.Employees.Should().Contain( scott );
-            g1.ReplacementCar.Should().HaveCount( 2 );
-            g1.ReplacementCar[g1.Cars[0]].Should().BeSameAs( g1.Cars[1] );
-            g1.ReplacementCar[g1.Cars[2]].Should().BeSameAs( g1.Cars[3] );
+            using( d.AcquireReadLock() )
+            {
+                var g1 = d.AllObjects.OfType<Garage>().Where( x => x.CompanyName == "Boite" ).Single();
+                g1.Cars.Select( c => c.Name ).Should().BeEquivalentTo( Enumerable.Range( 0, 10 ).Select( i => $"Renault n°{i}" ) );
+                var minc = d.AllObjects.OfType<Person>().Single( x => x.FirstName == "Paul" );
+                minc.LastName.Should().Be( "Minc" );
+                var scott = d.AllObjects.OfType<Mechanic>().Single( x => x.FirstName == "Scott" );
+                scott.CurrentCar.Should().BeSameAs( g1.Cars[2] );
+                scott.Garage.Should().BeSameAs( g1 );
+                g1.Employees.Should().Contain( scott );
+                g1.ReplacementCar.Should().HaveCount( 2 );
+                g1.ReplacementCar[g1.Cars[0]].Should().BeSameAs( g1.Cars[1] );
+                g1.ReplacementCar[g1.Cars[2]].Should().BeSameAs( g1.Cars[3] );
+            }
         }
     }
 }

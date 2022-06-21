@@ -70,12 +70,12 @@ namespace CK.Observable.Domain.Tests
 
         public class SimpleSidekick : ObservableDomainSidekick
         {
-            public SimpleSidekick( ObservableDomain d )
-                : base( d )
+            public SimpleSidekick( IObservableDomainSidekickManager manager )
+                : base( manager )
             {
             }
 
-            protected override void OnSuccessfulTransaction( in SuccessfulTransactionEventArgs result )
+            protected override void OnTransactionResult( in TransactionDoneEventArgs result )
             {
                 if( result.Events.Count > 0 && result.Events.Any( e => e.EventType == ObservableEventType.ListInsert ) )
                 {
@@ -140,7 +140,7 @@ namespace CK.Observable.Domain.Tests
             {
             }
 
-            protected override void OnDomainCleared( IActivityMonitor monitor )
+            protected override void OnUnload( IActivityMonitor monitor )
             {
             }
 
@@ -355,7 +355,7 @@ namespace CK.Observable.Domain.Tests
             {
                 if( modifyNoThrowAsync )
                 {
-                    return d.ModifyNoThrowAsync( i == 0 ? TestHelper.Monitor : new ActivityMonitor(), () => RunLoop( d ) );
+                    return d.TryModifyAsync( i == 0 ? TestHelper.Monitor : new ActivityMonitor(), () => RunLoop( d ) );
                 }
                 else
                 {
@@ -371,7 +371,7 @@ namespace CK.Observable.Domain.Tests
             {
                 try
                 {
-                    await d.ModifyAsync( monitor, () => RunLoop( d ) );
+                    await d.ModifyThrowAsync( monitor, () => RunLoop( d ) );
                 }
                 catch( Exception )
                 {

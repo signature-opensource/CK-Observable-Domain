@@ -1,5 +1,4 @@
 using CK.Core;
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
@@ -49,21 +48,26 @@ namespace CK.Observable
         /// <summary>
         /// Initializes a new sidekick for a domain.
         /// <para>
-        /// This is called after an external modification of the domain where an object with a [UseSidekick( ... )] attribute or a <see cref="ISidekickClientObject{TSidekick}"/>
-        /// interface marker has been instantiated.
-        /// If the sidekick type has not any instance yet, this is called just before soliciting the <see cref="ObservableDomain.DomainClient"/>.
+        /// This is called when an object with a [UseSidekick( ... )] attribute or a <see cref="ISidekickClientObject{TSidekick}"/>
+        /// interface marker has been instantiated and we are in a regular transaction.
         /// The domain has the write lock held and this constructor can interact with the domain objects (its interaction is part of the transaction).
         /// </para>
         /// <para>
-        /// A <see cref="IActivityMonitor"/> can appear in the parameters (and must be used only in the constructor and not kept) of the constructor and
-        /// all other parameters MUST be singletons.
+        /// A <see cref="IActivityMonitor"/> can appear in the parameters of the constructor (and must be used only in the constructor and not kept) and
+        /// all other parameters MUST be singletons services.
         /// </para>
         /// </summary>
-        /// <param name="domain">The domain.</param>
-        protected ObservableDomainSidekick( ObservableDomain domain )
+        /// <param name="manager">The domain's sidekick manager.</param>
+        protected ObservableDomainSidekick( IObservableDomainSidekickManager manager )
         {
-            Domain = domain;
+            Manager = manager;
+            Domain = manager.Domain;
         }
+
+        /// <summary>
+        /// Gets the domain's sidekick manager.
+        /// </summary>
+        protected IObservableDomainSidekickManager Manager { get; }
 
         /// <summary>
         /// Gets the domain.
@@ -79,20 +83,21 @@ namespace CK.Observable
         /// <summary>
         /// Must register the provided <see cref="InternalObject"/> or <see cref="ObservableObject"/> as a client
         /// of this sidekick.
-        /// The semantics of this registration, what a "client" actually means, is specific to each sidekick.
         /// <para>
-        /// When this method is called (from <see cref="DomainView.EnsureSidekicks"/> or at the end of a <see cref="ObservableDomain.Modify"/> call
-        /// or after the deserialization of the graph by <see cref="ObservableDomain.Load(IActivityMonitor, System.IO.Stream, bool, System.Text.Encoding?, int, bool?)"/>),
-        /// the domain lock is held, any interaction can take place.
+        /// The semantics of this registration and what a "client" actually means, is specific to each sidekick.
+        /// </para>
+        /// <para>
+        /// When this method is called the domain lock is held, any interaction can take place.
         /// After that registering phase, interactions must be protected in <see cref="ObservableDomain.AcquireReadLock(int)"/> or one of the Modify method.
         /// </para>
         /// <para>
         /// When a sidekick keeps a reference on a client object, it should either check <see cref="IDestroyable.IsDestroyed"/> (in the context of
-        /// a read or modify lock) or registers to <see cref="IDestroyable.Destroyed"/> event.
+        /// a read or modify lock) or registers to <see cref="IDestroyable.Destroyed"/> event or, even better if the objects share a base class, implement
+        /// internal OnDestroyed callbacks (the ObservableDeviceObject and ObservableDeviceSidekick do this).
         /// </para>
         /// </summary>
-        /// <param name="monitor"></param>
-        /// <param name="o"></param>
+        /// <param name="monitor">The monitor to use.</param>
+        /// <param name="o">The object that uses this sidekick.</param>
         protected internal abstract void RegisterClientObject( IActivityMonitor monitor, IDestroyable o );
 
         /// <summary>
@@ -101,22 +106,22 @@ namespace CK.Observable
         /// <para>
         /// When this is called, the <see cref="Domain"/>'s lock is held in read mode: objects can be read (but no write/modifications
         /// should occur). A typical implementation is to capture any required domain object's state and use
-        /// <see cref="SuccessfulTransactionEventArgs.PostActions"/> or <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/>
-        /// to post asynchronous actions (or to send commands thanks to <see cref="SuccessfulTransactionEventArgs.SendCommand(in ObservableDomainCommand)"/>
+        /// <see cref="TransactionDoneEventArgs.PostActions"/> or <see cref="TransactionDoneEventArgs.DomainPostActions"/>
+        /// to post asynchronous actions (or to send commands thanks to <see cref="TransactionDoneEventArgs.SendCommand(in ObservableDomainCommand)"/>
         /// that will be processed by this or other sidekicks).
         /// </para>
         /// <para>
-        /// Exceptions raised by this method are collected in <see cref="TransactionResult.SuccessfulTransactionErrors"/>.
+        /// Exceptions raised by this method are collected in <see cref="TransactionResult.TransactionDoneErrors"/>.
         /// </para>
         /// </summary>
-        /// <param name="result">The <see cref="SuccessfulTransactionEventArgs"/> event argument.</param>
-        protected internal virtual void OnSuccessfulTransaction( in SuccessfulTransactionEventArgs result )
+        /// <param name="result">The <see cref="TransactionDoneEventArgs"/> event argument.</param>
+        protected internal virtual void OnTransactionResult( in TransactionDoneEventArgs result )
         {
         }
 
         /// <summary>
         /// Called when a successful transaction has been successfully handled by the <see cref="ObservableDomain.DomainClient"/>
-        /// and <see cref="ObservableDomain.OnSuccessfulTransaction"/> event and <see cref="OnSuccessfulTransaction(in SuccessfulTransactionEventArgs)"/>
+        /// and <see cref="ObservableDomain.TransactionDone"/> event and <see cref="OnTransactionResult(in TransactionDoneEventArgs)"/>
         /// did not raise any error.
         /// <para>
         /// When this is called, the <see cref="Domain"/> MUST NOT BE touched in any way: this occurs outside of the domain lock.
@@ -136,9 +141,12 @@ namespace CK.Observable
         /// <summary>
         /// Called when the <see cref="Domain"/> is being cleared, either because it will be reloaded or because it is definitely disposed.
         /// In both case, the domain lock is held.
+        /// <para>
+        /// The reason is available in <see cref="DomainView.CurrentTransactionStatus">Domain.CurrentTransactionStatus</see>.
+        /// </para>
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
-        protected internal abstract void OnDomainCleared( IActivityMonitor monitor );
+        protected internal abstract void OnUnload( IActivityMonitor monitor );
 
     }
 

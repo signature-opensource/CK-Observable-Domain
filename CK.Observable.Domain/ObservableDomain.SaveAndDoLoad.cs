@@ -20,8 +20,8 @@ namespace CK.Observable
                           bool debugMode = false,
                           int millisecondsTimeout = -1 )
         {
-            if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
-            if( stream == null ) throw new ArgumentNullException( nameof( stream ) );
+            Throw.CheckNotNullArgument( monitor );
+            Throw.CheckNotNullArgument( stream );
             CheckDisposed();
 
             // Since we only need the read lock, whenever multiple threads Save() concurrently,
@@ -42,6 +42,8 @@ namespace CK.Observable
             using( var s = BinarySerializer.Create( stream, _serializerContext ) )
             {
                 s.OnDestroyedObject += Track;
+
+                // Lock check are done here (as late as possible to minimize contention).
                 bool isWrite = _lock.IsWriteLockHeld;
                 bool isRead = _lock.IsReadLockHeld;
                 if( !isWrite && !isRead && !_lock.TryEnterReadLock( millisecondsTimeout ) )
@@ -49,6 +51,16 @@ namespace CK.Observable
                     Monitor.Exit( _saveLock );
                     return false;
                 }
+                // We cannot use CheckDisposed here: we must release the locks.
+                if( _transactionStatus == CurrentTransactionStatus.Disposing )
+                {
+                    Monitor.Exit( _saveLock );
+                    _lock.ExitReadLock();
+                    ThrowOnDisposedDomain();
+                }
+                // Either there is no current transaction or the provided monitor is not the one that the
+                // user wants to use: we create an InitializationTransaction with the right monitor that "hides"
+                // the current transaction one if any.
                 bool needFakeTran = _currentTran == null || _currentTran.Monitor != monitor;
                 if( needFakeTran ) new InitializationTransaction( monitor, this, false );
                 try
@@ -58,6 +70,7 @@ namespace CK.Observable
                         s.Writer.Write( (byte)0 ); // Version
                         s.DebugWriteMode( debugMode ? (bool?)debugMode : null );
                         s.Writer.Write( _currentObjectUniquifier );
+                        Debug.Assert( _domainSecret != null );
                         s.Writer.Write( _domainSecret );
                         if( debugMode ) monitor.Trace( $"Domain {DomainName}: Tran #{_transactionSerialNumber} - {_transactionCommitTimeUtc:o}, {_actualObjectCount} objects." );
                         s.Writer.Write( DomainName );
@@ -73,7 +86,7 @@ namespace CK.Observable
                         s.Writer.WriteNonNegativeSmallInt32( _properties.Count );
                         foreach( var p in _propertiesByIndex )
                         {
-                            s.Writer.Write( p.PropertyName );
+                            s.Writer.Write( p.PropertyName! );
                         }
                         s.DebugWriteSentinel();
                         Debug.Assert( _objectsListCount == _actualObjectCount + _freeList.Count );
@@ -119,7 +132,7 @@ namespace CK.Observable
                         s.DebugWriteSentinel();
                         var (lostTimedObjects, unusedPooledReminders, pooledReminderCount) = _timeManager.Save( monitor, s, trackLostObjects );
                         s.DebugWriteSentinel();
-                        _sidekickManager.Save( s );
+                        _sidekickManager.Save( monitor, s );
                         var data = new LostObjectTracker( this,
                                                           lostObservableObjects,
                                                           lostInternalObjects,
@@ -145,48 +158,46 @@ namespace CK.Observable
             }
         }
 
-        bool DoRealLoad( IActivityMonitor monitor, RewindableStream s, string expectedName, bool? startTimer )
+        // Called from the public Load() method or from the deserialization constructor.
+        // Deserialization itself is done by the DeserializeAndGetTimerState called (possibly twice if BinaryDeserializer.Deserialize
+        // requires a second pass).
+        CurrentTransactionStatus DoLoad( IActivityMonitor monitor,
+                                         RewindableStream stream,
+                                         string expectedLoadedName,
+                                         bool? startTimer,
+                                         Func<bool, bool>? beforeTimer = null )
         {
+            Debug.Assert( stream.IsValid );
             Debug.Assert( _lock.IsWriteLockHeld );
-            _deserializeOrInitializing = true;
+            var previousTransactionStatus = _transactionStatus;
             try
             {
-                var r = BinaryDeserializer.Deserialize( s, _deserializerContext, d => DeserializeAndGetTimerState( monitor, expectedName, d ) );
-                // Throw on error.
-                bool timerRunning = r.GetResult();
-                if( startTimer.HasValue ) timerRunning = startTimer.Value;
-                // If we are in a real transaction, we leave the deserialization/initialization mode
-                // and instantiate any expected sidekick.
-                Debug.Assert( _currentTran is Transaction || _currentTran is InitializationTransaction );
-                if( _currentTran is Transaction && _sidekickManager.HasWaitingSidekick )
+                monitor.Trace( $"Stream's Serializer version is {stream.SerializerVersion}." );
+                var r = BinaryDeserializer.Deserialize( stream, _deserializerContext, d => DeserializeAndGetTimerState( monitor, expectedLoadedName, d ) );
+                // This throws on deserialization error.
+                bool mustStartTimer = r.GetResult();
+                if( startTimer.HasValue ) mustStartTimer = startTimer.Value;
+                if( beforeTimer != null ) mustStartTimer = beforeTimer( mustStartTimer );
+                if( mustStartTimer )
                 {
-                    // The sidekicks will initialize themselves in a "normal" context. The changes will be collected
-                    // and the ObservableEvents will be available.
-                    _deserializeOrInitializing = false;
-                    if( !_sidekickManager.CreateWaitingSidekicks( monitor, Util.ActionVoid, true ) )
-                    {
-                        var msg = "At least one critical error occurred while activating sidekicks. The error should be investigated since this may well be a blocking error.";
-                        if( timerRunning )
-                        {
-                            timerRunning = false;
-                            msg += " The TimeManager (that should have ran) has been stopped.";
-                        }
-                        monitor.Error( msg );
-                    }
+                    _timeManager.DoStartOrStop( monitor, true );
                 }
-                return timerRunning;
+                return _transactionStatus;
+            }
+            catch( Exception ex )
+            {
+                monitor.Error( ex );
+                throw;
             }
             finally
             {
-                _deserializeOrInitializing = false;
+                _transactionStatus = previousTransactionStatus;
             }
         }
 
         bool DeserializeAndGetTimerState( IActivityMonitor monitor, string expectedName, IBinaryDeserializer d )
         {
-            // We call unload on the current objects only on the first pass.
-            // On the second pass (if it happens), we just forget all the result of the first pass.
-            UnloadDomain( monitor, !d.StreamInfo.SecondPass );
+            bool firstPass = !d.StreamInfo.SecondPass;
 
             // This is where specialized typed ObservableDomain bind their roots:
             // this must be called before any PostActions added by the objects.
@@ -194,13 +205,67 @@ namespace CK.Observable
 
             d.Reader.ReadByte(); // Local version.
             d.DebugReadMode();
-            _currentObjectUniquifier = d.Reader.ReadInt32();
-            _domainSecret = d.Reader.ReadBytes( DomainSecretKeyLength );
-            var loaded = d.Reader.ReadString();
-            if( loaded != expectedName ) Throw.InvalidDataException( $"Domain name mismatch: loading domain named '{loaded}' but expected '{expectedName}'." );
+            if( firstPass )
+            {
+                var currentObjectUniquifier = d.Reader.ReadInt32();
+                var domainSecret = d.Reader.ReadBytes( DomainSecretKeyLength );
+                var loaded = d.Reader.ReadString();
+                if( loaded != expectedName ) Throw.InvalidDataException( $"Domain name mismatch: loading domain named '{loaded}' but expected '{expectedName}'." );
 
-            _transactionSerialNumber = d.Reader.ReadInt32();
-            _transactionCommitTimeUtc = d.Reader.ReadDateTime();
+                Debug.Assert( _transactionStatus is CurrentTransactionStatus.Instantiating or CurrentTransactionStatus.Deserializing or CurrentTransactionStatus.Regular );
+                // Either we come from:
+                //   - the domain's deserialization constructor (Deserializing);
+                //   - or from a constructor with a client.OnDomainCreated that wants to load this domain (Instantiating);
+                //   - or directly from the Load method (Regular - and we may be in a fake transaction):
+                // To keep things and the CurrentTransactionStatus as simple as possible:
+                //  - Instantiating and Regular transition to Deserializing (because we ARE deserializing!).
+                //  - If we are deserializing the same number: it's a RollingBack.
+                //  - If we are deserializing an older version: it's a DangerousRollingback.
+                //  - If we are deserializing a newer version, no change, it's Deserializing.
+                //
+                // This works in all cases because the very first transaction number that can be saved is 1
+                // and _transactionSerialNumber is let to 0 by the constructors (Instantiating will always be Deserializing).
+                // And it makes perfect sense that RollingBack/DangerousRollingback/Deserializing also apply to the explicit
+                // call to Load() on an existing domain (the check of the name provides a kind of identity check).
+                //
+                // Distinguishing between calls to Load() from DomainClient that rolls back or initialize from their OnDomainCreated
+                // and from "external world" would require to add one or more explicit parameter(s) to the public Load() that will
+                // be difficult to understand or to provide an internal Load from clients.
+                // This is useless since this API can be used in different ways (for instance, ObservableLeague doesn't use
+                // DomainClient.OnDomainCreated to load existing snapshots).
+                //
+                var tNumber = d.Reader.ReadInt32();
+                var tTime = d.Reader.ReadDateTime();
+                if( _transactionSerialNumber == tNumber ) _transactionStatus = CurrentTransactionStatus.Rollingback;
+                else if( _transactionSerialNumber > tNumber ) _transactionStatus = CurrentTransactionStatus.DangerousRollingback;
+                else _transactionStatus = CurrentTransactionStatus.Deserializing;
+
+                _transactionSerialNumber = tNumber;
+                _transactionCommitTimeUtc = tTime;
+                _domainSecret = domainSecret;
+
+                // We call unload on the current objects only on the first pass and
+                // the InitializingStatus is up to date.
+                UnloadDomain( monitor, true );
+
+                Debug.Assert( _transactionSerialNumber == tNumber
+                              && _transactionCommitTimeUtc == tTime
+                              && _domainSecret.AsSpan().SequenceEqual( domainSecret ), "OnUnload doesn't change these." );
+                _currentObjectUniquifier = currentObjectUniquifier;
+            }
+            else
+            {
+                // On the second pass (if it happens), we just forget all the result of the first pass.
+                UnloadDomain( monitor, false );
+                _currentObjectUniquifier = d.Reader.ReadInt32();
+                // Skips domain secret, domain name, transaction number and transaction date: they have
+                // been initialized (or checked for the name) by first pass and are not modified by UnloadDomain.
+                d.Reader.ReadBytes( DomainSecretKeyLength );
+                d.Reader.ReadString();
+                d.Reader.ReadInt32();
+                d.Reader.ReadDateTime();
+            }
+
             _actualObjectCount = d.Reader.ReadInt32();
 
             d.DebugCheckSentinel();
@@ -234,7 +299,7 @@ namespace CK.Observable
                 Array.Resize( ref _objects, _objects.Length * 2 );
             }
 
-            // Reading roots first (including Internal and Timed objects).
+            // Reading roots first (including their Internal and Timed objects).
             int rootCount = d.Reader.ReadNonNegativeSmallInt32();
             for( int i = 0; i < rootCount; ++i )
             {
@@ -247,6 +312,8 @@ namespace CK.Observable
                 Debug.Assert( o == null || !o.IsDestroyed );
                 if( o != null && o.OId.Index != i )
                 {
+                    // Magic control here. If the base Sliced constructor has not been called then we allocated
+                    // a new OId for the object.
                     Throw.InvalidDataException( $"Deserialization error for '{o.GetType().ToCSharpName()}': its deserialization constructor must call \": base( Sliced.{nameof(Sliced.Instance)} )\"." );
                 }
                 _objects[i] = o;
@@ -272,6 +339,7 @@ namespace CK.Observable
         /// <summary>
         /// Unloads this domain by clearing all internal state: it is ready to be reloaded
         /// or to be forgotten.
+        /// The CurrentTransactionStatus is up to date when this method is called.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="callUnload">Whether <see cref="ObservableObject.Unload(bool)"/> and
@@ -279,19 +347,22 @@ namespace CK.Observable
         void UnloadDomain( IActivityMonitor monitor, bool callUnload )
         {
             Debug.Assert( _lock.IsWriteLockHeld );
+            Debug.Assert( callUnload || _sidekickManager.IsEmpty, "callUnload == false => sidekicks have already been unloaded." );
 
             using( monitor.OpenTrace( $"Unloading domain '{DomainName}'{(callUnload ? "" : " NOT")} calling OnUnlaod methods." ) )
             {
                 if( callUnload )
                 {
-                    // Call Unload( false ) on all objects.
+                    _sidekickManager.OnUnload( monitor );
+
+                    // Call Unload( gc: false ) on all objects.
                     for( int i = 0; i < _objectsListCount; ++i )
                     {
                         var o = _objects[i];
                         if( o != null )
                         {
                             Debug.Assert( !o.IsDestroyed );
-                            o.Unload( false );
+                            o.Unload( gc: false );
                         }
                     }
                 }
@@ -305,7 +376,6 @@ namespace CK.Observable
 
                 // Free sidekicks and IObservableDomainActionTracker.
                 _trackers.Clear();
-                _sidekickManager.Clear( monitor );
 
                 // Clears any internal objects.
                 if( callUnload )
@@ -313,7 +383,7 @@ namespace CK.Observable
                     var internalObj = _firstInternalObject;
                     while( internalObj != null )
                     {
-                        internalObj.Unload( false );
+                        internalObj.Unload( gc: false );
                         internalObj = internalObj.Next;
                     }
                 }

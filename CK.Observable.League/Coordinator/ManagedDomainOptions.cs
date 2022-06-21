@@ -32,7 +32,7 @@ namespace CK.Observable.League
         /// </para>
         /// <para>
         /// When set to -1, transaction mode is off. Unhandled errors are logged (as <see cref="LogLevel.Error"/>) and
-        /// silently swallowed by <see cref="MemoryTransactionProviderClient.OnUnhandledError"/> method.
+        /// silently swallowed by <see cref="MemoryTransactionProviderClient.OnUnhandledException"/> method.
         /// </para>
         /// </summary>
         public readonly int SkipTransactionCount;

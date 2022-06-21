@@ -89,15 +89,16 @@ namespace CK.Observable
         /// <summary>
         /// Number of transactions to skip after every save.
         /// <para>
-        /// Defaults to zero: transaction mode is on, unhandled errors trigger a rollback of the current state.
+        /// Defaults to zero: transaction mode is on, unhandled errors trigger a rollback of the current state 
+        /// with <see cref="CurrentTransactionStatus.Rollingback"/>.
         /// </para>
         /// <para>
         /// When positive, the transaction mode is on, but in a very dangerous mode: whenever saves are skipped,
-        /// the domain rollbacks to an old version of itself.
+        /// the domain rollbacks to an old version of itself. <see cref="DomainView.CurrentTransactionStatus"/>
+        /// can be <see cref="CurrentTransactionStatus.DangerousRollingback"/>.
         /// </para>
         /// <para>
-        /// When set to -1, transaction mode is off. Unhandled errors are logged (as <see cref="LogLevel.Error"/>) and
-        /// silently swallowed by <see cref="OnUnhandledError(IActivityMonitor, ObservableDomain, Exception, ref bool)"/>.
+        /// When set to -1, transaction mode is off. The domain must be saved explicitly.
         /// </para>
         /// </summary>
         public int SkipTransactionCount
@@ -105,7 +106,7 @@ namespace CK.Observable
             get => _skipTransactionCount;
             set
             {
-                if( _skipTransactionCount < -1 ) throw new ArgumentOutOfRangeException( nameof(SkipTransactionCount) );
+                Throw.CheckOutOfRangeArgument( value >= -1 );
                 _skipTransactionCount = value;
             }
         }
@@ -127,30 +128,29 @@ namespace CK.Observable
 
         /// <summary>
         /// Default behavior is FIRST to relay the call to the next client if any, and
-        /// THEN to create a snapshot (simply calls <see cref="CreateSnapshot"/> protected method).
+        /// THEN to create a snapshot (simply calls <see cref="CreateSnapshot"/> protected method)
+        /// if <see cref="TransactionDoneEventArgs.RollbackedInfo"/> is null.
         /// </summary>
         /// <param name="c">The transaction context.</param>
-        public virtual void OnTransactionCommit( in SuccessfulTransactionEventArgs c )
+        public virtual void OnTransactionCommit( in TransactionDoneEventArgs c )
         {
             Next?.OnTransactionCommit( c );
-            CreateSnapshot( c.Monitor, c.Domain, false, c.HasSaveCommand );
+            if( c.RollbackedInfo == null )
+            {
+                CreateSnapshot( c.Monitor, c.Domain, false, c.HasSaveCommand );
+            }
         }
 
-
         /// <summary>
-        /// See <see cref="IObservableDomainClient.OnUnhandledError(IActivityMonitor, ObservableDomain, Exception, ref bool)"/>.
-        /// Empty implementation nothing here: <paramref name="swallowError"/> is not changed.
+        /// See <see cref="IObservableDomainClient.OnUnhandledException(IActivityMonitor, ObservableDomain, Exception, ref bool)"/>.
+        /// This implementation does nothing here: it relays to the next client.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="ex">The exception that has been raised.</param>
-        /// <param name="swallowError">Unchanged.</param>
-        public virtual void OnUnhandledError( IActivityMonitor monitor, ObservableDomain d, Exception ex, ref bool swallowError )
+        /// <param name="swallowError">Unchanged (unless the next client changed it).</param>
+        public virtual void OnUnhandledException( IActivityMonitor monitor, ObservableDomain d, Exception ex, ref bool swallowError )
         {
-            if( _skipTransactionCount < 0 )
-            {
-                monitor.Error( $"Error while modifying domain '{d.DomainName}' (SkipTransactionCount = -1 - Transaction is off).", ex );
-                swallowError = true;
-            }
+            Next?.OnUnhandledException( monitor, d, ex, ref swallowError );
         }
 
         /// <summary>
@@ -310,7 +310,7 @@ namespace CK.Observable
             {
                 try
                 {
-                    DoLoadOrCreateFromSnapshot( monitor, ref d, true, startTimer );
+                    DoLoadOrCreateFromSnapshot( monitor, ref d, restoring: true, startTimer );
                     monitor.CloseGroup( "Success." );
                     return true;
                 }
@@ -323,11 +323,11 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Loads the domain from the current snapshot memory: either calls Load on it or invokes the deserialization
-        /// constructor when <paramref name="domain"/> is null.
+        /// Loads the domain from the current snapshot memory: either calls Load() on the existing <paramref name="domain"/>
+        /// or calls <see cref="DeserializeDomain(IActivityMonitor, RewindableStream, bool?)"/> if it is null.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
-        /// <param name="domain">The domain to reload or deserialize.</param>
+        /// <param name="domain">The domain to reload or deserialize if null.</param>
         /// <param name="restoring">
         /// True when called from <see cref="RollbackSnapshot"/>, false when called by <see cref="LoadOrCreateAndInitializeSnapshot"/>.
         /// </param>
@@ -351,6 +351,7 @@ namespace CK.Observable
                     domain = DeserializeDomain( monitor, stream, startTimer );
                 }
             }
+
             _memory.Position = _currentSnapshotHeaderLength;
             if( _currentSnapshotKind == CompressionKind.GZiped )
             {
@@ -363,7 +364,6 @@ namespace CK.Observable
                 Ensure( monitor, ref domain, RewindableStream.FromStream( _memory ), startTimer );
             }
         }
-
 
         /// <summary>
         /// Extension point that can only be called from <see cref="LoadOrCreateAndInitializeSnapshot"/> with a null domain:
@@ -386,16 +386,19 @@ namespace CK.Observable
         /// <param name="initialOne">
         /// True if this snapshot is the initial one, created by the first call
         /// to <see cref="OnTransactionStart(IActivityMonitor, ObservableDomain, DateTime)"/>.
-        /// Subsequent calls are coming from <see cref="OnTransactionCommit(in SuccessfulTransactionEventArgs)"/>.
+        /// Subsequent calls are coming from <see cref="OnTransactionCommit(in TransactionDoneEventArgs)"/>.
         /// <para>
         /// This "initial" snapshot is the first one for this Client, this has nothing to do with the <see cref="ObservableDomain.TransactionSerialNumber"/>
-        /// that can be greater than 0 if the domain has been loaded.
+        /// that can already be greater than 0 if the domain has been loaded.
         /// </para>
         /// </param>
         /// <param name="ignoreSkipTransactionCount">True to create a snapshot regardless of <see cref="SkipTransactionCount"/>.</param>
         protected virtual void CreateSnapshot( IActivityMonitor monitor, IObservableDomain d, bool initialOne, bool ignoreSkipTransactionCount )
         {
-            if( !ignoreSkipTransactionCount && _skipTransactionCount != 0 && _snapshotSerialNumber > 0 )
+            // If we ignoreSkipTransactionCount or skipTransactionCount is 0 (full transacted mode)
+            // or if have no snapshot yet, we do the snapshot: we always have a snapshot to restore,
+            // even if it is the very first one.
+            if( !ignoreSkipTransactionCount && _skipTransactionCount != 0 && _snapshotSerialNumber >= 0 )
             {
                 if( _skipTransactionCount > 0 )
                 {

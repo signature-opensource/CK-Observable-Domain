@@ -6,16 +6,16 @@ using System.Text;
 namespace CK.Observable.Domain.Tests.TimedEvents
 {
     [SerializationVersion( 0 )]
-    class AutoCounter : ObservableObject
+    class StupidAutoCounter : ObservableObject
     {
         readonly ObservableTimer _timer;
         ObservableEventHandler _countChanged;
 
         /// <summary>
-        /// Initializes a new <see cref="AutoCounter"/> that starts immediately.
+        /// Initializes a new <see cref="StupidAutoCounter"/> that starts immediately.
         /// </summary>
         /// <param name="intervalMilliSeconds">Interval between <see cref="Count"/> increment.</param>
-        public AutoCounter( int intervalMilliSeconds )
+        public StupidAutoCounter( int intervalMilliSeconds )
         {
             _timer = new ObservableTimer( DateTime.UtcNow, intervalMilliSeconds, true ) { Mode = ObservableTimerMode.Critical };
             _timer.Elapsed += IncrementCount;
@@ -32,7 +32,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             e.Monitor.Info( $"AutoCounter call n°{Count}." );
         }
 
-        AutoCounter( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
+        StupidAutoCounter( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
                 : base( BinarySerialization.Sliced.Instance )
         {
             Count = d.Reader.ReadInt32();
@@ -40,7 +40,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             _countChanged = new ObservableEventHandler( d );
         }
 
-        public static void Write( BinarySerialization.IBinarySerializer s, in AutoCounter o )
+        public static void Write( BinarySerialization.IBinarySerializer s, in StupidAutoCounter o )
         {
             s.Writer.Write( o.Count );
             s.WriteObject( o._timer );
@@ -49,12 +49,10 @@ namespace CK.Observable.Domain.Tests.TimedEvents
 
         /// <summary>
         /// This event is automatically raised each time Count changed.
-        /// This is an unsafe event (it is not serialized and no cleanup of disposed <see cref="IDestroyable"/> is done).
-        /// Even if it is supported, safe event should always be preferred.
         /// </summary>
         public event SafeEventHandler CountChanged
         {
-            add => _countChanged.Add( value, nameof( CountChanged ) );
+            add => _countChanged.Add( value );
             remove => _countChanged.Remove( value );
         }
 

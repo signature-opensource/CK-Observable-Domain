@@ -26,7 +26,7 @@ namespace CK.Observable.League
         string DomainName { get; }
 
         /// <summary>
-        /// Gets whether this domain is destroyed (the <see cref="Coordinator"/>'s <see cref="Domain"/> has been disposed).
+        /// Gets whether this domain is destroyed (the <see cref="OCoordinatorRoot"/>'s <see cref="ODomain"/> has been disposed).
         /// </summary>
         bool IsDestroyed { get; }
 

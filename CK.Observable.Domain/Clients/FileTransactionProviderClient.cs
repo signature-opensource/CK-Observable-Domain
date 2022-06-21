@@ -106,19 +106,22 @@ namespace CK.Observable
         }
 
         /// <inheritdoc />
-        public override void OnTransactionCommit( in SuccessfulTransactionEventArgs c )
+        public override void OnTransactionCommit( in TransactionDoneEventArgs c )
         {
             base.OnTransactionCommit( c );
-            if( _minimumDueTimeMs == 0 )
+            if( c.RollbackedInfo == null )
             {
-                // Write every snapshot
-                WriteFileIfNeeded();
-            }
-            else if( _minimumDueTimeMs > 0 && c.CommitTimeUtc > _nextDueTimeUtc )
-            {
-                // Write snapshot if due, then reschedule it.
-                WriteFileIfNeeded();
-                RescheduleDueTime( c.CommitTimeUtc );
+                if( _minimumDueTimeMs == 0 )
+                {
+                    // Write every snapshot
+                    WriteFileIfNeeded();
+                }
+                else if( _minimumDueTimeMs > 0 && c.CommitTimeUtc > _nextDueTimeUtc )
+                {
+                    // Write snapshot if due, then reschedule it.
+                    WriteFileIfNeeded();
+                    RescheduleDueTime( c.CommitTimeUtc );
+                }
             }
         }
 
@@ -143,7 +146,7 @@ namespace CK.Observable
             }
             catch( Exception e )
             {
-                monitor.Error( "Caught when writing ObservableDomain file", e );
+                monitor.Error( "When writing ObservableDomain snapshot", e );
                 return false;
             }
         }
@@ -175,19 +178,14 @@ namespace CK.Observable
 
                         if( File.Exists( _filePath ) )
                         {
-                            File.Replace(
-                                _tmpFilePath,
-                                _filePath,
-                                _bakFilePath,
-                                true
-                            );
+                            File.Replace( _tmpFilePath,
+                                          _filePath,
+                                          _bakFilePath,
+                                          true );
                         }
                         else
                         {
-                            File.Move(
-                                _tmpFilePath,
-                                _filePath
-                            );
+                            File.Move( _tmpFilePath, _filePath );
                         }
 
                         _fileTransactionNumber = CurrentSerialNumber;

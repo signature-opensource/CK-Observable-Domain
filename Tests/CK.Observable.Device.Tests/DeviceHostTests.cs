@@ -58,12 +58,12 @@ namespace CK.Observable.Device.Tests
             using var obs = new ObservableDomain<Root>( TestHelper.Monitor, nameof( ObservableDeviceHostObject_sync_the_list_of_ObservableDevice_and_Devices_Async ), false, serviceProvider: sp );
 
             // Here the Device exists but not the ObservableDevice.
-            using( obs.AcquireReadLock() )
+            await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 obs.Root.Host.Devices.Should().ContainKey( "TheOne" );
                 obs.Root.Host.Devices["TheOne"].Object.Should().BeNull( "No ObservableObject yet." );
                 obs.Root.Host.Devices["TheOne"].Status.Should().Be( DeviceControlStatus.HasSharedControl );
-            }
+            } );
 
             // Now we create the TheOne ObservableObject.
             await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
@@ -87,7 +87,7 @@ namespace CK.Observable.Device.Tests
             }
 
             // Destroying the Device.
-            await host.ClearAsync( TestHelper.Monitor, true );
+            await host.ClearAsync( TestHelper.Monitor, waitForDeviceDestroyed: true );
 
             using( obs.AcquireReadLock() )
             {
@@ -102,6 +102,7 @@ namespace CK.Observable.Device.Tests
             await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 var d = obs.Root.Host.Devices["TheOne"].Object;
+                Debug.Assert( d != null );
                 d.Destroy();
                 obs.Root.Host.Devices.Should().BeEmpty( "The ObservableHostDevice has no more info to keep (no device, no observable)." );
             } );
@@ -128,16 +129,37 @@ namespace CK.Observable.Device.Tests
             // Collects ObservableEvent emitted.
             IReadOnlyList<ObservableEvent>? lastEvents = null;
             var obs = new ObservableDomain<Root>( TestHelper.Monitor, nameof( deserialization_triggers_events_when_resynchronizing_Async ), false, serviceProvider: sp );
-            obs.OnSuccessfulTransaction += ( d, ev ) => lastEvents = ev.Events;
+            obs.TransactionDone += ( d, ev ) => lastEvents = ev.Events;
 
-            using( obs.AcquireReadLock() )
+            obs.HasWaitingSidekicks.Should().BeTrue();
+            await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 obs.Root.Host.Devices.Should().ContainKey( "TheOne", "The host is synchronized." );
                 obs.Root.Host.Devices["TheOne"].Object.Should().BeNull( "No ObservableObject yet." );
                 obs.Root.Host.Devices["TheOne"].Status.Should().Be( DeviceControlStatus.HasSharedControl );
                 obs.Root.Host.Devices["TheOne"].IsRunning.Should().BeFalse();
-            }
-            lastEvents.Should().BeNull();
+            } );
+            Debug.Assert( lastEvents != null );
+            lastEvents.Select( e => e.ToString() ).Should().BeEquivalentTo( new[] {
+                "NewObject 3 (ODeviceInfo<OSampleDevice>).",
+                "CollectionMapSet 2[TheOne] = Device: TheOne [Stopped, HasSharedControl]",
+                "NewProperty DeviceName -> 0.",
+                "PropertyChanged 3.DeviceName = TheOne.",
+                "NewProperty Object -> 1.",
+                "PropertyChanged 3.Object = null.",
+                "NewProperty Status -> 2.",
+                "PropertyChanged 3.Status = HasSharedControl.",
+                "NewProperty IsRunning -> 3.",
+                "PropertyChanged 3.IsRunning = False.",
+                "NewProperty ControllerKey -> 4.",
+                "PropertyChanged 3.ControllerKey = null.",
+                "NewProperty ConfigurationControllerKey -> 5.",
+                "PropertyChanged 3.ConfigurationControllerKey = null.",
+                "NewProperty IsDestroyed -> 6.",
+                "PropertyChanged 3.IsDestroyed = False.",
+                "NewProperty OId -> 7.",
+                "PropertyChanged 3.OId = 3." }, o => o.WithStrictOrdering() );
+            lastEvents = null;
 
             // Saving the domain while the device is stopped.
             using var memory = new MemoryStream();
@@ -150,13 +172,12 @@ namespace CK.Observable.Device.Tests
                 obs.Root.Host.Devices["TheOne"].IsRunning.Should().BeTrue( "The observable has been updated." );
             }
             Debug.Assert( lastEvents != null );
-            lastEvents.Should().HaveCount( 2 );
-            lastEvents[0].ToString().Should().Be( "NewProperty IsRunning -> 0." );
-            lastEvents[1].ToString().Should().Be( "PropertyChanged 3.IsRunning = True." );
+            lastEvents.Should().HaveCount( 1 );
+            lastEvents[0].ToString().Should().Be( "PropertyChanged 3.IsRunning = True." );
+            lastEvents = null;
 
             // Reloads the domain: for the serialized state, the device is not running.
             // This load occurs in an implicit (fake) transaction: the sidekicks are not instantiated.
-            lastEvents = null;
             memory.Position = 0;
             using( var read = RewindableStream.FromStream( memory ) )
             {
@@ -167,15 +188,15 @@ namespace CK.Observable.Device.Tests
                 obs.Root.Host.Devices["TheOne"].IsRunning.Should().BeFalse( "No sidekick yet." );
             }
             lastEvents.Should().BeNull( "No real transaction: no event." );
-            obs.Modify( TestHelper.Monitor, null ).Success.Should().BeTrue();
+            await obs.ModifyThrowAsync( TestHelper.Monitor, null );
             using( obs.AcquireReadLock() )
             {
                 obs.Root.Host.Devices["TheOne"].IsRunning.Should().BeTrue( "The sidekick has been instantiated." );
             }
             Debug.Assert( lastEvents != null );
-            lastEvents.Should().HaveCount( 2 );
-            lastEvents[0].ToString().Should().Be( "NewProperty IsRunning -> 0." );
-            lastEvents[1].ToString().Should().Be( "PropertyChanged 3.IsRunning = True." );
+            lastEvents.Should().HaveCount( 1 );
+            lastEvents[0].ToString().Should().Be( "PropertyChanged 3.IsRunning = True.", "Sidekick resynchronized the value." );
+            lastEvents = null;
 
             // Same reload but now within a real transaction.
             lastEvents = null;
@@ -192,9 +213,9 @@ namespace CK.Observable.Device.Tests
                 obs.Root.Host.Devices["TheOne"].IsRunning.Should().BeTrue( "The observable has been updated by the sidekick." );
             }
             Debug.Assert( lastEvents != null, "The initialization of the sidekicks exposes its side effects." );
-            lastEvents.Should().HaveCount( 2 );
-            lastEvents[0].ToString().Should().Be( "NewProperty IsRunning -> 0." );
-            lastEvents[1].ToString().Should().Be( "PropertyChanged 3.IsRunning = True." );
+            lastEvents.Should().HaveCount( 1 );
+            lastEvents[0].ToString().Should().Be( "PropertyChanged 3.IsRunning = True." );
+            lastEvents = null;
 
             // Destroying the Device.
             await host.ClearAsync( TestHelper.Monitor, true );

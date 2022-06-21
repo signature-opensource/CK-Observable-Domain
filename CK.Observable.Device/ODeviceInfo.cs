@@ -150,6 +150,7 @@ namespace CK.Observable.Device
             }
         }
 
+        public override string ToString() => $"Device: {DeviceName} [{(IsRunning ? "Running" : "Stopped")}, {Status}]";
     }
 
 }

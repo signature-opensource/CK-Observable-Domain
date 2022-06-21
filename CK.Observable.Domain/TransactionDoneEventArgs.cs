@@ -9,10 +9,10 @@ namespace CK.Observable
 {
     /// <summary>
     /// Encapsulates the result of a successful <see cref="ObservableDomain.Transaction.Commit"/>.
-    /// This is available from <see cref="IObservableDomainClient.OnTransactionCommit(in SuccessfulTransactionEventArgs)"/>
-    /// and <see cref="ObservableDomain.OnSuccessfulTransaction"/> event.
+    /// This is available from <see cref="IObservableDomainClient.OnTransactionCommit(in TransactionDoneEventArgs)"/>
+    /// and <see cref="ObservableDomain.TransactionDone"/> event.
     /// </summary>
-    public class SuccessfulTransactionEventArgs : EventMonitoredArgs, ISuccessfulTransactionEvent
+    public sealed class TransactionDoneEventArgs : EventMonitoredArgs, ITransactionDoneEvent
     {
         readonly ObservableDomain _domain;
         readonly Func<string, int?> _propertyId;
@@ -39,6 +39,17 @@ namespace CK.Observable
         /// Gets the transaction number.
         /// </summary>
         public int TransactionNumber { get; }
+
+        /// <summary>
+        /// Gets the information of the rolled back if the current transaction is recovering
+        /// a transaction failure.
+        /// <para>
+        /// It happens when a transaction fails and has been reloaded by one of the <see cref="ObservableDomain.DomainClient"/>
+        /// and one or more sidekicks are waiting to be instantiated.
+        /// This successful transaction captures the impacts of the rollback that may be triggered by the sidekicks instantiation.
+        /// </para>
+        /// </summary>
+        public RolledbackTransactionInfo? RollbackedInfo { get; }
 
         /// <summary>
         /// Gets the events that the transaction generated (all <see cref="ObservableObject"/> changes).
@@ -154,12 +165,13 @@ namespace CK.Observable
         /// </summary>
         public IActionRegistrar<PostActionContext> DomainPostActions => _domainPostActions;
 
-        internal SuccessfulTransactionEventArgs( ObservableDomain d,
+        internal TransactionDoneEventArgs( ObservableDomain d,
                                                  Func<string, int?> propertyId,
                                                  IReadOnlyList<ObservableEvent> e,
                                                  List<ObservableDomainCommand> c,
                                                  DateTime startTime,
-                                                 int tranNum )
+                                                 int tranNum,
+                                                 RolledbackTransactionInfo? rollbacked )
             : base( d.CurrentMonitor )
         {
             _domain = d;
@@ -171,6 +183,7 @@ namespace CK.Observable
             CommitTimeUtc = DateTime.UtcNow;
             TransactionNumber = tranNum;
             Events = e;
+            RollbackedInfo = rollbacked;
         }
 
     }

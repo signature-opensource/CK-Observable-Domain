@@ -8,7 +8,7 @@ namespace CK.Observable
 {
 
     /// <summary>
-    /// The context in which <see cref="SuccessfulTransactionEventArgs.PostActions"/> and <see cref="SuccessfulTransactionEventArgs.DomainPostActions"/>
+    /// The context in which <see cref="TransactionDoneEventArgs.PostActions"/> and <see cref="TransactionDoneEventArgs.DomainPostActions"/>
     /// are executed.
     /// </summary>
     public class PostActionContext : AsyncExecutionContext<PostActionContext>

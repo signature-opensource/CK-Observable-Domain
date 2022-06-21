@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
 
 namespace CK.Observable.Domain.Tests
@@ -220,11 +221,11 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
-        public void testing_auto_cleanup()
+        public async Task testing_auto_cleanup_Async()
         {
-            using( var domain = new ObservableDomain( TestHelper.Monitor, nameof( testing_auto_cleanup ), startTimer: true ) )
+            using( var domain = new ObservableDomain( TestHelper.Monitor, nameof( testing_auto_cleanup_Async ), startTimer: true ) )
             {
-                domain.Modify( TestHelper.Monitor, () =>
+                await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     TestCounter counter = new TestCounter();
                     Sample.Car c = new Sample.Car( "First Car" );
@@ -288,8 +289,7 @@ namespace CK.Observable.Domain.Tests
                     counter.Count.Should().Be( 3 );
                     counter2.Count.Should().Be( 1 );
                     counter3.Count.Should().Be( 2 );
-                } ).Success
-                    .Should().BeTrue();
+                } );
             }
 
         }
@@ -364,16 +364,16 @@ namespace CK.Observable.Domain.Tests
 
         [TestCase( "UseSpecialized" )]
         [TestCase( "UseBase" )]
-        public void private_event_handler_serialization( string type )
+        public async Task private_event_handler_serialization_Async( string type )
         {
-            using var domain = new ObservableDomain( TestHelper.Monitor, nameof( private_event_handler_serialization ), startTimer: true );
+            using var domain = new ObservableDomain( TestHelper.Monitor, nameof( private_event_handler_serialization_Async ), startTimer: true );
 
             PrivateHandlerObject? o = null;
-            domain.Modify( TestHelper.Monitor, () =>
+            await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 o = type == "UseBase" ? new PrivateHandlerObject() : new SpecializedPrivateHandlerObject();
 
-            } ).Success.Should().BeTrue();
+            } );
             ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, domain );
         }
 

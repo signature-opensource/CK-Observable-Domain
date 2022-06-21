@@ -35,7 +35,8 @@ namespace CK.Observable
         {
             if( _runSignal != null )
             {
-                _queue.Writer.TryWrite( TransactionResult.Empty );
+                // Uses the EmptySuccess as the stop signal.
+                _queue.Writer.TryWrite( TransactionResult.EmptySuccess );
                 return true;
             }
             return false;
@@ -59,7 +60,7 @@ namespace CK.Observable
                 for(; ; )
                 {
                     TransactionResult t = await r.ReadAsync().ConfigureAwait( false );
-                    if( t == TransactionResult.Empty )
+                    if( t == TransactionResult.EmptySuccess )
                     {
                         break;
                     }

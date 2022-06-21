@@ -32,16 +32,27 @@ namespace CK.Observable
         public IActivityMonitor Monitor => _d.CurrentMonitor;
 
         /// <summary>
-        /// Gets the current transaction number: the very first one is 1.
-        /// Note that if this transaction fails, the <see cref="ObservableDomain.TransactionSerialNumber"/> will not
-        /// be set to this number.
+        /// Gets the current transaction status.
         /// </summary>
-        public int CurrentTransactionNumber => _d.TransactionSerialNumber + 1;
+        public CurrentTransactionStatus CurrentTransactionStatus => _d.CurrentTransactionStatus;
 
         /// <summary>
-        /// Sends a <see cref="ObservableDomainCommand"/> to the external world. Commands are enlisted
-        /// into <see cref="TransactionResult.Commands"/> (when the transaction succeeds)
-        /// and will be processed by one (or more) <see cref="ObservableDomainSidekick"/>.
+        /// Gets the current transaction number (the very first one is 0).
+        /// This will be incremented at the end of the current transaction if it succeeds.
+        /// </summary>
+        public int TransactionNumber => _d.TransactionSerialNumber;
+
+        /// <summary>
+        /// Gets the current commit time. Defaults to <see cref="DateTime.UtcNow"/> at the very beginning,
+        /// when no transaction has been committed yet (and <see cref="TransactionSerialNumber"/> is 0).
+        /// </summary>
+        public DateTime TransactionCommitTimeUtc => _d.TransactionCommitTimeUtc;
+
+        /// <summary>
+        /// Sends a <see cref="ObservableDomainCommand"/> to the external world only if <see cref="CurrentTransactionStatus"/>
+        /// is <see cref="CurrentTransactionStatus.Regular"/> (otherwise the command is ignored and a warning is emitted).
+        /// Commands are enlisted into <see cref="TransactionResult.Commands"/>  and will be processed by one (or more)
+        /// <see cref="ObservableDomainSidekick"/> when and if the transaction succeeded.
         /// </summary>
         /// <param name="command">The command to send.</param>
         public void SendCommand( in ObservableDomainCommand command )
@@ -53,7 +64,8 @@ namespace CK.Observable
         /// Sends a command to a sidekick via a locator (a sidekick is its own <see cref="ISidekickLocator"/>).
         /// By default, the target sidekick must handle the command: see <paramref name="isOptionalExecution"/>.
         /// <para>
-        /// This is just a helper that calls <see cref="SendCommand(in ObservableDomainCommand)"/>.
+        /// This is a helper that calls <see cref="SendCommand(in ObservableDomainCommand)"/>: the <see cref="CurrentTransactionStatus"/>
+        /// must be <see cref="CurrentTransactionStatus.Regular"/> otherwise the command is ignored (and a warning is emitted).
         /// </para>
         /// </summary>
         /// <param name="command">The command payload.</param>
@@ -72,7 +84,8 @@ namespace CK.Observable
         /// Sends a command to a known sidekick type. By default, a sidekick instance must exist AND handle the command:
         /// see <paramref name="isOptionalExecution"/>.
         /// <para>
-        /// This is just a helper that calls <see cref="SendCommand(in ObservableDomainCommand)"/>.
+        /// This is a helper that calls <see cref="SendCommand(in ObservableDomainCommand)"/>: the <see cref="CurrentTransactionStatus"/>
+        /// must be <see cref="CurrentTransactionStatus.Regular"/> otherwise the command is ignored (and a warning is emitted).
         /// </para>
         /// </summary>
         /// <param name="command">The command payload.</param>
@@ -89,16 +102,17 @@ namespace CK.Observable
 
         /// <summary>
         /// Sends a command in "broadcast mode": all existing sidekicks will have the opportunity to handle it.
-        /// In this "broadcast mode", if all <see cref="ObservableDomainSidekick.ExecuteCommand(Core.IActivityMonitor, in SidekickCommand)"/>
+        /// In this "broadcast mode", if all <see cref="ObservableDomainSidekick.ExecuteCommand(IActivityMonitor, in SidekickCommand)"/>
         /// return false, the command is considered unhandled and by default this is an error: see <paramref name="isOptionalExecution"/>.
         /// <para>
-        /// This is just a helper that calls <see cref="SendCommand(in ObservableDomainCommand)"/>.
+        /// This is a helper that calls <see cref="SendCommand(in ObservableDomainCommand)"/>: the <see cref="CurrentTransactionStatus"/>
+        /// must be <see cref="CurrentTransactionStatus.Regular"/> otherwise the command is ignored (and a warning is emitted).
         /// </para>
         /// </summary>
         /// <param name="command">The command payload.</param>
         /// <param name="isOptionalExecution">
         /// By default, at least one sidekick must handle the command
-        /// (at least one <see cref="ObservableDomainSidekick.ExecuteCommand(Core.IActivityMonitor, in SidekickCommand)"/> must return true).
+        /// (at least one <see cref="ObservableDomainSidekick.ExecuteCommand(IActivityMonitor, in SidekickCommand)"/> must return true).
         /// When set to true, a simple warning is emitted if the command failed to be handled.
         /// </param>
         public void SendCommand( object command, bool isOptionalExecution = false )
@@ -142,20 +156,19 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Gets whether the domain is being deserialized.
-        /// </summary>
-        public bool IsDeserializing => _d.IsDeserializing;
-
-        /// <summary>
         /// Ensures that required sidekicks are instantiated and that any required <see cref="ObservableDomainSidekick.RegisterClientObject(IActivityMonitor, IDestroyable)"/>
         /// have been called.
-        /// When this method returns false, it means that an error occurred and that the current transaction cannot be committed.
         /// <para>
-        /// This should typically called at the end of a final constructor code of a <see cref="ISidekickClientObject{TSidekick}"/> object.
+        /// This should typically called at the end of a final constructor code of a <see cref="ISidekickClientObject{TSidekick}"/> (or decorated
+        /// with a <see cref="UseSidekickAttribute"/>) object.
+        /// </para>
+        /// <para>
+        /// When <see cref="DomainView.CurrentTransactionStatus"/> is not <see cref="CurrentTransactionStatus.Regular"/> (we are deserializing or initializing),
+        /// nothing is done: <see cref="ObservableDomain.HasWaitingSidekicks"/> is true and the sidekicks will kick in at the start of the next transaction
+        /// (or during the roll back if a <see cref="IObservableDomainClient"/> can do it).
         /// </para>
         /// </summary>
-        /// <returns>True on success, false if one required sidekick failed to be instantiated.</returns>
-        public bool EnsureSidekicks() => _d.EnsureSidekicks( _o );
+        public void EnsureSidekicks() => _d.EnsureSidekicks( _o );
 
         /// <summary>
         /// Gets a central domain simple random number generator.

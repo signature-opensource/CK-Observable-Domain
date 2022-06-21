@@ -30,10 +30,10 @@ namespace CK.Observable.Device
         /// <summary>
         /// Initializes a new <see cref="ObservableDeviceSidekick{THost, TObjectDevice, TObjectDeviceHost}"/>.
         /// </summary>
-        /// <param name="domain">The observable domain.</param>
-        /// <param name="host">The host.</param>
-        protected ObservableDeviceSidekick( ObservableDomain domain, THost host )
-            : base( domain )
+        /// <param name="manager">The domain's sidekick manager.</param>
+        /// <param name="host">The device host.</param>
+        protected ObservableDeviceSidekick( IObservableDomainSidekickManager manager, THost host )
+            : base( manager )
         {
             Host = host;
             _bridges = new Dictionary<string, DeviceBridge>();
@@ -56,7 +56,6 @@ namespace CK.Observable.Device
         public TDeviceObject? FindObservableDeviceObject( string deviceName ) => _bridges.GetValueOrDefault( deviceName )?.Object;
 
         ObservableDeviceObject? IObservableDeviceSidekick.FindObservableDeviceObject( string deviceName ) => FindObservableDeviceObject( deviceName );
-
 
         /// <summary>
         /// Gets the bridges: all the <see cref="TDeviceObject"/> that exist in the domain
@@ -111,7 +110,7 @@ namespace CK.Observable.Device
 
         Task OnAllDevicesLifetimeEventAsync( IActivityMonitor monitor, IDeviceHost sender, DeviceLifetimeEvent e )
         {
-            return Domain.ModifyAsync( monitor, () =>
+            return Domain.TryModifyAsync( monitor, () =>
             {
                 var bridge = _bridges.GetValueOrDefault( e.Device.Name );
                 // No bridge (no observable object) and no host: this sidekick is "empty", it is not
@@ -127,7 +126,7 @@ namespace CK.Observable.Device
                     if( bridge != null )
                     {
                         if( bridge.Device == null ) bridge.SetDevice( monitor, e.Device );
-                        else 
+                        else
                         {
                             var o = bridge.Object;
                             o.SetIsRunning( e.Device.Status.IsRunning );
@@ -204,7 +203,7 @@ namespace CK.Observable.Device
         /// This is sealed and calls the protected virtual <see cref="OnDispose(IActivityMonitor)"/> that
         /// can be overridden.
         /// </remarks>
-        protected sealed override void OnDomainCleared( IActivityMonitor monitor )
+        protected sealed override void OnUnload( IActivityMonitor monitor )
         {
             if( _deviceTracking )
             {

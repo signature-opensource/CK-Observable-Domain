@@ -22,9 +22,11 @@ namespace CK.Observable.League
                 _shell = shell;
             }
 
-            public override void OnTransactionCommit( in SuccessfulTransactionEventArgs c )
+            public override void OnTransactionCommit( in TransactionDoneEventArgs c )
             {
                 base.OnTransactionCommit( c );
+                // To update the shell knowledge of the NextActiveTime, knowing if we have rolled back or not
+                // is useless.
                 DateTime nextActiveTime = c.Domain.TimeManager.NextActiveTime;
                 c.DomainPostActions.Add( ctx =>
                 {

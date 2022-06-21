@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace CK.Observable.League
 {
     /// <summary>
-    /// Default league service.
+    /// Default league singleton service.
     /// </summary>
     public class DefaultObservableLeague : IObservableLeague, IHostedService, ISingletonAutoService
     {
@@ -36,7 +36,7 @@ namespace CK.Observable.League
         public IObservableDomainLoader? this[string domainName] => _default!.Find( domainName );
 
         /// <inheritdoc />
-        public IObservableDomainAccess<Coordinator> Coordinator => _default!.Coordinator;
+        public IObservableDomainAccess<OCoordinatorRoot> Coordinator => _default!.Coordinator;
 
         /// <inheritdoc />
         public IObservableDomainLoader? Find( string domainName ) => _default!.Find( domainName );

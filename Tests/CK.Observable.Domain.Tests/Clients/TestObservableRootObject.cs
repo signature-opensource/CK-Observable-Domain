@@ -6,8 +6,8 @@ namespace CK.Observable.Domain.Tests.Clients
     [SerializationVersion( 0 )]
     public sealed class TestObservableRootObject : ObservableRootObject
     {
-        public string Prop1 { get; set; }
-        public string Prop2 { get; set; }
+        public string? Prop1 { get; set; }
+        public string? Prop2 { get; set; }
 
         public bool TestBehavior__ThrowOnWrite { get; set; }
 
