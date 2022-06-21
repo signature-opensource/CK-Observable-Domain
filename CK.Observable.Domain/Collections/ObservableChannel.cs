@@ -1,3 +1,5 @@
+using CK.BinarySerialization;
+using CK.Core;
 using System;
 using System.Collections.Generic;
 
@@ -29,25 +31,23 @@ namespace CK.Observable
         {
         }
 
-        /// <summary>
-        /// Special no-op constructor for specializations.
-        /// </summary>
-        /// <param name="_">unused parameter.</param>
-        protected ObservableChannel( RevertSerialization _ ) : base( _ ) { }
-
-        ObservableChannel( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+        protected ObservableChannel( BinarySerialization.Sliced _ ) : base( _ ) { }
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+  
+        ObservableChannel( IBinaryDeserializer d, ITypeReadInfo info )
+                : base( BinarySerialization.Sliced.Instance )
         {
-            _itemSent = new ObservableEventHandler<ListInsertEvent>( r );
+            _itemSent = new ObservableEventHandler<ListInsertEvent>( d );
         }
 
-       void Write( BinarySerializer s )
+        public static void Write( BinarySerialization.IBinarySerializer s, in ObservableChannel<T> o )
         {
-            _itemSent.Write( s );
+            o._itemSent.Write( s );
         }
 
         /// <summary>
-        /// Define to export this channel as an empty list of items.
+        /// Exports this channel as an empty list of items.
         /// </summary>
         /// <param name="num">The object number.</param>
         /// <param name="exporter">The target exporter.</param>

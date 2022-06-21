@@ -10,27 +10,29 @@ namespace CK.Observable.Domain.Tests.Sample
         {
         }
 
-        Mechanic( IBinaryDeserializer r, TypeReadInfo? info )
-            : base( RevertSerialization.Default )
+        Mechanic( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+            : base( BinarySerialization.Sliced.Instance )
         {
-            CurrentCar = (Car)r.ReadObject();
+            CurrentCar = r.ReadNullableObject<Car>();
         }
 
-        void Write( BinarySerializer s )
+        public static void Write( BinarySerialization.IBinarySerializer s, in Mechanic o )
         {
-            s.WriteObject( CurrentCar );
+            s.WriteNullableObject( o.CurrentCar );
         }
 
-        public Car CurrentCar { get; set; }
+        public Car? CurrentCar { get; set; }
 
         public MechanicLevel Level { get; set; }
 
         void OnCurrentCarChanged( object before, object after )
         {
-            if( Domain.IsDeserializing ) return;
-            Domain.Monitor.Info( $"{ToString()} has a new Car: {CurrentCar?.ToString() ?? "null"}." );
-            if( CurrentCar != null ) CurrentCar.CurrentMechanic = this;
-            else ((Car)before).CurrentMechanic = null;
+            if( Domain.CurrentTransactionStatus.IsRegular() )
+            {
+                Domain.Monitor.Info( $"{ToString()} has a new Car: {CurrentCar?.ToString() ?? "null"}." );
+                if( CurrentCar != null ) CurrentCar.CurrentMechanic = this;
+                else ((Car)before).CurrentMechanic = null;
+            }
         }
 
         public override string ToString() => $"'Mechanic {FirstName} {LastName}'";

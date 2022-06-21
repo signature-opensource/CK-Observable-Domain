@@ -26,18 +26,18 @@ namespace CK.Observable.Domain.Tests
             _privateTestSerialization.Add( PrivateHandler, "PrivateEvent" );
         }
 
-        TestCounter( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+        TestCounter( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
+        : base( BinarySerialization.Sliced.Instance )
         {
-            Count = r.ReadInt32();
-            _privateTestSerialization = new ObservableEventHandler( r );
+            Count = d.Reader.ReadInt32();
+            _privateTestSerialization = new ObservableEventHandler( d );
             _privateTestSerialization.HasHandlers.Should().BeTrue();
         }
 
-        void Write( BinarySerializer w )
+        public static void Write( BinarySerialization.IBinarySerializer s, in TestCounter o )
         {
-            w.Write( Count );
-            _privateTestSerialization.Write( w );
+            s.Writer.Write( o.Count );
+            o._privateTestSerialization.Write( s );
         }
 
         public void IncrementNoLog( object sender ) => Count++;

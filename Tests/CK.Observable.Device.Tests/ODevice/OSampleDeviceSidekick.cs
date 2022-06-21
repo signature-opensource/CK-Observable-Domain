@@ -9,8 +9,8 @@ namespace CK.Observable.Device.Tests
 {
     public class OSampleDeviceSidekick : ObservableDeviceSidekick<SampleDeviceHost, OSampleDevice, OSampleDeviceHost>
     {
-        public OSampleDeviceSidekick( ObservableDomain domain, SampleDeviceHost host )
-            : base( domain, host )
+        public OSampleDeviceSidekick( IObservableDomainSidekickManager manager, SampleDeviceHost host )
+            : base( manager, host )
         {
         }
 
@@ -27,7 +27,7 @@ namespace CK.Observable.Device.Tests
             SampleDevice.SafeDeviceState? GetDeviceState();
         }
 
-        class SampleBridge : Bridge<OSampleDeviceSidekick, SampleDevice>, IBridge
+        class SampleBridge : PassiveBridge<OSampleDeviceSidekick, SampleDevice>, IBridge
         {
             public SampleBridge( OSampleDevice o )
                 : base( o )
@@ -39,13 +39,13 @@ namespace CK.Observable.Device.Tests
             protected override void OnDeviceAppeared( IActivityMonitor monitor )
             {
                 Debug.Assert( Device != null );
-                Device.MessageChanged.Async += OnMessageChanged;
+                Device.MessageChanged.Async += OnMessageChangedAsync;
                 Object.Message = Device.DangerousCurrentMessage;
             }
 
-            Task OnMessageChanged( IActivityMonitor monitor, SampleDevice sender, string e )
-            {
-                return ModifyAsync( monitor, () =>
+            Task OnMessageChangedAsync( IActivityMonitor monitor, SampleDevice sender, string e )
+            {  
+                return Sidekick.Domain.ModifyThrowAsync( monitor, () =>
                 {
                     Object.Message = e;
                 } );
@@ -55,7 +55,7 @@ namespace CK.Observable.Device.Tests
             protected override void OnDeviceDisappearing( IActivityMonitor monitor )
             {
                 Debug.Assert( Device != null );
-                Device.MessageChanged.Async -= OnMessageChanged;
+                Device.MessageChanged.Async -= OnMessageChangedAsync;
                 Object.Message = null;
             }
 
@@ -63,7 +63,7 @@ namespace CK.Observable.Device.Tests
             {
                 if( Device != null )
                 {
-                    Device.MessageChanged.Async -= OnMessageChanged;
+                    Device.MessageChanged.Async -= OnMessageChangedAsync;
                 }
             }
 

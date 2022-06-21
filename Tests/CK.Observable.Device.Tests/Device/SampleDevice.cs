@@ -23,8 +23,7 @@ namespace CK.Observable.Device.Tests
         int _period;
         int _count;
         PerfectEventSender<SampleDevice, string> _messageChanged;
-        int _syncCommandCount;
-        int _asyncCommandCount;
+        int _commandCount;
 
         public SampleDevice( IActivityMonitor monitor, CreateInfo c )
             : base( monitor, c )
@@ -65,7 +64,7 @@ namespace CK.Observable.Device.Tests
             {
                 DangerousCurrentMessage = message;
                 DangerousCurrentCount = d._count;
-                SyncCommandCount = d._syncCommandCount;
+                SyncCommandCount = d._commandCount;
             }
 
             public string DangerousCurrentMessage { get; }
@@ -95,11 +94,11 @@ namespace CK.Observable.Device.Tests
         protected override Task<bool> DoStartAsync( IActivityMonitor monitor, DeviceStartedReason reason )
         {
             _stopToken = new CancellationTokenSource();
-            _run = RunLoop();
+            _run = _period != Timeout.Infinite ? RunLoopAsync() : Task.CompletedTask;
             return Task.FromResult( true );
         }
 
-        async Task RunLoop()
+        async Task RunLoopAsync()
         {
             Debug.Assert( _stopToken != null );
             _count = 0;
@@ -148,21 +147,17 @@ namespace CK.Observable.Device.Tests
             return Task.FromResult( DeviceReconfiguredResult.None );
         }
 
-        /// <summary>
-        /// Caution: Handling command is done out of any lock: this may be called concurrently.
-        /// </summary>
-        /// <param name="monitor">The monitor to use.</param>
-        /// <param name="command">The command to handle.</param>
-        protected override void DoHandleCommand( IActivityMonitor monitor, SyncDeviceCommand command )
+        /// <inheritdoc />
+        protected override Task DoHandleCommandAsync( IActivityMonitor monitor, BaseDeviceCommand command )
         {
             if( command is SampleCommand c )
             {
-                Interlocked.Increment( ref _syncCommandCount );
+                Interlocked.Increment( ref _commandCount );
                 _messagePrefixFromCommand = c.MessagePrefix;
-                return;
+                c.Completion.SetResult();
+                return Task.CompletedTask;
             }
-            // The base implementation throws.
-            base.DoHandleCommand( monitor, command );
+            return base.DoHandleCommandAsync( monitor, command );
         }
 
         /// <summary>

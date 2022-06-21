@@ -23,7 +23,7 @@ namespace CK.Observable.League
         bool IsLoaded { get; }
 
         /// <summary>
-        /// Gets whether this domain is destroyed (the <see cref="Coordinator"/>'s <see cref="Domain"/> has been disposed).
+        /// Gets whether this domain is destroyed (the <see cref="OCoordinatorRoot"/>'s <see cref="ODomain"/> has been disposed).
         /// </summary>
         bool IsDestroyed { get; }
 
@@ -41,7 +41,7 @@ namespace CK.Observable.League
         (int TransactionNumber, IReadOnlyList<JsonEventCollector.TransactionEvent>? Events) GetTransactionEvents( int transactionNumber );
 
         /// <summary>
-        /// Raised whenever a transaction has been successfully commited.
+        /// Raised whenever a transaction has been successfully committed.
         /// Note that the first transaction is visible: see <see cref="JsonEventCollector.TransactionEvent.TransactionNumber"/>.
         /// </summary>
         event Action<IActivityMonitor,JsonEventCollector.TransactionEvent> DomainChanged;

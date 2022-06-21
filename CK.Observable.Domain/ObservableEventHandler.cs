@@ -1,14 +1,19 @@
+using CK.BinarySerialization;
 using CK.Core;
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace CK.Observable
 {
     /// <summary>
-    /// Serializable and safe event handler: only non null and static method or method on a <see cref="IDestroyable"/> (that must
-    /// be serializable) can be added. 
+    /// Serializable and safe event handler with no argument: only static methods or methods on a <see cref="IDestroyable"/> (that must
+    /// be serializable) can be registered. 
+    /// <para>
     /// This is a helper class that implements <see cref="SafeEventHandler"/> events.
+    /// This field MUST not be readonly. See <see cref="ObservableEventHandler{TEventArgs}"/>
+    /// </para>
     /// </summary>
     public struct ObservableEventHandler
     {
@@ -18,20 +23,20 @@ namespace CK.Observable
         /// Deserializes the <see cref="ObservableEventHandler"/>.
         /// If the method has been suppressed, use the static helper <see cref="Skip(IBinaryDeserializer)"/>.
         /// </summary>
-        /// <param name="r">The deserializer.</param>
-        public ObservableEventHandler( IBinaryDeserializer r ) => _handler = new ObservableDelegate( r );
+        /// <param name="d">The deserializer.</param>
+        public ObservableEventHandler( IBinaryDeserializer d ) => _handler = new ObservableDelegate( d );
 
         /// <summary>
         /// Helper that skips a serialized event to be used when an event is removed.
         /// </summary>
         /// <param name="r">The deserializer.</param>
-        public static void Skip( IBinaryDeserializer r ) => ObservableDelegate.Skip( r );
+        public static void Skip( IBinaryDeserializer d ) => ObservableDelegate.Skip( d );
 
         /// <summary>
         /// Serializes this <see cref="ObservableEventHandler"/>.
         /// </summary>
         /// <param name="w">The writer.</param>
-        public void Write( BinarySerializer w ) => _handler.Write( w );
+        public void Write( BinarySerialization.IBinarySerializer s ) => _handler.Write( s );
 
         /// <summary>
         /// Gets whether at least one handler is registered.
@@ -43,7 +48,7 @@ namespace CK.Observable
         /// </summary>
         /// <param name="h">The handler must be non null and be a static method or a method on a <see cref="ObservableObject"/>.</param>
         /// <param name="eventName">The event name (used for error messages).</param>
-        public void Add( SafeEventHandler h, string eventName ) => _handler.Add( h, eventName );
+        public void Add( SafeEventHandler h, [CallerMemberName]string? eventName = null ) => _handler.Add( h, eventName );
 
         /// <summary>
         /// Removes a handler and returns true if it has been removed.

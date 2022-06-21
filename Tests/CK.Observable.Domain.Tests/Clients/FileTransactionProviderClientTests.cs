@@ -1,9 +1,9 @@
 using System;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using CK.Core;
 using CK.Testing;
-using CK.Text;
 using FluentAssertions;
 using NUnit.Framework;
 using static CK.Testing.MonitorTestHelper;
@@ -13,16 +13,16 @@ namespace CK.Observable.Domain.Tests.Clients
     public class FileTransactionProviderClientTests
     {
         [Test]
-        public void File_can_be_written_manually_with_minimumDueTime_minus_1()
+        public async Task File_can_be_written_manually_with_minimumDueTime_minus_1_Async()
         {
-            NormalizedPath folder = TestHelper.TestProjectFolder.AppendPart( "TestTemp" ).AppendPart( nameof( File_can_be_written_manually_with_minimumDueTime_minus_1 ) );
+            NormalizedPath folder = TestHelper.TestProjectFolder.AppendPart( "TestTemp" ).AppendPart( nameof( File_can_be_written_manually_with_minimumDueTime_minus_1_Async ) );
             TestHelper.CleanupFolder( folder );
             var file = new FileInfo( folder.AppendPart( "f.bin" ) );
 
             var client = new FileTransactionProviderClient( file.FullName, -1 );
 
-            using var d = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, nameof( File_can_be_written_manually_with_minimumDueTime_minus_1 ), startTimer: true, client: client );
-            d.Modify( TestHelper.Monitor, () =>
+            using var d = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, nameof( File_can_be_written_manually_with_minimumDueTime_minus_1_Async ), startTimer: true, client: client );
+            await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 d.Root.Prop1 = "Hello";
                 d.Root.Prop2 = "World";
@@ -36,16 +36,16 @@ namespace CK.Observable.Domain.Tests.Clients
         }
 
         [Test]
-        public void File_is_written_on_every_snapshot_with_minimumDueTime_0()
+        public async Task File_is_written_on_every_snapshot_with_minimumDueTime_0_Async()
         {
-            NormalizedPath folder = TestHelper.TestProjectFolder.AppendPart( "TestTemp" ).AppendPart( nameof( File_is_written_on_every_snapshot_with_minimumDueTime_0 ) );
+            NormalizedPath folder = TestHelper.TestProjectFolder.AppendPart( "TestTemp" ).AppendPart( nameof( File_is_written_on_every_snapshot_with_minimumDueTime_0_Async ) );
             TestHelper.CleanupFolder( folder );
             var file = new FileInfo( folder.AppendPart( "f.bin" ) );
 
             var client = new FileTransactionProviderClient( file.FullName, 0 );
 
-            using var d = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, nameof( File_is_written_on_every_snapshot_with_minimumDueTime_0 ), startTimer: true, client: client );
-            d.Modify( TestHelper.Monitor, () =>
+            using var d = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, nameof( File_is_written_on_every_snapshot_with_minimumDueTime_0_Async ), startTimer: true, client: client );
+            await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 d.Root.Prop1 = "Hello";
                 d.Root.Prop2 = "World";
@@ -55,18 +55,18 @@ namespace CK.Observable.Domain.Tests.Clients
         }
 
         [Test]
-        public void File_is_written_after_minimumDueTime_with_positive_minimumDueTime()
+        public async Task File_is_written_after_minimumDueTime_with_positive_minimumDueTime_Async()
         {
             const int dueTimeMs = 300;
-            NormalizedPath folder = TestHelper.TestProjectFolder.AppendPart( "TestTemp" ).AppendPart( nameof( File_is_written_after_minimumDueTime_with_positive_minimumDueTime ) );
+            NormalizedPath folder = TestHelper.TestProjectFolder.AppendPart( "TestTemp" ).AppendPart( nameof( File_is_written_after_minimumDueTime_with_positive_minimumDueTime_Async ) );
             TestHelper.CleanupFolder( folder );
             var file = new FileInfo( folder.AppendPart( "f.bin" ) );
 
             var client = new FileTransactionProviderClient( file.FullName, dueTimeMs );
 
-            using var d = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, nameof(File_is_written_after_minimumDueTime_with_positive_minimumDueTime), startTimer: true, client: client );
+            using var d = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, nameof(File_is_written_after_minimumDueTime_with_positive_minimumDueTime_Async), startTimer: true, client: client );
             // Call once - doesn't trigger the DoWrite yet
-            d.Modify( TestHelper.Monitor, () =>
+            await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 d.Root.Prop1 = "Hello";
                 d.Root.Prop2 = "World";
@@ -76,31 +76,28 @@ namespace CK.Observable.Domain.Tests.Clients
             file.Exists.Should().BeFalse( "File is flushed before dueTime, and should not exist yet" );
             Thread.Sleep( 2 * dueTimeMs );
             // Call again - triggers the DoWrite
-            d.Modify( TestHelper.Monitor, () =>
-            {
-            } );
+            await d.ModifyThrowAsync( TestHelper.Monitor, null );
 
             file.Refresh();
             file.Exists.Should().BeTrue( "File was flushed after dueTime, and should exist" );
         }
 
         [Test]
-        public void File_due_time_is_properly_rescheduled()
+        public async Task File_due_time_is_properly_rescheduled_Async()
         {
-
             int dueTimeMs = 300;
             int waitTimeMs = dueTimeMs + 150;
 
-            NormalizedPath folder = TestHelper.TestProjectFolder.AppendPart( "TestTemp" ).AppendPart( nameof( File_is_written_after_minimumDueTime_with_positive_minimumDueTime ) );
+            NormalizedPath folder = TestHelper.TestProjectFolder.AppendPart( "TestTemp" ).AppendPart( nameof( File_is_written_after_minimumDueTime_with_positive_minimumDueTime_Async ) );
             TestHelper.CleanupFolder( folder );
             var file = new FileInfo( folder.AppendPart( "f.bin" ) );
 
             var client1 = new FileTransactionProviderClient( file.FullName, dueTimeMs );
 
-            using var d1 = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, nameof(File_due_time_is_properly_rescheduled)+"(1)", startTimer: true, client: client1 );
+            using var d1 = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, nameof(File_due_time_is_properly_rescheduled_Async)+"(1)", startTimer: true, client: client1 );
 
             // Call once - doesn't trigger the DoWrite yet
-            d1.Modify( TestHelper.Monitor, () =>
+            await d1.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 d1.Root.Prop1 = "Hello";
                 d1.Root.Prop2 = "World";
@@ -111,9 +108,7 @@ namespace CK.Observable.Domain.Tests.Clients
             Thread.Sleep( waitTimeMs );
 
             // Call again - triggers the DoWrite
-            d1.Modify( TestHelper.Monitor, () =>
-            {
-            } );
+            await d1.ModifyThrowAsync( TestHelper.Monitor, null );
             file.Refresh();
             file.Exists.Should().BeTrue( "File was flushed after dueTime, and should exist" );
 
@@ -122,7 +117,7 @@ namespace CK.Observable.Domain.Tests.Clients
             file.Refresh();
 
             // Call again - change properties and trigger DoWrite
-            d1.Modify( TestHelper.Monitor, () =>
+            await d1.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 d1.Root.Prop1 = "This should";
                 d1.Root.Prop2 = "Have been saved to file";
@@ -131,7 +126,7 @@ namespace CK.Observable.Domain.Tests.Clients
             // Load file with another client and domain to ensure it has the new values
 
             var client2 = new FileTransactionProviderClient( file.FullName, -1 );
-            using var d2 = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, nameof( File_due_time_is_properly_rescheduled ) + "(1)", startTimer: true, client: client2 );
+            using var d2 = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, nameof( File_due_time_is_properly_rescheduled_Async ) + "(1)", startTimer: true, client: client2 );
             using( d2.AcquireReadLock() )
             {
                 d2.Root.Prop1.Should().Be( "This should" );
@@ -156,7 +151,7 @@ namespace CK.Observable.Domain.Tests.Clients
         }
 
         [Test]
-        public void Flush_returns_false_when_file_directory_does_not_exist()
+        public async Task Flush_returns_false_when_file_directory_does_not_exist_Async()
         {
             NormalizedPath path = Path.Combine(
                 Path.GetTempPath(),
@@ -166,13 +161,13 @@ namespace CK.Observable.Domain.Tests.Clients
             var client = CreateClient( -1, path );
 
 
-            using var d = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, nameof( Flush_returns_false_when_file_directory_does_not_exist), startTimer: true, client: client );
-            d.Modify( TestHelper.Monitor, () =>
+            using var d = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, nameof( Flush_returns_false_when_file_directory_does_not_exist_Async), startTimer: true, client: client );
+            await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 d.Root.Prop1 = "Hello";
                 d.Root.Prop2 = "World";
 
-            } ).Success.Should().BeTrue();
+            } );
             bool isSuccess = client.Flush( TestHelper.Monitor );
 
             isSuccess.Should().BeFalse( "ObservableDomain can't be flushed when target path does not exist" );
@@ -180,7 +175,7 @@ namespace CK.Observable.Domain.Tests.Clients
         }
 
         [Test]
-        public void TransactionResult_has_ClientError_when_file_directory_does_not_exist()
+        public async Task TransactionResult_has_ClientError_when_file_directory_does_not_exist_Async()
         {
             NormalizedPath path = Path.Combine(
                 Path.GetTempPath(),
@@ -188,9 +183,9 @@ namespace CK.Observable.Domain.Tests.Clients
                 "ObservableDomain.bin"
             );
             var client = CreateClient( 0, path );
-            using var d = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, nameof( TransactionResult_has_ClientError_when_file_directory_does_not_exist), startTimer: true, client: client );
+            using var d = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, nameof( TransactionResult_has_ClientError_when_file_directory_does_not_exist_Async), startTimer: true, client: client );
 
-            var transactionResult = d.Modify( TestHelper.Monitor, () =>
+            var transactionResult = await d.TryModifyAsync( TestHelper.Monitor, () =>
             {
                 d.Root.Prop1 = "Hello";
                 d.Root.Prop2 = "World";
@@ -201,9 +196,9 @@ namespace CK.Observable.Domain.Tests.Clients
         }
 
         [Test]
-        public void Snapshot_file_can_be_saved_and_restored_in_compressed_or_not_form()
+        public async Task Snapshot_file_can_be_saved_and_restored_in_compressed_or_not_form_Async()
         {
-            NormalizedPath folder = TestHelper.TestProjectFolder.AppendPart( "TestTemp" ).AppendPart( nameof( Snapshot_file_can_be_saved_and_restored_in_compressed_or_not_form ) );
+            NormalizedPath folder = TestHelper.TestProjectFolder.AppendPart( "TestTemp" ).AppendPart( nameof( Snapshot_file_can_be_saved_and_restored_in_compressed_or_not_form_Async ) );
             TestHelper.CleanupFolder( folder );
             NormalizedPath file1 = folder.AppendPart( "f1.bin" );
             NormalizedPath file2 = folder.AppendPart( "f2.bin" );
@@ -211,8 +206,8 @@ namespace CK.Observable.Domain.Tests.Clients
             // File1: Create first uncompressed. 
             var c1 = new FileTransactionProviderClient( file1, 0 );
             c1.CompressionKind.Should().Be( CompressionKind.None );
-            using var d1 = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, nameof( Snapshot_file_can_be_saved_and_restored_in_compressed_or_not_form ), startTimer: true, client: c1 );
-            d1.Modify( TestHelper.Monitor, () =>
+            using var d1 = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, nameof( Snapshot_file_can_be_saved_and_restored_in_compressed_or_not_form_Async ), startTimer: true, client: c1 );
+            await d1.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 TestHelper.Monitor.Info( "Modifying properties." );
                 d1.Root.Prop1 = "Hello";
@@ -222,7 +217,7 @@ namespace CK.Observable.Domain.Tests.Clients
             // Read File1 back.
             {
                 var c2 = new FileTransactionProviderClient( file1, 0 );
-                using var d2 = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, nameof( Snapshot_file_can_be_saved_and_restored_in_compressed_or_not_form ), startTimer: true, client: c2 );
+                using var d2 = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, nameof( Snapshot_file_can_be_saved_and_restored_in_compressed_or_not_form_Async ), startTimer: true, client: c2 );
                 using( d2.AcquireReadLock() )
                 {
                     d2.Root.Prop1.Should().Be( "Hello" );
@@ -231,7 +226,7 @@ namespace CK.Observable.Domain.Tests.Clients
             }
             File.Move( file1, file2 );
             c1.CompressionKind = CompressionKind.GZiped;
-            d1.Modify( TestHelper.Monitor, () =>
+            await d1.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 d1.Root.Prop1 = "Hello (I'm compressed)";
                 d1.Root.Prop2 = "World! (me too)";
@@ -241,7 +236,7 @@ namespace CK.Observable.Domain.Tests.Clients
             new FileInfo( file1 ).Length.Should().BeLessThan( new FileInfo( file2 ).Length, "Compressed file is smaller (even if the strings are bigger)." );
 
             var cC = new FileTransactionProviderClient( file1, 0 );
-            using var dC = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, nameof( Snapshot_file_can_be_saved_and_restored_in_compressed_or_not_form ), startTimer: true, client: cC );
+            using var dC = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, nameof( Snapshot_file_can_be_saved_and_restored_in_compressed_or_not_form_Async ), startTimer: true, client: cC );
             using( dC.AcquireReadLock() )
             {
                 dC.Root.Prop1.Should().Be( "Hello (I'm compressed)" );

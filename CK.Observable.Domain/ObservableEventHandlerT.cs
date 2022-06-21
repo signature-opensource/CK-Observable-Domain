@@ -1,14 +1,40 @@
+using CK.BinarySerialization;
 using CK.Core;
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace CK.Observable
 {
     /// <summary>
-    /// Serializable and safe event handler: only non null and static method or method on a <see cref="IDestroyable"/> (that must
-    /// be serializable) can be added.
+    /// Serializable and safe event handler: only static methods or methods on a <see cref="IDestroyable"/> (that must
+    /// be serializable) can be registered.
+    /// <para>
+    /// When suppressing the event, <see cref="ObservableEventHandler.Skip(BinarySerialization.IBinaryDeserializer)"/>
+    /// must be used when deserializing from a previous version that had the event.
+    /// </para>
+    /// <para>
     /// This is a helper class that implements <see cref="SafeEventHandler{TEventArgs}"/> events.
+    /// This field MUST not be readonly. The pattern is the following one:
+    /// <code>
+    /// // Declare a private non readonly field:
+    /// ObservableEventHandler&lt;MyEventArgs&gt; _myEvent;
+    /// 
+    /// // In the Write method, saves it:
+    /// o._myEvent.Write( s );
+    /// 
+    /// // In the Deserialization constructor, reads it back:
+    /// _myEvent = new ObservableEventHandler&lt;MyEventArgs&gt;( d );
+    /// 
+    /// // Exposes the event:
+    /// public event SafeEventHandler&lt;MyEventArgs&gt; MyEvent
+    /// {
+    ///    add => _myEvent.Add( value );
+    ///    remove => _myEvent.Remove( value );
+    /// }
+    /// </code>
+    /// </para>
     /// </summary>
     /// <typeparam name="TEventArgs">The type of the event argument.</typeparam>
     public struct ObservableEventHandler<TEventArgs> where TEventArgs : EventArgs
@@ -20,13 +46,13 @@ namespace CK.Observable
         /// If the method has been suppressed, use the static helper <see cref="ObservableEventHandler.Skip(IBinaryDeserializer)"/>.
         /// </summary>
         /// <param name="r">The deserializer.</param>
-        public ObservableEventHandler( IBinaryDeserializer r ) => _handler = new ObservableDelegate( r );
+        public ObservableEventHandler( IBinaryDeserializer d ) => _handler = new ObservableDelegate( d );
 
         /// <summary>
         /// Serializes this <see cref="ObservableEventHandler{TEventArgs}"/>.
         /// </summary>
         /// <param name="w">The writer.</param>
-        public void Write( BinarySerializer w ) => _handler.Write( w );
+        public void Write( IBinarySerializer s ) => _handler.Write( s );
 
         /// <summary>
         /// Gets whether at least one handler is registered.
@@ -38,7 +64,7 @@ namespace CK.Observable
         /// </summary>
         /// <param name="h">The handler must be non null and be a static method or a method on a <see cref="ObservableObject"/>.</param>
         /// <param name="eventName">The event name (used for error messages).</param>
-        public void Add( SafeEventHandler<TEventArgs> h, string eventName ) => _handler.Add( h, eventName );
+        public void Add( SafeEventHandler<TEventArgs> h, [CallerMemberName] string? eventName = null ) => _handler.Add( h, eventName );
 
         /// <summary>
         /// Removes a handler and returns true if it has been removed.
@@ -76,7 +102,7 @@ namespace CK.Observable
         /// <returns>True on success, false if at least one handler has thrown.</returns>
         public bool SafeRaise( IActivityMonitor monitor, object sender, TEventArgs args )
         {
-            if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
+            Throw.CheckNotNullArgument( monitor );
             bool success = true;
             var h = _handler.Cleanup();
             for( int i = 0; i < h.Length; ++i )

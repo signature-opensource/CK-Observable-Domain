@@ -1,3 +1,4 @@
+using CK.BinarySerialization;
 using CK.Core;
 using System;
 using System.Collections.Generic;
@@ -8,8 +9,8 @@ namespace CK.Observable.League
     /// <summary>
     /// Immutable definition of options for domains managed in a <see cref="ObservableLeague"/>.
     /// </summary>
-    [SerializationVersion( 2 )]
-    public sealed class ManagedDomainOptions : IEquatable<ManagedDomainOptions>
+    [SerializationVersion( 3 )]
+    public sealed class ManagedDomainOptions : IEquatable<ManagedDomainOptions>, ICKSlicedSerializable
     {
         /// <summary>
         /// Gets the <see cref="DomainLifeCycleOption"/> configuration.
@@ -22,17 +23,16 @@ namespace CK.Observable.League
         public readonly CompressionKind CompressionKind;
 
         /// <summary>
-        /// Number of transactions to skip after every save.
+        /// Number of transactions to skip after every commit.
         /// <para>
-        /// Defaults to zero: transaction mode is on, unhandled errors trigger a rollback of the current state.
+        /// Defaults to zero: transaction mode is on, unhandled errors trigger a rollback to the previous state (before the commit).
         /// </para>
         /// <para>
-        /// When positive, the transaction mode is on, but in a very dangerous mode: whenever saves are skipped,
-        /// the domain rollbacks to an old version of itself.
+        /// When positive, the transaction mode is in a very dangerous mode since the domain may rollback to an old version of itself.
         /// </para>
         /// <para>
         /// When set to -1, transaction mode is off. Unhandled errors are logged (as <see cref="LogLevel.Error"/>) and
-        /// silently swallowed by <see cref="MemoryTransactionProviderClient.OnUnhandledError"/> method.
+        /// silently swallowed by <see cref="MemoryTransactionProviderClient.OnUnhandledException"/> method.
         /// </para>
         /// </summary>
         public readonly int SkipTransactionCount;
@@ -40,7 +40,7 @@ namespace CK.Observable.League
         /// <summary>
         /// Minimum time between each save, checked on every transaction commit.
         /// When negative, the file will not be saved automatically (manual save must be done by <see cref="IObservableDomainShellBase.SaveAsync(IActivityMonitor)"/>
-        /// or by sending the <see cref="ObservableDomain.SaveCommand"/> from a transaction).
+        /// or by sending the <see cref="ObservableDomain.SnapshotDomainCommand"/> from a transaction).
         /// When 0, every transaction will be saved.
         /// </summary>
         public readonly TimeSpan SnapshotSaveDelay;
@@ -61,6 +61,15 @@ namespace CK.Observable.League
         /// Defaults to 10 Mebibyte.
         /// </summary>
         public readonly int SnapshotMaximalTotalKiB;
+
+        /// <summary>
+        /// The rate at which housekeeping is executed, in Modify cycles (ie. how many transactions between housekeeping).
+        /// <para>
+        /// Defaults to 50.
+        /// </para>
+        /// </summary>
+        /// <remarks>Housekeeping is always executed on domain load, and on manual save.</remarks>
+        public readonly int HousekeepingRate;
 
         /// <summary>
         /// Gets the maximum time during which events are kept.
@@ -88,7 +97,8 @@ namespace CK.Observable.League
                 SnapshotKeepDuration,
                 SnapshotMaximalTotalKiB,
                 ExportedEventKeepDuration,
-                ExportedEventKeepLimit
+                ExportedEventKeepLimit,
+                HousekeepingRate
             );
 
         /// <summary>
@@ -105,22 +115,23 @@ namespace CK.Observable.League
                 SnapshotKeepDuration,
                 SnapshotMaximalTotalKiB,
                 ExportedEventKeepDuration,
-                ExportedEventKeepLimit
+                ExportedEventKeepLimit,
+                HousekeepingRate
             );
 
 
         /// <summary>
         /// Initializes a new <see cref="ManagedDomainOptions"/>.
         /// </summary>
-        public ManagedDomainOptions(
-            DomainLifeCycleOption loadOption,
-            CompressionKind c,
-            int skipTransactionCount,
-            TimeSpan snapshotSaveDelay,
-            TimeSpan snapshotKeepDuration,
-            int snapshotMaximalTotalKiB,
-            TimeSpan eventKeepDuration,
-            int eventKeepLimit )
+        public ManagedDomainOptions( DomainLifeCycleOption loadOption,
+                                     CompressionKind c,
+                                     int skipTransactionCount,
+                                     TimeSpan snapshotSaveDelay,
+                                     TimeSpan snapshotKeepDuration,
+                                     int snapshotMaximalTotalKiB,
+                                     TimeSpan eventKeepDuration,
+                                     int eventKeepLimit,
+                                     int housekeepingRate )
         {
             LifeCycleOption = loadOption;
             CompressionKind = c;
@@ -130,43 +141,35 @@ namespace CK.Observable.League
             SnapshotMaximalTotalKiB = snapshotMaximalTotalKiB;
             ExportedEventKeepDuration = eventKeepDuration;
             ExportedEventKeepLimit = eventKeepLimit;
+            HousekeepingRate = housekeepingRate;
         }
 
-        ManagedDomainOptions( IBinaryDeserializer r, TypeReadInfo? info )
+        ManagedDomainOptions( IBinaryDeserializer d, ITypeReadInfo info )
         {
-            LifeCycleOption = r.ReadEnum<DomainLifeCycleOption>();
-            CompressionKind = r.ReadEnum<CompressionKind>();
+            var r = d.Reader;
+            LifeCycleOption = (DomainLifeCycleOption)r.ReadInt32();
+            CompressionKind = (CompressionKind)r.ReadInt32();
             SnapshotSaveDelay = r.ReadTimeSpan();
             SnapshotKeepDuration = r.ReadTimeSpan();
             SnapshotMaximalTotalKiB = r.ReadInt32();
             ExportedEventKeepDuration = r.ReadTimeSpan();
             ExportedEventKeepLimit = r.ReadInt32();
-            if( info.Version < 2 )
-            {
-                // SaveDestroyedObjectBehavior enumeration (int).
-                r.ReadInt32();
-            }
-            if( info.Version >= 1 )
-            {
-                SkipTransactionCount = r.ReadInt32();
-            }
+            SkipTransactionCount = r.ReadInt32();
+            HousekeepingRate = r.ReadInt32();
         }
 
-        void Write( BinarySerializer w )
+        public static void Write( IBinarySerializer s, in ManagedDomainOptions o )
         {
-            w.WriteEnum( LifeCycleOption );
-            w.WriteEnum( CompressionKind );
-            w.Write( SnapshotSaveDelay );
-            w.Write( SnapshotKeepDuration );
-            w.Write( SnapshotMaximalTotalKiB );
-            w.Write( ExportedEventKeepDuration );
-            w.Write( ExportedEventKeepLimit );
-
-            // v2: no more SaveDestroyedObjectBehavior.
-            // w.WriteEnum( SaveDestroyedObjectBehavior );
-
-            // v1
-            w.Write( SkipTransactionCount );
+            var w = s.Writer;
+            w.Write( (int)o.LifeCycleOption );
+            w.Write( (int)o.CompressionKind );
+            w.Write( o.SnapshotSaveDelay );
+            w.Write( o.SnapshotKeepDuration );
+            w.Write( o.SnapshotMaximalTotalKiB );
+            w.Write( o.ExportedEventKeepDuration );
+            w.Write( o.ExportedEventKeepLimit );
+            w.Write( o.SkipTransactionCount );
+            w.Write( o.HousekeepingRate );
         }
 
         /// <summary>
@@ -174,26 +177,34 @@ namespace CK.Observable.League
         /// </summary>
         /// <param name="obj">The other object.</param>
         /// <returns>True on equal, false otherwise.</returns>
-        public override bool Equals( object obj ) => obj is ManagedDomainOptions o && Equals( o );
+        public override bool Equals( object? obj ) => obj is ManagedDomainOptions o && Equals( o );
 
         /// <summary>
         /// Value semantic hash code.
         /// </summary>
         /// <returns>The hash code.</returns>
-        public override int GetHashCode() => HashCode.Combine( LifeCycleOption, CompressionKind, SnapshotSaveDelay, SnapshotKeepDuration, SnapshotMaximalTotalKiB, ExportedEventKeepDuration, ExportedEventKeepLimit + SkipTransactionCount );
+        public override int GetHashCode() => HashCode.Combine( LifeCycleOption,
+                                                               CompressionKind,
+                                                               SnapshotSaveDelay,
+                                                               SnapshotKeepDuration,
+                                                               SnapshotMaximalTotalKiB,
+                                                               ExportedEventKeepDuration,
+                                                               ExportedEventKeepLimit + SkipTransactionCount );
 
         /// <summary>
         /// Value semantic equality.
         /// </summary>
         /// <param name="other">The other object.</param>
         /// <returns>True on equal, false otherwise.</returns>
-        public bool Equals( ManagedDomainOptions other ) => LifeCycleOption == other.LifeCycleOption
-                                                            && CompressionKind == other.CompressionKind
-                                                            && SnapshotSaveDelay == other.SnapshotSaveDelay
-                                                            && SkipTransactionCount == other.SkipTransactionCount
-                                                            && SnapshotKeepDuration == other.SnapshotKeepDuration
-                                                            && SnapshotMaximalTotalKiB == other.SnapshotMaximalTotalKiB
-                                                            && ExportedEventKeepDuration == other.ExportedEventKeepDuration
-                                                            && ExportedEventKeepLimit == other.ExportedEventKeepLimit;
+        public bool Equals( ManagedDomainOptions? other ) => other != null
+                                                             && LifeCycleOption == other.LifeCycleOption
+                                                             && CompressionKind == other.CompressionKind
+                                                             && SnapshotSaveDelay == other.SnapshotSaveDelay
+                                                             && SkipTransactionCount == other.SkipTransactionCount
+                                                             && SnapshotKeepDuration == other.SnapshotKeepDuration
+                                                             && SnapshotMaximalTotalKiB == other.SnapshotMaximalTotalKiB
+                                                             && ExportedEventKeepDuration == other.ExportedEventKeepDuration
+                                                             && ExportedEventKeepLimit == other.ExportedEventKeepLimit
+                                                             && HousekeepingRate == other.HousekeepingRate;
     }
 }

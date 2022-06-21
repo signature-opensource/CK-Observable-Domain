@@ -70,12 +70,12 @@ namespace CK.Observable.Domain.Tests
 
         public class SimpleSidekick : ObservableDomainSidekick
         {
-            public SimpleSidekick( ObservableDomain d )
-                : base( d )
+            public SimpleSidekick( IObservableDomainSidekickManager manager )
+                : base( manager )
             {
             }
 
-            protected override void OnSuccessfulTransaction( in SuccessfulTransactionEventArgs result )
+            protected override void OnTransactionResult( in TransactionDoneEventArgs result )
             {
                 if( result.Events.Count > 0 && result.Events.Any( e => e.EventType == ObservableEventType.ListInsert ) )
                 {
@@ -140,7 +140,7 @@ namespace CK.Observable.Domain.Tests
             {
             }
 
-            protected override void OnDomainCleared( IActivityMonitor monitor )
+            protected override void OnUnload( IActivityMonitor monitor )
             {
             }
 
@@ -158,12 +158,12 @@ namespace CK.Observable.Domain.Tests
             {
             }
 
-            SimpleRoot( IBinaryDeserializer r, TypeReadInfo info )
-                : base( RevertSerialization.Default )
+            SimpleRoot( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+                : base( BinarySerialization.Sliced.Instance )
             {
             }
 
-            void Write( BinarySerializer w )
+            public static void Write( BinarySerialization.IBinarySerializer w, in SimpleRoot o )
             {
             }
 
@@ -227,7 +227,9 @@ namespace CK.Observable.Domain.Tests
         {
             ResetContext();
 
-            using var d = new ObservableDomain<SimpleRoot>( TestHelper.Monitor, "local_are_executed_before_domain_ones", startTimer: true );
+            using var d = new ObservableDomain<SimpleRoot>( TestHelper.Monitor,
+                                                            "local_are_executed_before_domain_ones_when_parallelDomainPostActions_is_false",
+                                                            startTimer: true );
 
             await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
@@ -239,8 +241,8 @@ namespace CK.Observable.Domain.Tests
                 d.Root.SendNumber( HandlerTarget.Domain );
             }, parallelDomainPostActions: false );
 
-            LocalNumbers.Should().BeEquivalentTo( (0, 1000), (1, 1001), (2, 1002) );
-            DomainNumbers.Should().BeEquivalentTo( (3, 0), (4, 1), (5, 2) );
+            LocalNumbers.Should().BeEquivalentTo( new[] { (0, 1000), (1, 1001), (2, 1002) } );
+            DomainNumbers.Should().BeEquivalentTo( new[] { (3, 0), (4, 1), (5, 2) } );
 
             await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
@@ -252,32 +254,41 @@ namespace CK.Observable.Domain.Tests
                 d.Root.SendNumber( HandlerTarget.Domain );
             }, parallelDomainPostActions: false );
 
-            LocalNumbers.Should().BeEquivalentTo( (0, 1000), (1, 1001), (2, 1002), (6, 1003), (7, 1004), (8, 1005) );
-            DomainNumbers.Should().BeEquivalentTo( (3, 0), (4, 1), (5, 2), (9, 3), (10, 4), (11, 5) );
+            LocalNumbers.Should().BeEquivalentTo( new[] { (0, 1000), (1, 1001), (2, 1002), (6, 1003), (7, 1004), (8, 1005) } );
+            DomainNumbers.Should().BeEquivalentTo( new[] { (3, 0), (4, 1), (5, 2), (9, 3), (10, 4), (11, 5) } );
         }
 
         [TestCase( 20, false )]
         [TestCase( 20, true )]
-        [Timeout(20*1000)]
-        public async Task parrallel_operations_respect_the_Domain_PostActions_ordering_guaranty( int nb, bool useAsync )
+        [Timeout(30*1000)]
+        public async Task parrallel_operations_respect_the_Domain_PostActions_ordering_guaranty_Async( int nb, bool useAsync )
         {
             ResetContext();
 
-            using var d = new ObservableDomain<SimpleRoot>( TestHelper.Monitor, "parrallel_operations_respect_the_Domain_PostActions_ordering_guaranty", startTimer: true );
+            using var d = new ObservableDomain<SimpleRoot>( TestHelper.Monitor, $"parrallel_operations_respect_the_Domain_PostActions_ordering_guaranty-{nb}-{useAsync}", startTimer: true );
 
             Barrier b = new Barrier( nb );
             var tasks = Enumerable.Range( 0, nb ).Select( i => Task.Run( () => Run( i, i == 0 ? TestHelper.Monitor : new ActivityMonitor(), d, b ) ) ).ToArray();
             await Task.WhenAll( tasks );
+            TestHelper.Monitor.Info( $"{nb} tasks done! Disposing Domain." );
+            d.Dispose( TestHelper.Monitor );
 
+
+            LocalNumbers.Count.Should().Be( 3 * nb );
             LocalNumbers.Select( x => x.Number ).Should().NotBeInAscendingOrder();
+
+            DomainNumbers.Count.Should().Be( 3 * nb );
             DomainNumbers.Select( x => x.Number ).Should().BeInAscendingOrder();
 
             async Task Run( int num, IActivityMonitor monitor, ObservableDomain<SimpleRoot> d, Barrier b )
             {
+                monitor.Info( $"Run {num}: Waiting for Barrier..." );
                 b.SignalAndWait();
+                monitor.Info( $"Running {num}!" );
                 var tr = await d.ModifyThrowAsync( monitor, () =>
                 {
-                    if( (num % 2) == 0 ) d.Root.SendWait( 500, WaitTarget.PostActions );
+                    d.Root.SendWait( num, WaitTarget.PostActions );
+                    d.Root.SendWait( num, WaitTarget.DomainPostActions );
                     d.Root.SendNumber( HandlerTarget.Local, useAsync );
                     d.Root.SendNumber( HandlerTarget.Domain, useAsync );
                     d.Root.SendNumber( HandlerTarget.Local, useAsync );
@@ -285,7 +296,9 @@ namespace CK.Observable.Domain.Tests
                     d.Root.SendNumber( HandlerTarget.Local, useAsync );
                     d.Root.SendNumber( HandlerTarget.Domain, useAsync );
                 } );
+                monitor.Info( $"Run {num}: Waiting for DomainPostActionsError..." );
                 await tr.DomainPostActionsError;
+                monitor.Info( $"Awaited DomainPostActionsError! (Run {num})" );
             }
         }
 
@@ -342,7 +355,7 @@ namespace CK.Observable.Domain.Tests
             {
                 if( modifyNoThrowAsync )
                 {
-                    return d.ModifyNoThrowAsync( i == 0 ? TestHelper.Monitor : new ActivityMonitor(), () => RunLoop( d ) );
+                    return d.TryModifyAsync( i == 0 ? TestHelper.Monitor : new ActivityMonitor(), () => RunLoop( d ) );
                 }
                 else
                 {
@@ -358,9 +371,9 @@ namespace CK.Observable.Domain.Tests
             {
                 try
                 {
-                    await d.ModifyAsync( monitor, () => RunLoop( d ) );
+                    await d.ModifyThrowAsync( monitor, () => RunLoop( d ) );
                 }
-                catch( Exception ex )
+                catch( Exception )
                 {
                 }
             }

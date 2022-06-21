@@ -4,9 +4,11 @@ using FluentAssertions;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
 
 namespace CK.Observable.Domain.Tests
@@ -14,39 +16,67 @@ namespace CK.Observable.Domain.Tests
     [TestFixture]
     public class DomainSerializationTests
     {
+
+        class A
+        {
+            public readonly string Called;
+
+            public A()
+            {
+                Called = Virtual();
+            }
+
+            protected virtual string Virtual() => "A";
+        }
+
+        class B : A
+        {
+            protected override string Virtual() => "B";
+        }
+
+        // C# allows virtual methods to be called by the constructor of a base class.
+        // Collections Write method calls a virtual WriteContent(): specialized collections can override WriteContent().
+        // And collections use a virtual ReadContent( int version ) that may be use to handle specific deserialization.
         [Test]
-        public void simple_serialization()
+        public void how_specialized_collections_can_handle_specific_serialization_issues()
+        {
+            var o = new B();
+            o.Called.Should().Be( "B" );
+        }
+
+        [Test]
+        public async Task simple_serialization_Async()
         {
             using var domain = new ObservableDomain( TestHelper.Monitor, "TEST", startTimer: false );
-            domain.Modify( TestHelper.Monitor, () =>
+            await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 var car = new Car( "Hello" );
                 car.TestSpeed = 10;
-            } ).Success.Should().BeTrue();
+            } );
 
-            using var d2 = TestHelper.SaveAndLoad( domain );
+            using var d2 = TestHelper.CloneDomain( domain );
             domain.IsDisposed.Should().BeTrue( "SaveAndLoad disposed it." );
 
             IReadOnlyList<ObservableEvent>? events = null;
-            d2.OnSuccessfulTransaction += ( d, ev ) => events = ev.Events;
+            d2.TransactionDone += ( d, ev ) => events = ev.Events;
 
             var c = d2.AllObjects.OfType<Car>().Single();
             c.Name.Should().Be( "Hello" );
             c.TestSpeed.Should().Be( 10 );
 
-            d2.Modify( TestHelper.Monitor, () =>
+            await d2.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 c.TestSpeed = 10000;
-            } ).Success.Should().BeTrue();
+            } );
             events.Should().HaveCount( 1 );
         }
 
         [Test]
-        public void serialization_with_mutiple_types()
+        public async Task serialization_with_mutiple_types_Async()
         {
-            using var domain = new ObservableDomain( TestHelper.Monitor, nameof( serialization_with_mutiple_types ), startTimer: true );
-            MultiPropertyType defValue = null;
-            domain.Modify( TestHelper.Monitor, () =>
+            using var domain = new ObservableDomain( TestHelper.Monitor, nameof( serialization_with_mutiple_types_Async ), startTimer: true );
+            MultiPropertyType defValue = null!;
+            await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 defValue = new MultiPropertyType();
                 var other = new MultiPropertyType();
@@ -54,10 +84,10 @@ namespace CK.Observable.Domain.Tests
                 domain.AllObjects.ElementAt( 1 ).Should().BeSameAs( other );
             } );
 
-            using var d2 = TestHelper.SaveAndLoad( domain );
+            using var d2 = TestHelper.CloneDomain( domain );
             d2.AllObjects.OfType<MultiPropertyType>().All( o => o.Equals( defValue ) );
 
-            d2.Modify( TestHelper.Monitor, () =>
+            await d2.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 var other = d2.AllObjects.OfType<MultiPropertyType>().ElementAt( 1 );
                 other.ChangeAll( "Changed", 3, Guid.NewGuid() );
@@ -65,7 +95,7 @@ namespace CK.Observable.Domain.Tests
             d2.AllObjects.First().Should().Match( o => o.Equals( defValue ) );
             d2.AllObjects.ElementAt( 1 ).Should().Match( o => !o.Equals( defValue ) );
 
-            using( var d3 = TestHelper.SaveAndLoad( d2 ) )
+            using( var d3 = TestHelper.CloneDomain( d2 ) )
             {
                 d3.AllObjects.First().Should().Match( o => o.Equals( defValue ) );
                 d3.AllObjects.ElementAt( 1 ).Should().Match( o => !o.Equals( defValue ) );
@@ -73,10 +103,10 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
-        public void with_cycle_serialization()
+        public async Task with_cycle_serialization_Async()
         {
-            using var domain = new ObservableDomain( TestHelper.Monitor, nameof( with_cycle_serialization ), startTimer: true );
-            domain.Modify( TestHelper.Monitor, () =>
+            using var domain = new ObservableDomain( TestHelper.Monitor, nameof( with_cycle_serialization_Async ), startTimer: true );
+            await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 var g = new Garage();
                 g.CompanyName = "Hello";
@@ -84,31 +114,34 @@ namespace CK.Observable.Domain.Tests
                 var m = new Mechanic( g ) { FirstName = "Hela", LastName = "Bas" };
                 m.CurrentCar = car;
             } );
-            using var d2 = TestHelper.SaveAndLoad( domain );
-            var g1 = domain.AllObjects.OfType<Garage>().Single();
+            // SaveAndLoad disposes domain.
+            // Captures the Garage's OId since it is set to invalid.
+            var g1OId = domain.AllObjects.OfType<Garage>().Single().OId;
+
+            using var d2 = TestHelper.CloneDomain( domain );
             var g2 = d2.AllObjects.OfType<Garage>().Single();
-            g2.CompanyName.Should().Be( g1.CompanyName );
-            g2.OId.Should().Be( g1.OId );
+            g2.CompanyName.Should().Be( "Hello" );
+            g2.OId.Should().Be( g1OId );
         }
 
 
         [Test]
-        public void with_cycle_serialization_between_2_objects()
+        public async Task with_cycle_serialization_between_2_objects_Async()
         {
-            using var domain = new ObservableDomain( TestHelper.Monitor, nameof( with_cycle_serialization_between_2_objects ), startTimer: true );
-            domain.Modify( TestHelper.Monitor, () =>
+            using var domain = new ObservableDomain( TestHelper.Monitor, nameof( with_cycle_serialization_between_2_objects_Async ), startTimer: true );
+            await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 var p1 = new Person() { FirstName = "A" };
                 var p2 = new Person() { FirstName = "B", Friend = p1 };
                 p1.Friend = p2;
             } );
-            using var d2 = TestHelper.SaveAndLoad( domain );
             var pA1 = domain.AllObjects.OfType<Person>().Single( p => p.FirstName == "A" );
             var pB1 = domain.AllObjects.OfType<Person>().Single( p => p.FirstName == "B" );
 
             pA1.Friend.Should().BeSameAs( pB1 );
             pB1.Friend.Should().BeSameAs( pA1 );
 
+            using var d2 = TestHelper.CloneDomain( domain );
             var pA2 = d2.AllObjects.OfType<Person>().Single( p => p.FirstName == "A" );
             var pB2 = d2.AllObjects.OfType<Person>().Single( p => p.FirstName == "B" );
 
@@ -117,47 +150,39 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
-        public void ultimate_cycle_serialization()
+        public async Task ultimate_cycle_serialization_Async()
         {
-            using var domain = new ObservableDomain( TestHelper.Monitor, nameof( ultimate_cycle_serialization ), startTimer: true );
-            domain.Modify( TestHelper.Monitor, () =>
+            using var domain = new ObservableDomain( TestHelper.Monitor, nameof( ultimate_cycle_serialization_Async ), startTimer: true );
+            await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 var p = new Person() { FirstName = "P" };
                 p.Friend = p;
             } );
-            using var d2 = TestHelper.SaveAndLoad( domain );
             var p1 = domain.AllObjects.OfType<Person>().Single();
             p1.Friend.Should().BeSameAs( p1 );
 
+            using var d2 = TestHelper.CloneDomain( domain );
             var p2 = d2.AllObjects.OfType<Person>().Single();
             p2.Friend.Should().BeSameAs( p2 );
         }
 
         [Test]
-        public void sample_graph_serialization_inside_read_or_write_locks()
+        public async Task sample_graph_serialization_inside_read_or_write_locks_Async()
         {
-            using( var domain = Sample.SampleDomain.CreateSample() )
+            using( var domain = await SampleDomain.CreateSampleAsync() )
             {
-                using( var d2 = TestHelper.SaveAndLoad( domain, skipDomainDispose: true ) )
+                using( var d2 = TestHelper.CloneDomain( domain, initialDomainDispose: false ) )
                 {
-                    Sample.SampleDomain.CheckSampleGarage1( d2 );
+                    SampleDomain.CheckSampleGarage( d2 );
                 }
 
                 using( domain.AcquireReadLock() )
                 {
-                    using( var d = TestHelper.SaveAndLoad( domain, skipDomainDispose: true ) )
+                    using( var d = TestHelper.CloneDomain( domain, initialDomainDispose: false ) )
                     {
-                        Sample.SampleDomain.CheckSampleGarage1( d );
+                        SampleDomain.CheckSampleGarage( d );
                     }
                 }
-
-                domain.Modify( TestHelper.Monitor, () =>
-                {
-                    using( var d = TestHelper.SaveAndLoad( domain, skipDomainDispose: true ) )
-                    {
-                        Sample.SampleDomain.CheckSampleGarage1( d );
-                    }
-                } );
             }
         }
 
@@ -170,29 +195,29 @@ namespace CK.Observable.Domain.Tests
 
             }
 
-            LoadHookTester( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+            LoadHookTester( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+                : base( BinarySerialization.Sliced.Instance )
             {
-                Count = r.ReadInt32();
+                Count = r.Reader.ReadInt32();
             }
 
-            void Write( BinarySerializer w )
+            public static void Write( BinarySerialization.IBinarySerializer s, in LoadHookTester o )
             {
-                w.Write( Count );
+                s.Writer.Write( o.Count );
             }
 
             public int Count { get; private set; }
 
-            public ObservableTimer Timer { get; }
+            public ObservableTimer? Timer { get; }
  
         }
 
         [Test]
-        public void persisting_disposed_objects_reference_tracking()
+        public async Task persisting_disposed_objects_reference_tracking_Async()
         {
             // Will be disposed by SaveAndLoad.
-            var d = new ObservableDomain( TestHelper.Monitor, nameof( loadHooks_can_skip_the_TimedEvents_update ), startTimer: true );
-            d.Modify( TestHelper.Monitor, () =>
+            var d = new ObservableDomain( TestHelper.Monitor, nameof( Load_can_disable_TimeManager_Async ), startTimer: true );
+            await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 var list = new ObservableList<object>();
                 var timer = new ObservableTimer( DateTime.UtcNow.AddDays( 1 ) );
@@ -210,9 +235,9 @@ namespace CK.Observable.Domain.Tests
             ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
 
             // This disposes the domain and returns a brand new one. This doesn't throw.
-            using var d2 = TestHelper.SaveAndLoad( d );
+            using var d2 = TestHelper.CloneDomain( d );
 
-            d2.Modify( TestHelper.Monitor, () =>
+            await d2.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 var list = d2.AllObjects.OfType<ObservableList<object>>().Single();
 
@@ -224,7 +249,7 @@ namespace CK.Observable.Domain.Tests
             } );
             ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d2 );
 
-            d2.Modify( TestHelper.Monitor, () =>
+            await d2.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 var list = d2.AllObjects.OfType<ObservableList<object>>().Single();
                 list.Count.Should().Be( 4 );
@@ -232,42 +257,59 @@ namespace CK.Observable.Domain.Tests
                 {
                     o.IsDestroyed.Should().BeTrue();
                 }
-            } ).Success.Should().BeTrue();
+            } );
 
+            Debug.Assert( d2.CurrentLostObjectTracker != null );
             d2.CurrentLostObjectTracker.ReferencedDestroyed.Should().HaveCount( 4 );
         }
 
-
         [Test]
-        public void loadHooks_can_skip_the_TimedEvents_update()
+        public async Task Load_can_disable_TimeManager_Async()
         {
             ElapsedFired = false;
 
-            using var d = new ObservableDomain( TestHelper.Monitor, nameof( loadHooks_can_skip_the_TimedEvents_update ), startTimer: true );
-            d.Modify( TestHelper.Monitor, () =>
+            var d = new ObservableDomain( TestHelper.Monitor, nameof( Load_can_disable_TimeManager_Async ), startTimer: true );
+            await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 var r = new ObservableReminder( DateTime.UtcNow.AddMilliseconds( 100 ) );
                 r.Elapsed += OnElapsedFire;
+                d.TimeManager.IsRunning.Should().BeTrue();
                 d.TimeManager.Reminders.Single().Should().BeSameAs( r );
                 r.IsActive.Should().BeTrue();
             } );
-            using var d2 = TestHelper.SaveAndLoad( d, startTimer: false, pauseMilliseconds: 150 );
-            d.IsDisposed.Should().BeTrue();
+
+            using var d2 = TestHelper.CloneDomain( d, startTimer: false, pauseMilliseconds: 150 );
+            d.IsDisposed.Should().BeTrue( "Initial domain has been disposed.");
 
             using( d2.AcquireReadLock() )
             {
+                d2.TimeManager.IsRunning.Should().BeFalse();
                 d2.TimeManager.Reminders.Single().IsActive.Should().BeTrue( "Not triggered by Load." );
             }
             Thread.Sleep( 100 );
             using( d2.AcquireReadLock() )
             {
-                d2.TimeManager.Reminders.Single().IsActive.Should().BeTrue( "Will be triggered at the start of the next Modify." );
+                d2.TimeManager.IsRunning.Should().BeFalse();
+                d2.TimeManager.Reminders.Single().IsActive.Should().BeTrue( "Waiting for TimeManager.Start()." );
+                ElapsedFired.Should().BeFalse();
             }
-            d2.Modify( TestHelper.Monitor, () =>
+            await d2.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
-                d2.TimeManager.Reminders.Single().IsActive.Should().BeFalse();
-                ElapsedFired.Should().BeTrue();
+                d2.TimeManager.IsRunning.Should().BeFalse();
+                d2.TimeManager.Reminders.Single().IsActive.Should().BeTrue();
             } );
+
+            ElapsedFired.Should().BeFalse( "Still waiting." );
+
+            await d2.ModifyThrowAsync( TestHelper.Monitor, () =>
+            {
+                d2.TimeManager.Start();
+                d2.TimeManager.IsRunning.Should().BeTrue();
+                d2.TimeManager.Reminders.Single().IsActive.Should().BeTrue( "Will be raised at the end of the transaction." );
+            } );
+
+            ElapsedFired.Should().BeTrue( "TimeManager.IsRunning: reminder has fired." );
+
         }
 
         static bool ElapsedFired = false;

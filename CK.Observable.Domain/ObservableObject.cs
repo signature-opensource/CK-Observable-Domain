@@ -14,7 +14,7 @@ namespace CK.Observable
     /// which properties changes and <see cref="Destroy()"/> are tracked.
     /// </summary>
     [SerializationVersion( 1 )]
-    public abstract partial class ObservableObject : INotifyPropertyChanged, IDestroyableObject, IKnowMyExportDriver
+    public abstract partial class ObservableObject : INotifyPropertyChanged, IKnowMyExportDriver, IDestroyableObject, BinarySerialization.ICKSlicedSerializable
     {
         ObservableObjectId _oid;
         internal readonly ObservableDomain ActualDomain;
@@ -49,7 +49,7 @@ namespace CK.Observable
             remove => _propertyChanged.Remove( value );
         }
 
-        event PropertyChangedEventHandler INotifyPropertyChanged.PropertyChanged
+        event PropertyChangedEventHandler? INotifyPropertyChanged.PropertyChanged
         {
             add
             {
@@ -63,8 +63,7 @@ namespace CK.Observable
 
         /// <summary>
         /// Constructor for specialized instance.
-        /// The current domain is retrieved automatically: it is the last one on the current thread
-        /// that has started a transaction (see <see cref="ObservableDomain.BeginTransaction"/>).
+        /// The current domain is retrieved automatically.
         /// </summary>
         protected ObservableObject()
             : this( ObservableDomain.GetCurrentActiveDomain() )
@@ -77,56 +76,47 @@ namespace CK.Observable
         /// <param name="domain">The domain to which this object belong.</param>
         ObservableObject( ObservableDomain domain )
         {
-            if( domain == null ) throw new ArgumentNullException( nameof( domain ) );
+            Throw.CheckNotNullArgument( domain );
             ActualDomain = domain;
             _exporter = ActualDomain._exporters.FindDriver( GetType() );
             _oid = ActualDomain.Register( this );
         }
 
-        /// <summary>
-        /// Specialized deserialization constructor for specialized classes: it must be called
-        /// by deserialization constructors otherwise an <see cref="InvalidOperationException"/>
-        /// is thrown when loading a domain.
-        /// </summary>
-        /// <param name="_">Unused parameter.</param>
-        protected ObservableObject( RevertSerialization _ )
-        {
-            RevertSerialization.OnRootDeserialized( this );
-        }
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+        protected ObservableObject( BinarySerialization.Sliced _ ) { }
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
-        ObservableObject( IBinaryDeserializer r, TypeReadInfo? info )
+        ObservableObject( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
         {
-            RevertSerialization.OnRootDeserialized( this );
-            _oid = new ObservableObjectId( r );
+            _oid = new ObservableObjectId( d.Reader );
             if( !IsDestroyed )
             {
                 // This enables the Observable object to be serializable/deserializable outside a Domain
                 // (for instance to use BinarySerializer.IdempotenceCheck): we really register the deserialized object
                 // if and only if the available Domain service is the one being deserialized.
-                var domain = r.Services.GetService<ObservableDomain>( throwOnNull: true );
+                var domain = d.Context.Services.GetService<ObservableDomain>( throwOnNull: true );
                 if( (ActualDomain = domain) == ObservableDomain.CurrentThreadDomain )
                 {
                     domain.SideEffectsRegister( this );
                 }
                 _exporter = domain._exporters.FindDriver( GetType() );
-                _destroyed = new ObservableEventHandler<ObservableDomainEventArgs>( r );
-                _propertyChanged = new ObservableEventHandler<PropertyChangedEventArgs>( r );
+                _destroyed = new ObservableEventHandler<ObservableDomainEventArgs>( d );
+                _propertyChanged = new ObservableEventHandler<PropertyChangedEventArgs>( d );
             }
         }
 
-        void Write( BinarySerializer w )
+
+        public static void Write( BinarySerialization.IBinarySerializer s, in ObservableObject o )
         {
-            _oid.Write( w );
-            if( !IsDestroyed )
+            o._oid.Write( s.Writer );
+            if( !o.IsDestroyed )
             {
-                _destroyed.Write( w );
-                _propertyChanged.Write( w );
+                o._destroyed.Write( s );
+                o._propertyChanged.Write( s );
             }
         }
 
-        /// <summary>
-        /// Gets whether this object has been disposed.
-        /// </summary>
+        /// <inheritdoc />
         public bool IsDestroyed => _oid == ObservableObjectId.Destroyed;
 
         /// <summary>
@@ -162,7 +152,7 @@ namespace CK.Observable
                 if( this is ObservableRootObject
                     && (!ObservableRootObject.AllowRootObjectDestroying || ActualDomain.AllRoots.IndexOf( x => x == this ) >= 0) )
                 {
-                    throw new InvalidOperationException( "ObservableRootObject cannot be disposed." );
+                    Throw.InvalidOperationException( "ObservableRootObject cannot be disposed." );
                 }
                 ActualDomain.CheckBeforeDestroy( this );
                 OnUnload();
@@ -190,7 +180,7 @@ namespace CK.Observable
         /// This is called by the <see cref="ObservableDomain.Load(IActivityMonitor, System.IO.Stream, bool, System.Text.Encoding?, int, bool?)"/>
         /// or <see cref="ObservableDomain.DoDispose(IActivityMonitor)"/> and by <see cref="ObservableDomain.GarbageCollectAsync"/>.
         /// </summary>
-        /// <param name="gc">True when called by the garbage collector: this object in unregistered.</param>
+        /// <param name="gc">True when called by the garbage collector: this object is unregistered.</param>
         internal void Unload( bool gc )
         {
             Debug.Assert( !IsDestroyed );
@@ -201,7 +191,7 @@ namespace CK.Observable
 
         /// <summary>
         /// Called when this object is unloaded: either because the <see cref="ObservableDomain"/> is disposed
-        /// or <see cref="ObservableDomain.Load(IActivityMonitor, System.IO.Stream, bool, System.Text.Encoding, int, bool)"/>
+        /// or <see cref="ObservableDomain.Load(IActivityMonitor, BinarySerialization.RewindableStream, int, bool?)"/>
         /// has been called or <see cref="Destroy"/> is being called (this is called prior to call <see cref="OnDestroy"/>).
         /// <para>
         /// This base is an empty implementation (we have nothing to do at this level). This must be overridden whenever
@@ -233,8 +223,29 @@ namespace CK.Observable
             var ev = ActualDomain.OnPropertyChanged( this, propertyName, value );
             if( ev != null )
             {
+                // Is this really useful?
+                // Is this even used?
+                // 
+                // The idea was that for any property:
+                //
+                //   public string Prop { get; set; }
+                //
+                // A Changed handler like this:
+                //
+                //     ObservableEventHandler _propChanged; // (name here DOES matter! '_' + camelCased property name + "Changed" )
+                //
+                //     public event SafeEventHandler&lt;MyEventArgs&gt; OnPChange // (name here doesn't matter)
+                //     {
+                //         add => _propChanged.Add( value );
+                //         remove => _propChanged.Remove( value );
+                //     }
+                //
+                // The event is automatically raised when the Prop changes.
+                //
+                // Code below is awful... Even if it can be optimized (at the price of some memory), this is terrible...
+                //
                 {
-                    // Forbids previously handled EventHandler: this is too dangerous.
+                    // Forbids previously (in initial ObservableDomain versions) handled EventHandler: this is too dangerous.
                     // See https://stackoverflow.com/questions/14885325/eventinfo-getraisemethod-always-null
                     FieldInfo fNamedEv = GetType().GetField( propertyName + "Changed", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance );
                     if( fNamedEv != null )

@@ -1,3 +1,4 @@
+using CK.Core;
 using CK.DeviceModel;
 using System;
 using System.Collections.Generic;
@@ -20,17 +21,15 @@ namespace CK.Observable.Device.Tests
             Domain.EnsureSidekicks();
         }
 
-        OSampleDevice( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+        OSampleDevice( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+                : base( BinarySerialization.Sliced.Instance )
         {
         }
 #pragma warning restore CS8618
 
-        void Write( BinarySerializer w )
+        public static void Write( BinarySerialization.IBinarySerializer w, in OSampleDevice o )
         {
         }
-
-        internal OSampleDeviceSidekick.IBridge _bridgeAccess;
 
         /// <summary>
         /// An observable device object should, if possible, not directly interact with its device.
@@ -43,6 +42,8 @@ namespace CK.Observable.Device.Tests
         /// <returns>The state or null if <see cref="ObservableDeviceObject.IsBoundDevice"/> is false.</returns>
         public SampleDevice.SafeDeviceState? GetSafeState() => _bridgeAccess.GetDeviceState();
 
+        internal OSampleDeviceSidekick.IBridge _bridgeAccess;
+
         /// <summary>
         /// The message starts with the <see cref="SampleDeviceConfiguration.Message"/> and ends with the
         /// number of times the device loop ran (at <see cref="SampleDeviceConfiguration.PeriodMilliseconds"/>).
@@ -50,8 +51,8 @@ namespace CK.Observable.Device.Tests
         public string? Message { get; internal set; }
 
         /// <summary>
-        /// The CmdSend helper enables easy command sending.
+        /// The SendDeviceCommand helper enables easy command sending.
         /// </summary>
-        public void SendSimpleCommand( string? messagePrefix = null ) => CmdSend<SampleCommand>( c => c.MessagePrefix = messagePrefix );
+        public void SendSimpleCommand( string? messagePrefix = null ) => SendDeviceCommand<SampleCommand>( c => c.MessagePrefix = messagePrefix );
     }
 }

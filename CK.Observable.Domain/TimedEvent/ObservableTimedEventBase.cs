@@ -1,3 +1,4 @@
+using CK.BinarySerialization;
 using CK.Core;
 using System;
 using System.Collections.Generic;
@@ -16,9 +17,10 @@ namespace CK.Observable
     /// </summary>
     [SerializationVersion( 1 )]
     [NotExportable]
-    public abstract class ObservableTimedEventBase : IDestroyableObject
+    public abstract class ObservableTimedEventBase : IDestroyableObject, BinarySerialization.ICKSlicedSerializable
     {
         internal TimeManager? TimeManager;
+
         /// <summary>
         /// The ActiveIndex is the index of this object in the heap managed by the TimeManager.
         /// When 0, this is "out of the heap": this is not active.
@@ -44,49 +46,25 @@ namespace CK.Observable
             TimeManager.OnCreated( this, true );
         }
 
-        protected ObservableTimedEventBase( RevertSerialization _ )
-        {
-            RevertSerialization.OnRootDeserialized( this );
-        }
+        /// <summary>
+        /// Specialized deserialization constructor for specialized classes.
+        /// </summary>
+        /// <param name="_">Unused parameter.</param>
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+        protected ObservableTimedEventBase( Sliced _ ) { }
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
-        ObservableTimedEventBase( IBinaryDeserializer r, TypeReadInfo info )
+        ObservableTimedEventBase( IBinaryDeserializer d, ITypeReadInfo info )
         {
-            RevertSerialization.OnRootDeserialized( this );
-            int index = r.ReadInt32();
+            int index = d.Reader.ReadInt32();
             if( index >= 0 )
             {
                 TimeManager = ObservableDomain.GetCurrentActiveDomain().TimeManager;
                 Debug.Assert( TimeManager != null );
                 ActiveIndex = index;
-                ExpectedDueTimeUtc = r.ReadDateTime();
-                if( info.Version == 0 )
-                {
-                    _clock = (SuspendableClock?)r.ReadObject();
-                    NextInClock = (ObservableTimedEventBase?)r.ReadObject();
-                    PrevInClock = (ObservableTimedEventBase?)r.ReadObject();
-
-                    r.ImplementationServices.OnPostDeserialization( () =>
-                    {
-                        if( _clock != null )
-                        {
-                            if( _clock.V0Bug == null || !_clock.V0Bug.Contains( this ) )
-                            {
-                                _clock = null;
-                                if( NextInClock != null ) NextInClock = null;
-                                if( PrevInClock != null ) PrevInClock = null;
-                            }
-                        }
-                        else
-                        {
-                            // Oups?
-                            if( NextInClock != null ) NextInClock = null;
-                            if( PrevInClock != null ) PrevInClock = null;
-                        }
-
-                    } );
-                }
-                _disposed = new ObservableEventHandler<ObservableDomainEventArgs>( r );
-                Tag = r.ReadObject();
+                ExpectedDueTimeUtc = d.Reader.ReadDateTime();
+                _disposed = new ObservableEventHandler<ObservableDomainEventArgs>( d );
+                Tag = d.ReadNullableObject<object>();
                 // Call to TimeManager.OnCreated is done by TimeManager.Load() that is called at the end of the object load,
                 // before the sidekicks so that the order in the linked list of ObservableTimedEventBase is preserved.
                 // Activation is also done by TimeManager.Load().
@@ -97,19 +75,19 @@ namespace CK.Observable
                 Debug.Assert( IsDestroyed );
             }
         }
-
-        void Write( BinarySerializer w )
+        
+        public static void Write( IBinarySerializer s, in ObservableTimedEventBase o )
         {
-            if( IsDestroyed )
+            if( o.IsDestroyed )
             {
-                w.Write( -1 );
+                s.Writer.Write( -1 );
             }
             else
             {
-                w.Write( ActiveIndex );
-                w.Write( ExpectedDueTimeUtc );
-                _disposed.Write( w );
-                w.WriteObject( Tag );
+                s.Writer.Write( o.ActiveIndex );
+                s.Writer.Write( o.ExpectedDueTimeUtc );
+                o._disposed.Write( s );
+                s.WriteNullableObject( o.Tag );
             }
         }
 
@@ -161,7 +139,7 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Gets whether this object has been disposed.
+        /// Gets whether this object has been destroyed.
         /// </summary>
         public bool IsDestroyed => TimeManager == null;
 
@@ -188,7 +166,9 @@ namespace CK.Observable
 
         internal void SetDeserializedClock( SuspendableClock clock )
         {
-            Debug.Assert( _clock == null && TimeManager != null && TimeManager.Domain.IsDeserializing );
+            Debug.Assert( _clock == null
+                          && TimeManager != null
+                          && TimeManager.Domain.CurrentTransactionStatus.IsDeserializing() );
             _clock = clock;
         }
 

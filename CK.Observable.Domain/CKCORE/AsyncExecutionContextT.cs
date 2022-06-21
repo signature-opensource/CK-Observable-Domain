@@ -71,14 +71,14 @@ namespace CK.Core
         /// Gets the registrar. Actions, error, success and/or finally handlers can be registered
         /// even when <see cref="ExecuteAsync(bool, bool)"/> has been called.
         /// </summary>
-        public ActionRegistrar<TThis> Registrar { get; }
+        public ActionRegistrar<TThis> Registrar => _reg;
 
         /// <summary>
-        /// Executes the currently enlisted actions, optionaly in reverse order.
+        /// Executes the currently enlisted actions, optionally in reverse order.
         /// On the first exception thrown by any action, all the error handlers are called (their own exceptions,
         /// if any, are logged but ignored).
         /// </summary>
-        /// <param name="throwException">False to return any exception instead of logging and rethrowing it.</param>
+        /// <param name="throwException">False to return any exception instead of logging and re throwing it.</param>
         /// <param name="reverseInitialActions">
         /// True to revert the initial action list: the last registered will be the first to be called.
         /// </param>
@@ -86,7 +86,7 @@ namespace CK.Core
         /// <returns>The first exception that occurred or null on success.</returns>
         public async Task<Exception?> ExecuteAsync( bool throwException = true, bool reverseInitialActions = false, string name = "(unnamed)" )
         {
-            if( _executing ) throw new InvalidOperationException( "ExecuteAsync reentrancy detected." );
+            Throw.CheckState( !_executing );
             var actions = _reg._actions;
             if( reverseInitialActions ) actions.Reverse();
             using( _monitor.OpenInfo( $"[{name}]: {actions.Count} initial actions{(reverseInitialActions ? " in reverse order" : "")}." ) )
@@ -111,12 +111,12 @@ namespace CK.Core
                         actions.RemoveRange( 0, roundCount );
                     }
                     var onSuccess = _reg._onSuccess;
-                    if( onSuccess == null ) _monitor.Trace( "There is no registered success handler." );
+                    if( onSuccess == null ) _monitor.Debug( "There is no registered success handler." );
                     else
                     {
                         using( _monitor.OpenTrace( $"Calling {onSuccess.Count} success handlers." ) )
                         {
-                            await RaiseSuccess( onSuccess, name );
+                            await RaiseSuccessAsync( onSuccess, name );
                         }
                     }
                     return null;
@@ -131,7 +131,7 @@ namespace CK.Core
                         {
                             using( _monitor.OpenInfo( $"Calling {_reg._onError.Count} error handlers." ) )
                             {
-                                await RaiseError( _reg._onError, ex, name ).ConfigureAwait( false );
+                                await RaiseErrorAsync( _reg._onError, ex, name ).ConfigureAwait( false );
                             }
                         }
                         if( throwException )
@@ -144,12 +144,12 @@ namespace CK.Core
                 }
                 finally
                 {
-                    if( _reg._onFinally == null ) _monitor.Trace( "There is no registered final handler." );
+                    if( _reg._onFinally == null ) _monitor.Debug( "There is no registered final handler." );
                     else
                     {
                         using( _monitor.OpenInfo( $"Calling {_reg._onFinally.Count} final handlers." ) )
                         {
-                            await RaiseFinally( _reg._onFinally, name );
+                            await RaiseFinallyAsync( _reg._onFinally, name ).ConfigureAwait( false );
                         }
                     }
                     _executing = false;
@@ -163,7 +163,7 @@ namespace CK.Core
         /// <param name="success">The success handlers.</param>
         /// <param name="name">Execution name (for logs).</param>
         /// <returns>The awaitable.</returns>
-        async Task RaiseSuccess( List<Func<TThis, Task>> success, string name )
+        async Task RaiseSuccessAsync( List<Func<TThis, Task>> success, string name )
         {
             _reg.SetHandlingSuccess();
             int roundNumber = 0;
@@ -196,7 +196,7 @@ namespace CK.Core
         /// <param name="ex">The exception that has been raised by the action.</param>
         /// <param name="name">Execution name (for logs).</param>
         /// <returns>The awaitable.</returns>
-        async ValueTask RaiseError( List<Func<TThis, Exception, Task>> errors, Exception ex, string name )
+        async ValueTask RaiseErrorAsync( List<Func<TThis, Exception, Task>> errors, Exception ex, string name )
         {
             _reg.SetHandlingError();
             int roundNumber = 0;
@@ -228,7 +228,7 @@ namespace CK.Core
         /// <param name="final">The final actions to execute.</param>
         /// <param name="name">Execution name (for logs).</param>
         /// <returns>The awaitable.</returns>
-        async Task RaiseFinally( List<Func<TThis, Task>> final, string name )
+        async Task RaiseFinallyAsync( List<Func<TThis, Task>> final, string name )
         {
             _reg.SetHandlingFinally();
             int roundNumber = 0;
@@ -286,7 +286,7 @@ namespace CK.Core
                 }
                 catch( Exception ex )
                 {
-                    return $"<Exception '{ex.Message}' while calling ToString() on a '{o.GetType().Name}'>";
+                    return $"<Exception '{ex.Message}' while calling ToString() on a '{o?.GetType().Name}'>";
                 }
             }
         }

@@ -1,3 +1,5 @@
+using CK.BinarySerialization;
+using CK.Core;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -12,15 +14,15 @@ namespace CK.Observable.League.Tests.MicroMachine
         {
         }
 
-        SpecializedMachine( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+        SpecializedMachine( IBinaryDeserializer r, ITypeReadInfo info )
+                : base( Sliced.Instance )
         {
-            CommandReceivedCount = r.ReadInt32();
+            CommandReceivedCount = r.Reader.ReadInt32();
         }
 
-        void Write( BinarySerializer w )
+        public static void Write( IBinarySerializer s, in SpecializedMachine o )
         {
-            w.Write( CommandReceivedCount );
+            s.Writer.Write( o.CommandReceivedCount );
         }
 
         public int CommandReceivedCount { get; private set; }

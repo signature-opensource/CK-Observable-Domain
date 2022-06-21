@@ -21,20 +21,20 @@ namespace CK.Observable
         /// <summary>
         /// Adjustment of actual due time is allowed as long as no event is lost.
         /// A <see cref="Core.LogLevel.Warn"/> is always logged if this happens.
-        /// If an event is lost, an error is logged or an exception is thrown depdending on <see cref="ThrowException"/> bit.
+        /// If an event is lost, an error is logged or an exception is thrown depending on <see cref="ThrowException"/> flag.
         /// </summary>
         AllowSlidingAdjustment = 1,
 
         /// <summary>
         /// Adjustment of actual due time is allowed by skipping at most one event.
         /// A <see cref="Core.LogLevel.Warn"/> is always logged if this happens.
-        /// If more than one event is lost, an error is logged or an exception is thrown depdending on <see cref="ThrowException"/> bit.
+        /// If more than one event is lost, an error is logged or an exception is thrown depending on <see cref="ThrowException"/> flag.
         /// </summary>
         AllowOneStepAdjustment = 2,
 
         /// <summary>
         /// Any due time adjustment is forbidden. No event must be lost.
-        /// Any time adjustment logs an error or throws an exception depdending on <see cref="ThrowException"/> bit.
+        /// Any time adjustment logs an error or throws an exception depending on <see cref="ThrowException"/> flag.
         /// </summary>
         Critical = 3,
 

@@ -1,3 +1,4 @@
+using CK.BinarySerialization;
 using CK.Core;
 using FluentAssertions;
 using System;
@@ -15,25 +16,26 @@ namespace CK.Observable.Domain.Tests.Sample
 
         public Car( string name )
         {
+            Throw.CheckNotNullArgument( name );
             Domain.Monitor.Info( $"Creating Car '{name}'." );
             Name = name;
         }
 
-        Car( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+        Car( IBinaryDeserializer d, ITypeReadInfo info )
+        : base( Sliced.Instance )
         {
-            Name = r.ReadNullableString();
-            TestSpeed = r.ReadInt32();
-            _position = (Position)r.ReadObject();
-            _testSpeedChanged = new ObservableEventHandler<ObservableDomainEventArgs>( r );
+            Name = d.Reader.ReadString();
+            TestSpeed = d.Reader.ReadInt32();
+            _position = d.ReadValue<Position>();
+            _testSpeedChanged = new ObservableEventHandler<ObservableDomainEventArgs>( d );
         }
 
-        void Write( BinarySerializer w )
+        public static void Write( IBinarySerializer s, in Car o )
         {
-            w.WriteNullableString( Name );
-            w.Write( TestSpeed );
-            w.WriteObject( _position );
-            _testSpeedChanged.Write( w );
+            s.Writer.Write( o.Name );
+            s.Writer.Write( o.TestSpeed );
+            s.WriteValue( o._position );
+            o._testSpeedChanged.Write( s );
         }
 
         public string Name { get; }
@@ -52,7 +54,7 @@ namespace CK.Observable.Domain.Tests.Sample
         /// </summary>
         public event SafeEventHandler<ObservableDomainEventArgs> TestSpeedChanged
         {
-            add => _testSpeedChanged.Add( value, nameof( TestSpeedChanged ) );
+            add => _testSpeedChanged.Add( value );
             remove => _testSpeedChanged.Remove( value );
         }
 
@@ -81,7 +83,7 @@ namespace CK.Observable.Domain.Tests.Sample
             remove => _positionChanged.Remove( value );
         }
 
-        bool __onPowerChanged;
+        bool _onPowerChanged;
 
         /// <summary>
         /// Gets or sets a property with a specific setter.
@@ -94,11 +96,11 @@ namespace CK.Observable.Domain.Tests.Sample
             {
                 if( _power != value )
                 {
-                    __onPowerChanged = false;
+                    _onPowerChanged = false;
                     Domain.Monitor.Info( "Before Power setting." );
                     _power = value;
                     Domain.Monitor.Info( "After Power setting." );
-                    __onPowerChanged.Should().BeTrue();
+                    _onPowerChanged.Should().BeTrue();
                 }
             }
         }
@@ -107,17 +109,17 @@ namespace CK.Observable.Domain.Tests.Sample
         void OnPowerChanged()
         {
             Domain.Monitor.Info( "Power set." );
-            __onPowerChanged = true;
+            _onPowerChanged = true;
         }
 
         public event SafeEventHandler PowerChanged
         {
-            add => _powerChanged.Add( value, nameof( PowerChanged ) );
+            add => _powerChanged.Add( value );
             remove => _powerChanged.Remove( value );
         }
 
 
-        public Mechanic CurrentMechanic { get; set; }
+        public Mechanic? CurrentMechanic { get; set; }
 
         public override string ToString() => $"'Car {Name}'";
 
@@ -128,10 +130,12 @@ namespace CK.Observable.Domain.Tests.Sample
         /// <param name="after"></param>
         void OnCurrentMechanicChanged( object before, object after )
         {
-            if( Domain.IsDeserializing ) return;
-            Domain.Monitor.Info( $"{ToString()} is now repaired by: {CurrentMechanic?.ToString() ?? "null"}." );
-            if( CurrentMechanic != null ) CurrentMechanic.CurrentCar = this;
-            else ((Mechanic)before).CurrentCar = null;
+            if( Domain.CurrentTransactionStatus.IsRegular() )
+            {
+                Domain.Monitor.Info( $"{ToString()} is now repaired by: {CurrentMechanic?.ToString() ?? "null"}." );
+                if( CurrentMechanic != null ) CurrentMechanic.CurrentCar = this;
+                else ((Mechanic)before).CurrentCar = null;
+            }
         }
 
     }

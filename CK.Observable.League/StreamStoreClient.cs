@@ -1,3 +1,4 @@
+using CK.BinarySerialization;
 using CK.Core;
 using System;
 using System.Collections.Generic;
@@ -22,6 +23,7 @@ namespace CK.Observable.League
         readonly string _storeName;
         readonly JsonEventCollector _eventCollector;
         int _savedTransactionNumber;
+        int _savesBeforeNextHousekeeping;
         DateTime _nextSave;
         int _snapshotSaveDelay;
 
@@ -79,14 +81,23 @@ namespace CK.Observable.League
         public int SnapshotMaximalTotalKiB { get; set; } = 10 * 1024;
 
         /// <summary>
+        /// See <see cref="ManagedDomainOptions.HousekeepingRate"/>.
+        /// </summary>
+        public int HousekeepingRate { get; set; } = 50;
+
+        /// <summary>
         /// Overridden to FIRST create a snapshot and THEN call the next client.
         /// </summary>
         /// <param name="c"></param>
-        public override void OnTransactionCommit( in SuccessfulTransactionEventArgs c )
+        public override void OnTransactionCommit( in TransactionDoneEventArgs c )
         {
-            CreateSnapshot( c.Monitor, c.Domain, false, c.HasSaveCommand );
-            // We save the snapshot if we must (and there is no compensation for this of course).
-            if( c.CommitTimeUtc >= _nextSave ) c.PostActions.Add( ctx => SaveAsync( ctx.Monitor ) );
+            if( c.RollbackedInfo == null )
+            {
+                CreateSnapshot( c.Monitor, c.Domain, false, c.HasSaveCommand );
+                // We save the snapshot if we must (and there is no compensation for this of course).
+                bool doHouseKeeping = c.HasSaveCommand;
+                if( doHouseKeeping || c.CommitTimeUtc >= _nextSave ) c.PostActions.Add( ctx => SaveSnapshotAsync( ctx.Monitor, doHouseKeeping ) );
+            }
             Next?.OnTransactionCommit( c );
         }
 
@@ -97,32 +108,40 @@ namespace CK.Observable.League
         }
 
         /// <summary>
+        /// Overridden to call the protected <see cref="DoDeserializeDomain(IActivityMonitor, RewindableStream, bool?)"/>
+        /// and initialize the <see cref="JsonEventCollector"/>.
         /// See base <see cref="MemoryTransactionProviderClient.LoadOrCreateAndInitializeSnapshot"/> comments.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="stream">The stream from which the domain must be deserialized.</param>
         /// <param name="startTimer">Whether to start the domain's <see cref="TimeManager"/>.</param>
-        /// <returns>Never: throws a <see cref="NotSupportedException"/>.</returns>
-        protected override sealed ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, bool? startTimer )
+        /// <returns>The deserialized domain.</returns>
+        protected override sealed ObservableDomain DeserializeDomain( IActivityMonitor monitor, RewindableStream stream, bool? startTimer )
         {
             var d = DoDeserializeDomain( monitor, stream, startTimer );
             _eventCollector.CollectEvent( d, clearEvents: false );
             return d;
         }
 
-        protected abstract ObservableDomain DoDeserializeDomain( IActivityMonitor monitor, Stream stream, bool? startTimer );
+        protected abstract ObservableDomain DoDeserializeDomain( IActivityMonitor monitor, RewindableStream stream, bool? startTimer );
 
         /// <summary>
         /// Initializes the domain from the store or initializes the store with a new domain.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
+        /// <param name="createOnLoadError">True to automatically re-create a new store when it cannot be loaded.</param>
         /// <param name="factory">The domain factory to use if no stream exists in the store.</param>
         /// <param name="startTimer">Whether to start the <see cref="TimeManager"/>.</param>
         /// <returns>The awaitable.</returns>
-        public async Task<ObservableDomain> InitializeAsync( IActivityMonitor monitor, bool? startTimer, bool createOnLoadError, Func<IActivityMonitor,bool,ObservableDomain> factory )
+        public async Task<ObservableDomain> InitializeAsync( IActivityMonitor monitor,
+                                                             bool? startTimer,
+                                                             bool createOnLoadError,
+                                                             Func<IActivityMonitor,bool,ObservableDomain> factory,
+                                                             IObservableDomainInitializer? initializer )
         {
-            ObservableDomain result = null;
-            using( var s = await _streamStore.OpenReadAsync( _storeName ) )
+            string action = "Loaded";
+            ObservableDomain? result = null;
+            await using( var s = await _streamStore.OpenReadAsync( _storeName ) )
             {
                 if( s != null )
                 {
@@ -135,8 +154,7 @@ namespace CK.Observable.League
                     {
                         if( createOnLoadError )
                         {
-                            monitor.Error( $"Error while loading domain. Automatically recreating a new one and initializing it.", ex );
-                            result = await Create( monitor, startTimer, factory );
+                            monitor.Error( $"Error while loading domain from '{_storeName}'. Automatically recreating a new store and initializing it.", ex );
                         }
                         else
                         {
@@ -144,67 +162,93 @@ namespace CK.Observable.League
                         }
                     }
                 }
-                else
+            }
+
+            if( result == null )
+            {
+                action = "Created";
+                using( monitor.OpenInfo( $"Creating store '{_storeName}'." ) )
                 {
-                    result = await Create( monitor, startTimer, factory );
+                    result = factory( monitor, startTimer ?? false );
+                    _eventCollector.CollectEvent( result, clearEvents: true );
+                    if( initializer != null )
+                    {
+                        using( monitor.OpenInfo( $"Calling Domain Initializer." ) )
+                        {
+                            await initializer.InitializeAsync( monitor, result );
+                        }
+                    }
+                    // Calling CreateSnapshot so that
+                    // the initial snapshot can be saved to the Store: this initializes
+                    // the Store for this domain. From now on, it will be reloaded.
+                    CreateSnapshot( monitor, result, true, true );
+                    if( !await SaveSnapshotAsync( monitor, false ) )
+                    {
+                        throw new Exception( $"Unable to initialize the store for '{_storeName}'." );
+                    }
+                }
+            }
+            if( result.HasWaitingSidekicks )
+            {
+                using( monitor.OpenInfo( $"{action} domain '{DomainName}' has waiting sidekicks." ) )
+                {
+                    await result.ModifyThrowAsync( monitor, null );
                 }
             }
             return result;
-
-            async Task<ObservableDomain> Create( IActivityMonitor monitor, bool? startTimer, Func<IActivityMonitor, bool, ObservableDomain> factory )
-            {
-                ObservableDomain result = factory( monitor, startTimer ?? false );
-                _eventCollector.CollectEvent( result, clearEvents: true );
-                // Calling CreateSnapshot so that
-                // the initial snapshot can be saved to the Store: this initializes
-                // the Store for this domain. From now on, it will be reloaded.
-                CreateSnapshot( monitor, result, true, true );
-                if( !await SaveAsync( monitor ) )
-                {
-                    throw new Exception( $"Unable to initialize the store for '{_storeName}'." );
-                }
-                return result;
-            }
         }
 
         /// <summary>
         /// Saves the current snapshot if the <see cref="MemoryTransactionProviderClient.CurrentSerialNumber"/> has changed
         /// since the last save.
+        /// This never throws.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
+        /// <param name="doHouseKeeping">Do a cleanup of the backups now, regardless of the <see cref="ManagedDomainOptions.HousekeepingRate"/>.</param>
         /// <returns>True on success, false if an error occurred.</returns>
-        public Task<bool> SaveAsync( IActivityMonitor monitor ) => DoSaveAsync( monitor, false );
+        public Task<bool> SaveSnapshotAsync( IActivityMonitor monitor, bool doHouseKeeping ) => DoSaveSnapshotAsync( monitor, doHouseKeeping, false );
 
         /// <summary>
         /// Archives the persistent file in the store: the domain's file is no more available.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
-        public Task ArchiveAsync( IActivityMonitor monitor ) => DoSaveAsync( monitor, true );
+        public Task ArchiveSnapshotAsync( IActivityMonitor monitor ) => DoSaveSnapshotAsync( monitor, true, true );
 
-        async Task<bool> DoSaveAsync( IActivityMonitor monitor, bool sendToArchive )
+        async Task<bool> DoSaveSnapshotAsync( IActivityMonitor monitor, bool doHouseKeeping, bool sendToArchive )
         {
-            if( _savedTransactionNumber != CurrentSerialNumber || sendToArchive )
+            try
             {
-                try
+                if( _savedTransactionNumber != CurrentSerialNumber )
                 {
-                    if( _savedTransactionNumber != CurrentSerialNumber )
-                    {
-                        await _streamStore.UpdateAsync( _storeName, WriteSnapshotAsync, true ).ConfigureAwait( false );
-                        if( _snapshotSaveDelay >= 0 ) _nextSave = CurrentTimeUtc.AddMilliseconds( _snapshotSaveDelay );
-                        _savedTransactionNumber = CurrentSerialNumber;
-                    }
-                    if( sendToArchive )
-                    {
-                        await _streamStore.DeleteAsync( _storeName, true ).ConfigureAwait( false );
-                        monitor.Info( $"Domain '{_storeName}' saved and sent to archives." );
-                    }
-                    else monitor.Trace( $"Domain '{_storeName}' saved." );
+                    await _streamStore.UpdateAsync( _storeName, WriteSnapshotAsync, true ).ConfigureAwait( false );
+                    if( _snapshotSaveDelay >= 0 ) _nextSave = CurrentTimeUtc.AddMilliseconds( _snapshotSaveDelay );
+                    _savedTransactionNumber = CurrentSerialNumber;
                 }
-                catch( Exception ex )
+                if( sendToArchive )
                 {
-                    monitor.Error( $"While saving domain '{_storeName}'.", ex );
-                    return false;
+                    await _streamStore.DeleteAsync( _storeName, true ).ConfigureAwait( false );
+                    monitor.Info( $"Domain '{_storeName}' saved and sent to archives." );
                 }
+                else monitor.Trace( $"Domain '{_storeName}' successfully saved (TransactionNumber={_savedTransactionNumber})." );
+
+                if( _streamStore is IBackupStreamStore backupStreamStore )
+                {
+                    --_savesBeforeNextHousekeeping;
+                    if( (doHouseKeeping || _savesBeforeNextHousekeeping <= 0)
+                        && (SnapshotKeepDuration > TimeSpan.Zero || SnapshotMaximalTotalKiB > 0) )
+                    {
+                        _savesBeforeNextHousekeeping = HousekeepingRate;
+                        using( monitor.OpenTrace( $"Executing housekeeping for '{_storeName}' backups." ) )
+                        {
+                            backupStreamStore.CleanBackups( monitor, _storeName, SnapshotKeepDuration, SnapshotMaximalTotalKiB * 1024L );
+                        }
+                    }
+                }
+            }
+            catch( Exception ex )
+            {
+                monitor.Error( $"While {(sendToArchive ? "archiv" : "sav")}ing domain '{_storeName}' snapshot.", ex );
+                return false;
             }
             return true;
         }

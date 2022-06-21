@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
 
 namespace CK.Observable.Domain.Tests
@@ -23,17 +24,17 @@ namespace CK.Observable.Domain.Tests
                 Message = "I'm Invisible!";
             }
 
-            Invisible( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+            Invisible( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
+                : base( BinarySerialization.Sliced.Instance )
             {
-                Message = r.ReadString();
-                NoWay = r.ReadInt32();
+                Message = d.Reader.ReadString();
+                NoWay = d.Reader.ReadInt32();
             }
 
-            void Write( BinarySerializer w )
+            public static void Write( BinarySerialization.IBinarySerializer s, in Invisible o )
             {
-                w.Write( Message );
-                w.Write( NoWay );
+                s.Writer.Write( o.Message );
+                s.Writer.Write( o.NoWay );
             }
 
             public int NoWay { get; set; }
@@ -50,19 +51,19 @@ namespace CK.Observable.Domain.Tests
                 Message = "I'm Visible!";
             }
 
-            Visible( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+            Visible( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
+                : base( BinarySerialization.Sliced.Instance )
             {
-                NotVisible = (Invisible?)r.ReadObject();
-                Yes = r.ReadInt32();
-                Message = r.ReadNullableString();
+                NotVisible = d.ReadNullableObject<Invisible>();
+                Yes = d.Reader.ReadInt32();
+                Message = d.Reader.ReadNullableString();
             }
 
-            void Write( BinarySerializer w )
+            public static void Write( BinarySerialization.IBinarySerializer s, in Visible o )
             {
-                w.WriteObject( NotVisible );
-                w.Write( Yes );
-                w.WriteNullableString( Message );
+                s.WriteNullableObject( o.NotVisible );
+                s.Writer.Write( o.Yes );
+                s.Writer.WriteNullableString( o.Message );
             }
 
             public Invisible? NotVisible { get; set; }
@@ -75,24 +76,24 @@ namespace CK.Observable.Domain.Tests
 
 
         [Test]
-        public void internal_objects_should_not_be_exported()
+        public async Task internal_objects_should_not_be_exported_Async()
         {
-            using var domain = new ObservableDomain(TestHelper.Monitor, nameof(internal_objects_should_not_be_exported), startTimer: true );
+            using var domain = new ObservableDomain(TestHelper.Monitor, nameof(internal_objects_should_not_be_exported_Async), startTimer: true );
             var collector = new JsonEventCollector( domain );
 
             // The first event is always empty.
-            domain.Modify( TestHelper.Monitor, () => {} ).Success.Should().BeTrue();
+            await domain.ModifyThrowAsync( TestHelper.Monitor, null );
             collector.LastEvent.ExportedEvents.Should().BeEmpty();
 
             // Let's do it now.
             Visible? v = null;
-            domain.Modify( TestHelper.Monitor, () =>
+            await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 var i = new Invisible( 666 );
                 v = new Visible( 3712 );
                 v.NotVisible = i;
 
-            } ).Success.Should().BeTrue();
+            } );
             Debug.Assert( v != null );
 
             // Note that "NotVisible" is the property name: it is exported as the property name. This is
@@ -103,12 +104,12 @@ namespace CK.Observable.Domain.Tests
 
             // This check that the "NotVisible" property is not 'changed': even if its name and identifier
             // has been marshalled, the property of the object itself is not seen by the client. 
-            domain.Modify( TestHelper.Monitor, () =>
+            await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 var i2 = new Invisible( 2 * 666 );
                 v.NotVisible = i2;
 
-            } ).Success.Should().BeTrue();
+            } );
             collector.LastEvent.ExportedEvents.Should().BeEmpty();
 
         }

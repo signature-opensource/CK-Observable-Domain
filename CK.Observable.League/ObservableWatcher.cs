@@ -11,12 +11,12 @@ using System.Threading.Tasks;
 namespace CK.Observable
 {
     /// <summary>
-    /// Base abstract class that watches any number of domains in a <see cref="ObservableLeague"/>.
+    /// Base abstract class that watches any number of domains in a <see cref="IObservableLeague"/>.
     /// This class is thread safe.
     /// </summary>
     public abstract class ObservableWatcher : IDisposable
     {
-        readonly ObservableLeague _league;
+        readonly IObservableLeague _league;
         readonly SemaphoreSlim _lock;
         readonly List<DomainWatcher> _watched;
 
@@ -53,7 +53,7 @@ namespace CK.Observable
         /// domain that must be watched.
         /// </summary>
         /// <param name="league">The league.</param>
-        public ObservableWatcher( ObservableLeague league )
+        public ObservableWatcher( IObservableLeague league )
         {
             _league = league;
             _lock = new SemaphoreSlim( 1, 1 );
@@ -137,7 +137,7 @@ namespace CK.Observable
             await _lock.WaitAsync();
             try
             {
-                IObservableDomainLoader loader;
+                IObservableDomainLoader? loader;
                 var idx = _watched.IndexOf( loader => loader.D.DomainName == domainName );
                 if( idx >= 0 )
                 {
@@ -218,7 +218,7 @@ namespace CK.Observable
         /// Stops watching a domain.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
-        /// <param name="domainName">The domain that should be watched.</param>
+        /// <param name="domainName">The domain that should not be watched anymore.</param>
         /// <returns>
         /// Whether the <paramref name="domainName"/> has been found: false is the domain doesn't exist or was not watched.
         /// </returns>

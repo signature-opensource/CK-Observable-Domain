@@ -1,3 +1,4 @@
+using CK.Core;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -50,7 +51,8 @@ namespace CK.Observable
         /// <param name="isOptionalExecution">See <see cref="IsOptionalExecution"/>.</param>
         public ObservableDomainCommand( object command, object? knownTarget = null, bool isOptionalExecution = false )
         {
-            Command = command ?? throw new ArgumentNullException( nameof( command ) );
+            Throw.CheckNotNullArgument( command );
+            Command = command;
             KnownTarget = knownTarget;
             IsOptionalExecution = isOptionalExecution;
         }

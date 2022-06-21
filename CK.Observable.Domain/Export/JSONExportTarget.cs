@@ -1,4 +1,3 @@
-using CK.Text;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -16,7 +15,7 @@ namespace CK.Observable
         readonly StringBuilder _buffer;
         bool _commaNeeded;
 
-        public JSONExportTarget( TextWriter w, JSONExportTargetOptions options = null, JsonSerializerOptions jsonSerializerOptions = null )
+        public JSONExportTarget( TextWriter w, JSONExportTargetOptions? options = null, JsonSerializerOptions? jsonSerializerOptions = null )
         {
             _w = w;
             _jsonSerializerOptions = jsonSerializerOptions ?? JsonSerializerOptions.Default;
@@ -132,7 +131,7 @@ namespace CK.Observable
             if( _commaNeeded ) _w.Write( ',' );
             _buffer.Clear();
             _buffer.Append( '"' );
-            _buffer.AppendJSONEscaped( value );
+            AppendJSONEscaped( _buffer, value );
             _buffer.Append( '"' );
             _w.Write( _buffer.ToString() );
             _commaNeeded = true;
@@ -178,5 +177,74 @@ namespace CK.Observable
         public void EmitInt64( long o ) => EmitDouble( o );
 
         public void EmitUInt64( ulong o ) => EmitDouble( o );
+
+
+        /// <summary>
+        /// Appends a string (that can be null) to this StringBuilder, applying JSON escaping.
+        /// This does not prepend/append enclosing double quotes.
+        /// </summary>
+        /// <param name="this">This StringBuilder.</param>
+        /// <param name="s">The string. Can be null.</param>
+        /// <param name="useEscapedUnicode">True to use unicode hexadecimal code for non-ascii characters.</param>
+        /// <returns>This string builder to enable fluent syntax.</returns>
+        static StringBuilder AppendJSONEscaped( StringBuilder @this, string s, bool useEscapedUnicode = false )
+        {
+            if( s == null ) return @this;
+            return DoAppendJSONEscaped( @this, s, 0, s.Length, useEscapedUnicode );
+        }
+
+        static StringBuilder DoAppendJSONEscaped( StringBuilder @this, string s, int startIndex, int count, bool useEscapedUnicode )
+        {
+            int markIdx = -1;
+            int index = startIndex;
+            while( --count >= 0 )
+            {
+                char c = s[index];
+                if( useEscapedUnicode )
+                {
+                    if( c >= ' ' && c < 128 && c != '\"' && c != '\\' )
+                    {
+                        if( markIdx == -1 ) markIdx = index;
+                        ++index;
+                        continue;
+                    }
+                }
+                else
+                {
+                    if( c != '\t' && c != '\n' && c != '\r' && c != '\"' && c != '\\' && c != '\0' )
+                    {
+                        if( markIdx == -1 ) markIdx = index;
+                        ++index;
+                        continue;
+                    }
+                }
+                if( markIdx != -1 )
+                {
+                    @this.Append( s, markIdx, index - markIdx );
+                    markIdx = -1;
+                }
+                switch( c )
+                {
+                    case '\t': @this.Append( "\\t" ); break;
+                    case '\r': @this.Append( "\\r" ); break;
+                    case '\n': @this.Append( "\\n" ); break;
+                    case '"':
+                    case '\\': @this.Append( '\\' ); @this.Append( c ); break;
+                    case '\0': @this.Append( "\\u0000" ); break;
+                    default:
+                        if( useEscapedUnicode )
+                        {
+                            @this.Append( "\\u" );
+                            @this.Append( ((int)c).ToString( "X4", System.Globalization.NumberFormatInfo.InvariantInfo ) );
+                        }
+                        else @this.Append( c );
+                        break;
+                }
+                ++index;
+            }
+            if( markIdx != -1 ) @this.Append( s, markIdx, index - markIdx );
+            return @this;
+        }
+
     }
 }

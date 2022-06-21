@@ -22,7 +22,7 @@ namespace CK.Observable
         void EmitReference( int num );
 
         /// <summary>
-        /// Emits an empty referencable object.
+        /// Emits an empty object that can be referenced.
         /// </summary>
         /// <param name="num">The object number: must be 0 or positive.</param>
         void EmitEmptyObject( int num );
@@ -36,7 +36,7 @@ namespace CK.Observable
         /// <summary>
         /// Emits the start of an object that may be one of <see cref="ObjectExportedKind"/>.
         /// </summary>
-        /// <param name="num">The object that can be negative: in such case, the object cannot be referenceable.</param>
+        /// <param name="num">The object that can be negative: in such case, the object cannot be referenced.</param>
         /// <param name="kind">The object kind.</param>
         void EmitStartObject( int num, ObjectExportedKind kind );
 
@@ -49,7 +49,7 @@ namespace CK.Observable
         /// <summary>
         /// Closes an object previously opened by <see cref="EmitStartObject(int, ObjectExportedKind)"/>.
         /// </summary>
-        /// <param name="num">The object number (negative for a non referenceable object).</param>
+        /// <param name="num">The object number (negative for an object that cannot be referenced).</param>
         /// <param name="kind">The object kind.</param>
         void EmitEndObject( int num, ObjectExportedKind kind );
 

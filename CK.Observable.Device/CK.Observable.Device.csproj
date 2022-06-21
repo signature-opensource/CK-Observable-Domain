@@ -1,15 +1,10 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
-  <Sdk Name="Microsoft.Build.CentralPackageVersions" Version="2.0.79" />
-  <Import Project="..\Common\Shared.props" />
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netstandard2.1</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <Nullable>enable</Nullable>
   </PropertyGroup>
-  
   <ItemGroup>
-    <PackageReference Include="CK.DeviceModel" />
+    <PackageReference Include="CK.DeviceModel" Version="2.0.0" />
     <ProjectReference Include="..\CK.Observable.Domain\CK.Observable.Domain.csproj" />
   </ItemGroup>
-
 </Project>

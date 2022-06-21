@@ -1,3 +1,4 @@
+using CK.BinarySerialization;
 using CK.Core;
 using System;
 using System.Collections.Generic;
@@ -21,9 +22,11 @@ namespace CK.Observable.League
                 _shell = shell;
             }
 
-            public override void OnTransactionCommit( in SuccessfulTransactionEventArgs c )
+            public override void OnTransactionCommit( in TransactionDoneEventArgs c )
             {
                 base.OnTransactionCommit( c );
+                // To update the shell knowledge of the NextActiveTime, knowing if we have rolled back or not
+                // is useless.
                 DateTime nextActiveTime = c.Domain.TimeManager.NextActiveTime;
                 c.DomainPostActions.Add( ctx =>
                 {
@@ -33,7 +36,7 @@ namespace CK.Observable.League
                 } );
             }
 
-            protected override ObservableDomain DoDeserializeDomain( IActivityMonitor monitor, Stream stream, bool? startTimer )
+            protected override ObservableDomain DoDeserializeDomain( IActivityMonitor monitor, RewindableStream stream, bool? startTimer )
             {
                 return _shell.DeserializeDomain( monitor, stream, startTimer );
             }

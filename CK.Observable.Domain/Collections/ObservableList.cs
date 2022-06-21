@@ -1,3 +1,4 @@
+using CK.Core;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -66,34 +67,31 @@ namespace CK.Observable
         /// Specialized deserialization constructor for specialized classes.
         /// </summary>
         /// <param name="_">Unused parameter.</param>
-        protected ObservableList( RevertSerialization _ ) : base( _ ) { }
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+        protected ObservableList( BinarySerialization.Sliced _ ) : base( _ ) { }
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
-        /// <summary>
-        /// Deserialization constructor.
-        /// </summary>
-        /// <param name="r">The deserializer.</param>
-        /// <param name="info">The type info.</param>
-        ObservableList( IBinaryDeserializer r, TypeReadInfo info )
-                : base( RevertSerialization.Default )
+        ObservableList( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
+            : base( BinarySerialization.Sliced.Instance )
         {
-            _list = (List<T>)r.ReadObject()!;
-            _itemSet = new ObservableEventHandler<ListSetAtEvent>( r );
-            _itemInserted = new ObservableEventHandler<ListInsertEvent>( r );
-            _itemRemovedAt = new ObservableEventHandler<ListRemoveAtEvent>( r );
-            _collectionCleared = new ObservableEventHandler<CollectionClearEvent>( r );
+            _list = d.ReadObject<List<T>>()!;
+            _itemSet = new ObservableEventHandler<ListSetAtEvent>( d );
+            _itemInserted = new ObservableEventHandler<ListInsertEvent>( d );
+            _itemRemovedAt = new ObservableEventHandler<ListRemoveAtEvent>( d );
+            _collectionCleared = new ObservableEventHandler<CollectionClearEvent>( d );
         }
 
         /// <summary>
         /// The serialization method.
         /// </summary>
         /// <param name="s">The target binary serializer.</param>
-        void Write( BinarySerializer s )
+        public static void Write( BinarySerialization.IBinarySerializer s, in ObservableList<T> o )
         {
-            s.WriteObject( _list );
-            _itemSet.Write( s );
-            _itemInserted.Write( s );
-            _itemRemovedAt.Write( s );
-            _collectionCleared.Write( s );
+            s.WriteObject( o._list );
+            o._itemSet.Write( s );
+            o._itemInserted.Write( s );
+            o._itemRemovedAt.Write( s );
+            o._collectionCleared.Write( s );
         }
 
         /// <summary>

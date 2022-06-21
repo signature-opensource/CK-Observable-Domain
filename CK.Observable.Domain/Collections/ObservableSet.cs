@@ -1,3 +1,5 @@
+using CK.BinarySerialization;
+using CK.Core;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -61,32 +63,29 @@ namespace CK.Observable
         /// Specialized deserialization constructor for specialized classes.
         /// </summary>
         /// <param name="_">Unused parameter.</param>
-        protected ObservableSet( RevertSerialization _ ) : base( _ ) { }
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+        protected ObservableSet( Sliced _ ) : base( _ ) { }
+#pragma warning restore CS8618
 
-        /// <summary>
-        /// Deserialization constructor.
-        /// </summary>
-        /// <param name="r">The deserializer.</param>
-        /// <param name="info">The type info.</param>
-        ObservableSet( IBinaryDeserializer r, TypeReadInfo info )
-                : base( RevertSerialization.Default )
+        ObservableSet( IBinaryDeserializer d, ITypeReadInfo info )
+            : base( Sliced.Instance )
         {
-            _set = (HashSet<T>)r.ReadObject()!;
-            _itemAdded = new ObservableEventHandler<CollectionAddKeyEvent>( r );
-            _itemRemoved = new ObservableEventHandler<CollectionRemoveKeyEvent>( r );
-            _collectionCleared = new ObservableEventHandler<CollectionClearEvent>( r );
+            _set = d.ReadObject<HashSet<T>>()!;
+            _itemAdded = new ObservableEventHandler<CollectionAddKeyEvent>( d );
+            _itemRemoved = new ObservableEventHandler<CollectionRemoveKeyEvent>( d );
+            _collectionCleared = new ObservableEventHandler<CollectionClearEvent>( d );
         }
 
         /// <summary>
         /// The serialization method.
         /// </summary>
         /// <param name="s">The target binary serializer.</param>
-        void Write( BinarySerializer s )
+        public static void Write( IBinarySerializer s, in ObservableSet<T> o )
         {
-            s.WriteObject( _set );
-            _itemAdded.Write( s );
-            _itemRemoved.Write( s );
-            _collectionCleared.Write( s );
+            s.WriteObject( o._set );
+            o._itemAdded.Write( s );
+            o._itemRemoved.Write( s );
+            o._collectionCleared.Write( s );
         }
 
         /// <summary>
@@ -146,6 +145,9 @@ namespace CK.Observable
             }
         }
 
+        /// <summary>
+        /// Destroys any <see cref="IDestroyableObject"/> items that may appear in this set.
+        /// </summary>
         protected void DestroyItems()
         {
             // Take a snapshot so that OnDestroyed reflexes can safely alter the _set.

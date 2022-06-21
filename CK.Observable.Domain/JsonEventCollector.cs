@@ -9,8 +9,8 @@ using System.Threading.Tasks;
 namespace CK.Observable
 {
     /// <summary>
-    /// Helpers that can be enlisted to the <see cref="ObservableDomain.OnSuccessfulTransaction"/> event that transforms
-    /// <see cref="SuccessfulTransactionEventArgs.Events"/> into <see cref="TransactionEvent"/> that captures, for each transaction,
+    /// Helpers that can be enlisted to the <see cref="ObservableDomain.TransactionDone"/> event that transforms
+    /// <see cref="TransactionDoneEventArgs.Events"/> into <see cref="TransactionEvent"/> that captures, for each transaction,
     /// all the transaction events as JSON string that describes them.
     /// </summary>
     public class JsonEventCollector
@@ -18,7 +18,7 @@ namespace CK.Observable
         readonly List<TransactionEvent> _events;
         readonly StringWriter _buffer;
         readonly ObjectExporter _exporter;
-        ObservableDomain _domain;
+        ObservableDomain? _domain;
         int _lastTranNum;
         TimeSpan _keepDuration;
         int _keepLimit;
@@ -44,7 +44,7 @@ namespace CK.Observable
             public readonly DateTime TimeUtc;
 
             /// <summary>
-            /// The JSON description of the <see cref="SuccessfulTransactionEventArgs.Events"/>.
+            /// The JSON description of the <see cref="TransactionDoneEventArgs.Events"/>.
             /// </summary>
             public readonly string ExportedEvents;
 
@@ -94,7 +94,7 @@ namespace CK.Observable
             get => _keepLimit;
             set
             {
-                if( value < 1 ) throw new ArgumentOutOfRangeException();
+                Throw.CheckOutOfRangeArgument( value >= 1 );
                 _keepLimit = value;
             }
         }
@@ -107,7 +107,7 @@ namespace CK.Observable
         /// </summary>
         /// <param name="transactionNumber">The starting transaction number.</param>
         /// <returns>The current transaction number and the set of transaction events to apply or null if an export is required.</returns>
-        public (int TransactionNumber,IReadOnlyList<TransactionEvent>? Events) GetTransactionEvents( int transactionNumber )
+        public (int TransactionNumber, IReadOnlyList<TransactionEvent>? Events) GetTransactionEvents( int transactionNumber )
         {
             lock( _events )
             {
@@ -135,7 +135,7 @@ namespace CK.Observable
         /// Called whenever a new transaction event is available.
         /// Note that the first transaction is visible: see <see cref="TransactionEvent.TransactionNumber"/>.
         /// </summary>
-        public event Action<IActivityMonitor, TransactionEvent> LastEventChanged;
+        public event Action<IActivityMonitor, TransactionEvent>? LastEventChanged;
 
         /// <summary>
         /// Gets the last transaction event that has been seen (the first one can appear
@@ -146,17 +146,18 @@ namespace CK.Observable
         /// <summary>
         /// Associates this collector to a domain. There must not be any existing associated domain
         /// otherwise an <see cref="InvalidOperationException"/> is thrown.
+        /// Use <see cref="Detach()"/> to stop collecting events from a domain.
         /// </summary>
         /// <param name="domain">The domain from which transaction events must be collected.</param>
         /// <param name="clearEvents">True to clear any existing transactions events.</param>
         public void CollectEvent( ObservableDomain domain, bool clearEvents )
         {
-            if( domain == null ) throw new ArgumentNullException( nameof( domain ) );
+            Throw.CheckNotNullArgument( domain );
             lock( _events )
             {
-                if( _domain != null ) throw new InvalidOperationException( "Event collector is already associated to a domain." );
+                Throw.CheckState( _domain == null, "Event collector is already associated to a domain." );
                 _domain = domain;
-                domain.OnSuccessfulTransaction += OnSuccessfulTransaction;
+                domain.TransactionDone += OnSuccessfulTransaction;
                 if( clearEvents )
                 {
                     _events.Clear();
@@ -176,14 +177,14 @@ namespace CK.Observable
                 {
                     if( _domain != null )
                     {
-                        _domain.OnSuccessfulTransaction -= OnSuccessfulTransaction;
-                        _domain = null;
+                        _domain.TransactionDone -= OnSuccessfulTransaction;
+                        _domain = null!;
                     }
                 }
             }
         }
 
-        void OnSuccessfulTransaction( object sender, SuccessfulTransactionEventArgs c ) 
+        void OnSuccessfulTransaction( object? sender, TransactionDoneEventArgs c ) 
         {
             Debug.Assert( sender == _domain );
             // It's useless to capture the initial transaction: the full export will be more efficient.

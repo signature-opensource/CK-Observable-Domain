@@ -1,3 +1,4 @@
+using CK.Core;
 using System;
 
 namespace CK.Observable.Domain.Tests
@@ -15,17 +16,17 @@ namespace CK.Observable.Domain.Tests
             TimedEvents = new ObservableList<ObservableTimedEventBase>();
         }
 
-        Root( IBinaryDeserializer r, TypeReadInfo info )
-            : base( RevertSerialization.Default )
+        Root( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+            : base( BinarySerialization.Sliced.Instance )
         {
-            Objects = (ObservableList<ObservableObject>)r.ReadObject()!;
-            TimedEvents = (ObservableList<ObservableTimedEventBase>)r.ReadObject()!;
+            Objects = r.ReadObject<ObservableList<ObservableObject>>();
+            TimedEvents = r.ReadObject<ObservableList<ObservableTimedEventBase>>();
         }
 
-        void Write( BinarySerializer w )
+        public static void Write( BinarySerialization.IBinarySerializer w, in Root o )
         {
-            w.WriteObject( Objects );
-            w.WriteObject( TimedEvents );
+            w.WriteObject( o.Objects );
+            w.WriteObject( o.TimedEvents );
         }
 
         public void RemindFromPool( DateTime dueTime, SafeEventHandler<ObservableReminderEventArgs> callback )

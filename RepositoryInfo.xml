@@ -1,7 +1,5 @@
-
 <RepositoryInfo>
-
-  <SimpleGitVersion StartingVersion="v0.6.0">
+  <SimpleGitVersion StartingVersion="2.0.0-alpha">
     <IgnoreModifiedFiles>
       <Add>js/.npmrc</Add>
       <Add>js/package.json</Add>
@@ -9,7 +7,6 @@
     </IgnoreModifiedFiles>
     <Branches>
       <Branch Name="develop" CIVersionMode="LastReleaseBased" VersionName="develop" />
-      <Branch Name="garbage-collector" CIVersionMode="ZeroTimed" VersionName="gc" />
     </Branches>
   </SimpleGitVersion>
 </RepositoryInfo>

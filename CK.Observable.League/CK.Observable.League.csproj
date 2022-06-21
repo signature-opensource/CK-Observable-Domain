@@ -1,23 +1,14 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-  
-  <Sdk Name="Microsoft.Build.CentralPackageVersions" Version="2.0.79" />
-  
-  <Import Project="..\Common\Shared.props" />
-  
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netstandard2.1</TargetFramework>
-    <Nullable>annotations</Nullable>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <LangVersion>9</LangVersion>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Remove="Connection\**" />
-    <EmbeddedResource Remove="Connection\**" />
-    <None Remove="Connection\**" />
-  </ItemGroup>
-  
-  <ItemGroup>
-    <PackageReference Include="Fody" PrivateAssets="all" />
-    <PackageReference Include="PropertyChanged.Fody" PrivateAssets="all" />
+    <PackageReference Include="CK.StObj.Model" Version="19.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
+    <PackageReference Include="Fody" PrivateAssets="all" Version="6.6.3" />
+    <PackageReference Include="PropertyChanged.Fody" PrivateAssets="all" Version="4.0.0" />
     <ProjectReference Include="..\CK.Observable.Domain\CK.Observable.Domain.csproj" />
   </ItemGroup>
-
 </Project>

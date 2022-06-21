@@ -1,5 +1,4 @@
 using CK.Core;
-using CK.Text;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,7 +9,6 @@ namespace CK.Core
 
     /// <summary>
     /// Ad-hoc DI helper that focuses on required parameters injection.
-    /// The static Create method can be used as-is or an instance that implements
     /// </summary>
     public class SimpleObjectActivator
     {
@@ -24,21 +22,20 @@ namespace CK.Core
         /// <param name="parametersAreRequired">True to restrict constructors to the ones that use all the <paramref name="parameters"/>.</param>
         /// <param name="parameters">Optional parameters.</param>
         /// <returns>The object instance or null on error.</returns>
-        public static object? Create(
-            IActivityMonitor monitor,
-            Type t,
-            IServiceProvider services,
-            bool parametersAreRequired,
-            IEnumerable<object>? parameters = null )
+        public static object? Create( IActivityMonitor monitor,
+                                      Type t,
+                                      IServiceProvider services,
+                                      bool parametersAreRequired,
+                                      IEnumerable<object>? parameters = null )
         {
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
             if( t == null ) throw new ArgumentNullException( nameof( t ) );
-            using( monitor.OpenDebug( $"Creating instance of type: {t.AssemblyQualifiedName}." ) )
+            using( monitor.OpenDebug( $"Creating instance of type: {t}." ) )
                 try
                 {
                     Required required = parameters == null
                             ? Array.Empty<KeyValuePair<object?, Type>>()
-                            : (Required)parameters.Select( r => new KeyValuePair<object?, Type>( r, r.GetType() ) ).ToList();
+                            : parameters.Select( r => new KeyValuePair<object?, Type>( r, r.GetType() ) ).ToList();
 
                     var longestCtor = t.GetConstructors()
                                         .Select( x => ValueTuple.Create( x, x.GetParameters() ) )

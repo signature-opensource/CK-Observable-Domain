@@ -1,10 +1,12 @@
 using CK.Core;
+using CK.Observable.Domain.Tests.Sample;
 using FluentAssertions;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
 
 namespace CK.Observable.Domain.Tests
@@ -17,12 +19,12 @@ namespace CK.Observable.Domain.Tests
         [TestCase( "Timer" )]
         [TestCase( "Reminder" )]
         [TestCase( "AutoCounter" )]
-        public void one_object_serialization( string type )
+        public async Task one_object_serialization_Async( string type )
         {
-            using var handler = TestHelper.CreateDomainHandler( $"{nameof( one_object_serialization )}-{type}", startTimer: false, serviceProvider: null );
+            using var handler = TestHelper.CreateDomainHandler( $"{nameof( one_object_serialization_Async )}-{type}", startTimer: false, serviceProvider: null );
 
-            object o = null;
-            handler.Domain.Modify( TestHelper.Monitor, () =>
+            object o = null!;
+            await handler.Domain.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 switch( type )
                 {
@@ -30,12 +32,12 @@ namespace CK.Observable.Domain.Tests
                     case "SuspendableClock": o = new SuspendableClock(); break;
                     case "Timer": o = new ObservableTimer( DateTime.UtcNow.AddDays( 1 ) ); break;
                     case "Reminder": o = new ObservableReminder( DateTime.UtcNow.AddDays( 1 ) ); break;
-                    case "AutoCounter": o = new TimedEvents.AutoCounter( 10000 ); break;
+                    case "AutoCounter": o = new TimedEvents.StupidAutoCounter( 10000 ); break;
                 }
 
-            } ).Success.Should().BeTrue();
+            } );
 
-            handler.Reload( TestHelper.Monitor, idempotenceCheck: type != "SuspendableClock" );
+            handler.ReloadNewDomain( TestHelper.Monitor, idempotenceCheck: type != "SuspendableClock" );
 
             using( handler.Domain.AcquireReadLock() )
             {
@@ -57,36 +59,84 @@ namespace CK.Observable.Domain.Tests
                 }
             }
 
-            handler.Reload( TestHelper.Monitor, idempotenceCheck: type != "SuspendableClock" );
+            handler.ReloadNewDomain( TestHelper.Monitor, idempotenceCheck: type != "SuspendableClock" );
         }
 
         [Test]
-        public void simple_idempotence_checks()
+        public async Task simple_idempotence_checks_Async()
         {
-            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( simple_idempotence_checks ), startTimer: true ) )
+            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( simple_idempotence_checks_Async ), startTimer: true ) )
             {
                 TestHelper.Monitor.Info( "Test 1" );
-                d.Modify( TestHelper.Monitor, () => new Sample.Car( "Zoé" ) );
+                await d.ModifyThrowAsync( TestHelper.Monitor, () => new Sample.Car( "Zoé" ) );
                 d.AllObjects.Should().HaveCount( 1 );
                 ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
 
                 TestHelper.Monitor.Info( "Test 2" );
-                d.Modify( TestHelper.Monitor, () => d.AllObjects.Single().Destroy() );
+                await d.ModifyThrowAsync( TestHelper.Monitor, () => d.AllObjects.Single().Destroy() );
                 ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
 
                 TestHelper.Monitor.Info( "Test 3" );
-                d.Modify( TestHelper.Monitor, () => new Sample.Car( "Zoé is back!" ) );
+                await d.ModifyThrowAsync( TestHelper.Monitor, () => new Sample.Car( "Zoé is back!" ) );
                 ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
             }
         }
 
 
-        [Test]
-        public void immutable_string_serialization_test()
+        [SerializationVersion(0)]
+        class ObservableWithJaggedArrays : ObservableObject
         {
-            using( var od = new ObservableDomain<CustomRoot>( TestHelper.Monitor, nameof( immutable_string_serialization_test ), startTimer: false) )
+            public ObservableWithJaggedArrays()
             {
-                od.Modify( TestHelper.Monitor, () =>
+            }
+
+            ObservableWithJaggedArrays( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+                : base( BinarySerialization.Sliced.Instance )
+            {
+                Cars = r.ReadObject<Car[][]>();
+            }
+
+            public static void Write( BinarySerialization.IBinarySerializer w, in ObservableWithJaggedArrays o )
+            {
+                w.WriteObject( o.Cars );
+            }
+
+            public Car[][] Cars { get; set; }
+        }
+
+        [Test]
+        public async Task jagged_arrays_of_ObservableObjects_idempotence_checks_Async()
+        {
+            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( jagged_arrays_of_ObservableObjects_idempotence_checks_Async ), startTimer: false ) )
+            {
+                await d.ModifyThrowAsync( TestHelper.Monitor, () =>
+                {
+                    var ketru = new ObservableWithJaggedArrays();
+                    ketru.Cars = new[]
+                    {
+                        new[] { new Car( "Zoé" ), new Car( "Xrq" ) },
+                        new[] { new Car( "O1" ), new Car( "O2" ), new Car( "O3" ) }
+                    };
+                } );
+                ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
+                await d.ModifyThrowAsync( TestHelper.Monitor, () =>
+                {
+                    var ketru = d.AllObjects.OfType<ObservableWithJaggedArrays>().Single();
+                    ketru.Cars[0].Should().HaveCount( 2 );
+                    ketru.Cars[1].Should().HaveCount( 3 );
+                    ketru.Cars[1][2].Name.Should().Be( "O3" );
+                } );
+
+            }
+        }
+
+
+        [Test]
+        public async Task immutable_string_serialization_test_Async()
+        {
+            using( var od = new ObservableDomain<CustomRoot>( TestHelper.Monitor, nameof( immutable_string_serialization_test_Async ), startTimer: false) )
+            {
+                await od.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     od.Root.ImmutablesById = new ObservableDictionary<string, CustomImmutable>();
 
@@ -99,12 +149,12 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
-        public void created_then_disposed_event_test()
+        public async Task created_then_disposed_event_test_Async()
         {
-            using( var od = new ObservableDomain<CustomRoot>( TestHelper.Monitor, nameof( created_then_disposed_event_test ), startTimer: true ) )
+            using( var od = new ObservableDomain<CustomRoot>( TestHelper.Monitor, nameof( created_then_disposed_event_test_Async ), startTimer: true ) )
             {
                 // Prepare initial state
-                od.Modify( TestHelper.Monitor, () =>
+                await od.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     od.Root.CustomObservableList = new ObservableList<CustomObservable>();
                 } );
@@ -112,7 +162,7 @@ namespace CK.Observable.Domain.Tests
                 var initialState = od.ExportToString();
 
                 // Add some events for good measure
-                var events = od.Modify( TestHelper.Monitor, () =>
+                await od.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     // Create Observable and immutables
                     var myImmutable = new CustomImmutable( "ABC000", "My object" );
@@ -139,12 +189,12 @@ namespace CK.Observable.Domain.Tests
 
         [TestCase( true )]
         [TestCase( false )]
-        public void IdempotenceSerializationCheck_works_on_disposing_Observables( bool alwaysDisposeChild )
+        public async Task IdempotenceSerializationCheck_works_on_disposing_Observables_Async( bool alwaysDisposeChild )
         {
-            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( IdempotenceSerializationCheck_works_on_disposing_Observables ), startTimer: true ) )
+            using( var d = new ObservableDomain( TestHelper.Monitor, nameof( IdempotenceSerializationCheck_works_on_disposing_Observables_Async ), startTimer: true ) )
             {
                 TestDisposableObservableObject oldObject = null;
-                d.Modify( TestHelper.Monitor, () =>
+                await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     oldObject = new TestDisposableObservableObject( alwaysDisposeChild );
                 } );
@@ -163,28 +213,28 @@ namespace CK.Observable.Domain.Tests
         {
             public ObservableDictionary<string, CustomImmutable> ImmutablesById { get; set; }
             public ObservableList<string> SomeList { get; set; }
-            public ObservableList<CustomObservable> CustomObservableList { get; set; }
+            public ObservableList<CustomObservable>? CustomObservableList { get; set; }
 
             public CustomRoot() { }
 
-            CustomRoot( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+            CustomRoot( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+                : base( BinarySerialization.Sliced.Instance )
             {
-                ImmutablesById = (ObservableDictionary<string, CustomImmutable>)r.ReadObject();
-                SomeList = (ObservableList<string>)r.ReadObject();
-                CustomObservableList = (ObservableList<CustomObservable>)r.ReadObject();
+                ImmutablesById = r.ReadObject<ObservableDictionary<string, CustomImmutable>>();
+                SomeList = r.ReadObject<ObservableList<string>>();
+                CustomObservableList = r.ReadNullableObject<ObservableList<CustomObservable>>();
             }
 
-            void Write( BinarySerializer w )
+            public static void Write( BinarySerialization.IBinarySerializer w, in CustomRoot o )
             {
-                w.WriteObject( ImmutablesById );
-                w.WriteObject( SomeList );
-                w.WriteObject( CustomObservableList );
+                w.WriteObject( o.ImmutablesById );
+                w.WriteObject( o.SomeList );
+                w.WriteNullableObject( o.CustomObservableList );
             }
         }
 
         [SerializationVersion( 0 )]
-        public class CustomImmutable
+        public class CustomImmutable : BinarySerialization.ICKSlicedSerializable
         {
             public string Id { get; }
             public string Title { get; }
@@ -195,17 +245,17 @@ namespace CK.Observable.Domain.Tests
                 Title = title;
             }
 
-            CustomImmutable( IBinaryDeserializer r, TypeReadInfo? info )
+            CustomImmutable( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo? info )
             {
-                Id = r.ReadNullableString();
-                Title = r.ReadNullableString();
+                Id = r.Reader.ReadNullableString();
+                Title = r.Reader.ReadNullableString();
             }
 
 
-            void Write( BinarySerializer w )
+            public static void Write( BinarySerialization.IBinarySerializer w, in CustomImmutable o )
             {
-                w.WriteNullableString( Id );
-                w.WriteNullableString( Title );
+                w.Writer.WriteNullableString( o.Id );
+                w.Writer.WriteNullableString( o.Title );
             }
 
         }
@@ -220,16 +270,16 @@ namespace CK.Observable.Domain.Tests
                 ImmutablesById = new ObservableDictionary<string, CustomImmutable>();
             }
 
-            protected CustomObservable( IBinaryDeserializer r, TypeReadInfo? info )
-            : base( RevertSerialization.Default )
+            protected CustomObservable( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+            : base( BinarySerialization.Sliced.Instance )
             {
-                ImmutablesById = (ObservableDictionary<string, CustomImmutable>)r.ReadObject();
+                ImmutablesById = r.ReadObject<ObservableDictionary<string, CustomImmutable>>();
             }
 
 
-            void Write( BinarySerializer w )
+            public static void Write( BinarySerialization.IBinarySerializer w, in CustomObservable o )
             {
-                w.WriteObject( ImmutablesById );
+                w.WriteObject( o.ImmutablesById );
             }
 
         }
@@ -246,17 +296,17 @@ namespace CK.Observable.Domain.Tests
                 ChildObject = new ObservableList<int>();
             }
 
-            TestDisposableObservableObject( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+            TestDisposableObservableObject( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo? info )
+                : base( BinarySerialization.Sliced.Instance )
             {
-                AlwaysDisposeChild = r.ReadBoolean();
-                ChildObject = (ObservableList<int>)r.ReadObject();
+                AlwaysDisposeChild = r.Reader.ReadBoolean();
+                ChildObject = r.ReadObject<ObservableList<int>>();
             }
 
-            void Write( BinarySerializer w )
+            public static void Write( BinarySerialization.IBinarySerializer w, in TestDisposableObservableObject o )
             {
-                w.Write( AlwaysDisposeChild );
-                w.WriteObject( ChildObject );
+                w.Writer.Write( o.AlwaysDisposeChild );
+                w.WriteObject( o.ChildObject );
             }
 
             protected override void OnDestroy()
@@ -273,7 +323,6 @@ namespace CK.Observable.Domain.Tests
                 }
             }
         }
-
 
         [SerializationVersion( 0 )]
         public class ReminderAndTimerBag : InternalObject
@@ -293,23 +342,23 @@ namespace CK.Observable.Domain.Tests
                 _oTimers = new ObservableList<ObservableTimer>();
             }
 
-            ReminderAndTimerBag( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+            ReminderAndTimerBag( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo? info )
+                : base( BinarySerialization.Sliced.Instance )
             {
-                _identifier = r.ReadInt32();
-                _reminders = (List<ObservableReminder>)r.ReadObject()!;
-                _oReminders = (ObservableList<ObservableReminder>)r.ReadObject()!;
-                _timers = (List<ObservableTimer>)r.ReadObject()!;
-                _oTimers = (ObservableList<ObservableTimer>)r.ReadObject()!;
+                _identifier = r.Reader.ReadInt32();
+                _reminders = r.ReadObject<List<ObservableReminder>>();
+                _oReminders = r.ReadObject<ObservableList<ObservableReminder>>();
+                _timers = r.ReadObject<List<ObservableTimer>>();
+                _oTimers = r.ReadObject<ObservableList<ObservableTimer>>();
             }
 
-            void Write( BinarySerializer w )
+            public static void Write( BinarySerialization.IBinarySerializer w, in ReminderAndTimerBag o )
             {
-                w.Write( _identifier );
-                w.WriteObject( _reminders );
-                w.WriteObject( _oReminders );
-                w.WriteObject( _timers );
-                w.WriteObject( _oTimers );
+                w.Writer.Write( o._identifier );
+                w.WriteObject( o._reminders );
+                w.WriteObject( o._oReminders );
+                w.WriteObject( o._timers );
+                w.WriteObject( o._oTimers );
             }
 
             public void Create( int count = 5 )
@@ -329,11 +378,11 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
-        public void lot_of_timed_events_test()
+        public async Task lot_of_timed_events_test_Async()
         {
-            using( var od = new ObservableDomain( TestHelper.Monitor, nameof( lot_of_timed_events_test ), startTimer: true ) )
+            using( var od = new ObservableDomain( TestHelper.Monitor, nameof( lot_of_timed_events_test_Async ), startTimer: true ) )
             {
-                od.Modify( TestHelper.Monitor, () =>
+                await od.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     new ReminderAndTimerBag( 1 ).Create( 1 );
 
@@ -342,7 +391,7 @@ namespace CK.Observable.Domain.Tests
                 od.TimeManager.AllObservableTimedEvents.Should().HaveCount( 4 );
                 ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, od );
 
-                od.Modify( TestHelper.Monitor, () =>
+                await od.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     new ReminderAndTimerBag( 2 ).Create( 20 );
 

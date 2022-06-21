@@ -1,3 +1,5 @@
+using CK.BinarySerialization;
+using CK.Core;
 using System.Diagnostics;
 using System.Text;
 
@@ -14,40 +16,30 @@ namespace CK.Observable.League.Tests.MicroMachine
             Configuration = configuration;
             _clock = new SuspendableClock( isActive: false );
             _clock.IsActiveChanged += ClockIsActiveChanged;
+            Domain.EnsureSidekicks();
         }
 
-        protected Machine( RevertSerialization _ ) : base( _ ) { }
+        protected Machine( Sliced _ ) : base( _ ) { }
 
-        Machine( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+        Machine( IBinaryDeserializer d, ITypeReadInfo info )
+                : base( Sliced.Instance )
         {
             Debug.Assert( !IsDestroyed );
-            Configuration = (MachineConfiguration)r.ReadObject()!;
-            _clock = (SuspendableClock)r.ReadObject()!;
-            Name = r.ReadString();
-            r.ImplementationServices.OnPostDeserialization( () => IsRunning = _clock.IsActive );
+            Configuration = d.ReadObject<MachineConfiguration>();
+            _clock = d.ReadObject<SuspendableClock>()!;
+            Name = d.Reader.ReadString();
+            d.PostActions.Add( () => IsRunning = _clock.IsActive );
         }
 
-        void Write( BinarySerializer w )
+        public static void Write( IBinarySerializer s, in Machine o )
         {
-            Debug.Assert( !IsDestroyed );
-            w.WriteObject( Configuration );
-            w.WriteObject( _clock );
-            w.Write( Name );
+            Debug.Assert( !o.IsDestroyed );
+            s.WriteObject( o.Configuration );
+            s.WriteObject( o._clock );
+            s.Writer.Write( o.Name );
         }
 
         public string Name { get; }
-
-        /// <summary>
-        /// This is NOT to be exposed in real life.
-        /// This shows that the observable object may interact with its sidekick if needed.
-        /// </summary>
-        public MachineSideKick.MicroBridge BridgeToTheSidekick { get; internal set; }
-
-        /// <summary>
-        /// This is typically done in the constructor...
-        /// </summary>
-        public void TestCallEnsureBridge() => Domain.EnsureSidekicks();
 
         public MachineConfiguration Configuration { get; }
 

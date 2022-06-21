@@ -4,6 +4,7 @@ using NUnit.Framework;
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
 
 namespace CK.Observable.Domain.Tests
@@ -20,29 +21,29 @@ namespace CK.Observable.Domain.Tests
             {
             }
 
-            SerializableOnly( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+            SerializableOnly( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+                : base( BinarySerialization.Sliced.Instance )
             {
-                Name = r.ReadNullableString();
+                Name = r.Reader.ReadNullableString();
             }
 
-            void Write( BinarySerializer s )
+            public static void Write( BinarySerialization.IBinarySerializer s, in SerializableOnly o )
             {
-                s.WriteNullableString( Name );
+                s.Writer.WriteNullableString( o.Name );
             }
 
             public string Name { get; set; }
         }
 
         [Test]
-        public void serializable_but_not_exportable()
+        public async Task serializable_but_not_exportable_Async()
         {
-            using var d = new ObservableDomain(TestHelper.Monitor, nameof(serializable_but_not_exportable), startTimer: true );
-            d.Modify( TestHelper.Monitor, () =>
+            var d = new ObservableDomain(TestHelper.Monitor, nameof(serializable_but_not_exportable_Async), startTimer: true );
+            await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 new SerializableOnly() { Name = "Albert" };
             } );
-            using( var d2 = TestHelper.SaveAndLoad( d ) )
+            using( var d2 = TestHelper.CloneDomain( d ) )
             {
                 d2.AllObjects.OfType<SerializableOnly>().Single().Name.Should().Be( "Albert" );
 

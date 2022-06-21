@@ -1,3 +1,4 @@
+using CK.BinarySerialization;
 using CK.Core;
 using System;
 using System.Collections.Generic;
@@ -19,7 +20,7 @@ namespace CK.Observable
     {
         // Link to the next free reminder. Can be not null if and only if this reminder
         // is a pooled one and is currently inactive.
-        internal ObservableReminder NextFreeReminder;
+        internal ObservableReminder? NextFreeReminder;
 
         /// <summary>
         /// Initializes a new unnamed <see cref="ObservableReminder"/> bound to the current <see cref="ObservableDomain"/>.
@@ -44,19 +45,19 @@ namespace CK.Observable
             ReusableArgs = new ObservableReminderEventArgs( this );
         }
 
-        ObservableReminder( IBinaryDeserializer r, TypeReadInfo? info )
-            : base( RevertSerialization.Default )
+        ObservableReminder( IBinaryDeserializer d, ITypeReadInfo info )
+            : base( Sliced.Instance )
         {
             Debug.Assert( !IsDestroyed );
-            IsPooled = r.ReadBoolean();
+            IsPooled = d.Reader.ReadBoolean();
             ReusableArgs = new ObservableReminderEventArgs( this );
             if( IsPooled && ActiveIndex == 0 ) TimeManager.ReleaseToPool( this );
         }
 
-        void Write( BinarySerializer w )
+        public static void Write( BinarySerialization.IBinarySerializer s, in ObservableReminder o )
         {
-            Debug.Assert( !IsDestroyed );
-            w.Write( IsPooled );
+            Debug.Assert( !o.IsDestroyed );
+            s.Writer.Write( o.IsPooled );
         }
 
         /// <summary>
@@ -106,7 +107,7 @@ namespace CK.Observable
             {
                 if( ExpectedDueTimeUtc != value )
                 {
-                    if( value.Kind != DateTimeKind.Utc ) throw new ArgumentException( nameof( DueTimeUtc ), "Must be a Utc DateTime." );
+                    Throw.CheckArgument( value.Kind == DateTimeKind.Utc );
                     this.CheckDestroyed();
                     ExpectedDueTimeUtc = value;
                     TimeManager.OnChanged( this );

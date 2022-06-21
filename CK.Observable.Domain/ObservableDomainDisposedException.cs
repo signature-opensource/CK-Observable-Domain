@@ -14,7 +14,7 @@ namespace CK.Observable
         /// </summary>
         /// <param name="domainName">The domain name.</param>
         public ObservableDomainDisposedException( string domainName )
-            : base( $"Observable domain '{domainName}' has been disposed." )
+            : base( $"Observable domain '{domainName}'" )
         {
             DomainName = domainName;
         }

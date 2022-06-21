@@ -97,10 +97,10 @@ namespace CK.Observable
         /// <summary>
         /// Initializes a new Id from a binary stream.
         /// </summary>
-        /// <param name="reader">The reader.</param>
-        public ObservableObjectId( ICKBinaryReader reader )
+        /// <param name="r">The reader.</param>
+        public ObservableObjectId( ICKBinaryReader r )
         {
-            UniqueId = reader.ReadInt64();
+            UniqueId = r.ReadInt64();
         }
 
         void Export( int num, ObjectExporter exporter )
@@ -130,10 +130,10 @@ namespace CK.Observable
         /// </summary>
         /// <param name="obj">The other object to compare to.</param>
         /// <returns>True if equal, false otherwise.</returns>
-        public override bool Equals( object obj ) => obj is ObservableObjectId o && o.UniqueId == UniqueId;
+        public override bool Equals( object? obj ) => obj is ObservableObjectId o && o.UniqueId == UniqueId;
 
         /// <summary>
-        /// Overidden to return <see cref="Index"/>.
+        /// Overridden to return <see cref="Index"/>.
         /// </summary>
         /// <returns>This object's index.</returns>
         public override string ToString() => Index.ToString();

@@ -24,17 +24,20 @@ namespace CK.Observable
         {
         }
 
-        protected ObservableTimedEventBase( RevertSerialization _ ) : base( _ ) { }
 
-        ObservableTimedEventBase( IBinaryDeserializer r, TypeReadInfo info )
-            : base( RevertSerialization.Default )
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+        protected ObservableTimedEventBase( BinarySerialization.Sliced _ ) : base( _ ) { }
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+
+        ObservableTimedEventBase( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
+            : base( BinarySerialization.Sliced.Instance )
         {
-            _handlers = new ObservableEventHandler<TEventArgs>( r );
+            _handlers = new ObservableEventHandler<TEventArgs>( d );
         }
 
-        void Write( BinarySerializer w )
+        public static void Write( BinarySerialization.IBinarySerializer s, in ObservableTimedEventBase<TEventArgs> o )
         {
-            _handlers.Write( w );
+            o._handlers.Write( s );
         }
 
         internal override bool HasHandlers => _handlers.HasHandlers;

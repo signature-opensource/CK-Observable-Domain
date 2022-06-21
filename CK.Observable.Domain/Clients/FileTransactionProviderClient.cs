@@ -1,4 +1,3 @@
-using CK.Text;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -6,6 +5,7 @@ using System.Threading;
 using CK.Core;
 using System.Threading.Tasks;
 using System.Diagnostics.CodeAnalysis;
+using CK.BinarySerialization;
 
 namespace CK.Observable
 {
@@ -106,19 +106,22 @@ namespace CK.Observable
         }
 
         /// <inheritdoc />
-        public override void OnTransactionCommit( in SuccessfulTransactionEventArgs c )
+        public override void OnTransactionCommit( in TransactionDoneEventArgs c )
         {
             base.OnTransactionCommit( c );
-            if( _minimumDueTimeMs == 0 )
+            if( c.RollbackedInfo == null )
             {
-                // Write every snapshot
-                WriteFileIfNeeded();
-            }
-            else if( _minimumDueTimeMs > 0 && c.CommitTimeUtc > _nextDueTimeUtc )
-            {
-                // Write snapshot if due, then reschedule it.
-                WriteFileIfNeeded();
-                RescheduleDueTime( c.CommitTimeUtc );
+                if( _minimumDueTimeMs == 0 )
+                {
+                    // Write every snapshot
+                    WriteFileIfNeeded();
+                }
+                else if( _minimumDueTimeMs > 0 && c.CommitTimeUtc > _nextDueTimeUtc )
+                {
+                    // Write snapshot if due, then reschedule it.
+                    WriteFileIfNeeded();
+                    RescheduleDueTime( c.CommitTimeUtc );
+                }
             }
         }
 
@@ -143,7 +146,7 @@ namespace CK.Observable
             }
             catch( Exception e )
             {
-                monitor.Error( "Caught when writing ObservableDomain file", e );
+                monitor.Error( "When writing ObservableDomain snapshot", e );
                 return false;
             }
         }
@@ -175,19 +178,14 @@ namespace CK.Observable
 
                         if( File.Exists( _filePath ) )
                         {
-                            File.Replace(
-                                _tmpFilePath,
-                                _filePath,
-                                _bakFilePath,
-                                true
-                            );
+                            File.Replace( _tmpFilePath,
+                                          _filePath,
+                                          _bakFilePath,
+                                          true );
                         }
                         else
                         {
-                            File.Move(
-                                _tmpFilePath,
-                                _filePath
-                            );
+                            File.Move( _tmpFilePath, _filePath );
                         }
 
                         _fileTransactionNumber = CurrentSerialNumber;
@@ -206,7 +204,7 @@ namespace CK.Observable
         /// <param name="startTimer">Unused.</param>
         /// <returns>Never: throws a <see cref="NotSupportedException"/>.</returns>
         [DoesNotReturn]
-        protected override ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, bool? startTimer )
+        protected override ObservableDomain DeserializeDomain( IActivityMonitor monitor, RewindableStream stream, bool? startTimer )
         {
             throw new NotSupportedException( "FileTransactionProviderClient is not a domain manager." );
         }

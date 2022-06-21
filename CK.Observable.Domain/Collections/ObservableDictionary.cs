@@ -1,7 +1,10 @@
+using CK.Core;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Runtime.InteropServices;
 
 namespace CK.Observable
 {
@@ -67,25 +70,27 @@ namespace CK.Observable
         /// Specialized deserialization constructor for specialized classes.
         /// </summary>
         /// <param name="_">Unused parameter.</param>
-        protected ObservableDictionary( RevertSerialization _ ) : base( _ ) { }
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+        protected ObservableDictionary( BinarySerialization.Sliced _ ) : base( _ ) { }
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
-        ObservableDictionary( IBinaryDeserializer r, TypeReadInfo? info )
-                : base( RevertSerialization.Default )
+        ObservableDictionary( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
+            : base( BinarySerialization.Sliced.Instance )
         {
-            _map = (Dictionary<TKey, TValue>)r.ReadObject()!;
-            _itemSet = new ObservableEventHandler<CollectionMapSetEvent>( r );
-            _itemAdded = new ObservableEventHandler<CollectionMapSetEvent>( r );
-            _collectionCleared = new ObservableEventHandler<CollectionClearEvent>( r );
-            _itemRemoved = new ObservableEventHandler<CollectionRemoveKeyEvent>( r );
+            _map = d.ReadObject<Dictionary<TKey, TValue>>()!;
+            _itemSet = new ObservableEventHandler<CollectionMapSetEvent>( d );
+            _itemAdded = new ObservableEventHandler<CollectionMapSetEvent>( d );
+            _collectionCleared = new ObservableEventHandler<CollectionClearEvent>( d );
+            _itemRemoved = new ObservableEventHandler<CollectionRemoveKeyEvent>( d );
         }
 
-        void Write( BinarySerializer s )
+        public static void Write( BinarySerialization.IBinarySerializer s, in ObservableDictionary<TKey, TValue> o )
         {
-            s.WriteObject( _map );
-            _itemSet.Write( s );
-            _itemAdded.Write( s );
-            _collectionCleared.Write( s );
-            _itemRemoved.Write( s );
+            s.WriteObject( o._map );
+            o._itemSet.Write( s );
+            o._itemAdded.Write( s );
+            o._collectionCleared.Write( s );
+            o._itemRemoved.Write( s );
         }
 
         internal override ObjectExportedKind ExportedKind => ObjectExportedKind.Map;
@@ -104,17 +109,54 @@ namespace CK.Observable
             get => _map[key];
             set
             {
-                if( _map.TryGetValue( key, out var exists ) )
+                ref TValue? v = ref CollectionsMarshal.GetValueRefOrAddDefault( _map, key, out bool exists );
+                if( exists )
                 {
-                    if( !EqualityComparer<TValue>.Default.Equals( value, exists ) )
+                    if( !EqualityComparer<TValue>.Default.Equals( value, v ) )
                     {
-                        _map[key] = value;
-                        CollectionMapSetEvent? e = ActualDomain.OnCollectionMapSet( this, key, value );
-                        if( e != null && _itemSet.HasHandlers ) _itemSet.Raise( this, e );
+                        v = value;
+                        OnItemSet( key, value );
                     }
                 }
-                else Add( key, value );
-           }
+                else
+                {
+                    v = value;
+                    OnItemAdded( key, value );
+                }
+            }
+        }
+        void OnItemAdded( in TKey key, in TValue value )
+        {
+            CollectionMapSetEvent? e = ActualDomain.OnCollectionMapSet( this, key, value );
+            if( e != null && _itemAdded.HasHandlers ) _itemAdded.Raise( this, e );
+        }
+
+        void OnItemSet( in TKey key, in TValue value )
+        {
+            CollectionMapSetEvent? e = ActualDomain.OnCollectionMapSet( this, key, value );
+            if( e != null && _itemSet.HasHandlers ) _itemSet.Raise( this, e );
+        }
+
+        void OnItemRemoved( in TKey key )
+        {
+            CollectionRemoveKeyEvent? e = ActualDomain.OnCollectionRemoveKey( this, key );
+            if( e != null && _itemRemoved.HasHandlers ) _itemRemoved.Raise( this, e );
+        }
+
+        /// <summary>
+        /// Attempts to add the specified key and value to the dictionary.
+        /// </summary>
+        /// <param name="key">The key of the element to add.</param>
+        /// <param name="value">The value of the element to add.</param>
+        /// <returns>true if the key/value pair was added to the dictionary successfully; otherwise, false.</returns>
+        public bool TryAdd( TKey key, TValue value )
+        {
+            if( _map.TryAdd( key, value ) )
+            {
+                OnItemAdded( key, value );
+                return true;
+            }
+            return false;
         }
 
         /// <summary>
@@ -150,8 +192,7 @@ namespace CK.Observable
         public void Add( TKey key, TValue value )
         {
             _map.Add( key, value );
-            CollectionMapSetEvent? e = ActualDomain.OnCollectionMapSet( this, key, value );
-            if( e != null && _itemAdded.HasHandlers ) _itemAdded.Raise( this, e );
+            OnItemAdded( key, value );
         }
 
         void ICollection<KeyValuePair<TKey, TValue>>.Add( KeyValuePair<TKey, TValue> item ) => Add( item.Key, item.Value );
@@ -201,8 +242,23 @@ namespace CK.Observable
         {
             if( _map.Remove( key ) )
             {
-                CollectionRemoveKeyEvent? e = ActualDomain.OnCollectionRemoveKey( this, key );
-                if( e != null && _itemRemoved.HasHandlers ) _itemRemoved.Raise( this, e );
+                OnItemRemoved( key );
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Removes the value with the specified key from the dictionary, returning the removed value.
+        /// </summary>
+        /// <param name="key">The key of the element to remove.</param>
+        /// <param name="value">The removed element.</param>
+        /// <returns>true if the element is successfully found and removed; otherwise, false. This method returns false if key is not found in the dictionary.</returns>
+        public bool Remove( TKey key, [MaybeNullWhen( false )] out TValue value )
+        {
+            if( _map.Remove( key, out value ) )
+            {
+                OnItemRemoved( key );
                 return true;
             }
             return false;
@@ -213,8 +269,7 @@ namespace CK.Observable
             // Removing a pair from a dictionary also checks the value equality.
             if( ((IDictionary<TKey, TValue>)_map).Remove( item ) )
             {
-                CollectionRemoveKeyEvent? e = ActualDomain.OnCollectionRemoveKey( this, item.Key );
-                if( e != null && _itemRemoved.HasHandlers ) _itemRemoved.Raise( this, e );
+                OnItemRemoved( item.Key );
                 return true;
             }
             return false;
@@ -252,9 +307,24 @@ namespace CK.Observable
         /// This parameter is passed uninitialized.
         /// </param>
         /// <returns>True if the dictionary contains an element with the specified key; otherwise, false.</returns>
-        public bool TryGetValue( TKey key, out TValue value ) => _map.TryGetValue( key, out value );
+        public bool TryGetValue( TKey key, [MaybeNullWhen( false )]out TValue value ) => _map.TryGetValue( key, out value );
 
         IEnumerator IEnumerable.GetEnumerator() => _map.GetEnumerator();
+
+        /// <summary>
+        /// Explicit definition that resolves ambiguities between extension methods.
+        /// </summary>
+        /// <param name="key">The key to lookup.</param>
+        /// <returns>The existing associated value or the default value for TValue.</returns>
+        public TValue? GetValueOrDefault( TKey key ) => _map.GetValueOrDefault( key );
+
+        /// <summary>
+        /// Explicit definition that resolves ambiguities between extension methods.
+        /// </summary>
+        /// <param name="key">The key to lookup.</param>
+        /// <param name="defaultValue">The default value to return when the dictionary cannot find a value associated with the specified key.</param>
+        /// <returns>The existing associated value or the <paramref name="defaultValue"/>.</returns>
+        public TValue GetValueOrDefault( TKey key, TValue defaultValue ) => _map.GetValueOrDefault( key, defaultValue );
 
     }
 }

@@ -47,25 +47,25 @@ namespace CK.Observable
             Name = name ?? throw new ArgumentNullException( nameof( name ) );
         }
 
-        ObservableTimer( IBinaryDeserializer r, TypeReadInfo? info )
-            : base( RevertSerialization.Default )
+        ObservableTimer( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
+            : base( BinarySerialization.Sliced.Instance )
         {
             Debug.Assert( !IsDestroyed );
-            _milliSeconds = r.ReadInt32();
+            _milliSeconds = d.Reader.ReadInt32();
             if( _milliSeconds < 0 )
             {
                 _milliSeconds = -_milliSeconds;
                 _isActive = true;
             }
-            Name = r.ReadNullableString();
+            Name = d.Reader.ReadNullableString();
             ReusableArgs = new ObservableTimerEventArgs( this );
         }
 
-        void Write( BinarySerializer w )
+        public static void Write( BinarySerialization.IBinarySerializer s, in ObservableTimer o )
         {
-            Debug.Assert( !IsDestroyed );
-            w.Write( _isActive ? -_milliSeconds : _milliSeconds );
-            w.WriteNullableString( Name );
+            Debug.Assert( !o.IsDestroyed );
+            s.Writer.Write( o._isActive ? -o._milliSeconds : o._milliSeconds );
+            s.Writer.WriteNullableString( o.Name );
         }
 
         private protected override bool GetIsActiveFlag() => _isActive;
@@ -111,7 +111,7 @@ namespace CK.Observable
         /// Gets or sets an optional name for this timer.
         /// Default to null.
         /// </summary>
-        public string Name { get; set; }
+        public string? Name { get; set; }
 
         /// <summary>
         /// Gets or sets the interval, expressed in milliseconds, at which the <see cref="ObservableTimedEventBase{T}.Elapsed"/> event must repeatedly fire.
@@ -127,7 +127,7 @@ namespace CK.Observable
                     this.CheckDestroyed();
                     if( ExpectedDueTimeUtc == Util.UtcMinValue || ExpectedDueTimeUtc == Util.UtcMaxValue )
                     {
-                        if( value <= 0 ) throw new ArgumentOutOfRangeException( nameof( IntervalMilliSeconds ) );
+                        Throw.CheckOutOfRangeArgument( value > 0 );
                         _milliSeconds = value;
                     }
                     else Reconfigure( DueTimeUtc, value );

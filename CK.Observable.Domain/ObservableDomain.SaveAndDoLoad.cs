@@ -1,5 +1,5 @@
+using CK.BinarySerialization;
 using CK.Core;
-using CK.Text;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -14,328 +14,14 @@ namespace CK.Observable
 
     public partial class ObservableDomain
     {
-        /// <summary>
-        /// Immutable capture of object graph issues.
-        /// This is (efficiently) computed by the <see cref="Save"/> method. Note that because of concurrent executions,
-        /// unreachable objects appearing in these lists may already be destroyed when this object is exposed.
-        /// </summary>
-        public class LostObjectTracker
-        {
-            readonly ObservableDomain _d;
-
-            internal LostObjectTracker( ObservableDomain d,
-                                        IReadOnlyList<ObservableObject>? observables,
-                                        IReadOnlyList<InternalObject>? internals,
-                                        IReadOnlyList<ObservableTimedEventBase>? timed,
-                                        IReadOnlyList<IDestroyable>? refDestroyed,
-                                        int unusedPooledReminders,
-                                        int pooledReminderCount )
-            {
-                _d = d;
-                TransactionNumber = d.TransactionSerialNumber;
-                UnreacheableObservables = observables ?? Array.Empty<ObservableObject>();
-                UnreacheableInternals = internals ?? Array.Empty<InternalObject>();
-                UnreacheableTimedObjects = timed ?? Array.Empty<ObservableTimedEventBase>();
-                ReferencedDestroyed = refDestroyed ?? Array.Empty<IDestroyable>();
-                UnusedPooledReminderCount = unusedPooledReminders;
-                PooledReminderCount = pooledReminderCount;
-            }
-
-            /// <summary>
-            /// Gets the transaction number of the domain that has been captured.
-            /// </summary>
-            public int TransactionNumber { get; }
-
-            /// <summary>
-            /// Gets a list of <see cref="IDestroyable"/> that are destroyed but are
-            /// still referenced from non destroyed objects.
-            /// </summary>
-            public IReadOnlyList<IDestroyable> ReferencedDestroyed { get; }
-
-            /// <summary>
-            /// Gets a list of non destroyed <see cref="ObservableObject"/> that are no more reachable
-            /// from any of <see cref="ObservableDomain.AllRoots"/>.
-            /// <para>
-            /// Note that when there is no defined root, this list is empty and that, because of concurrent executions,
-            /// some of these object may be already destroyed.
-            /// </para>
-            /// </summary>
-            public IReadOnlyList<ObservableObject> UnreacheableObservables { get; }
-
-            /// <summary>
-            /// Gets a list of non destroyed <see cref="InternalObject"/> that are no more reachable
-            /// from any of <see cref="ObservableDomain.AllRoots"/>.
-            /// <para>
-            /// Note that when there is no defined root, this list is empty and that, because of concurrent executions,
-            /// some of these object may be already destroyed.
-            /// </para>
-            /// </summary>
-            public IReadOnlyList<InternalObject> UnreacheableInternals { get; }
-
-            /// <summary>
-            /// Gets a list of non destroyed <see cref="ObservableTimedEventBase"/> that are no more reachable
-            /// from any of <see cref="ObservableDomain.AllRoots"/> (and are not pooled reminders).
-            /// <para>
-            /// Note that when there is no defined root, this list is empty and that, because of concurrent executions,
-            /// some of these object may be already destroyed.
-            /// </para>
-            /// </summary>
-            public IReadOnlyList<ObservableTimedEventBase> UnreacheableTimedObjects { get; }
-
-            /// <summary>
-            /// Gets the number of unused pooled reminders.
-            /// </summary>
-            public int UnusedPooledReminderCount { get; }
-
-            /// <summary>
-            /// Gets the total number of pooled reminders.
-            /// </summary>
-            public int PooledReminderCount { get; }
-
-            /// <summary>
-            /// When <see cref="UnusedPooledReminderCount"/> is greater than 16 and greater than half of the <see cref="PooledReminderCount"/>,
-            /// the <see cref="ObservableDomain.GarbageCollectAsync"/> will trim the number of pooled reminders.
-            /// </summary>
-            public bool ShouldTrimPooledReminders => UnusedPooledReminderCount > 16 && (2 * UnusedPooledReminderCount) > PooledReminderCount;
-
-            /// <summary>
-            /// Gets whether one or more issues have been detected.
-            /// When false, then there is nothing to do (it is useless to call <see cref="ObservableDomain.GarbageCollectAsync(IActivityMonitor, int)"/>).
-            /// </summary>
-            public bool HasIssues => ReferencedDestroyed.Count > 0
-                                     || UnreacheableObservables.Count > 0
-                                     || UnreacheableInternals.Count > 0
-                                     || UnreacheableTimedObjects.Count > 0
-                                     || ShouldTrimPooledReminders;
-
-            /// <summary>
-            /// Dumps the messages to the monitor. Only the <see cref="ReferencedDestroyed"/> are errors.
-            /// Other issues are expressed as warnings.
-            /// </summary>
-            /// <param name="monitor">The target monitor.</param>
-            /// <param name="dumpReferencedDestroyed">False to skip <see cref="ReferencedDestroyed"/> errors.</param>
-            public void DumpLog( IActivityMonitor monitor, bool dumpReferencedDestroyed = true )
-            {
-                if( dumpReferencedDestroyed )
-                {
-                    if( ReferencedDestroyed.Count > 0 )
-                    {
-                        using( monitor.OpenError( $"{ReferencedDestroyed.Count} destroyed objects are referenced by one or more non destroyed objects." ) )
-                        {
-                            monitor.Error( ReferencedDestroyed.GroupBy( r => r.GetType() ).Select( g => $"{g.Count()} of type '{g.Key.Name}'" ).Concatenate() );
-                        }
-                    }
-                    else
-                    {
-                        monitor.Trace( "No reference to destroyed objects." );
-                    }
-                }
-                if( UnreacheableObservables.Count > 0 )
-                {
-                    using( monitor.OpenWarn( $"{UnreacheableObservables.Count} Observable objects are not reachable from any of the domain's roots." ) )
-                    {
-                        monitor.Warn( UnreacheableObservables.GroupBy( r => r.GetType() ).Select( g => $"{g.Count()} of type '{g.Key.Name}'" ).Concatenate() );
-                    }
-                }
-                else
-                {
-                    monitor.Trace( "No unreachable Observable objects found." );
-                }
-                if( UnreacheableInternals.Count > 0 )
-                {
-                    using( monitor.OpenWarn( $"{UnreacheableInternals.Count} Internal objects are not reachable from any of the domain's roots." ) )
-                    {
-                        monitor.Warn( UnreacheableInternals.GroupBy( r => r.GetType() ).Select( g => $"{g.Count()} of type '{g.Key.Name}'" ).Concatenate() );
-                    }
-                }
-                else
-                {
-                    monitor.Trace( "No unreachable Internal objects found." );
-                }
-                if( UnreacheableTimedObjects.Count > 0 )
-                {
-                    using( monitor.OpenWarn( $"{UnreacheableTimedObjects.Count} Timer or Reminder objects are not reachable from any of the domain's roots." ) )
-                    {
-                        monitor.Warn( UnreacheableTimedObjects.GroupBy( r => r.GetType() ).Select( g => $"{g.Count()} of type '{g.Key.Name}'" ).Concatenate() );
-                    }
-                }
-                else
-                {
-                    monitor.Trace( "No unreachable Timer or Reminder objects found." );
-                }
-                if( ShouldTrimPooledReminders )
-                {
-                    monitor.Warn( $"There are {UnusedPooledReminderCount} unused pooled reminders out of {PooledReminderCount}. The set of pooled reminders should be trimmed." );
-                }
-            }
-
-            /// <summary>
-            /// Overridden to return the count of the different lists.
-            /// </summary>
-            /// <returns>A readable string.</returns>
-            public override string ToString() => $"{ReferencedDestroyed.Count} ReferencedDestroyed, {UnreacheableObservables.Count} UnreacheableObservables, {UnreacheableInternals.Count} UnreacheableInternals, {UnreacheableTimedObjects.Count} UnreacheableTimedObjects.";
-        }
-
-        /// <summary>
-        /// Gets the <see cref="LostObjectTracker"/> that has been computed by the last <see cref="Save"/> call.
-        /// Use <see cref="EnsureLostObjectTracker(IActivityMonitor, int)"/> to refresh it.
-        /// </summary>
-        public LostObjectTracker? CurrentLostObjectTracker { get; private set; }
-
-
-        class NullStream : Stream
-        {
-            long _p;
-
-            public override bool CanRead => false;
-
-            public override bool CanSeek => false;
-
-            public override bool CanWrite => true;
-
-            public override long Length => throw new NotSupportedException();
-
-            public override long Position { get => _p; set => throw new NotSupportedException(); }
-
-            public override void Flush() { }
-
-            public override int Read( byte[] buffer, int offset, int count )
-            {
-                throw new NotSupportedException();
-            }
-
-            public override long Seek( long offset, SeekOrigin origin )
-            {
-                throw new NotSupportedException();
-            }
-
-            public override void SetLength( long value )
-            {
-                throw new NotSupportedException();
-            }
-
-            public override void Write( byte[] buffer, int offset, int count )
-            {
-                _p += count;
-            }
-        }
-
-        /// <summary>
-        /// Triggers a garbage collection on this domain.
-        /// First, <see cref="EnsureLostObjectTracker(IActivityMonitor, int)"/> is called to update the <see cref="CurrentLostObjectTracker"/>
-        /// and then, the detected lost objects are unloaded in a <see cref="ModifyAsync"/>.
-        /// </summary>
-        /// <param name="monitor">The monitor to use.</param>
-        /// <param name="millisecondsTimeout">
-        /// The maximum number of milliseconds to wait for the write access before giving up (this is also used for
-        /// the read access if <see cref="EnsureLostObjectTracker(IActivityMonitor, int)"/> must update the <see cref="CurrentLostObjectTracker"/>).
-        /// Waits indefinitely by default.
-        /// </param>
-        /// <returns>True on success, false if timeout or an error occurred.</returns>
-        public async Task<bool> GarbageCollectAsync( IActivityMonitor monitor, int millisecondsTimeout = -1 )
-        {
-            CheckDisposed();
-            using( monitor.OpenInfo( $"Garbage collecting." ) )
-            {
-                var c = EnsureLostObjectTracker( monitor, millisecondsTimeout );
-                if( c == null ) return false;
-                if( !c.HasIssues )
-                {
-                    monitor.CloseGroup( "There is nothing to do." );
-                    return true;
-                }
-                c.DumpLog( monitor, false );
-                int count = 0;
-                var (ex, result) = await ModifyNoThrowAsync( monitor, () =>
-                {
-                    Debug.Assert( c != null );
-
-                    // Destroyed objects can only transition from alive to destroyed: using
-                    // the lost objects captured here is fine since the only risk is to forget
-                    // some objects.
-                    foreach( var o in c.UnreacheableObservables )
-                    {
-                        if( !o.IsDestroyed )
-                        {
-                            o.Unload( true );
-                            ++count;
-                        }
-                    }
-                    foreach( var o in c.UnreacheableInternals )
-                    {
-                        if( !o.IsDestroyed )
-                        {
-                            o.Unload( true );
-                            ++count;
-                        }
-                    }
-                    foreach( var o in c.UnreacheableTimedObjects )
-                    {
-                        if( !o.IsDestroyed )
-                        {
-                            o.Destroy();
-                            ++count;
-                        }
-                    }
-                    //// Pool reminders may have been added/removed to the pool by transactions
-                    //// before we enter this ModifyAsync.
-                    //// We should theoretically reanalyze the data but since we ask to
-                    //// remove only half of the unused (at most), we do it directly.
-                    if( c.ShouldTrimPooledReminders )
-                    {
-                        TimeManager.TrimPooledReminders( monitor, c.UnusedPooledReminderCount / 2 );
-                    }
-                }, millisecondsTimeout );
-                if( ex != null )
-                {
-                    monitor.Error( ex );
-                    return false;
-                }
-                monitor.CloseGroup( $"Removed {count} objects." );
-                return result.Success;
-            }
-        }
-
-        /// <summary>
-        /// Updates <see cref="CurrentLostObjectTracker"/> if its <see cref="LostObjectTracker.TransactionNumber"/> is
-        /// not the current <see cref="TransactionSerialNumber"/>.
-        /// On error (or if a read access failed to be obtained), returns null.
-        /// </summary>
-        /// <param name="monitor">The monitor to use.</param>
-        /// <param name="millisecondsTimeout">
-        /// The maximum number of milliseconds to wait for a read access before giving up.
-        /// Wait indefinitely by default.
-        /// </param>
-        /// <returns>True on success, false if timeout occurred.</returns>
-        /// <returns></returns>
-        public LostObjectTracker? EnsureLostObjectTracker( IActivityMonitor monitor, int millisecondsTimeout = -1 )
-        {
-            // We don't need synchronization code here: the "CurrentLostObjectTracker" may have been
-            // updated by another save and we absolutely don't care since the LostObjectTracker creation is
-            // not parametrized: it's the same for everyone.
-            var current = CurrentLostObjectTracker;
-            if( current == null || current.TransactionNumber != TransactionSerialNumber )
-            {
-                using var s = new NullStream();
-                monitor.Trace( "Saving objects in a null stream to track lost objects." );
-                if( !Save( monitor, s, millisecondsTimeout: millisecondsTimeout ) )
-                {
-                    return null;
-                }
-            }
-            return CurrentLostObjectTracker;
-        }
-
         /// <inheritdoc/>
         public bool Save( IActivityMonitor monitor,
                           Stream stream,
-                          bool leaveOpen = false,
                           bool debugMode = false,
-                          Encoding? encoding = null,
                           int millisecondsTimeout = -1 )
         {
-            if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
-            if( stream == null ) throw new ArgumentNullException( nameof( stream ) );
+            Throw.CheckNotNullArgument( monitor );
+            Throw.CheckNotNullArgument( stream );
             CheckDisposed();
 
             // Since we only need the read lock, whenever multiple threads Save() concurrently,
@@ -344,17 +30,20 @@ namespace CK.Observable
             // Since this is clearly an edge case, we use a lock with the same timeout and we don't care of a potential 2x wait time.
             if( !Monitor.TryEnter( _saveLock, millisecondsTimeout ) ) return false;
 
-            List<IDestroyable>? destroyedRefList = null;
+            List<BinarySerialization.IDestroyable>? destroyedRefList = null;
 
-            void Track( IDestroyable o )
+            void Track( BinarySerialization.IDestroyable o )
             {
-                if( destroyedRefList == null ) destroyedRefList = new List<IDestroyable>();
+                if( destroyedRefList == null ) destroyedRefList = new List<BinarySerialization.IDestroyable>();
                 Debug.Assert( !destroyedRefList.Contains( o ) );
                 destroyedRefList.Add( o );
             }
 
-            using( var w = new BinarySerializer( stream, _serializers, leaveOpen, encoding, Track ) )
+            using( var s = BinarySerializer.Create( stream, _serializerContext ) )
             {
+                s.OnDestroyedObject += Track;
+
+                // Lock check are done here (as late as possible to minimize contention).
                 bool isWrite = _lock.IsWriteLockHeld;
                 bool isRead = _lock.IsReadLockHeld;
                 if( !isWrite && !isRead && !_lock.TryEnterReadLock( millisecondsTimeout ) )
@@ -362,43 +51,54 @@ namespace CK.Observable
                     Monitor.Exit( _saveLock );
                     return false;
                 }
+                // We cannot use CheckDisposed here: we must release the locks.
+                if( _transactionStatus == CurrentTransactionStatus.Disposing )
+                {
+                    Monitor.Exit( _saveLock );
+                    _lock.ExitReadLock();
+                    ThrowOnDisposedDomain();
+                }
+                // Either there is no current transaction or the provided monitor is not the one that the
+                // user wants to use: we create an InitializationTransaction with the right monitor that "hides"
+                // the current transaction one if any.
                 bool needFakeTran = _currentTran == null || _currentTran.Monitor != monitor;
                 if( needFakeTran ) new InitializationTransaction( monitor, this, false );
                 try
                 {
                     using( monitor.OpenInfo( $"Saving domain ({_actualObjectCount} objects, {_internalObjectCount} internals, {_timeManager.AllObservableTimedEvents.Count} timed events)." ) )
                     {
-                        w.WriteSmallInt32( CurrentSerializationVersion );
-                        w.DebugWriteMode( debugMode ? (bool?)debugMode : null );
-                        w.Write( _currentObjectUniquifier );
-                        w.Write( _domainSecret );
+                        s.Writer.Write( (byte)0 ); // Version
+                        s.DebugWriteMode( debugMode ? (bool?)debugMode : null );
+                        s.Writer.Write( _currentObjectUniquifier );
+                        Debug.Assert( _domainSecret != null );
+                        s.Writer.Write( _domainSecret );
                         if( debugMode ) monitor.Trace( $"Domain {DomainName}: Tran #{_transactionSerialNumber} - {_transactionCommitTimeUtc:o}, {_actualObjectCount} objects." );
-                        w.Write( DomainName );
-                        w.Write( _transactionSerialNumber );
-                        w.Write( _transactionCommitTimeUtc );
-                        w.Write( _actualObjectCount );
+                        s.Writer.Write( DomainName );
+                        s.Writer.Write( _transactionSerialNumber );
+                        s.Writer.Write( _transactionCommitTimeUtc );
+                        s.Writer.Write( _actualObjectCount );
 
-                        w.DebugWriteSentinel();
-                        w.WriteNonNegativeSmallInt32( _freeList.Count );
-                        foreach( var i in _freeList ) w.WriteNonNegativeSmallInt32( i );
+                        s.DebugWriteSentinel();
+                        s.Writer.WriteNonNegativeSmallInt32( _freeList.Count );
+                        foreach( var i in _freeList ) s.Writer.WriteNonNegativeSmallInt32( i );
 
-                        w.DebugWriteSentinel();
-                        w.WriteNonNegativeSmallInt32( _properties.Count );
+                        s.DebugWriteSentinel();
+                        s.Writer.WriteNonNegativeSmallInt32( _properties.Count );
                         foreach( var p in _propertiesByIndex )
                         {
-                            w.Write( p.PropertyName );
+                            s.Writer.Write( p.PropertyName! );
                         }
-                        w.DebugWriteSentinel();
+                        s.DebugWriteSentinel();
                         Debug.Assert( _objectsListCount == _actualObjectCount + _freeList.Count );
 
                         // First writes the roots: any reachable objects (including
                         // Internal and Timed objects) will be written. Event callbacks' object will
                         // not if they are destroyed => any non saved objects after these roots
                         // are de facto not reachable from the roots.
-                        w.WriteNonNegativeSmallInt32( _roots.Count );
+                        s.Writer.WriteNonNegativeSmallInt32( _roots.Count );
                         foreach( var r in _roots )
                         {
-                            w.WriteObject( r );
+                            s.WriteObject( r );
                         }
                         // The tracking list of non reachable objects from roots.
                         bool trackLostObjects = _roots.Count > 0;
@@ -410,29 +110,29 @@ namespace CK.Observable
                         {
                             var o = _objects[i];
                             Debug.Assert( o == null || !o.IsDestroyed, "Either it is a free cell (that appears in the free list) or the object is NOT disposed." );
-                            if( w.WriteObject( o ) && o != null && trackLostObjects )
+                            if( s.WriteNullableObject( o ) && o != null && trackLostObjects )
                             {
                                 if( lostObservableObjects == null ) lostObservableObjects = new List<ObservableObject>();
                                 lostObservableObjects.Add( o );
                             }
                         }
-                        w.DebugWriteSentinel();
-                        w.WriteNonNegativeSmallInt32( _internalObjectCount );
+                        s.DebugWriteSentinel();
+                        s.Writer.WriteNonNegativeSmallInt32( _internalObjectCount );
                         var f = _firstInternalObject;
                         while( f != null )
                         {
                             Debug.Assert( !f.IsDestroyed, "Disposed internal objects are removed from the list." );
-                            if( w.WriteObject( f ) && trackLostObjects )
+                            if( s.WriteObject( f ) && trackLostObjects )
                             {
                                 if( lostInternalObjects == null ) lostInternalObjects = new List<InternalObject>();
                                 lostInternalObjects.Add( f );
                             }
                             f = f.Next;
                         }
-                        w.DebugWriteSentinel();
-                        var (lostTimedObjects, unusedPooledReminders, pooledReminderCount) = _timeManager.Save( monitor, w, trackLostObjects );
-                        w.DebugWriteSentinel();
-                        _sidekickManager.Save( w );
+                        s.DebugWriteSentinel();
+                        var (lostTimedObjects, unusedPooledReminders, pooledReminderCount) = _timeManager.Save( monitor, s, trackLostObjects );
+                        s.DebugWriteSentinel();
+                        _sidekickManager.Save( monitor, s );
                         var data = new LostObjectTracker( this,
                                                           lostObservableObjects,
                                                           lostInternalObjects,
@@ -447,187 +147,261 @@ namespace CK.Observable
                 }
                 finally
                 {
-                    if( needFakeTran ) _currentTran.Dispose();
+                    if( needFakeTran )
+                    {
+                        Debug.Assert( _currentTran != null );
+                        _currentTran.Dispose();
+                    }
                     if( !isWrite && !isRead ) _lock.ExitReadLock();
                     Monitor.Exit( _saveLock );
                 }
             }
         }
 
-        bool DoRealLoad( IActivityMonitor monitor, BinaryDeserializer r, string expectedName, bool? startTimer )
+        // Called from the public Load() method or from the deserialization constructor.
+        // Deserialization itself is done by the DeserializeAndGetTimerState called (possibly twice if BinaryDeserializer.Deserialize
+        // requires a second pass).
+        CurrentTransactionStatus DoLoad( IActivityMonitor monitor,
+                                         RewindableStream stream,
+                                         string expectedLoadedName,
+                                         bool? startTimer,
+                                         Func<bool, bool>? beforeTimer = null )
         {
+            Debug.Assert( stream.IsValid );
             Debug.Assert( _lock.IsWriteLockHeld );
-            _deserializeOrInitializing = true;
+            var previousTransactionStatus = _transactionStatus;
             try
             {
-                UnloadDomain( monitor );
-                int version = r.ReadSmallInt32();
-                if( version < 5 || version > CurrentSerializationVersion )
+                monitor.Trace( $"Stream's Serializer version is {stream.SerializerVersion}." );
+                var r = BinaryDeserializer.Deserialize( stream, _deserializerContext, d => DeserializeAndGetTimerState( monitor, expectedLoadedName, d ) );
+                // This throws on deserialization error.
+                bool mustStartTimer = r.GetResult();
+                if( startTimer.HasValue ) mustStartTimer = startTimer.Value;
+                if( beforeTimer != null ) mustStartTimer = beforeTimer( mustStartTimer );
+                if( mustStartTimer )
                 {
-                    throw new InvalidDataException( $"Version must be between 5 and {CurrentSerializationVersion}. Version read: {version}." );
+                    _timeManager.DoStartOrStop( monitor, true );
                 }
-                r.SerializationVersion = version;
-                r.DebugReadMode();
-                _currentObjectUniquifier = r.ReadInt32();
-                _domainSecret = r.ReadBytes( DomainSecretKeyLength );
-                var loaded = r.ReadString();
-                if( loaded != expectedName ) throw new InvalidDataException( $"Domain name mismatch: loading domain named '{loaded}' but expected '{expectedName}'." );
-
-                _transactionSerialNumber = r.ReadInt32();
-                _transactionCommitTimeUtc = r.ReadDateTime();
-                _actualObjectCount = r.ReadInt32();
-
-                r.DebugCheckSentinel();
-
-                // Clears and read the new free list.
-                _freeList.Clear();
-                int count = r.ReadNonNegativeSmallInt32();
-                while( --count >= 0 )
-                {
-                    _freeList.Add( r.ReadNonNegativeSmallInt32() );
-                }
-
-                r.DebugCheckSentinel();
-
-                // Read the properties index.
-                count = r.ReadNonNegativeSmallInt32();
-                for( int iProp = 0; iProp < count; iProp++ )
-                {
-                    string name = r.ReadString();
-                    var p = new ObservablePropertyChangedEventArgs( iProp, name );
-                    _properties.Add( name, p );
-                    _propertiesByIndex.Add( p );
-                }
-
-                r.DebugCheckSentinel();
-
-                // Resize _objects array.
-                _objectsListCount = count = _actualObjectCount + _freeList.Count;
-                while( _objectsListCount > _objects.Length )
-                {
-                    Array.Resize( ref _objects, _objects.Length * 2 );
-                }
-
-                if( version == 5 )
-                {
-                    // Reads objects. This can read Internal and Timed objects.
-                    for( int i = 0; i < count; ++i )
-                    {
-                        _objects[i] = (ObservableObject)r.ReadObject();
-                        Debug.Assert( _objects[i] == null || !_objects[i].IsDestroyed );
-                    }
-
-                    // Fill roots array.
-                    r.DebugCheckSentinel();
-                    count = r.ReadNonNegativeSmallInt32();
-                    while( --count >= 0 )
-                    {
-                        _roots.Add( _objects[r.ReadNonNegativeSmallInt32()] as ObservableRootObject );
-                    }
-                }
-                else
-                {
-                    // Reading roots first (including Internal and Timed objects).
-                    int rootCount = r.ReadNonNegativeSmallInt32();
-                    for( int i = 0; i < rootCount; ++i )
-                    {
-                        _roots.Add( (ObservableRootObject)r.ReadObject() );
-                    }
-                    // Reads all the objects. 
-                    for( int i = 0; i < count; ++i )
-                    {
-                        _objects[i] = (ObservableObject)r.ReadObject();
-                        Debug.Assert( _objects[i] == null || !_objects[i].IsDestroyed );
-                    }
-                }
-
-                // Reading InternalObjects.
-                r.DebugCheckSentinel();
-                count = r.ReadNonNegativeSmallInt32();
-                while( --count >= 0 )
-                {
-                    var o = (InternalObject)r.ReadObject();
-                    Debug.Assert( !o.IsDestroyed );
-                    Register( o );
-                }
-
-                // Reading Timed events.
-                r.DebugCheckSentinel();
-                bool timerRunning = _timeManager.Load( monitor, r );
-                r.DebugCheckSentinel();
-                _sidekickManager.Load( r );
-                // This is where specialized typed ObservableDomain bind their roots.
-                OnLoaded();
-                // Calling PostDeserializationActions finalizes the object's graph.
-                r.ImplementationServices.ExecutePostDeserializationActions();
-
-                if( startTimer.HasValue ) timerRunning = startTimer.Value;
-                if( !_sidekickManager.CreateWaitingSidekicks( monitor, ex => { }, true ) )
-                {
-                    var msg = "At least one critical error occurred while activating sidekicks. The error should be investigated since this may well be a blocking error.";
-                    if( timerRunning )
-                    {
-                        timerRunning = false;
-                        msg += " The TimeManager (that should have ran) has been stopped.";
-                    }
-                    monitor.Error( msg );
-                }
-                return timerRunning;
+                return _transactionStatus;
+            }
+            catch( Exception ex )
+            {
+                monitor.Error( ex );
+                throw;
             }
             finally
             {
-                _deserializeOrInitializing = false;
+                _transactionStatus = previousTransactionStatus;
             }
+        }
+
+        bool DeserializeAndGetTimerState( IActivityMonitor monitor, string expectedName, IBinaryDeserializer d )
+        {
+            bool firstPass = !d.StreamInfo.SecondPass;
+
+            // This is where specialized typed ObservableDomain bind their roots:
+            // this must be called before any PostActions added by the objects.
+            d.PostActions.Add( BindRoots );
+
+            d.Reader.ReadByte(); // Local version.
+            d.DebugReadMode();
+            if( firstPass )
+            {
+                var currentObjectUniquifier = d.Reader.ReadInt32();
+                var domainSecret = d.Reader.ReadBytes( DomainSecretKeyLength );
+                var loaded = d.Reader.ReadString();
+                if( loaded != expectedName ) Throw.InvalidDataException( $"Domain name mismatch: loading domain named '{loaded}' but expected '{expectedName}'." );
+
+                Debug.Assert( _transactionStatus is CurrentTransactionStatus.Instantiating or CurrentTransactionStatus.Deserializing or CurrentTransactionStatus.Regular );
+                // Either we come from:
+                //   - the domain's deserialization constructor (Deserializing);
+                //   - or from a constructor with a client.OnDomainCreated that wants to load this domain (Instantiating);
+                //   - or directly from the Load method (Regular - and we may be in a fake transaction):
+                // To keep things and the CurrentTransactionStatus as simple as possible:
+                //  - Instantiating and Regular transition to Deserializing (because we ARE deserializing!).
+                //  - If we are deserializing the same number: it's a RollingBack.
+                //  - If we are deserializing an older version: it's a DangerousRollingback.
+                //  - If we are deserializing a newer version, no change, it's Deserializing.
+                //
+                // This works in all cases because the very first transaction number that can be saved is 1
+                // and _transactionSerialNumber is let to 0 by the constructors (Instantiating will always be Deserializing).
+                // And it makes perfect sense that RollingBack/DangerousRollingback/Deserializing also apply to the explicit
+                // call to Load() on an existing domain (the check of the name provides a kind of identity check).
+                //
+                // Distinguishing between calls to Load() from DomainClient that rolls back or initialize from their OnDomainCreated
+                // and from "external world" would require to add one or more explicit parameter(s) to the public Load() that will
+                // be difficult to understand or to provide an internal Load from clients.
+                // This is useless since this API can be used in different ways (for instance, ObservableLeague doesn't use
+                // DomainClient.OnDomainCreated to load existing snapshots).
+                //
+                var tNumber = d.Reader.ReadInt32();
+                var tTime = d.Reader.ReadDateTime();
+                if( _transactionSerialNumber == tNumber ) _transactionStatus = CurrentTransactionStatus.Rollingback;
+                else if( _transactionSerialNumber > tNumber ) _transactionStatus = CurrentTransactionStatus.DangerousRollingback;
+                else _transactionStatus = CurrentTransactionStatus.Deserializing;
+
+                _transactionSerialNumber = tNumber;
+                _transactionCommitTimeUtc = tTime;
+                _domainSecret = domainSecret;
+
+                // We call unload on the current objects only on the first pass and
+                // the InitializingStatus is up to date.
+                UnloadDomain( monitor, true );
+
+                Debug.Assert( _transactionSerialNumber == tNumber
+                              && _transactionCommitTimeUtc == tTime
+                              && _domainSecret.AsSpan().SequenceEqual( domainSecret ), "OnUnload doesn't change these." );
+                _currentObjectUniquifier = currentObjectUniquifier;
+            }
+            else
+            {
+                // On the second pass (if it happens), we just forget all the result of the first pass.
+                UnloadDomain( monitor, false );
+                _currentObjectUniquifier = d.Reader.ReadInt32();
+                // Skips domain secret, domain name, transaction number and transaction date: they have
+                // been initialized (or checked for the name) by first pass and are not modified by UnloadDomain.
+                d.Reader.ReadBytes( DomainSecretKeyLength );
+                d.Reader.ReadString();
+                d.Reader.ReadInt32();
+                d.Reader.ReadDateTime();
+            }
+
+            _actualObjectCount = d.Reader.ReadInt32();
+
+            d.DebugCheckSentinel();
+
+            // Read the new free list.
+            Debug.Assert( _freeList.Count == 0 );
+            int count = d.Reader.ReadNonNegativeSmallInt32();
+            while( --count >= 0 )
+            {
+                _freeList.Add( d.Reader.ReadNonNegativeSmallInt32() );
+            }
+
+            d.DebugCheckSentinel();
+
+            // Read the properties index.
+            count = d.Reader.ReadNonNegativeSmallInt32();
+            for( int iProp = 0; iProp < count; iProp++ )
+            {
+                string name = d.Reader.ReadString();
+                var p = new ObservablePropertyChangedEventArgs( iProp, name );
+                _properties.Add( name, p );
+                _propertiesByIndex.Add( p );
+            }
+
+            d.DebugCheckSentinel();
+
+            // Resize _objects array.
+            _objectsListCount = count = _actualObjectCount + _freeList.Count;
+            while( _objectsListCount > _objects.Length )
+            {
+                Array.Resize( ref _objects, _objects.Length * 2 );
+            }
+
+            // Reading roots first (including their Internal and Timed objects).
+            int rootCount = d.Reader.ReadNonNegativeSmallInt32();
+            for( int i = 0; i < rootCount; ++i )
+            {
+                _roots.Add( d.ReadObject<ObservableRootObject>() );
+            }
+            // Reads all the objects. 
+            for( int i = 0; i < count; ++i )
+            {
+                var o = d.ReadNullableObject<ObservableObject>();
+                Debug.Assert( o == null || !o.IsDestroyed );
+                if( o != null && o.OId.Index != i )
+                {
+                    // Magic control here. If the base Sliced constructor has not been called then we allocated
+                    // a new OId for the object.
+                    Throw.InvalidDataException( $"Deserialization error for '{o.GetType().ToCSharpName()}': its deserialization constructor must call \": base( Sliced.{nameof(Sliced.Instance)} )\"." );
+                }
+                _objects[i] = o;
+            }
+
+            // Reading InternalObjects.
+            d.DebugCheckSentinel();
+            count = d.Reader.ReadNonNegativeSmallInt32();
+            while( --count >= 0 )
+            {
+                var o = d.ReadObject<InternalObject>();
+                Debug.Assert( !o.IsDestroyed );
+                Register( o );
+            }
+            // Reading Timed events.
+            d.DebugCheckSentinel();
+            bool timerRunning = _timeManager.Load( monitor, d );
+            d.DebugCheckSentinel();
+            _sidekickManager.Load( d );
+            return timerRunning;
         }
 
         /// <summary>
         /// Unloads this domain by clearing all internal state: it is ready to be reloaded
         /// or to be forgotten.
+        /// The CurrentTransactionStatus is up to date when this method is called.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
-        void UnloadDomain( IActivityMonitor monitor )
+        /// <param name="callUnload">Whether <see cref="ObservableObject.Unload(bool)"/> and
+        /// <see cref="InternalObject.Unload(bool)"/> must be called.</param>
+        void UnloadDomain( IActivityMonitor monitor, bool callUnload )
         {
             Debug.Assert( _lock.IsWriteLockHeld );
-            // Call Unload( false ) on all objects.
-            for( int i = 0; i < _objectsListCount; ++i )
+            Debug.Assert( callUnload || _sidekickManager.IsEmpty, "callUnload == false => sidekicks have already been unloaded." );
+
+            using( monitor.OpenTrace( $"Unloading domain '{DomainName}'{(callUnload ? "" : " NOT")} calling OnUnlaod methods." ) )
             {
-                var o = _objects[i];
-                if( o != null )
+                if( callUnload )
                 {
-                    Debug.Assert( !o.IsDestroyed );
-                    o.Unload( false );
+                    _sidekickManager.OnUnload( monitor );
+
+                    // Call Unload( gc: false ) on all objects.
+                    for( int i = 0; i < _objectsListCount; ++i )
+                    {
+                        var o = _objects[i];
+                        if( o != null )
+                        {
+                            Debug.Assert( !o.IsDestroyed );
+                            o.Unload( gc: false );
+                        }
+                    }
                 }
+                // Empty _objects completely.
+                Array.Clear( _objects, 0, _objectsListCount );
+                _objectsListCount = 0;
+                _actualObjectCount = 0;
+
+                // Clears root list.
+                _roots.Clear();
+
+                // Free sidekicks and IObservableDomainActionTracker.
+                _trackers.Clear();
+
+                // Clears any internal objects.
+                if( callUnload )
+                {
+                    var internalObj = _firstInternalObject;
+                    while( internalObj != null )
+                    {
+                        internalObj.Unload( gc: false );
+                        internalObj = internalObj.Next;
+                    }
+                }
+                _firstInternalObject = _lastInternalObject = null;
+                _internalObjectCount = 0;
+
+                // Clears any time event objects.
+                _timeManager.ClearAndStop( monitor );
+
+                // Clears and read the properties index.
+                _properties.Clear();
+                _propertiesByIndex.Clear();
+
+                // Clears the free list.
+                _freeList.Clear();
+
+                _currentObjectUniquifier = 0;
             }
-            // Empty _objects completely.
-            Array.Clear( _objects, 0, _objectsListCount );
-            _objectsListCount = 0;
-            _actualObjectCount = 0;
-
-            // Clears root list.
-            _roots.Clear();
-
-            // Free sidekicks and IObservableDomainActionTracker.
-            _trackers.Clear();
-            _sidekickManager.Clear( monitor );
-
-            // Clears any internal objects.
-            var internalObj = _firstInternalObject;
-            while( internalObj != null )
-            {
-                internalObj.Unload( false );
-                internalObj = internalObj.Next;
-            }
-            _firstInternalObject = _lastInternalObject = null;
-            _internalObjectCount = 0;
-
-            // Clears any time event objects.
-            _timeManager.ClearAndStop( monitor );
-
-            // Clears and read the properties index.
-            _properties.Clear();
-            _propertiesByIndex.Clear();
-
-            _currentObjectUniquifier = 0;
         }
     }
 }

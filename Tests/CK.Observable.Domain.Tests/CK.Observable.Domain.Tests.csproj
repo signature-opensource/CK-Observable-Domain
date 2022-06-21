@@ -1,28 +1,21 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  
-  <Sdk Name="Microsoft.Build.CentralPackageVersions" Version="2.0.79" />
-  <Import Project="..\..\Common\Shared.props" />
-  
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <IsPackable>False</IsPackable>
     <LangVersion>9</LangVersion>
-    <Nullable>annotations</Nullable>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
-  
   <ItemGroup>
-    <PackageReference Include="CK.Testing.Monitoring" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
-    <PackageReference Include="FluentAssertions" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" />
-    <PackageReference Include="NUnit" />
-    <PackageReference Include="NUnit3TestAdapter" PrivateAssets="all" />
-    <PackageReference Include="Fody" PrivateAssets="all" />
-    <PackageReference Include="PropertyChanged.Fody" PrivateAssets="all" />
+    <PackageReference Include="CK.Testing.Monitoring" Version="3.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
+    <PackageReference Include="FluentAssertions" Version="6.7.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.2.0" />
+    <PackageReference Include="NUnit" Version="3.13.3" />
+    <PackageReference Include="NUnit3TestAdapter" PrivateAssets="all" Version="4.2.1" />
+    <PackageReference Include="Fody" PrivateAssets="all" Version="6.6.3" />
+    <PackageReference Include="PropertyChanged.Fody" PrivateAssets="all" Version="4.0.0" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\..\CK.Observable.Domain\CK.Observable.Domain.csproj" />
   </ItemGroup>
-
 </Project>

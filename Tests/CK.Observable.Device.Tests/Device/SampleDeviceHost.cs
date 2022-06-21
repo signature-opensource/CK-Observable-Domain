@@ -7,9 +7,5 @@ namespace CK.Observable.Device.Tests
 {
     public class SampleDeviceHost : DeviceHost<SampleDevice,DeviceHostConfiguration<SampleDeviceConfiguration>,SampleDeviceConfiguration>
     {
-        public SampleDeviceHost( IDeviceAlwaysRunningPolicy alwaysRunningPolicy )
-            : base( alwaysRunningPolicy )
-        {
-        }
     }
 }

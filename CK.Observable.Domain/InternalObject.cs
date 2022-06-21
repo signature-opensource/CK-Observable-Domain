@@ -1,4 +1,5 @@
 using CK.Core;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -14,11 +15,11 @@ namespace CK.Observable
     /// </summary>
     [NotExportable]
     [SerializationVersion( 0 )]
-    public abstract class InternalObject : IDestroyableObject
+    public abstract class InternalObject : IDestroyableObject, BinarySerialization.ICKSlicedSerializable
     {
-        internal ObservableDomain ActualDomain;
-        internal InternalObject Next;
-        internal InternalObject Prev;
+        internal ObservableDomain? ActualDomain;
+        internal InternalObject? Next;
+        internal InternalObject? Prev;
         ObservableEventHandler<ObservableDomainEventArgs> _destroyed;
 
         /// <summary>
@@ -37,7 +38,7 @@ namespace CK.Observable
         /// <summary>
         /// Constructor for specialized instance.
         /// The current domain is retrieved automatically: it is the last one on the current thread
-        /// that has started a transaction (see <see cref="ObservableDomain.BeginTransaction"/>).
+        /// that has started a transaction.
         /// </summary>
         protected InternalObject()
             : this( ObservableDomain.GetCurrentActiveDomain() )
@@ -50,26 +51,22 @@ namespace CK.Observable
         /// <param name="domain">The domain to which this object belong.</param>
         protected InternalObject( ObservableDomain domain )
         {
-            if( domain == null ) throw new ArgumentNullException( nameof( domain ) );
+            Throw.CheckNotNullArgument( domain );
             ActualDomain = domain;
             ActualDomain.Register( this );
         }
 
-        protected InternalObject( RevertSerialization _ )
-        {
-            RevertSerialization.OnRootDeserialized( this );
-        }
+        protected InternalObject( BinarySerialization.Sliced _ ) { }
 
-        InternalObject( IBinaryDeserializer r, TypeReadInfo? info )
+        InternalObject( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
         {
-            RevertSerialization.OnRootDeserialized( this );
-            Debug.Assert( info != null && info.Version == 0 );
-            if( r.ReadBoolean() )
+            if( d.Reader.ReadBoolean() )
             {
                 // This enables the Internal object to be serializable/deserializable outside a Domain
                 // (for instance to use BinarySerializer.IdempotenceCheck): the domain registers it.
-                ActualDomain = r.Services.GetService<ObservableDomain>( throwOnNull: true );
-                _destroyed = new ObservableEventHandler<ObservableDomainEventArgs>( r );
+                ActualDomain = d.Context.Services.GetRequiredService<ObservableDomain>();
+                _destroyed = new ObservableEventHandler<ObservableDomainEventArgs>( d );
+                // We don't call Register here: this is called by the domain deserializer method.
             }
             else
             {
@@ -77,13 +74,13 @@ namespace CK.Observable
             }
         }
 
-        void Write( BinarySerializer w )
+        public static void Write( BinarySerialization.IBinarySerializer s, in InternalObject o )
         {
-            if( IsDestroyed ) w.Write( false );
+            if( o.IsDestroyed ) s.Writer.Write( false );
             else
             {
-                w.Write( true );
-                _destroyed.Write( w );
+                s.Writer.Write( true );
+                o._destroyed.Write( s );
             }
         }
 
@@ -94,7 +91,14 @@ namespace CK.Observable
         /// Useful properties and methods (like the <see cref="DomainView.Monitor"/> or <see cref="DomainView.SendCommand"/> )
         /// are exposed by this accessor so that the interface of the observable object is not polluted by infrastructure concerns.
         /// </remarks>
-        protected DomainView Domain => new DomainView( this, ActualDomain ?? throw new ObjectDestroyedException( GetType().Name ) );
+        protected DomainView Domain
+        {
+            get
+            {
+                if( ActualDomain == null ) DestroyableObjectExtensions.ThrowObjectDestroyedException( GetType().Name );
+                return new DomainView( this, ActualDomain! );
+            }
+        }
 
         /// <summary>
         /// Gets whether this object has been disposed.
@@ -116,7 +120,7 @@ namespace CK.Observable
                 OnUnload();
                 OnDestroy();
                 ActualDomain.Unregister( this );
-                ActualDomain = null;
+                ActualDomain = null!;
             }
         }
 
@@ -131,6 +135,7 @@ namespace CK.Observable
         /// </summary>
         protected internal virtual void OnDestroy()
         {
+            Debug.Assert( ActualDomain != null );
             _destroyed.Raise( this, ActualDomain.DefaultEventArgs );
         }
 

@@ -1,3 +1,4 @@
+using CK.Core;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -5,21 +6,24 @@ using System.Collections.Generic;
 
 namespace CK.Observable
 {
+    /// <summary>
+    /// Exporter that enriches <see cref="IObjectExporterTarget"/> and manages export <see cref="Drivers"/>.
+    /// </summary>
     public class ObjectExporter
     {
         readonly IObjectExporterTarget _target;
         readonly Dictionary<object, int> _seen;
         readonly IExporterResolver _drivers;
 
-        public ObjectExporter( IObjectExporterTarget target, IExporterResolver drivers = null )
+        public ObjectExporter( IObjectExporterTarget target, IExporterResolver? drivers = null )
         {
-            if( target == null ) throw new ArgumentNullException( nameof( target ) );
+            Throw.CheckNotNullArgument( target );
             _target = target;
-            _seen = new Dictionary<object, int>( CK.Core.PureObjectRefEqualityComparer<object>.Default );
+            _seen = new Dictionary<object, int>( PureObjectRefEqualityComparer<object>.Default );
             _drivers = drivers ?? ExporterRegistry.Default;
         }
 
-        public static void ExportRootList( IObjectExporterTarget target, IEnumerable objects, IExporterResolver drivers = null )
+        public static void ExportRootList( IObjectExporterTarget target, IEnumerable objects, IExporterResolver? drivers = null )
         {
             var e = new ObjectExporter( target, drivers );
             e._seen.Add( objects, 0 );
@@ -30,6 +34,11 @@ namespace CK.Observable
 
         public IExporterResolver Drivers => _drivers;
 
+        /// <summary>
+        /// Exports any enumerable as a <see cref="ObjectExportedKind.List"/>.
+        /// </summary>
+        /// <param name="num">The object number (negative for an object that cannot be referenced).</param>
+        /// <param name="list">Set of objects.</param>
         public void ExportList( int num, IEnumerable list )
         {
             Target.EmitStartObject( num, ObjectExportedKind.List );
@@ -37,7 +46,7 @@ namespace CK.Observable
             Target.EmitEndObject( num, ObjectExportedKind.List );
         }
 
-        public void ExportMap<TKey,TValue>( int num, IEnumerable<KeyValuePair<TKey, TValue>> map, IObjectExportTypeDriver<TKey> keyExporter = null, IObjectExportTypeDriver<TValue> valueExporter = null )
+        public void ExportMap<TKey,TValue>( int num, IEnumerable<KeyValuePair<TKey, TValue>> map, IObjectExportTypeDriver<TKey>? keyExporter = null, IObjectExportTypeDriver<TValue>? valueExporter = null )
         {
             Target.EmitStartObject( num, ObjectExportedKind.Map );
             foreach( var kv in map )
@@ -179,11 +188,11 @@ namespace CK.Observable
                     return;
                 }
             }
-            IObjectExportTypeDriver driver = (o is IKnowMyExportDriver drv ? drv.ExportDriver : null )
+            IObjectExportTypeDriver? driver = (o is IKnowMyExportDriver drv ? drv.ExportDriver : null )
                                                 ?? _drivers.FindDriver( t );
             if( driver == null )
             {
-                throw new InvalidOperationException( $"Type '{t.FullName}' is not exportable." );
+                Throw.InvalidOperationException( $"Type '{t.FullName}' is not exportable." );
             }
             driver.Export( o, idxSeen, this );
         }

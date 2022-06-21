@@ -1,3 +1,4 @@
+using CK.BinarySerialization;
 using CK.Core;
 using System;
 using System.Collections.Generic;
@@ -88,15 +89,16 @@ namespace CK.Observable
         /// <summary>
         /// Number of transactions to skip after every save.
         /// <para>
-        /// Defaults to zero: transaction mode is on, unhandled errors trigger a rollback of the current state.
+        /// Defaults to zero: transaction mode is on, unhandled errors trigger a rollback of the current state 
+        /// with <see cref="CurrentTransactionStatus.Rollingback"/>.
         /// </para>
         /// <para>
         /// When positive, the transaction mode is on, but in a very dangerous mode: whenever saves are skipped,
-        /// the domain rollbacks to an old version of itself.
+        /// the domain rollbacks to an old version of itself. <see cref="DomainView.CurrentTransactionStatus"/>
+        /// can be <see cref="CurrentTransactionStatus.DangerousRollingback"/>.
         /// </para>
         /// <para>
-        /// When set to -1, transaction mode is off. Unhandled errors are logged (as <see cref="LogLevel.Error"/>) and
-        /// silently swallowed by <see cref="OnUnhandledError(IActivityMonitor, ObservableDomain, Exception, ref bool)"/>.
+        /// When set to -1, transaction mode is off. The domain must be saved explicitly.
         /// </para>
         /// </summary>
         public int SkipTransactionCount
@@ -104,7 +106,7 @@ namespace CK.Observable
             get => _skipTransactionCount;
             set
             {
-                if( _skipTransactionCount < -1 ) throw new ArgumentOutOfRangeException( nameof(SkipTransactionCount) );
+                Throw.CheckOutOfRangeArgument( value >= -1 );
                 _skipTransactionCount = value;
             }
         }
@@ -126,35 +128,34 @@ namespace CK.Observable
 
         /// <summary>
         /// Default behavior is FIRST to relay the call to the next client if any, and
-        /// THEN to create a snapshot (simply calls <see cref="CreateSnapshot"/> protected method).
+        /// THEN to create a snapshot (simply calls <see cref="CreateSnapshot"/> protected method)
+        /// if <see cref="TransactionDoneEventArgs.RollbackedInfo"/> is null.
         /// </summary>
         /// <param name="c">The transaction context.</param>
-        public virtual void OnTransactionCommit( in SuccessfulTransactionEventArgs c )
+        public virtual void OnTransactionCommit( in TransactionDoneEventArgs c )
         {
             Next?.OnTransactionCommit( c );
-            CreateSnapshot( c.Monitor, c.Domain, false, c.HasSaveCommand );
-        }
-
-
-        /// <summary>
-        /// See <see cref="IObservableDomainClient.OnUnhandledError(IActivityMonitor, ObservableDomain, Exception, ref bool)"/>.
-        /// Empty implementation nothing here: <paramref name="swallowError"/> is not changed.
-        /// </summary>
-        /// <param name="monitor">The monitor to use.</param>
-        /// <param name="ex">The exception that has been raised.</param>
-        /// <param name="swallowError">Unchanged.</param>
-        public virtual void OnUnhandledError( IActivityMonitor monitor, ObservableDomain d, Exception ex, ref bool swallowError )
-        {
-            if( _skipTransactionCount < 0 )
+            if( c.RollbackedInfo == null )
             {
-                monitor.Error( $"Error while modifying domain '{d.DomainName}' (SkipTransactionCount = -1).", ex );
-                swallowError = true;
+                CreateSnapshot( c.Monitor, c.Domain, false, c.HasSaveCommand );
             }
         }
 
         /// <summary>
+        /// See <see cref="IObservableDomainClient.OnUnhandledException(IActivityMonitor, ObservableDomain, Exception, ref bool)"/>.
+        /// This implementation does nothing here: it relays to the next client.
+        /// </summary>
+        /// <param name="monitor">The monitor to use.</param>
+        /// <param name="ex">The exception that has been raised.</param>
+        /// <param name="swallowError">Unchanged (unless the next client changed it).</param>
+        public virtual void OnUnhandledException( IActivityMonitor monitor, ObservableDomain d, Exception ex, ref bool swallowError )
+        {
+            Next?.OnUnhandledException( monitor, d, ex, ref swallowError );
+        }
+
+        /// <summary>
         /// Default behavior is FIRST to relay the failure to the next client if any, and
-        /// THEN to call <see cref="RestoreSnapshot"/> (and throws an <see cref="Exception"/>
+        /// THEN to call <see cref="RollbackSnapshot"/> (and throws an <see cref="Exception"/>
         /// if no snapshot was available or if an error occurred).
         /// By default, <see cref="ObservableDomain.TimeManager"/> is started if it was previously started.
         /// </summary>
@@ -164,9 +165,9 @@ namespace CK.Observable
         public virtual void OnTransactionFailure( IActivityMonitor monitor, ObservableDomain d, IReadOnlyList<CKExceptionData> errors )
         {
             Next?.OnTransactionFailure( monitor, d, errors );
-            if( !RestoreSnapshot( monitor, d, null ) )
+            if( !RollbackSnapshot( monitor, d, null ) )
             {
-                throw new Exception( "No snapshot available or error while restoring the last snapshot." );
+                Throw.Exception( "No snapshot available or error while restoring the last snapshot." );
             }
         }
 
@@ -200,14 +201,14 @@ namespace CK.Observable
             _memory.Position = 0;
             s.CopyTo( _memory );
             // We check 16 bytes. Even an empty domain require more bytes than that (secret, name, object count...).
-            if( _memory.Position < 16 ) throw new InvalidDataException( $"Invalid Snapshot restoration (stream length is {_memory.Position})." );
+            Throw.CheckState( _memory.Position > 16 );
             var rawBytes = _memory.GetBuffer();
             if( rawBytes[0] == 0 )
             {
                 _currentSnapshotKind = (CompressionKind)rawBytes[1];
                 if( _currentSnapshotKind != CompressionKind.None && _currentSnapshotKind != CompressionKind.GZiped )
                 {
-                    throw new InvalidDataException( "Invalid CompressionKind marker." );
+                    Throw.InvalidDataException( "Invalid CompressionKind marker." );
                 }
                 _currentSnapshotHeaderLength = 2; 
             }
@@ -297,7 +298,7 @@ namespace CK.Observable
         /// When null, it keeps its previous state (it is initially stopped at domain creation) and then its current state is persisted.
         /// </param>
         /// <returns>False if no snapshot is available or if the restoration failed. True otherwise.</returns>
-        protected bool RestoreSnapshot( IActivityMonitor monitor, ObservableDomain d, bool? startTimer )
+        protected bool RollbackSnapshot( IActivityMonitor monitor, ObservableDomain d, bool? startTimer )
         {
             if( _snapshotSerialNumber == -1 )
             {
@@ -309,7 +310,7 @@ namespace CK.Observable
             {
                 try
                 {
-                    DoLoadOrCreateFromSnapshot( monitor, ref d, true, startTimer );
+                    DoLoadOrCreateFromSnapshot( monitor, ref d, restoring: true, startTimer );
                     monitor.CloseGroup( "Success." );
                     return true;
                 }
@@ -322,57 +323,47 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Loads the domain from the current snapshot memory: either calls Load on it or invokes the deserialization
-        /// constructor when <paramref name="domain"/> is null.
+        /// Loads the domain from the current snapshot memory: either calls Load() on the existing <paramref name="domain"/>
+        /// or calls <see cref="DeserializeDomain(IActivityMonitor, RewindableStream, bool?)"/> if it is null.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
-        /// <param name="domain">The domain to reload or deserialize.</param>
+        /// <param name="domain">The domain to reload or deserialize if null.</param>
         /// <param name="restoring">
-        /// True when called from <see cref="RestoreSnapshot"/>, false when called by <see cref="LoadOrCreateAndInitializeSnapshot"/>.
+        /// True when called from <see cref="RollbackSnapshot"/>, false when called by <see cref="LoadOrCreateAndInitializeSnapshot"/>.
         /// </param>
         /// <param name="startTimer">
         /// Ensures that the <see cref="ObservableDomain.TimeManager"/> is running or stopped.
         /// When null, it keeps its previous state (it is initially stopped at domain creation) and then its current state is persisted.
         /// </param>
-        protected virtual void DoLoadOrCreateFromSnapshot( IActivityMonitor monitor, ref ObservableDomain? domain, bool restoring, bool? startTimer )
+        protected virtual void DoLoadOrCreateFromSnapshot( IActivityMonitor monitor, [AllowNull]ref ObservableDomain domain, bool restoring, bool? startTimer )
         {
-            static void ReloadOrThrow( IActivityMonitor monitor,
-                                       ObservableDomain domain,
-                                       Stream stream,
-                                       bool? startTimer )
-            {
-                if( !domain.Load( monitor, stream, leaveOpen: true, startTimer: startTimer ) )
-                {
-                    throw new CKException( $"Error while loading serialized domain. Please see logs." );
-                }
-            }
-
-            void Ensure( IActivityMonitor monitor, ref ObservableDomain? domain, Stream stream, bool? startTimer )
+            void Ensure( IActivityMonitor monitor, [AllowNull]ref ObservableDomain domain, RewindableStream stream, bool? startTimer )
             {
                 if( domain != null )
                 {
-                    ReloadOrThrow( monitor, domain, stream, startTimer );
+                    if( !domain.Load( monitor, stream, startTimer: startTimer ) )
+                    {
+                        Throw.Exception( $"Error while loading serialized domain. Please see logs." );
+                    }
                 }
                 else
                 {
                     domain = DeserializeDomain( monitor, stream, startTimer );
                 }
             }
+
             _memory.Position = _currentSnapshotHeaderLength;
             if( _currentSnapshotKind == CompressionKind.GZiped )
             {
-                using( var gz = new GZipStream( _memory, CompressionMode.Decompress, leaveOpen: true ) )
-                {
-                    Ensure( monitor, ref domain, gz, startTimer );
-                }
+                using var g = new GZipStream( _memory, CompressionMode.Decompress, leaveOpen: true );
+                Ensure( monitor, ref domain, RewindableStream.FromGZipStream( g ), startTimer );
             }
             else
             {
                 Debug.Assert( CompressionKind == CompressionKind.None );
-                Ensure( monitor, ref domain, _memory, startTimer );
+                Ensure( monitor, ref domain, RewindableStream.FromStream( _memory ), startTimer );
             }
         }
-
 
         /// <summary>
         /// Extension point that can only be called from <see cref="LoadOrCreateAndInitializeSnapshot"/> with a null domain:
@@ -385,7 +376,7 @@ namespace CK.Observable
         /// When null, it keeps its previous state (it is initially stopped at domain creation) and then its current state is persisted.
         /// </param>
         /// <returns>The new domain.</returns>
-        protected abstract ObservableDomain DeserializeDomain( IActivityMonitor monitor, Stream stream, bool? startTimer );
+        protected abstract ObservableDomain DeserializeDomain( IActivityMonitor monitor, RewindableStream stream, bool? startTimer );
 
         /// <summary>
         /// Creates a snapshot, respecting the <see cref="CompressionKind"/>.
@@ -395,16 +386,19 @@ namespace CK.Observable
         /// <param name="initialOne">
         /// True if this snapshot is the initial one, created by the first call
         /// to <see cref="OnTransactionStart(IActivityMonitor, ObservableDomain, DateTime)"/>.
-        /// Subsequent calls are coming from <see cref="OnTransactionCommit(in SuccessfulTransactionEventArgs)"/>.
+        /// Subsequent calls are coming from <see cref="OnTransactionCommit(in TransactionDoneEventArgs)"/>.
         /// <para>
         /// This "initial" snapshot is the first one for this Client, this has nothing to do with the <see cref="ObservableDomain.TransactionSerialNumber"/>
-        /// that can be greater than 0 if the domain has been loaded.
+        /// that can already be greater than 0 if the domain has been loaded.
         /// </para>
         /// </param>
         /// <param name="ignoreSkipTransactionCount">True to create a snapshot regardless of <see cref="SkipTransactionCount"/>.</param>
         protected virtual void CreateSnapshot( IActivityMonitor monitor, IObservableDomain d, bool initialOne, bool ignoreSkipTransactionCount )
         {
-            if( !ignoreSkipTransactionCount && _skipTransactionCount != 0 && _snapshotSerialNumber > 0 )
+            // If we ignoreSkipTransactionCount or skipTransactionCount is 0 (full transacted mode)
+            // or if have no snapshot yet, we do the snapshot: we always have a snapshot to restore,
+            // even if it is the very first one.
+            if( !ignoreSkipTransactionCount && _skipTransactionCount != 0 && _snapshotSerialNumber >= 0 )
             {
                 if( _skipTransactionCount > 0 )
                 {
@@ -431,13 +425,13 @@ namespace CK.Observable
                 {
                     using( var gz = new GZipStream( _memory, CompressionLevel.Optimal, leaveOpen: true ) )
                     {
-                        d.Save( monitor, gz, leaveOpen: true );
+                        d.Save( monitor, gz );
                     }
                 }
                 else
                 {
                     Debug.Assert( CompressionKind == CompressionKind.None );
-                    d.Save( monitor, _memory, leaveOpen: true );
+                    d.Save( monitor, _memory );
                 }
                 _currentSnapshotHeaderLength = SnapshotHeaderLength;
                 _currentSnapshotKind = CompressionKind;

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,13 +11,13 @@ namespace CK.Core
     /// </summary>
     public class ActionRegistrar<T> : IActionRegistrar<T>
     {
-        // Internal storage is based on Task to minimise the risks:
+        // Internal storage is based on Task to minimize the risks:
         // returned Tasks can safely be awaited multiple times.
         internal readonly List<Func<T, Task>> _actions;
-        internal List<Func<T, Task>> _onSuccess;
-        internal List<Func<T, Exception, Task>> _onError;
-        internal List<Func<T, Task>> _onFinally;
-        // A registrar can can be owned by zero or one ExecutionContext, and only once.
+        internal List<Func<T, Task>>? _onSuccess;
+        internal List<Func<T, Exception, Task>>? _onError;
+        internal List<Func<T, Task>>? _onFinally;
+        // A registrar can be owned by zero or one ExecutionContext, and only once.
         object? _owner;
 
         static readonly string _successStep = "Currently handling success.";
@@ -101,7 +102,7 @@ namespace CK.Core
         /// Registers a new asynchronous success handler that will be called once all actions have been
         /// executed without errors.
         /// This can be called during the execution of any action or a success handler by <see cref="AsyncExecutionContext{T}.ExecuteAsync"/>
-        /// but not by an error hanlder. 
+        /// but not by an error handler. 
         /// </summary>
         /// <param name="handler">The success handler to register.</param>
         public void OnSuccess( Func<T, Task> handler )
@@ -114,7 +115,7 @@ namespace CK.Core
         /// Registers a new asynchronous success handler that will be called once all actions have been
         /// executed without errors.
         /// This can be called during the execution of any action or a success handler by <see cref="AsyncExecutionContext{T}.ExecuteAsync"/>
-        /// but not by an error hanlder. 
+        /// but not by an error handler. 
         /// </summary>
         /// <param name="handler">The success handler to register.</param>
         public void OnSuccess( Func<T, ValueTask> handler )
@@ -127,7 +128,7 @@ namespace CK.Core
         /// Registers a new synchronous success handler that will be called once all actions have been
         /// executed without errors.
         /// This can be called during the execution of any action or a success handler by <see cref="AsyncExecutionContext{T}.ExecuteAsync"/>
-        /// but not by an error hanlder. 
+        /// but not by an error handler. 
         /// </summary>
         /// <param name="handler">The success handler to register.</param>
         public void OnSuccess( Action<T> handler )
@@ -139,7 +140,7 @@ namespace CK.Core
         /// <summary>
         /// Registers a new asynchronous error handler: this can be called during the execution of any action
         /// by <see cref="AsyncExecutionContext{T}.ExecuteAsync"/> and even while executing an error handler (even if it is
-        /// not recommended), but not while executing a success hanlder. 
+        /// not recommended), but not while executing a success handler. 
         /// </summary>
         /// <param name="errorHandler">The error handler to register.</param>
         public void OnError( Func<T, Exception, Task> errorHandler )
@@ -151,7 +152,7 @@ namespace CK.Core
         /// <summary>
         /// Registers a new asynchronous error handler: this can be called during the execution of any action
         /// by <see cref="AsyncExecutionContext{T}.ExecuteAsync"/> and even while executing an error handler (even if it is
-        /// not recommended), but not while executing a success hanlder. 
+        /// not recommended), but not while executing a success handler. 
         /// </summary>
         /// <param name="errorHandler">The error handler to register.</param>
         public void OnError( Func<T, Exception, ValueTask> errorHandler )
@@ -163,7 +164,7 @@ namespace CK.Core
         /// <summary>
         /// Registers a new synchronous error handler: this can be called during the execution of any action
         /// by <see cref="AsyncExecutionContext{T}.ExecuteAsync"/> and even while executing an error handler (even if it is
-        /// not recommended), but not while executing a success hanlder. 
+        /// not recommended), but not while executing a success handler. 
         /// </summary>
         /// <param name="errorHandler">The error handler to register.</param>
         public void OnError( Action<T, Exception> errorHandler )
@@ -222,6 +223,7 @@ namespace CK.Core
             }
         }
 
+        [MemberNotNull( nameof( _onSuccess ) )]
         void GuardSuccess( bool nullArg )
         {
             if( nullArg ) throw new ArgumentNullException( "handler" );
@@ -232,6 +234,7 @@ namespace CK.Core
             if( _onSuccess == null ) _onSuccess = new List<Func<T, Task>>();
         }
 
+        [MemberNotNull( nameof( _onError ) )]
         void GuardError( bool nullArg )
         {
             if( nullArg ) throw new ArgumentNullException( "errorHandler" );
@@ -242,6 +245,7 @@ namespace CK.Core
             if( _onError == null ) _onError = new List<Func<T, Exception, Task>>();
         }
 
+        [MemberNotNull( nameof( _onFinally ) )]
         void GuardFinally( bool nullArg )
         {
             if( nullArg ) throw new ArgumentNullException( "finalHandler" );

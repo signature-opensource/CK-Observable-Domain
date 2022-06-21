@@ -13,7 +13,7 @@ namespace CK.Observable
     public class ObservableDomainEventArgs : EventMonitoredArgs
     {
         /// <summary>
-        /// Instanciates a new <see cref="ObservableDomainEventArgs"/>.
+        /// Instantiates a new <see cref="ObservableDomainEventArgs"/>.
         /// </summary>
         /// <param name="d">The owning domain.</param>
         public ObservableDomainEventArgs( ObservableDomain d )
