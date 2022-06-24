@@ -34,7 +34,7 @@ namespace CK.Observable.Domain.Tests.Sample
             return d;
         }
 
-        public static Task<TransactionResult> SetPaulMincLastNameNoThrowAsync( ObservableDomain d, string newLastName, bool throwException = false )
+        public static Task<TransactionResult> TrySetPaulMincLastNameAsync( ObservableDomain d, string newLastName, bool throwException = false )
         {
             return d.TryModifyAsync( TestHelper.Monitor, () =>
             {

@@ -28,7 +28,8 @@ namespace CK.Observable.Device
 
         /// <summary>
         /// Non generic bridge between observable <typeparamref name="TDeviceObject"/> and its actual <see cref="Device"/>.
-        /// This cannot be directly instantiated: the generic <see cref="PassiveBridge{TSidekick,TDevice}"/> adapter must be used.
+        /// This cannot be directly instantiated: the generic <see cref="PassiveBridge{TSidekick,TDevice}"/>
+        /// or <see cref="ActiveBridge{TSidekick, TDevice, TDeviceEvent}"/> adapter must be used.
         /// </summary>
         internal protected abstract class DeviceBridge : ObservableDeviceObject.IInternalDeviceBridge
         {
@@ -271,19 +272,19 @@ namespace CK.Observable.Device
             }
 
             /// <inheritdoc cref="ObservableDomain.TryModifyAsync(IActivityMonitor, Action?, int, bool, bool, bool)"/>.
-            protected Task<TransactionResult> ModifyNoThrowAsync( IActivityMonitor monitor,
-                                                                  Action actions,
-                                                                  int millisecondsTimeout = -1,
-                                                                  bool considerRolledbackAsFailure = true,
-                                                                  bool parallelDomainPostActions = true,
-                                                                  bool waitForDomainPostActionsCompletion = false )
+            protected Task<TransactionResult> TryModifyAsync( IActivityMonitor monitor,
+                                                              Action actions,
+                                                              int millisecondsTimeout = -1,
+                                                              bool considerRolledbackAsFailure = true,
+                                                              bool parallelDomainPostActions = true,
+                                                              bool waitForDomainPostActionsCompletion = false )
             {
                 return _sidekick.Domain.TryModifyAsync( monitor,
-                                                            actions,
-                                                            millisecondsTimeout,
-                                                            considerRolledbackAsFailure,
-                                                            parallelDomainPostActions,
-                                                            waitForDomainPostActionsCompletion );
+                                                        actions,
+                                                        millisecondsTimeout,
+                                                        considerRolledbackAsFailure,
+                                                        parallelDomainPostActions,
+                                                        waitForDomainPostActionsCompletion );
             }
 
             /// <inheritdoc cref="ObservableDomain.ModifyThrowAsync(IActivityMonitor, Action?, int, bool, bool, bool)"/>.

@@ -140,19 +140,19 @@ namespace CK.Observable.League
                                                    waitForDomainPostActionsCompletion );
                 }
 
-                Task<TransactionResult> IObservableDomainShell.ModifyNoThrowAsync( IActivityMonitor monitor,
-                                                                                   Action<IActivityMonitor, IObservableDomain> actions,
-                                                                                   int millisecondsTimeout,
-                                                                                   bool considerRolledbackAsFailure,
-                                                                                   bool parallelDomainPostActions,
-                                                                                   bool waitForDomainPostActionsCompletion )
+                Task<TransactionResult> IObservableDomainShell.TryModifyAsync( IActivityMonitor monitor,
+                                                                               Action<IActivityMonitor, IObservableDomain> actions,
+                                                                               int millisecondsTimeout,
+                                                                               bool considerRolledbackAsFailure,
+                                                                               bool parallelDomainPostActions,
+                                                                               bool waitForDomainPostActionsCompletion )
                 {
-                    return Shell.ModifyNoThrowAsync( monitor,
-                                                     actions,
-                                                     millisecondsTimeout,
-                                                     considerRolledbackAsFailure,
-                                                     parallelDomainPostActions,
-                                                     waitForDomainPostActionsCompletion );
+                    return Shell.TryModifyAsync( monitor,
+                                                 actions,
+                                                 millisecondsTimeout,
+                                                 considerRolledbackAsFailure,
+                                                 parallelDomainPostActions,
+                                                 waitForDomainPostActionsCompletion );
                 }
 
                 bool IObservableDomainShell.TryRead( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> reader, int millisecondsTimeout )
@@ -688,12 +688,12 @@ namespace CK.Observable.League
                                            waitForDomainPostActionsCompletion );
             }
 
-            Task<TransactionResult> IObservableDomainShell.ModifyNoThrowAsync( IActivityMonitor monitor,
-                                                                               Action<IActivityMonitor, IObservableDomain> actions,
-                                                                               int millisecondsTimeout,
-                                                                               bool considerRolledbackAsFailure,
-                                                                               bool parallelDomainPostActions,
-                                                                               bool waitForDomainPostActionsCompletion )
+            Task<TransactionResult> IObservableDomainShell.TryModifyAsync( IActivityMonitor monitor,
+                                                                           Action<IActivityMonitor, IObservableDomain> actions,
+                                                                           int millisecondsTimeout,
+                                                                           bool considerRolledbackAsFailure,
+                                                                           bool parallelDomainPostActions,
+                                                                           bool waitForDomainPostActionsCompletion )
             {
                 var d = LoadedDomain;
                 return d.TryModifyAsync( monitor,
@@ -800,19 +800,19 @@ namespace CK.Observable.League
                                                    waitForDomainPostActionsCompletion );
                 }
 
-                public Task<TransactionResult> ModifyNoThrowAsync( IActivityMonitor monitor,
-                                                                   Action<IActivityMonitor, IObservableDomain<T>> actions,
-                                                                   int millisecondsTimeout = -1,
-                                                                   bool considerRolledbackAsFailure = true,
-                                                                   bool parallelDomainPostActions = true,
-                                                                   bool waitForDomainPostActionsCompletion = false )
+                public Task<TransactionResult> TryModifyAsync( IActivityMonitor monitor,
+                                                               Action<IActivityMonitor, IObservableDomain<T>> actions,
+                                                               int millisecondsTimeout = -1,
+                                                               bool considerRolledbackAsFailure = true,
+                                                               bool parallelDomainPostActions = true,
+                                                               bool waitForDomainPostActionsCompletion = false )
                 {
-                    return Shell.ModifyNoThrowAsync( monitor,
-                                                     actions,
-                                                     millisecondsTimeout,
-                                                     considerRolledbackAsFailure,
-                                                     parallelDomainPostActions,
-                                                     waitForDomainPostActionsCompletion );
+                    return Shell.TryModifyAsync( monitor,
+                                                 actions,
+                                                 millisecondsTimeout,
+                                                 considerRolledbackAsFailure,
+                                                 parallelDomainPostActions,
+                                                 waitForDomainPostActionsCompletion );
                 }
 
                 public bool TryRead( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T>> reader, int millisecondsTimeout = -1 )
@@ -881,12 +881,12 @@ namespace CK.Observable.League
                                            waitForDomainPostActionsCompletion );
             }
 
-            Task<TransactionResult> IObservableDomainAccess<T>.ModifyNoThrowAsync( IActivityMonitor monitor,
-                                                                                   Action<IActivityMonitor, IObservableDomain<T>> actions,
-                                                                                   int millisecondsTimeout,
-                                                                                   bool considerRolledbackAsFailure,
-                                                                                   bool parallelDomainPostActions,
-                                                                                   bool waitForDomainPostActionsCompletion )
+            Task<TransactionResult> IObservableDomainAccess<T>.TryModifyAsync( IActivityMonitor monitor,
+                                                                               Action<IActivityMonitor, IObservableDomain<T>> actions,
+                                                                               int millisecondsTimeout,
+                                                                               bool considerRolledbackAsFailure,
+                                                                               bool parallelDomainPostActions,
+                                                                               bool waitForDomainPostActionsCompletion )
             {
                 var d = LoadedDomain;
                 return d.TryModifyAsync( monitor,
@@ -994,19 +994,19 @@ namespace CK.Observable.League
                                                    waitForDomainPostActionsCompletion );
                 }
 
-                public Task<TransactionResult> ModifyNoThrowAsync( IActivityMonitor monitor,
-                                                                   Action<IActivityMonitor, IObservableDomain<T1, T2>> actions,
-                                                                   int millisecondsTimeout = -1,
-                                                                   bool considerRolledbackAsFailure = true,
-                                                                   bool parallelDomainPostActions = true,
-                                                                   bool waitForDomainPostActionsCompletion = false )
+                public Task<TransactionResult> TryModifyAsync( IActivityMonitor monitor,
+                                                               Action<IActivityMonitor, IObservableDomain<T1, T2>> actions,
+                                                               int millisecondsTimeout = -1,
+                                                               bool considerRolledbackAsFailure = true,
+                                                               bool parallelDomainPostActions = true,
+                                                               bool waitForDomainPostActionsCompletion = false )
                 {
-                    return Shell.ModifyNoThrowAsync( monitor,
-                                                     actions,
-                                                     millisecondsTimeout,
-                                                     considerRolledbackAsFailure,
-                                                     parallelDomainPostActions,
-                                                     waitForDomainPostActionsCompletion );
+                    return Shell.TryModifyAsync( monitor,
+                                                 actions,
+                                                 millisecondsTimeout,
+                                                 considerRolledbackAsFailure,
+                                                 parallelDomainPostActions,
+                                                 waitForDomainPostActionsCompletion );
                 }
 
                 public bool TryRead( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2>> reader, int millisecondsTimeout = -1 )
@@ -1075,7 +1075,7 @@ namespace CK.Observable.League
                                            waitForDomainPostActionsCompletion );
             }
 
-            Task<TransactionResult> IObservableDomainShell<T1, T2>.ModifyNoThrowAsync( IActivityMonitor monitor,
+            Task<TransactionResult> IObservableDomainShell<T1, T2>.TryModifyAsync( IActivityMonitor monitor,
                                                                                    Action<IActivityMonitor, IObservableDomain<T1, T2>> actions,
                                                                                    int millisecondsTimeout,
                                                                                    bool considerRolledbackAsFailure,
@@ -1084,11 +1084,11 @@ namespace CK.Observable.League
             {
                 var d = LoadedDomain;
                 return d.TryModifyAsync( monitor,
-                                             () => actions.Invoke( monitor, d ),
-                                             millisecondsTimeout,
-                                             considerRolledbackAsFailure,
-                                             parallelDomainPostActions,
-                                             waitForDomainPostActionsCompletion );
+                                         () => actions.Invoke( monitor, d ),
+                                         millisecondsTimeout,
+                                         considerRolledbackAsFailure,
+                                         parallelDomainPostActions,
+                                         waitForDomainPostActionsCompletion );
             }
 
             bool IObservableDomainShell<T1, T2>.TryRead( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2>> reader, int millisecondsTimeout )
@@ -1188,19 +1188,19 @@ namespace CK.Observable.League
                                                    waitForDomainPostActionsCompletion );
                 }
 
-                public Task<TransactionResult> ModifyNoThrowAsync( IActivityMonitor monitor,
-                                                                   Action<IActivityMonitor, IObservableDomain<T1, T2, T3>> actions,
-                                                                   int millisecondsTimeout = -1,
-                                                                   bool considerRolledbackAsFailure = true,
-                                                                   bool parallelDomainPostActions = true,
-                                                                   bool waitForDomainPostActionsCompletion = false )
+                public Task<TransactionResult> TryModifyAsync( IActivityMonitor monitor,
+                                                               Action<IActivityMonitor, IObservableDomain<T1, T2, T3>> actions,
+                                                               int millisecondsTimeout = -1,
+                                                               bool considerRolledbackAsFailure = true,
+                                                               bool parallelDomainPostActions = true,
+                                                               bool waitForDomainPostActionsCompletion = false )
                 {
-                    return Shell.ModifyNoThrowAsync( monitor,
-                                                     actions,
-                                                     millisecondsTimeout,
-                                                     considerRolledbackAsFailure,
-                                                     parallelDomainPostActions,
-                                                     waitForDomainPostActionsCompletion );
+                    return Shell.TryModifyAsync( monitor,
+                                                 actions,
+                                                 millisecondsTimeout,
+                                                 considerRolledbackAsFailure,
+                                                 parallelDomainPostActions,
+                                                 waitForDomainPostActionsCompletion );
 
                 }
 
@@ -1272,20 +1272,20 @@ namespace CK.Observable.League
                                            waitForDomainPostActionsCompletion );
             }
 
-            Task<TransactionResult> IObservableDomainShell<T1, T2, T3>.ModifyNoThrowAsync( IActivityMonitor monitor,
-                                                                                           Action<IActivityMonitor, IObservableDomain<T1, T2, T3>> actions,
-                                                                                           int millisecondsTimeout,
-                                                                                           bool considerRolledbackAsFailure,
-                                                                                           bool parallelDomainPostActions,
-                                                                                           bool waitForDomainPostActionsCompletion )
+            Task<TransactionResult> IObservableDomainShell<T1, T2, T3>.TryModifyAsync( IActivityMonitor monitor,
+                                                                                       Action<IActivityMonitor, IObservableDomain<T1, T2, T3>> actions,
+                                                                                       int millisecondsTimeout,
+                                                                                       bool considerRolledbackAsFailure,
+                                                                                       bool parallelDomainPostActions,
+                                                                                       bool waitForDomainPostActionsCompletion )
             {
                 var d = LoadedDomain;
                 return d.TryModifyAsync( monitor,
-                                             () => actions.Invoke( monitor, d ),
-                                             millisecondsTimeout,
-                                             considerRolledbackAsFailure,
-                                             parallelDomainPostActions,
-                                             waitForDomainPostActionsCompletion );
+                                         () => actions.Invoke( monitor, d ),
+                                         millisecondsTimeout,
+                                         considerRolledbackAsFailure,
+                                         parallelDomainPostActions,
+                                         waitForDomainPostActionsCompletion );
             }
 
             bool IObservableDomainShell<T1, T2, T3>.TryRead( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3>> reader, int millisecondsTimeout )
@@ -1386,19 +1386,19 @@ namespace CK.Observable.League
                                                    waitForDomainPostActionsCompletion );
                 }
 
-                public Task<TransactionResult> ModifyNoThrowAsync( IActivityMonitor monitor,
-                                                                   Action<IActivityMonitor, IObservableDomain<T1, T2, T3, T4>> actions,
-                                                                   int millisecondsTimeout = -1,
-                                                                   bool considerRolledbackAsFailure = true,
-                                                                   bool parallelDomainPostActions = true,
-                                                                   bool waitForDomainPostActionsCompletion = false )
+                public Task<TransactionResult> TryModifyAsync( IActivityMonitor monitor,
+                                                               Action<IActivityMonitor, IObservableDomain<T1, T2, T3, T4>> actions,
+                                                               int millisecondsTimeout = -1,
+                                                               bool considerRolledbackAsFailure = true,
+                                                               bool parallelDomainPostActions = true,
+                                                               bool waitForDomainPostActionsCompletion = false )
                 {
-                    return Shell.ModifyNoThrowAsync( monitor,
-                                                     actions,
-                                                     millisecondsTimeout,
-                                                     considerRolledbackAsFailure,
-                                                     parallelDomainPostActions,
-                                                     waitForDomainPostActionsCompletion );
+                    return Shell.TryModifyAsync( monitor,
+                                                 actions,
+                                                 millisecondsTimeout,
+                                                 considerRolledbackAsFailure,
+                                                 parallelDomainPostActions,
+                                                 waitForDomainPostActionsCompletion );
 
                 }
 
@@ -1469,20 +1469,20 @@ namespace CK.Observable.League
                                            waitForDomainPostActionsCompletion );
             }
 
-            Task<TransactionResult> IObservableDomainShell<T1, T2, T3, T4>.ModifyNoThrowAsync( IActivityMonitor monitor,
-                                                                                               Action<IActivityMonitor, IObservableDomain<T1, T2, T3, T4>> actions,
-                                                                                               int millisecondsTimeout,
-                                                                                               bool considerRolledbackAsFailure,
-                                                                                               bool parallelDomainPostActions,
-                                                                                               bool waitForDomainPostActionsCompletion )
+            Task<TransactionResult> IObservableDomainShell<T1, T2, T3, T4>.TryModifyAsync( IActivityMonitor monitor,
+                                                                                           Action<IActivityMonitor, IObservableDomain<T1, T2, T3, T4>> actions,
+                                                                                           int millisecondsTimeout,
+                                                                                           bool considerRolledbackAsFailure,
+                                                                                           bool parallelDomainPostActions,
+                                                                                           bool waitForDomainPostActionsCompletion )
             {
                 var d = LoadedDomain;
                 return d.TryModifyAsync( monitor,
-                                             () => actions.Invoke( monitor, d ),
-                                             millisecondsTimeout,
-                                             considerRolledbackAsFailure,
-                                             parallelDomainPostActions,
-                                             waitForDomainPostActionsCompletion );
+                                         () => actions.Invoke( monitor, d ),
+                                         millisecondsTimeout,
+                                         considerRolledbackAsFailure,
+                                         parallelDomainPostActions,
+                                         waitForDomainPostActionsCompletion );
             }
 
             bool IObservableDomainShell<T1, T2, T3, T4>.TryRead( IActivityMonitor monitor,
@@ -1494,9 +1494,9 @@ namespace CK.Observable.League
             }
 
             bool IObservableDomainShell<T1, T2, T3, T4>.TryRead<TInfo>( IActivityMonitor monitor,
-                                                            Func<IActivityMonitor, IObservableDomain<T1, T2, T3, T4>, TInfo> reader,
-                                                            [MaybeNullWhen( false )] out TInfo result,
-                                                            int millisecondsTimeout )
+                                                                        Func<IActivityMonitor, IObservableDomain<T1, T2, T3, T4>, TInfo> reader,
+                                                                        [MaybeNullWhen( false )] out TInfo result,
+                                                                        int millisecondsTimeout )
             {
                 var d = LoadedDomain;
                 return d.TryRead( monitor, () => reader.Invoke( monitor, d ), out result, millisecondsTimeout );

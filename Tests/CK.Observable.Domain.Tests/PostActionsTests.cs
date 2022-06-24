@@ -345,7 +345,7 @@ namespace CK.Observable.Domain.Tests
 
         [TestCase( 50, true )]
         [TestCase( 49, false )]
-        public async Task parrallel_operations_with_random_behavior( int nb, bool modifyNoThrowAsync )
+        public async Task parrallel_operations_with_random_behavior( int nb, bool tryModifyAsync )
         {
             ResetContext();
 
@@ -353,7 +353,7 @@ namespace CK.Observable.Domain.Tests
 
             var tasks = Enumerable.Range( 0, nb ).Select( i => Task.Run( () =>
             {
-                if( modifyNoThrowAsync )
+                if( tryModifyAsync )
                 {
                     return d.TryModifyAsync( i == 0 ? TestHelper.Monitor : new ActivityMonitor(), () => RunLoop( d ) );
                 }

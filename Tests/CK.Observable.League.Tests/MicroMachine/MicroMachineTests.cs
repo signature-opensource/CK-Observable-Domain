@@ -101,7 +101,7 @@ namespace CK.Observable.League.Tests.MicroMachine
                         d.Root.Machine.CommandReceivedCount.Should().Be( 2 );
 
                     } );
-                    var result = await shell.ModifyNoThrowAsync( TestHelper.Monitor, ( m, d ) =>
+                    var result = await shell.TryModifyAsync( TestHelper.Monitor, ( m, d ) =>
                     {
                         d.Root.Machine.CmdToTheMachine( "bug" );
                         d.Root.Machine.CommandReceivedCount.Should().Be( 3 );
@@ -109,7 +109,7 @@ namespace CK.Observable.League.Tests.MicroMachine
                     result.Success.Should().BeFalse();
                     result.CommandHandlingErrors.Should().NotBeEmpty();
 
-                    result = await shell.ModifyNoThrowAsync( TestHelper.Monitor, ( m, d ) =>
+                    result = await shell.TryModifyAsync( TestHelper.Monitor, ( m, d ) =>
                     {
                         d.Root.Machine.CommandReceivedCount.Should().Be( 3, "This has been committed." );
                         d.Root.Machine.CmdToTheMachine( "bug in sending" );
@@ -118,7 +118,7 @@ namespace CK.Observable.League.Tests.MicroMachine
                     result.Success.Should().BeFalse();
                     result.Errors.Should().NotBeEmpty();
 
-                    result = await shell.ModifyNoThrowAsync( TestHelper.Monitor, ( m, d ) =>
+                    result = await shell.TryModifyAsync( TestHelper.Monitor, ( m, d ) =>
                     {
                         d.Root.Machine.CommandReceivedCount.Should().Be( 3, "The 4th call has been rollbacked." );
                     } );
