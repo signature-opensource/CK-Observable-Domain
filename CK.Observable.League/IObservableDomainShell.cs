@@ -56,12 +56,12 @@ namespace CK.Observable.League
                                                  bool waitForDomainPostActionsCompletion = false );
 
         /// <inheritdoc cref="ObservableDomain.TryModifyAsync(IActivityMonitor, Action?, int, bool, bool, bool)"/>
-        Task<TransactionResult> ModifyNoThrowAsync( IActivityMonitor monitor,
-                                                    Action<IActivityMonitor, IObservableDomain> actions,
-                                                    int millisecondsTimeout = -1,
-                                                    bool considerRolledbackAsFailure = true,
-                                                    bool parallelDomainPostActions = true,
-                                                    bool waitForDomainPostActionsCompletion = false );
+        Task<TransactionResult> TryModifyAsync( IActivityMonitor monitor,
+                                                Action<IActivityMonitor, IObservableDomain> actions,
+                                                int millisecondsTimeout = -1,
+                                                bool considerRolledbackAsFailure = true,
+                                                bool parallelDomainPostActions = true,
+                                                bool waitForDomainPostActionsCompletion = false );
 
         /// <inheritdoc cref="ObservableDomain.TryRead(IActivityMonitor, Action, int)"/>
         bool TryRead( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> reader, int millisecondsTimeout = -1 );

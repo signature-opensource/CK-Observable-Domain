@@ -38,18 +38,18 @@ namespace CK.Observable.Domain.Tests
             using( var d = await SampleDomain.CreateSampleAsync( new Clients.ConcreteMemoryTransactionProviderClient() ) )
             {
                 d.TransactionSerialNumber.Should().Be( 1 );
-                var r = await SampleDomain.SetPaulMincLastNameNoThrowAsync( d, "No-More-Minc" );
+                var r = await SampleDomain.TrySetPaulMincLastNameAsync( d, "No-More-Minc" );
                 r.Success.Should().BeTrue();
                 d.TransactionSerialNumber.Should().Be( 2 );
                 d.AllObjects.OfType<Person>().Single( x => x.FirstName == "Paul" ).LastName.Should().Be( "No-More-Minc" );
 
-                r = await SampleDomain.SetPaulMincLastNameNoThrowAsync( d, "Minc" );
+                r = await SampleDomain.TrySetPaulMincLastNameAsync( d, "Minc" );
                 r.Success.Should().BeTrue();
                 d.TransactionSerialNumber.Should().Be( 3 );
 
                 SampleDomain.CheckSampleGarage( d );
 
-                r = await SampleDomain.SetPaulMincLastNameNoThrowAsync( d, "No-More-Minc", throwException: true );
+                r = await SampleDomain.TrySetPaulMincLastNameAsync( d, "No-More-Minc", throwException: true );
                 r.Success.Should().BeFalse();
                 r.Errors.Should().NotBeEmpty();
                 d.TransactionSerialNumber.Should().Be( 3 );

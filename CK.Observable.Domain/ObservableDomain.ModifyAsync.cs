@@ -260,7 +260,7 @@ namespace CK.Observable
             try
             {
                 // This could throw and be handled just like other pre-transaction errors (when a buggy client throws during OnTransactionStart).
-                // Depending on throwException parameter, it will be re-thrown or returned (returning the exception is for ModifyNoThrow).
+                // Depending on throwException parameter, it will be re-thrown or returned (returning the exception is for TryModifyAsync).
                 // See DoDispose method for the discussion about disposal...
                 CheckDisposed();
                 DomainClient?.OnTransactionStart( m, this, startTime );

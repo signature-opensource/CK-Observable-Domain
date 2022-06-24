@@ -190,12 +190,12 @@ namespace CK.Observable.League
                                        waitForDomainPostActionsCompletion );
         }
 
-        Task<TransactionResult> IObservableDomainAccess<OCoordinatorRoot>.ModifyNoThrowAsync( IActivityMonitor monitor,
-                                                                                         Action<IActivityMonitor, IObservableDomain<OCoordinatorRoot>> actions,
-                                                                                         int millisecondsTimeout,
-                                                                                         bool considerRolledbackAsFailure,
-                                                                                         bool parallelDomainPostActions,
-                                                                                         bool waitForDomainPostActionsCompletion )
+        Task<TransactionResult> IObservableDomainAccess<OCoordinatorRoot>.TryModifyAsync( IActivityMonitor monitor,
+                                                                                          Action<IActivityMonitor, IObservableDomain<OCoordinatorRoot>> actions,
+                                                                                          int millisecondsTimeout,
+                                                                                          bool considerRolledbackAsFailure,
+                                                                                          bool parallelDomainPostActions,
+                                                                                          bool waitForDomainPostActionsCompletion )
         {
             var d = Domain;
             return d.TryModifyAsync( monitor,

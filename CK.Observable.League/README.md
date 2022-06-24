@@ -68,6 +68,6 @@ The `LoadAsync` method return a [IObservableDomainShell](IObservableDomainShell.
 the [IObservableDomainShell&lt;out T1, out T2, out T3, out T4&gt;](IObservableDomainShellTTTT.cs) with 4 roots)
 that will keep the domain loaded in memory until it is disposed.
 
-This shell expose `ModifyAsync`, `ModifyThrowAsync`, `ModifyNoThrowAsync` methods to alter a domain
-and `Read` methods to read it.
+This shell expose `ModifyAsync`, `ModifyThrowAsync` and `TryModifyAsync` methods to alter a domain
+and `TryRead` methods to read it.
 
