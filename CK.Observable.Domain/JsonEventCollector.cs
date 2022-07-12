@@ -1,9 +1,11 @@
 using CK.Core;
+using CK.PerfectEvent;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace CK.Observable
@@ -13,20 +15,23 @@ namespace CK.Observable
     /// <see cref="TransactionDoneEventArgs.Events"/> into <see cref="TransactionEvent"/> that captures, for each transaction,
     /// all the transaction events as JSON string that describes them.
     /// </summary>
-    public class JsonEventCollector
+    public sealed class JsonEventCollector
     {
         readonly List<TransactionEvent> _events;
         readonly StringWriter _buffer;
         readonly ObjectExporter _exporter;
+        readonly Channel<TransactionEvent?> _channel;
+        readonly PerfectEventSender<TransactionEvent> _lastEventChanged;
+
         ObservableDomain? _domain;
         int _lastTranNum;
         TimeSpan _keepDuration;
         int _keepLimit;
 
         /// <summary>
-        /// Representation of a successful transaction.
+        /// Immutable representation of a successful transaction.
         /// </summary>
-        public class TransactionEvent
+        public sealed class TransactionEvent
         {
             /// <summary>
             /// The transaction number.
@@ -66,6 +71,9 @@ namespace CK.Observable
             _events = new List<TransactionEvent>();
             _buffer = new StringWriter();
             _exporter = new ObjectExporter( new JSONExportTarget( _buffer ) );
+            _channel = Channel.CreateUnbounded<TransactionEvent?>( new UnboundedChannelOptions { SingleReader = true } );
+            _lastEventChanged = new PerfectEventSender<TransactionEvent>();
+
             KeepDuration = TimeSpan.FromMinutes( 5 );
             KeepLimit = 10;
             if( domain != null ) CollectEvent( domain, false );
@@ -80,7 +88,7 @@ namespace CK.Observable
             get => _keepDuration;
             set
             {
-                if( value < TimeSpan.Zero ) throw new ArgumentOutOfRangeException();
+                Throw.CheckOutOfRangeArgument( value >= TimeSpan.Zero );
                 _keepDuration = value;
             }
         }
@@ -103,7 +111,7 @@ namespace CK.Observable
         /// Gets the transaction events if possible from a given transaction number.
         /// This returns null if an export is required (the <paramref name="transactionNumber"/> is too old),
         /// and an empty array if the transactionNumber is greater or equal to the current transaction number
-        /// stored (this should not happen: clients should only have smaller transaction number).
+        /// stored (this should not happen: clients should only have smaller transaction numbers).
         /// </summary>
         /// <param name="transactionNumber">The starting transaction number.</param>
         /// <returns>The current transaction number and the set of transaction events to apply or null if an export is required.</returns>
@@ -135,7 +143,7 @@ namespace CK.Observable
         /// Called whenever a new transaction event is available.
         /// Note that the first transaction is visible: see <see cref="TransactionEvent.TransactionNumber"/>.
         /// </summary>
-        public event Action<IActivityMonitor, TransactionEvent>? LastEventChanged;
+        public PerfectEvent<TransactionEvent> LastEventChanged => _lastEventChanged.PerfectEvent;
 
         /// <summary>
         /// Gets the last transaction event that has been seen (the first one can appear
@@ -155,8 +163,12 @@ namespace CK.Observable
             Throw.CheckNotNullArgument( domain );
             lock( _events )
             {
-                Throw.CheckState( _domain == null, "Event collector is already associated to a domain." );
+                Throw.CheckState( "Event collector is already associated to a domain.", _domain == null );
                 _domain = domain;
+                // We don't need to wait for the end of the loop.
+                // The null terminator is sent, the loop ends.
+                // The channel is never completed (it's reused across Detach/CollectEvent).
+                _ = Task.Run( RunLoopAsync );
                 domain.TransactionDone += OnSuccessfulTransaction;
                 if( clearEvents )
                 {
@@ -177,6 +189,9 @@ namespace CK.Observable
                 {
                     if( _domain != null )
                     {
+                        // Sends the null terminator from the lock: no risk to push a transaction
+                        // event after it.
+                        _channel.Writer.TryWrite( null );
                         _domain.TransactionDone -= OnSuccessfulTransaction;
                         _domain = null!;
                     }
@@ -184,18 +199,18 @@ namespace CK.Observable
             }
         }
 
-        void OnSuccessfulTransaction( object? sender, TransactionDoneEventArgs c ) 
+        void OnSuccessfulTransaction( object? sender, TransactionDoneEventArgs c )
         {
             Debug.Assert( sender == _domain );
-            // It's useless to capture the initial transaction: the full export will be more efficient.
-            int num = c.Domain.TransactionSerialNumber;
-            if( num == 1 )
+            lock( _events )
             {
-                LastEvent = new TransactionEvent( 1, c.CommitTimeUtc, String.Empty );
-            }
-            else
-            {
-                lock( _events )
+                // It's useless to capture the initial transaction: the full export will be more efficient.
+                int num = c.Domain.TransactionSerialNumber;
+                if( num == 1 )
+                {
+                    LastEvent = new TransactionEvent( 1, c.CommitTimeUtc, String.Empty );
+                }
+                else
                 {
                     if( _lastTranNum != 0 && _lastTranNum != num - 1 )
                     {
@@ -210,7 +225,21 @@ namespace CK.Observable
                     ApplyKeepDuration();
                 }
             }
-            LastEventChanged?.Invoke( c.Monitor, LastEvent );
+            _channel.Writer.TryWrite( LastEvent );
+        }
+
+        async Task RunLoopAsync()
+        {
+            Debug.Assert( _domain != null );
+            var monitor = new ActivityMonitor( $"JsonEvent collector for '{_domain.DomainName}'." );
+            bool mustExit = false;
+            while( !mustExit )
+            {
+                var ev = await _channel.Reader.ReadAsync();
+                if( ev == null ) break;
+                await _lastEventChanged.SafeRaiseAsync( monitor, ev );
+            }
+            monitor.MonitorEnd();
         }
 
         void ApplyKeepDuration()
