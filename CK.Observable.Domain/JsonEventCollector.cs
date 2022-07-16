@@ -169,7 +169,7 @@ namespace CK.Observable
                 // The null terminator is sent, the loop ends.
                 // The channel is never completed (it's reused across Detach/CollectEvent).
                 _ = Task.Run( RunLoopAsync );
-                domain.TransactionDone += OnSuccessfulTransaction;
+                domain.TransactionDone += OnTransaction;
                 if( clearEvents )
                 {
                     _events.Clear();
@@ -192,14 +192,14 @@ namespace CK.Observable
                         // Sends the null terminator from the lock: no risk to push a transaction
                         // event after it.
                         _channel.Writer.TryWrite( null );
-                        _domain.TransactionDone -= OnSuccessfulTransaction;
+                        _domain.TransactionDone -= OnTransaction;
                         _domain = null!;
                     }
                 }
             }
         }
 
-        void OnSuccessfulTransaction( object? sender, TransactionDoneEventArgs c )
+        void OnTransaction( object? sender, TransactionDoneEventArgs c )
         {
             Debug.Assert( sender == _domain );
             lock( _events )

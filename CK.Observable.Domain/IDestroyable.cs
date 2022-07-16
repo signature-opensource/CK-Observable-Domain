@@ -6,7 +6,7 @@ using System.Text;
 namespace CK.Observable
 {
     /// <summary>
-    /// Exposes <see cref="IsDestroyed"/> property and <see cref="Destroyed"/> event but not the Destroy method.
+    /// Exposes <see cref="BinarySerialization.IDestroyable"/> property and <see cref="Destroyed"/> event but not the Destroy method.
     /// This interface is used to monitor destroying, not to trigger it.
     /// <para>
     /// The <see cref="IDestroyableObject"/> extends this interface and adds the <see cref="IDestroyableObject.Destroy()"/> method.
@@ -30,7 +30,7 @@ namespace CK.Observable
     public static class DestroyableObjectExtensions
     {
         /// <summary>
-        /// Throws an <see cref="ObjectDestroyedException"/> if this <see cref="IDestroyable.IsDestroyed"/> is true.
+        /// Throws an <see cref="ObjectDestroyedException"/> if this <see cref="BinarySerialization.IDestroyable.IsDestroyed"/> is true.
         /// </summary>
         /// <param name="this">This object.</param>
         public static void CheckDestroyed( this IDestroyable @this )

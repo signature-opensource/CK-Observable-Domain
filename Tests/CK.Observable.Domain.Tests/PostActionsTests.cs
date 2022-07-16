@@ -223,7 +223,7 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
-        public async Task local_are_executed_before_domain_ones_when_parallelDomainPostActions_is_false()
+        public async Task local_are_executed_before_domain_ones_when_parallelDomainPostActions_is_false_Async()
         {
             ResetContext();
 
@@ -304,7 +304,7 @@ namespace CK.Observable.Domain.Tests
 
         [TestCase( 2, 2, false )]
         [TestCase( 4, 4, true )]
-        public async Task multiple_Timers_respect_the_Domain_PostActions_ordering_guaranty( int nb, int nbTimers, bool useAsync )
+        public async Task multiple_Timers_respect_the_Domain_PostActions_ordering_guaranty_Async( int nb, int nbTimers, bool useAsync )
         {
             ResetContext();
 
@@ -345,7 +345,7 @@ namespace CK.Observable.Domain.Tests
 
         [TestCase( 50, true )]
         [TestCase( 49, false )]
-        public async Task parrallel_operations_with_random_behavior( int nb, bool tryModifyAsync )
+        public async Task parrallel_operations_with_random_behavior_Async( int nb, bool tryModifyAsync )
         {
             ResetContext();
 

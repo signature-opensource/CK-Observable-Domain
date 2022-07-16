@@ -36,7 +36,6 @@ namespace CK.Observable
         /// Gets whether <see cref="Errors"/> is empty, <see cref="ClientError"/> is null, both <see cref="TransactionDoneErrors"/>
         /// and <see cref="CommandHandlingErrors"/> are empty and <see cref="PostActionsError"/> is null and <see cref="DomainPostActionsError"/> must not
         /// yet be resolved or has a null exception.
-        /// </para>
         /// <para>
         /// The domain post actions execution are asynchronously executed by the <see cref="ObservableDomainPostActionExecutor"/>.
         /// If needed the <see cref="DomainPostActionsError"/> task can be used to await for the completion of the domain post actions 

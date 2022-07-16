@@ -26,7 +26,7 @@ namespace CK.Observable
         /// Initializes a new <see cref="ObservableDomain{T1,T2,T3,T4}"/> without any <see cref="ObservableDomain.DomainClient"/>.
         /// The roots are initialized with new instances of their respective type.
         /// <para>
-        /// Sidekicks are NOT instantiated by the constructors. If <see cref="HasWaitingSidekicks"/> is true, a null transaction
+        /// Sidekicks are NOT instantiated by the constructors. If <see cref="ObservableDomain.HasWaitingSidekicks"/> is true, a null transaction
         /// can be done that will instantiate the required sidekicks (and initialize them with the <see cref="ISidekickClientObject{TSidekick}"/> objects
         /// if any).
         /// </para>
@@ -44,7 +44,7 @@ namespace CK.Observable
         /// Initializes a new <see cref="ObservableDomain{T1,T2,T3,T4}"/>.
         /// The roots are initialized with new instances of their respective type.
         /// <para>
-        /// Sidekicks are NOT instantiated by the constructors. If <see cref="HasWaitingSidekicks"/> is true, a null transaction
+        /// Sidekicks are NOT instantiated by the constructors. If <see cref="ObservableDomain.HasWaitingSidekicks"/> is true, a null transaction
         /// can be done that will instantiate the required sidekicks (and initialize them with the <see cref="ISidekickClientObject{TSidekick}"/> objects
         /// if any).
         /// </para>
@@ -79,7 +79,7 @@ namespace CK.Observable
         /// <summary>
         /// Initializes a previously <see cref="ObservableDomain.Save"/>d domain.
         /// <para>
-        /// Sidekicks are NOT instantiated by the constructors. If <see cref="HasWaitingSidekicks"/> is true, a null transaction
+        /// Sidekicks are NOT instantiated by the constructors. If <see cref="ObservableDomain.HasWaitingSidekicks"/> is true, a null transaction
         /// can be done that will instantiate the required sidekicks (and initialize them with the <see cref="ISidekickClientObject{TSidekick}"/> objects
         /// if any).
         /// </para>

@@ -70,10 +70,6 @@ namespace CK.Observable
         /// The maximum number of milliseconds to wait for a read access before returning <see cref="TransactionResult.Empty"/>.
         /// Wait indefinitely by default.
         /// </param>
-        /// <param name="millisecondsTimeout">
-        /// The maximum number of milliseconds to wait for a read access before throwing.
-        /// Wait indefinitely by default.
-        /// </param>
         /// <param name="parallelDomainPostActions">
         /// False to wait for the success of the <see cref="TransactionDoneEventArgs.PostActions"/> that are executed here before
         /// allowing the <see cref="TransactionDoneEventArgs.DomainPostActions"/> to run: if any post action fails, domain post actions are skipped.
@@ -214,7 +210,7 @@ namespace CK.Observable
                 monitor.Warn( msg );
                 return new TransactionResult( CKExceptionData.Create( msg ), isTimeout: true );
             }
-            var (tx, ex) = DoCreateObservableTransaction( monitor, throwException, fromModifyAsync: true );
+            var (tx, ex) = DoCreateObservableTransaction( monitor, throwException );
             Debug.Assert( (tx != null) != (ex != null), "The Transaction XOR IObservableDomainClient.OnTransactionStart() exception." );
 
             if( ex != null ) return new TransactionResult( ex );
@@ -222,6 +218,11 @@ namespace CK.Observable
             var tr = DoModifyAndCommit( actions, tx );
             await tr.ExecutePostActionsAsync( monitor, parallelDomainPostActions ).ConfigureAwait( false );
             if( throwException ) tr.ThrowOnFailure( considerRolledbackAsFailure );
+            if( waitForDomainPostActionsCompletion )
+            {
+                await tr.DomainPostActionsError;
+                if( throwException ) tr.ThrowOnFailure( considerRolledbackAsFailure );
+            }
             return considerRolledbackAsFailure && tr.RollbackedInfo != null ? tr.RollbackedInfo.Failure : tr;
         }
 
@@ -251,7 +252,7 @@ namespace CK.Observable
         /// <param name="m">The monitor to use.</param>
         /// <param name="throwException">Whether to throw or return the potential IObservableDomainClient.OnTransactionStart exception.</param>
         /// <returns>The transaction XOR the IObservableDomainClient.OnTransactionStart exception.</returns>
-        (Transaction?, Exception?) DoCreateObservableTransaction( IActivityMonitor m, bool throwException, bool fromModifyAsync )
+        (Transaction?, Exception?) DoCreateObservableTransaction( IActivityMonitor m, bool throwException )
         {
             Debug.Assert( m != null && _lock.IsWriteLockHeld );
             // This group is left Open on success. It will be closed at the end of the transaction.

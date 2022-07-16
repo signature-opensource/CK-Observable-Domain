@@ -551,10 +551,10 @@ namespace CK.Observable
         /// <summary>
         /// Raised whenever when a successful transaction has been successfully handled by the <see cref="ObservableDomain.DomainClient"/>.
         /// <para>
-        /// When this is called, the <see cref="Domain"/>'s lock is held in read mode: objects can be read (but no write/modifications
+        /// When this is called, the Domain's lock is held in read mode: objects can be read (but no write/modifications
         /// should occur). A typical implementation is to capture any required domain object's state and use
         /// <see cref="TransactionDoneEventArgs.PostActions"/> or <see cref="TransactionDoneEventArgs.DomainPostActions"/>
-        /// to post asynchronous actions (or to send commands thanks to <see cref="TransactionDoneEventArgs.SendCommand(ObservableDomainCommand)"/>
+        /// to post asynchronous actions (or to send commands thanks to <see cref="TransactionDoneEventArgs.SendCommand(in ObservableDomainCommand)"/>
         /// that will be processed by the sidekicks).
         /// </para>
         /// <para>
@@ -1237,17 +1237,26 @@ namespace CK.Observable
             using( monitor.OpenInfo( $"Idempotence check of '{domain.DomainName}'." ) )
             using( var s = new MemoryStream() )
             {
-                if( !domain.Save( monitor, s, millisecondsTimeout: milliSecondsTimeout, debugMode: useDebugMode ) ) throw new Exception( "First Save failed: Unable to acquire lock." );
+                if( !domain.Save( monitor, s, millisecondsTimeout: milliSecondsTimeout, debugMode: useDebugMode ) )
+                {
+                    throw new Exception( "First Save failed: Unable to acquire lock." );
+                }
                 var originalBytes = s.ToArray();
                 var originalTransactionSerialNumber = domain.TransactionSerialNumber;
                 s.Position = 0;
-                if( !domain.Load( monitor, RewindableStream.FromStream( s ), millisecondsTimeout: milliSecondsTimeout, startTimer: null ) ) throw new Exception( "Reload failed: Unable to acquire lock." );
+                if( !domain.Load( monitor, RewindableStream.FromStream( s ), millisecondsTimeout: milliSecondsTimeout, startTimer: null ) )
+                {
+                    throw new Exception( "Reload failed: Unable to acquire lock." );
+                }
                 if( restoreSidekicks && domain._sidekickManager.HasWaitingSidekick )
                 {
                     domain._sidekickManager.CreateWaitingSidekicks( monitor, Util.ActionVoid, true );
                 }
                 using var checker = BinarySerializer.CreateCheckedWriteStream( originalBytes );
-                if( !domain.Save( monitor, checker, millisecondsTimeout: milliSecondsTimeout, debugMode: useDebugMode ) ) throw new Exception( "Second Save failed: Unable to acquire lock." );
+                if( !domain.Save( monitor, checker, millisecondsTimeout: milliSecondsTimeout, debugMode: useDebugMode ) )
+                {
+                    throw new Exception( "Second Save failed: Unable to acquire lock." );
+                }
                 return domain.CurrentLostObjectTracker!;
             }
         }
