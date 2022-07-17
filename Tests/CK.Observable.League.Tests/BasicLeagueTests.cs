@@ -167,9 +167,9 @@ namespace CK.Observable.League.Tests
         }
 
         [Test]
-        public async Task up_to_4_typed_roots_are_supported()
+        public async Task up_to_4_typed_roots_are_supported_Async()
         {
-            var store = CreateStore( nameof( up_to_4_typed_roots_are_supported ) );
+            var store = CreateStore( nameof( up_to_4_typed_roots_are_supported_Async ) );
             var league = await ObservableLeague.LoadAsync( TestHelper.Monitor, store );
 
             var roots = new[] { typeof( Root1 ), typeof( Root2 ), typeof( Root3 ), typeof( Root4 ) };

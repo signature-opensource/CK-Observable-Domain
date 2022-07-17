@@ -20,7 +20,7 @@ namespace CK.Observable
         /// Initializes a new <see cref="ObservableDomain{T}"/> without any <see cref="ObservableDomain.DomainClient"/>.
         /// The <see cref="Root"/> is a new <typeparamref name="T"/>.
         /// <para>
-        /// Sidekicks are NOT instantiated by the constructors. If <see cref="HasWaitingSidekicks"/> is true, a null transaction
+        /// Sidekicks are NOT instantiated by the constructors. If <see cref="ObservableDomain.HasWaitingSidekicks"/> is true, a null transaction
         /// can be done that will instantiate the required sidekicks (and initialize them with the <see cref="ISidekickClientObject{TSidekick}"/> objects
         /// if any).
         /// </para>
@@ -38,7 +38,7 @@ namespace CK.Observable
         /// Initializes a new <see cref="ObservableDomain{T}"/>.
         /// The <see cref="Root"/> is a new <typeparamref name="T"/>.
         /// <para>
-        /// Sidekicks are NOT instantiated by the constructors. If <see cref="HasWaitingSidekicks"/> is true, a null transaction
+        /// Sidekicks are NOT instantiated by the constructors. If <see cref="ObservableDomain.HasWaitingSidekicks"/> is true, a null transaction
         /// can be done that will instantiate the required sidekicks (and initialize them with the <see cref="ISidekickClientObject{TSidekick}"/> objects
         /// if any).
         /// </para>
@@ -76,7 +76,7 @@ namespace CK.Observable
         /// <summary>
         /// Initializes a previously <see cref="ObservableDomain.Save"/>d domain.
         /// <para>
-        /// Sidekicks are NOT instantiated by the constructors. If <see cref="HasWaitingSidekicks"/> is true, a null transaction
+        /// Sidekicks are NOT instantiated by the constructors. If <see cref="ObservableDomain.HasWaitingSidekicks"/> is true, a null transaction
         /// can be done that will instantiate the required sidekicks (and initialize them with the <see cref="ISidekickClientObject{TSidekick}"/> objects
         /// if any).
         /// </para>

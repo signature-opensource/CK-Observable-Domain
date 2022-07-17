@@ -29,12 +29,12 @@ namespace CK.Observable
             {
                 W = w;
                 D = d;
-                d.DomainChanged += DomainChanged;
+                d.DomainChanged.Sync += DomainChanged;
             }
 
             public void Dispose()
             {
-                D.DomainChanged -= DomainChanged;
+                D.DomainChanged.Sync -= DomainChanged;
             }
 
             void DomainChanged( IActivityMonitor monitor, JsonEventCollector.TransactionEvent e )

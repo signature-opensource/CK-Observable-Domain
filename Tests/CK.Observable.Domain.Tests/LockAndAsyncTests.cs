@@ -68,6 +68,7 @@ namespace CK.Observable.Domain.Tests
         }
 
 
+#pragma warning disable VSTHRD002 // Avoid problematic synchronous waits
         [TestCase( "UseMRSW" )]
         [TestCase( "UseMonitor" )]
         public void showing_how_Locks_and_async_can_be_dangerous( string mode )
@@ -95,6 +96,7 @@ namespace CK.Observable.Domain.Tests
                 locker.ExplicitRelease();
             }
         }
+#pragma warning restore VSTHRD002 // Avoid problematic synchronous waits
 
         static async Task<Exception> TestAsync( Locker locker )
         {

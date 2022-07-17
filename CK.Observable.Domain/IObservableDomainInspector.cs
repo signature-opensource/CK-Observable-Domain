@@ -31,7 +31,7 @@ namespace CK.Observable
         /// <summary>
         /// Triggers a garbage collection on this domain.
         /// First, <see cref="EnsureLostObjectTracker(IActivityMonitor, int)"/> is called to update the <see cref="CurrentLostObjectTracker"/>
-        /// and then, the detected lost objects are unloaded in a <see cref="ModifyAsync"/>.
+        /// and then, the detected lost objects are unloaded in a <see cref="ObservableDomain.ModifyAsync(IActivityMonitor, Action?, bool, int, bool, bool, bool)"/>.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="millisecondsTimeout">

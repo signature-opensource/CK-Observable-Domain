@@ -1,5 +1,6 @@
 using CK.BinarySerialization;
 using CK.Core;
+using CK.PerfectEvent;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -316,11 +317,7 @@ namespace CK.Observable.League
                 return Client.JsonEventCollector.GetTransactionEvents( transactionNumber );
             }
 
-            public event Action<IActivityMonitor, JsonEventCollector.TransactionEvent> DomainChanged
-            {
-                add => Client.JsonEventCollector.LastEventChanged += value;
-                remove => Client.JsonEventCollector.LastEventChanged -= value;
-            }
+            public PerfectEvent<JsonEventCollector.TransactionEvent> DomainChanged => Client.JsonEventCollector.LastEventChanged;
 
             internal bool ClosingLeague { get; private set; }
 

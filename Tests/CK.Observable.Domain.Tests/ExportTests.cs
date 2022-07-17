@@ -66,12 +66,13 @@ namespace CK.Observable.Domain.Tests
             using( var d = new ObservableDomain( TestHelper.Monitor, "TEST", startTimer: true ) )
             {
                 eventCollector.CollectEvent( d, false );
-                eventCollector.LastEventChanged += TrackLastEvent;
+                eventCollector.LastEventChanged.Sync += TrackLastEvent;
                 d.TransactionSerialNumber.Should().Be( 0, "Nothing happened yet." );
 
                 var initial = d.ExportToString();
 
                 await d.ModifyThrowAsync( TestHelper.Monitor, null );
+                await Task.Delay( 20 );
 
                 d.TransactionSerialNumber.Should().Be( 1, "Even if nothing changed, TransactionNumber is incremented." );
                 LastEvent.TransactionNumber.Should().Be( 1 );
@@ -89,6 +90,7 @@ namespace CK.Observable.Domain.Tests
                 {
                     new Car( "Hello!" );
                 } );
+                await Task.Delay( 20 );
 
                 LastEvent.TransactionNumber.Should().Be( 2 );
                 string t2 = LastEvent.ExportedEvents;
@@ -97,6 +99,7 @@ namespace CK.Observable.Domain.Tests
                 {
                     d.AllObjects.Single().Destroy();
                 } );
+                await Task.Delay( 20 );
 
                 string t3 = LastEvent.ExportedEvents;
 
@@ -105,6 +108,7 @@ namespace CK.Observable.Domain.Tests
                     new MultiPropertyType();
 
                 } );
+                await Task.Delay( 20 );
 
                 string t4 = LastEvent.ExportedEvents;
 
@@ -114,6 +118,7 @@ namespace CK.Observable.Domain.Tests
                     m.ChangeAll( "Pouf", 3, new Guid( "{B681AD83-A276-4A5C-A11A-4A22469B6A0D}" ) );
 
                 } );
+                await Task.Delay( 20 );
 
                 string t5 = LastEvent.ExportedEvents;
 
@@ -123,6 +128,7 @@ namespace CK.Observable.Domain.Tests
                     m.SetDefaults();
 
                 } );
+                await Task.Delay( 20 );
 
                 string t6 = LastEvent.ExportedEvents;
 
@@ -134,6 +140,7 @@ namespace CK.Observable.Domain.Tests
                     l.Add( "Two" );
 
                 } );
+                await Task.Delay( 20 );
 
                 string t7 = LastEvent.ExportedEvents;
 
@@ -142,6 +149,7 @@ namespace CK.Observable.Domain.Tests
                     var l = d.AllObjects.OfType<ObservableList<string>>().Single();
                     l[0] = "Three";
                 } );
+                await Task.Delay( 20 );
 
                 string t8 = LastEvent.ExportedEvents;
 
@@ -155,7 +163,7 @@ namespace CK.Observable.Domain.Tests
             using( var d = new ObservableDomain(TestHelper.Monitor, "TEST", startTimer: true ) )
             {
                 var eventCollector = new JsonEventCollector( d );
-                eventCollector.LastEventChanged += TrackLastEvent;
+                eventCollector.LastEventChanged.Sync += TrackLastEvent;
 
                 d.TransactionSerialNumber.Should().Be( 0, "Nothing happened yet." );
                 var r0 = eventCollector.GetTransactionEvents( 0 );
@@ -175,6 +183,7 @@ namespace CK.Observable.Domain.Tests
 
                 } );
                 Debug.Assert( oneObject != null );
+                await Task.Delay( 20 );
 
                 d.TransactionSerialNumber.Should().Be( 1, "TransactionNumber is incremented." );
                 LastEvent.TransactionNumber.Should().Be( 1 );
@@ -193,6 +202,7 @@ namespace CK.Observable.Domain.Tests
                     oneObject.Add( 1 );
 
                 } );
+                await Task.Delay( 20 );
                 d.TransactionSerialNumber.Should().Be( 2, "TransactionNumber is incremented." );
                 LastEvent.TransactionNumber.Should().Be( 2 );
                 LastEvent.ExportedEvents.Should().Be( "[\"I\",0,0,1]" );
@@ -211,6 +221,7 @@ namespace CK.Observable.Domain.Tests
                     oneObject.Destroy();
 
                 } );
+                await Task.Delay( 20 );
 
                 d.TransactionSerialNumber.Should().Be( 3, "TransactionNumber is incremented." );
                 LastEvent.TransactionNumber.Should().Be( 3 );
@@ -230,7 +241,7 @@ namespace CK.Observable.Domain.Tests
         public async Task exporting_and_altering_sample_Async()
         {
             var eventCollector = new JsonEventCollector();
-            eventCollector.LastEventChanged += TrackLastEvent;
+            eventCollector.LastEventChanged.Sync += TrackLastEvent;
 
             using( var d = await SampleDomain.CreateSampleAsync() )
             {
@@ -246,6 +257,7 @@ namespace CK.Observable.Domain.Tests
                     var g2 = d.AllObjects.OfType<Garage>().Single( g => g.CompanyName == null );
                     g2.CompanyName = "Signature Code";
                 } );
+                await Task.Delay( 20 );
                 Debug.Assert( LastEvent != null );
 
                 LastEvent.TransactionNumber.Should().Be( 2 );
@@ -258,6 +270,7 @@ namespace CK.Observable.Domain.Tests
                     g2.Cars.Clear();
                     var newOne = new Mechanic( g2 ) { FirstName = "X", LastName = "Y" };
                 } );
+                await Task.Delay( 20 );
                 LastEvent.TransactionNumber.Should().Be( 3 );
                 string t2 = LastEvent.ExportedEvents;
 
@@ -266,6 +279,7 @@ namespace CK.Observable.Domain.Tests
                     var spi = d.AllObjects.OfType<Mechanic>().Single( m => m.LastName == "Spinelli" );
                     spi.Destroy();
                 } );
+                await Task.Delay( 20 );
                 LastEvent.TransactionNumber.Should().Be( 4 );
                 string t3 = LastEvent.ExportedEvents;
                 t3.Should().Be( "[\"R\",17,5],[\"D\",25]" );
@@ -275,6 +289,7 @@ namespace CK.Observable.Domain.Tests
                     var g1 = d.AllObjects.OfType<Garage>().Single( g => g.CompanyName == "Boite" );
                     g1.ReplacementCar.Remove( g1.Cars[0] );
                 } );
+                await Task.Delay( 20 );
                 LastEvent.TransactionNumber.Should().Be( 5 );
                 string t4 = LastEvent.ExportedEvents;
                 t4.Should().Be( "[\"K\",3,{\"=\":4}]" );
@@ -286,7 +301,7 @@ namespace CK.Observable.Domain.Tests
         public async Task exporting_and_altering_ApplicationState_Async()
         {
             var eventCollector = new JsonEventCollector();
-            eventCollector.LastEventChanged += TrackLastEvent;
+            eventCollector.LastEventChanged.Sync += TrackLastEvent;
 
             using( var d = new ObservableDomain<RootSample.ApplicationState>( TestHelper.Monitor,
                                                                               "TEST",
@@ -303,6 +318,7 @@ namespace CK.Observable.Domain.Tests
                     d.Root.ProductStateList.Add( new RootSample.Product( p1 ) { Name = "Product n°1" } );
                     d.Root.CurrentProductState = d.Root.ProductStateList[0];
                 } );
+                await Task.Delay( 20 );
                 Debug.Assert( LastEvent != null );
 
                 d.Root.ProductStateList[0].OId.Index.Should().Be( 7, "Product n°1 OId.Index is 7." );
@@ -322,6 +338,7 @@ namespace CK.Observable.Domain.Tests
                 } );
                 d.Root.ProductStateList[1].OId.Index.Should().Be( 6, "Product n°2 OId.Index is 6." );
 
+                await Task.Delay( 20 );
                 string t1 = LastEvent.ExportedEvents;
                 // p2 is the object n°5.
                 t1.Should().Contain( @"[""N"",6,""""]" );
@@ -337,6 +354,7 @@ namespace CK.Observable.Domain.Tests
                     d.Root.SkipToNextProduct();
                     d.Root.CurrentProductState.Name.Should().Be( "Product n°1" );
                 } );
+                await Task.Delay( 20 );
                 string t2 = LastEvent.ExportedEvents;
                 // Switch to Product n°1 (OId is 7).
                 t2.Should().Contain( @"[""C"",0,1,{""="":7}]" );
@@ -361,7 +379,7 @@ namespace CK.Observable.Domain.Tests
             }
 
             // ObservableObjects and InternalObjects MUST NOT interact with any domain directly.
-            public ObservableDomain ThisIsVeryBad { get; }
+            public ObservableDomain? ThisIsVeryBad { get; }
         }
 
         [SerializationVersion(0)]
@@ -386,7 +404,7 @@ namespace CK.Observable.Domain.Tests
             public DomainView ThisIsBad => Domain;
         }
 
-        [SerializationVersion(0)]
+        [SerializationVersion( 0 )]
         public class TryingToExportNotExportableProperties3 : ObservableObject
         {
             public TryingToExportNotExportableProperties3()
@@ -403,7 +421,7 @@ namespace CK.Observable.Domain.Tests
             }
 
             // Error on property can be set, but this obviously prevents the whole type to be exported.
-            [NotExportable(Error = "Missed..." )]
+            [NotExportable( Error = "Missed..." )]
             public int NoWay { get; }
         }
 

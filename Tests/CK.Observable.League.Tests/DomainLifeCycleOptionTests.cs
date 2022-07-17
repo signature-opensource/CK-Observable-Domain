@@ -59,9 +59,9 @@ namespace CK.Observable.League.Tests
         }
 
         [Test]
-        public async Task never_option_unloads_the_domain_even_if_there_is_active_timed_events()
+        public async Task never_option_unloads_the_domain_even_if_there_is_active_timed_events_Async()
         {
-            var store = BasicLeagueTests.CreateStore( nameof( never_option_unloads_the_domain_even_if_there_is_active_timed_events ) );
+            var store = BasicLeagueTests.CreateStore( nameof( never_option_unloads_the_domain_even_if_there_is_active_timed_events_Async ) );
             var league = await ObservableLeague.LoadAsync( TestHelper.Monitor, store );
             Debug.Assert( league != null );
 
@@ -99,9 +99,9 @@ namespace CK.Observable.League.Tests
         }
 
         [Test]
-        public async Task default_option_is_to_keep_the_domain_in_memory_as_long_as_there_is_active_timed_events()
+        public async Task default_option_is_to_keep_the_domain_in_memory_as_long_as_there_is_active_timed_events_Async()
         {
-            var store = BasicLeagueTests.CreateStore( nameof( default_option_is_to_keep_the_domain_in_memory_as_long_as_there_is_active_timed_events ) );
+            var store = BasicLeagueTests.CreateStore( nameof( default_option_is_to_keep_the_domain_in_memory_as_long_as_there_is_active_timed_events_Async ) );
             var league = await ObservableLeague.LoadAsync( TestHelper.Monitor, store );
             Debug.Assert( league != null );
 

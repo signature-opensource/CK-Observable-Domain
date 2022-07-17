@@ -8,8 +8,7 @@ namespace CK.Observable
 {
     /// <summary>
     /// Exposes the heart of an <see cref="ObservableDomain"/>. This is the only API surface that
-    /// should be used by <see cref="ObservableDomain.Modify(IActivityMonitor, Action, int)"/> action (inside
-    /// a transaction).
+    /// should be used by ModifyAsync methods action (inside a transaction).
     /// </summary>
     public interface IObservableDomain
     {

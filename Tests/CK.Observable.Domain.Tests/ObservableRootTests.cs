@@ -32,7 +32,7 @@ namespace CK.Observable.Domain.Tests
         public async Task initializing_and_persisting_domain_Async()
         {
             var eventCollector = new JsonEventCollector();
-            eventCollector.LastEventChanged += TrackLastEvent;
+            eventCollector.LastEventChanged.Sync += TrackLastEvent;
 
             using( var d = new ObservableDomain<ApplicationState>(TestHelper.Monitor, nameof( initializing_and_persisting_domain_Async ), startTimer: true ) )
             {
@@ -43,6 +43,7 @@ namespace CK.Observable.Domain.Tests
                 {
                     d.Root.ToDoNumbers.Add( 42 );
                 } );
+                await Task.Delay( 20 );
                 string t1 = LastEvent.ExportedEvents;
                 t1.Should().Be( "" );
 

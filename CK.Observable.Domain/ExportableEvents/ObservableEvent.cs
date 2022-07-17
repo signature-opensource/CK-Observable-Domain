@@ -3,8 +3,8 @@ using System;
 namespace CK.Observable
 {
     /// <summary>
-    /// Base class for all observable events. Such events are emitted by <see cref="ObservableDomain.Modify(Core.IActivityMonitor, Action, int)"/>
-    /// and are enough to fully synchronize a remote associated domain.
+    /// Base class for all observable events. Such events are emitted by ModifyAsync methods
+    /// and are enough to fully synchronize a remote associated domain view.
     /// These events must be handled by <see cref="IObservableDomainClient.OnTransactionCommit(in TransactionDoneEventArgs)"/> (write lock held),
     /// or by <see cref="ObservableDomainSidekick.OnTransactionResult(in TransactionDoneEventArgs)"/> (read lock held), directly after the
     /// modifications because direct domain objects are exposed by these events (for example the <see cref="PropertyChangedEvent.Value"/>): these

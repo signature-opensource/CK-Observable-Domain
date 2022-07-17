@@ -1,4 +1,5 @@
 using CK.Core;
+using CK.PerfectEvent;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -44,7 +45,7 @@ namespace CK.Observable.League
         /// Raised whenever a transaction has been successfully committed.
         /// Note that the first transaction is visible: see <see cref="JsonEventCollector.TransactionEvent.TransactionNumber"/>.
         /// </summary>
-        event Action<IActivityMonitor,JsonEventCollector.TransactionEvent> DomainChanged;
+        PerfectEvent<JsonEventCollector.TransactionEvent> DomainChanged { get; }
 
         /// <summary>
         /// Loads this domain (if it is not yet loaded) and returns a shell on which <see cref="IObservableDomainShellBase.DisposeAsync(IActivityMonitor)"/>

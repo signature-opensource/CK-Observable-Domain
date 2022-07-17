@@ -1,9 +1,5 @@
 using CK.Core;
-using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.ComponentModel;
 using System.Diagnostics;
-using System.Reflection;
 
 namespace CK.Observable
 {
@@ -64,7 +60,7 @@ namespace CK.Observable
             {
                 // This enables the Internal object to be serializable/deserializable outside a Domain
                 // (for instance to use BinarySerializer.IdempotenceCheck): the domain registers it.
-                ActualDomain = d.Context.Services.GetRequiredService<ObservableDomain>();
+                ActualDomain = d.Context.Services.GetService<ObservableDomain>( throwOnNull: true );
                 _destroyed = new ObservableEventHandler<ObservableDomainEventArgs>( d );
                 // We don't call Register here: this is called by the domain deserializer method.
             }
@@ -88,7 +84,7 @@ namespace CK.Observable
         /// Gets a safe view on the domain to which this internal object belongs.
         /// </summary>
         /// <remarks>
-        /// Useful properties and methods (like the <see cref="DomainView.Monitor"/> or <see cref="DomainView.SendCommand"/> )
+        /// Useful properties and methods (like the <see cref="DomainView.Monitor"/> or <see cref="DomainView.SendCommand(in ObservableDomainCommand)"/> )
         /// are exposed by this accessor so that the interface of the observable object is not polluted by infrastructure concerns.
         /// </remarks>
         protected DomainView Domain
@@ -151,7 +147,7 @@ namespace CK.Observable
 
         /// <summary>
         /// Called when this object is unloaded: either because the <see cref="ObservableDomain"/> is disposed
-        /// or <see cref="ObservableDomain.Load(IActivityMonitor, System.IO.Stream, bool, System.Text.Encoding?, int, bool?)"/>
+        /// or <see cref="ObservableDomain.Load(IActivityMonitor, BinarySerialization.RewindableStream, int, bool?)"/>
         /// has been called or <see cref="Destroy"/> is being called (this is called prior to call <see cref="OnDestroy"/>).
         /// <para>
         /// This base is an empty implementation (we have nothing to do at this level). This must be overridden whenever
