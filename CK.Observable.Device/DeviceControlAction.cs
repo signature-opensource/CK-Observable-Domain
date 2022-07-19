@@ -32,7 +32,7 @@ namespace CK.Observable.Device
         /// existing ownership: its <see cref="DeviceConfiguration.ControllerKey"/> is set to null.
         /// <para>
         /// This is a dangerous option since this implies to reapply the current configuration
-        /// (but with a null ControllerKey.
+        /// (but with a null ControllerKey).
         /// </para>
         /// </summary>
         ForceReleaseControl,
@@ -50,17 +50,12 @@ namespace CK.Observable.Device
 
         /// <summary>
         /// Takes control of the device whatever its current state and configuration is.
+        /// See <see cref="DeviceControlStatus.HasOwnership"/>.
         /// <para>
         /// This is a dangerous option since this implies to reapply the current configuration
         /// (but with this domain's name as the <see cref="DeviceConfiguration.ControllerKey"/>).
         /// </para>
         /// </summary>
-        TakeOwnership,
-
-        /// <summary>
-        /// Same as <see cref="TakeOwnership"/> and the configuration is persisted.
-        /// See <see cref="DeviceControlStatus.HasPersistentOwnership"/>.
-        /// </summary>
-        TakePersistentOwnership
+        TakeOwnership
     }
 }

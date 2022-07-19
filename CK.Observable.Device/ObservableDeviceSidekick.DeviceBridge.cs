@@ -75,15 +75,35 @@ namespace CK.Observable.Device
                 if( initialDevice != null ) SetDevice( monitor, initialDevice );
             }
 
-            internal void SetDevice( IActivityMonitor monitor, IDevice d, bool initCall = false )
+            internal void SetDevice( IActivityMonitor monitor, IDevice d )
             {
                 Debug.Assert( Device == null, "This is called only if the current Device is null." );
                 Device = d;
                 SubscribeDeviceEvent();
-                Object.SetIsRunning( d.Status.IsRunning );
-                Object.OnDeviceConfigurationApplied( d.ExternalConfiguration );
-                Object.SetDeviceControlStatus( ObservableDeviceObject.ComputeStatus( d, _sidekick.Domain.DomainName ) );
+
+                Object._isRunning = d.Status.IsRunning;
+                Object._configuration = d.ExternalConfiguration;
+                Object._deviceControlStatus = ObservableDeviceObject.ComputeStatus( d, _sidekick.Domain.DomainName );
                 OnDeviceAppeared( monitor );
+                RaiseDevicePropertiesChanged( true, true, true, null );
+            }
+
+            internal void UpdateDevice( IActivityMonitor monitor, IDevice d )
+            {
+                Debug.Assert( Device == d, "This is called to update the current Device." );
+                bool rC = Object._isRunning != d.Status.IsRunning;
+                if( rC ) Object._isRunning = d.Status.IsRunning;
+                var previous = Object._configuration;
+                bool cC = previous != d.ExternalConfiguration;
+                if( cC ) Object._configuration = d.ExternalConfiguration;
+                var s = ObservableDeviceObject.ComputeStatus( d, _sidekick.Domain.DomainName );
+                bool sC = Object._deviceControlStatus != s;
+                if( sC ) Object._deviceControlStatus = s;
+                if( rC || cC || sC )
+                {
+                    RaiseDevicePropertiesChanged( rC, cC, sC, previous );
+                    OnDeviceChanged( monitor, rC, cC, sC, previous );
+                }
             }
 
             internal void DetachDevice( IActivityMonitor monitor )
@@ -91,10 +111,20 @@ namespace CK.Observable.Device
                 Debug.Assert( Device != null, "This is called only if a Device is bound." );
                 UnsubscribeDeviceEvent();
                 OnDeviceDisappearing( monitor );
-                Object.SetIsRunning( null );
-                Object.OnDeviceConfigurationApplied( null );
-                Object.SetDeviceControlStatus( DeviceControlStatus.MissingDevice );
+
                 Device = null;
+                Object._isRunning = null;
+                var previous = Object._configuration;
+                Object._configuration = null;
+                Object._deviceControlStatus = DeviceControlStatus.MissingDevice;
+                RaiseDevicePropertiesChanged( true, true, true, previous );
+            }
+
+            void RaiseDevicePropertiesChanged( bool runningChanged, bool configurationChanged, bool statusChanged, DeviceConfiguration? previous )
+            {
+                if( runningChanged ) Object.OnIsRunningChanged();
+                if( configurationChanged ) Object.OnConfigurationChanged( previous );
+                if( statusChanged ) Object.OnDeviceControlStatusChanged();
             }
 
             private protected virtual void SubscribeDeviceEvent()
@@ -141,6 +171,29 @@ namespace CK.Observable.Device
             /// </summary>
             /// <param name="monitor">The monitor to use.</param>
             protected virtual void OnDeviceAppeared( IActivityMonitor monitor )
+            {
+            }
+
+            /// <summary>
+            /// Called whenever a change occur in the bound <see cref="Device"/> that impacts
+            /// <see cref="ObservableDeviceObject.IsRunning"/>, <see cref="ObservableDeviceObject.Configuration"/>
+            /// or <see cref="ObservableDeviceObject.DeviceControlStatus"/>.
+            /// The <see cref="Object"/> (and any other objects of the domain) can be safely modified
+            /// since the domain's write lock is held.
+            /// <para>
+            /// Does nothing at this level.
+            /// </para>
+            /// </summary>
+            /// <param name="monitor">The monitor to use.</param>
+            /// <param name="runningChanged">True if the <see cref="ObservableDeviceObject.IsRunning"/> has changed.</param>
+            /// <param name="configurationChanged">True if the <see cref="ObservableDeviceObject.Configuration"/> has changed (<paramref name="previous"/> references the previous one).</param>
+            /// <param name="statusChanged">True if the <see cref="ObservableDeviceObject.DeviceControlStatus"/> changed.</param>
+            /// <param name="previous">The previous configuration if it has changed, the current one otherwise.</param>
+            protected virtual void OnDeviceChanged( IActivityMonitor monitor,
+                                                    bool runningChanged,
+                                                    bool configurationChanged,
+                                                    bool statusChanged,
+                                                    DeviceConfiguration? previous )
             {
             }
 
@@ -219,6 +272,7 @@ namespace CK.Observable.Device
         /// </summary>
         /// <typeparam name="TSidekick">The type of the sidekick that manages this bridge.</typeparam>
         /// <typeparam name="TDevice">The type of the actual device.</typeparam>
+        /// <typeparam name="TDeviceEvent">The base type of the device event.</typeparam>
         internal protected abstract class ActiveBridge<TSidekick, TDevice, TDeviceEvent> : DeviceBridge
             where TSidekick : ObservableDeviceSidekick<THost, TDeviceObject, TDeviceHostObject>
             where TDevice : class, IActiveDevice<TDeviceEvent>

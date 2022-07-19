@@ -12,6 +12,7 @@ namespace CK.Observable.Device
     /// Base class for an observable host of devices.
     /// </summary>
     /// <typeparam name="TSidekick">The type of the sidekick.</typeparam>
+    /// <typeparam name="TDeviceObject">The type of the device object.</typeparam>
     [SerializationVersion( 0 )]
     public abstract class ObservableDeviceHostObject<TSidekick, TDeviceObject> : ObservableDeviceHostObject, ISidekickClientObject<TSidekick>
         where TSidekick : ObservableDomainSidekick, IObservableDeviceSidekick
@@ -38,7 +39,9 @@ namespace CK.Observable.Device
         /// Specialized deserialization constructor for specialized classes.
         /// </summary>
         /// <param name="_">Unused parameter.</param>
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         protected ObservableDeviceHostObject( Sliced _ ) : base( _ ) { }
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
         /// <summary>
         /// Deserialization constructor for specialized classes.
