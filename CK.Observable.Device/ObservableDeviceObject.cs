@@ -32,7 +32,9 @@ namespace CK.Observable.Device
             DeviceName = deviceName;
         }
 
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
         protected ObservableDeviceObject( Sliced _ ) : base( _ ) { }
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
         ObservableDeviceObject( IBinaryDeserializer d, ITypeReadInfo info )
             : base( Sliced.Instance )
@@ -80,6 +82,8 @@ namespace CK.Observable.Device
 
             BaseSetControllerKeyDeviceCommand CreateSetControllerKeyCommand();
 
+            IDevice? Device { get; }
+
             IEnumerable<string> CurrentlyAvailableDeviceNames { get; }
 
             T CreateCommand<T>( Action<T>? configuration ) where T : BaseDeviceCommand, new();
@@ -90,6 +94,15 @@ namespace CK.Observable.Device
         /// </summary>
         public string DeviceName { get; }
 
+        /// <summary>
+        /// Gets the actual device if it exists or null.
+        /// </summary>
+        /// <remarks>
+        /// This is weakly typed and protected because direct interactions with devices from the Observable
+        /// layer should not occur: the commands and events handled by the sidekick must do he job.
+        /// However since some use case require the actual device (like creating events), it is exposed here.
+        /// </remarks>
+        protected IDevice? Device => _bridge?.Device;
 
         /// <summary>
         /// Gets the device status.

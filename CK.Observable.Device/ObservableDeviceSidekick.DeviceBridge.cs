@@ -43,7 +43,7 @@ namespace CK.Observable.Device
             /// <summary>
             /// Gets the associated device or null if no actual device with the <see cref="ObservableDeviceObject.DeviceName"/> exists in the host.
             /// </summary>
-            internal protected IDevice? Device { get; private set; }
+            public IDevice? Device { get; private set; }
 
             #pragma warning disable CS8618 // Non-nullable _sidekick uninitialized. Consider declaring as nullable.
             /// <summary>
