@@ -52,10 +52,9 @@ namespace CK.Observable
         /// <param name="reader">The reader function.</param>
         /// <param name="millisecondsTimeout">
         /// The maximum number of milliseconds to wait for a read access before returning false.
-        /// Wait indefinitely by default.
         /// </param>
         /// <returns>True if the read has been done, false on timeout.</returns>
-        public bool TryRead( IActivityMonitor monitor, Action reader, int millisecondsTimeout = -1 )
+        public bool TryRead( IActivityMonitor monitor, Action reader, int millisecondsTimeout )
         {
             if( !_lock.TryEnterReadLock( millisecondsTimeout ) ) return false;
             try
@@ -75,9 +74,9 @@ namespace CK.Observable
         /// <typeparam name="T">The type of the information to read.</typeparam>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="reader">The reader function that projects read information into a <typeparamref name="T"/>.</param>
+        /// <param name="result">The value returned by the reader function.</param>
         /// <param name="millisecondsTimeout">
-        /// The maximum number of milliseconds to wait for a read access before returning the <paramref name="defaultValue"/>.
-        /// Wait indefinitely by default.
+        /// The maximum number of milliseconds to wait for a read access before returning false.
         /// </param>
         /// <returns>True if the read has been done, false on timeout.</returns>
         public bool TryRead<T>( IActivityMonitor monitor, Func<T> reader, [MaybeNullWhen( false )] out T result, int millisecondsTimeout )
@@ -91,6 +90,26 @@ namespace CK.Observable
             {
                 result = reader();
                 return true;
+            }
+            finally
+            {
+                _lock.ExitReadLock();
+            }
+        }
+
+        /// <summary>
+        /// Read the domain by protecting the <paramref name="reader"/> function in a <see cref="ObservableDomain.AcquireReadLock(int)"/>.
+        /// </summary>
+        /// <typeparam name="T">The type of the information to read.</typeparam>
+        /// <param name="monitor">The monitor to use.</param>
+        /// <param name="reader">The reader function that projects read information into a <typeparamref name="T"/>.</param>
+        /// <returns>The read value.</returns>
+        public T Read<T>( IActivityMonitor monitor, Func<T> reader )
+        {
+            _lock.EnterReadLock();
+            try
+            {
+                return reader();
             }
             finally
             {

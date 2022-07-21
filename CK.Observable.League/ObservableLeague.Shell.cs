@@ -161,9 +161,17 @@ namespace CK.Observable.League
                     return Shell.TryRead( monitor, reader, millisecondsTimeout );
                 }
 
-                bool IObservableDomainShell.TryRead<T>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain, T> reader, [MaybeNullWhen( false )] out T result, int millisecondsTimeout )
+                bool IObservableDomainShell.TryRead<T>( IActivityMonitor monitor,
+                                                        Func<IActivityMonitor, IObservableDomain, T> reader,
+                                                        [MaybeNullWhen( false )] out T result,
+                                                        int millisecondsTimeout )
                 {
                     return Shell.TryRead( monitor, reader, out result, millisecondsTimeout );
+                }
+
+                T IObservableDomainShell.Read<T>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain, T> reader )
+                {
+                    return Shell.Read( monitor, reader );
                 }
 
 
@@ -715,6 +723,12 @@ namespace CK.Observable.League
                 var d = LoadedDomain;
                 return d.TryRead( monitor, () => reader.Invoke( monitor, d ), out result, millisecondsTimeout );
             }
+
+            TInfo IObservableDomainShell.Read<TInfo>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain, TInfo> reader )
+            {
+                var d = LoadedDomain;
+                return d.Read( monitor, () => reader.Invoke( monitor, d ) );
+            }
             #endregion
 
         }
@@ -820,9 +834,15 @@ namespace CK.Observable.League
                 public bool TryRead<TInfo>( IActivityMonitor monitor,
                                             Func<IActivityMonitor, IObservableDomain<T>, TInfo> reader,
                                             [MaybeNullWhen( false )] out TInfo result,
-                                            int millisecondsTimeout = -1 )
+                                            int millisecondsTimeout )
                 {
                     return Shell.TryRead( monitor, reader, out result, millisecondsTimeout );
+                }
+
+                public TInfo Read<TInfo>( IActivityMonitor monitor,
+                                          Func<IActivityMonitor, IObservableDomain<T>, TInfo> reader )
+                {
+                    return Shell.Read( monitor, reader );
                 }
             }
 
@@ -907,6 +927,13 @@ namespace CK.Observable.League
             {
                 var d = LoadedDomain;
                 return d.TryRead( monitor, () => reader.Invoke( monitor, d ), out result, millisecondsTimeout );
+            }
+
+            TInfo IObservableDomainAccess<T>.Read<TInfo>( IActivityMonitor monitor,
+                                                          Func<IActivityMonitor, IObservableDomain<T>, TInfo> reader )
+            {
+                var d = LoadedDomain;
+                return d.Read( monitor, () => reader.Invoke( monitor, d ) );
             }
 
         }
@@ -1006,7 +1033,7 @@ namespace CK.Observable.League
                                                  waitForDomainPostActionsCompletion );
                 }
 
-                public bool TryRead( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2>> reader, int millisecondsTimeout = -1 )
+                public bool TryRead( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2>> reader, int millisecondsTimeout )
                 {
                     return Shell.TryRead( monitor, reader, millisecondsTimeout );
                 }
@@ -1014,9 +1041,15 @@ namespace CK.Observable.League
                 public bool TryRead<TInfo>( IActivityMonitor monitor,
                                             Func<IActivityMonitor, IObservableDomain<T1, T2>, TInfo> reader,
                                             [MaybeNullWhen( false )] out TInfo result,
-                                            int millisecondsTimeout = -1 )
+                                            int millisecondsTimeout )
                 {
                     return Shell.TryRead( monitor, reader, out result, millisecondsTimeout );
+                }
+
+                public TInfo Read<TInfo>( IActivityMonitor monitor,
+                                          Func<IActivityMonitor, IObservableDomain<T1, T2>, TInfo> reader )
+                {
+                    return Shell.Read( monitor, reader );
                 }
             }
 
@@ -1101,6 +1134,13 @@ namespace CK.Observable.League
             {
                 var d = LoadedDomain;
                 return d.TryRead( monitor, () => reader.Invoke( monitor, d ), out result, millisecondsTimeout );
+            }
+
+            TInfo IObservableDomainShell<T1, T2>.Read<TInfo>( IActivityMonitor monitor,
+                                                              Func<IActivityMonitor, IObservableDomain<T1, T2>, TInfo> reader )
+            {
+                var d = LoadedDomain;
+                return d.Read( monitor, () => reader.Invoke( monitor, d ) );
             }
         }
 
@@ -1201,7 +1241,7 @@ namespace CK.Observable.League
 
                 }
 
-                public bool TryRead( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3>> reader, int millisecondsTimeout = -1 )
+                public bool TryRead( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3>> reader, int millisecondsTimeout )
                 {
                     return Shell.TryRead( monitor, reader, millisecondsTimeout );
                 }
@@ -1209,9 +1249,15 @@ namespace CK.Observable.League
                 public bool TryRead<TInfo>( IActivityMonitor monitor,
                                             Func<IActivityMonitor, IObservableDomain<T1, T2, T3>, TInfo> reader,
                                             [MaybeNullWhen( false )] out TInfo result,
-                                            int millisecondsTimeout = -1 )
+                                            int millisecondsTimeout )
                 {
                     return Shell.TryRead( monitor, reader, out result, millisecondsTimeout );
+                }
+
+                public TInfo Read<TInfo>( IActivityMonitor monitor,
+                                          Func<IActivityMonitor, IObservableDomain<T1, T2, T3>, TInfo> reader )
+                {
+                    return Shell.Read( monitor, reader );
                 }
 
             }
@@ -1298,6 +1344,13 @@ namespace CK.Observable.League
             {
                 var d = LoadedDomain;
                 return d.TryRead( monitor, () => reader.Invoke( monitor, d ), out result, millisecondsTimeout );
+            }
+
+            TInfo IObservableDomainShell<T1, T2, T3>.Read<TInfo>( IActivityMonitor monitor,
+                                                                  Func<IActivityMonitor, IObservableDomain<T1, T2, T3>, TInfo> reader )
+            {
+                var d = LoadedDomain;
+                return d.Read( monitor, () => reader.Invoke( monitor, d ) );
             }
         }
 
@@ -1399,7 +1452,7 @@ namespace CK.Observable.League
 
                 }
 
-                public bool TryRead( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3, T4>> reader, int millisecondsTimeout = -1 )
+                public bool TryRead( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3, T4>> reader, int millisecondsTimeout )
                 {
                     return Shell.TryRead( monitor, reader, millisecondsTimeout );
                 }
@@ -1407,10 +1460,17 @@ namespace CK.Observable.League
                 public bool TryRead<TInfo>( IActivityMonitor monitor,
                                             Func<IActivityMonitor, IObservableDomain<T1, T2, T3, T4>, TInfo> reader,
                                             [MaybeNullWhen( false )] out TInfo result,
-                                            int millisecondsTimeout = -1 )
+                                            int millisecondsTimeout )
                 {
                     return Shell.TryRead( monitor, reader, out result, millisecondsTimeout );
                 }
+
+                public TInfo Read<TInfo>( IActivityMonitor monitor,
+                                          Func<IActivityMonitor, IObservableDomain<T1, T2, T3, T4>, TInfo> reader )
+                {
+                    return Shell.Read( monitor, reader );
+                }
+
             }
 
             private protected override IObservableDomainShell CreateIndependentShell( IActivityMonitor monitor ) => new IndependentShellTTTT( this, monitor );
@@ -1497,6 +1557,13 @@ namespace CK.Observable.League
             {
                 var d = LoadedDomain;
                 return d.TryRead( monitor, () => reader.Invoke( monitor, d ), out result, millisecondsTimeout );
+            }
+
+            TInfo IObservableDomainShell<T1, T2, T3, T4>.Read<TInfo>( IActivityMonitor monitor,
+                                                                      Func<IActivityMonitor, IObservableDomain<T1, T2, T3, T4>, TInfo> reader )
+            {
+                var d = LoadedDomain;
+                return d.Read( monitor, () => reader.Invoke( monitor, d ) );
             }
 
         }
