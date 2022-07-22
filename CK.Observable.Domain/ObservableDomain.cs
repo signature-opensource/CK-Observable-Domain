@@ -147,10 +147,45 @@ namespace CK.Observable
 
         private protected CurrentTransactionStatus _transactionStatus;
 
+        static ObservableDomain()
+        {
+            BinaryDeserializer.DefaultSharedContext.AddDeserializationHook( t =>
+            {
+                // Do not handle "Observable" prefix in our base libraries: these base libraries
+                // still use full prefix, only the observable objects in "application layers" should
+                // use simpler "O" prefix.
+                //
+                // Note that this code doesn't handle nested Observable objects (the ones with a '+' in
+                // their type name).
+                //
+                if( t.ReadInfo.TypeName.StartsWith( "Observable", StringComparison.Ordinal )
+                    && t.ReadInfo.AssemblyName != "CK.Observable.Domain"
+                    && t.ReadInfo.AssemblyName != "CK.Observable.Device"
+                    && t.ReadInfo.AssemblyName != "CK.Observable.League" )
+                {
+                    var aqn = $"{t.ReadInfo.TypeNamespace}.{t.ReadInfo.TypeName}, {t.ReadInfo.AssemblyName}";
+                    if( Type.GetType( aqn, throwOnError: false ) == null )
+                    {
+                        // Before mutating, check that the O type exists.
+                        var oTypeName = t.ReadInfo.TypeName.Remove( 1, 9 );
+                        aqn = $"{t.ReadInfo.TypeNamespace}.{oTypeName}, {t.ReadInfo.AssemblyName}";
+                        if( Type.GetType( aqn, throwOnError: false ) != null )
+                        {
+                            // The O type exists.
+                            // Use the resolution by type name instead of setting the target type:
+                            // if other hooks set the type, it will have precedence.
+                            t.SetLocalTypeName( oTypeName );
+                        }
+                    }
+                }
+            } );
+        }
+
+
         /// <summary>
         /// Exposes the non null objects in _objects as a collection.
         /// </summary>
-        class AllCollection : IObservableAllObjectsCollection
+        sealed class AllCollection : IObservableAllObjectsCollection
         {
             readonly ObservableDomain _d;
 
