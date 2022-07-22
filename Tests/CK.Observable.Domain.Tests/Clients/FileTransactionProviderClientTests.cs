@@ -127,11 +127,11 @@ namespace CK.Observable.Domain.Tests.Clients
 
             var client2 = new FileTransactionProviderClient( file.FullName, -1 );
             using var d2 = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, nameof( File_due_time_is_properly_rescheduled_Async ) + "(1)", startTimer: true, client: client2 );
-            using( d2.AcquireReadLock() )
+            d2.Read( TestHelper.Monitor, () =>
             {
                 d2.Root.Prop1.Should().Be( "This should" );
                 d2.Root.Prop2.Should().Be( "Have been saved to file" );
-            }
+            } );
         }
 
         [Test]
@@ -218,11 +218,11 @@ namespace CK.Observable.Domain.Tests.Clients
             {
                 var c2 = new FileTransactionProviderClient( file1, 0 );
                 using var d2 = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, nameof( Snapshot_file_can_be_saved_and_restored_in_compressed_or_not_form_Async ), startTimer: true, client: c2 );
-                using( d2.AcquireReadLock() )
+                d2.Read( TestHelper.Monitor, () =>
                 {
                     d2.Root.Prop1.Should().Be( "Hello" );
                     d2.Root.Prop2.Should().Be( "World" );
-                }
+                } );
             }
             File.Move( file1, file2 );
             c1.CompressionKind = CompressionKind.GZiped;
@@ -237,11 +237,11 @@ namespace CK.Observable.Domain.Tests.Clients
 
             var cC = new FileTransactionProviderClient( file1, 0 );
             using var dC = new ObservableDomain<TestObservableRootObject>(TestHelper.Monitor, nameof( Snapshot_file_can_be_saved_and_restored_in_compressed_or_not_form_Async ), startTimer: true, client: cC );
-            using( dC.AcquireReadLock() )
+            dC.Read( TestHelper.Monitor, () =>
             {
                 dC.Root.Prop1.Should().Be( "Hello (I'm compressed)" );
                 dC.Root.Prop2.Should().Be( "World! (me too)" );
-            }
+            } );
 
         }
 

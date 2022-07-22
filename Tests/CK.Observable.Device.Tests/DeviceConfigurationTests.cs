@@ -44,7 +44,7 @@ namespace CK.Observable.Device.Tests
             Debug.Assert( device1 != null );
             await Task.Delay( 20 );
 
-            using( obs.AcquireReadLock() )
+            obs.Read( TestHelper.Monitor, () =>
             {
                 device1.IsBoundDevice.Should().BeTrue( "The ObservableDevice has created its Device!" );
                 Debug.Assert( device1.Configuration != null );
@@ -52,7 +52,7 @@ namespace CK.Observable.Device.Tests
                 // The ObservableDevice.Configuration is a safe clone.
                 device1.Configuration.Should().NotBeSameAs( config );
                 device1.Configuration.Should().BeEquivalentTo( config );
-            }
+            } );
 
             // Even if the ObservableDevice.Configuration is a safe clone and COULD be used to reconfigure the device,
             // this is not really a good idea since this modifies an object that is not Observable (it's a value type
@@ -64,10 +64,10 @@ namespace CK.Observable.Device.Tests
             } );
             await Task.Delay( 20 );
 
-            using( obs.AcquireReadLock() )
+            obs.Read( TestHelper.Monitor, () =>
             {
-                ((SampleDeviceConfiguration)device1.Configuration).Message.Should().Be( "Hello World!" );
-            }
+                ((SampleDeviceConfiguration)device1.Configuration!).Message.Should().Be( "Hello World!" );
+            } );
 
             // By sending the destroy command from the domain, the Device is destroyed...
             await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
@@ -76,11 +76,11 @@ namespace CK.Observable.Device.Tests
             } );
             await Task.Delay( 20 );
 
-            using( obs.AcquireReadLock() )
+            obs.Read( TestHelper.Monitor, () =>
             {
                 device1.IsBoundDevice.Should().BeFalse( "The Device has been destroyed." );
                 device1.Configuration.Should().BeNull();
-            }
+            } );
         }
 
         sealed class Root : ObservableRootObject
@@ -122,18 +122,18 @@ namespace CK.Observable.Device.Tests
 
             using var obs = new ObservableDomain<Root>( TestHelper.Monitor, nameof( ObservableDeviceHostObject_is_a_dashboard_with_device_and_ObservableDevice_Async ), false, serviceProvider: sp );
 
-            using( obs.AcquireReadLock() )
+            obs.Read( TestHelper.Monitor, () =>
             {
                 obs.Root.OHost.Devices.Should().BeEmpty( "Sidekick instantiation is deferred to the first transaction." );
-            }
+            } );
             obs.HasWaitingSidekicks.Should().BeTrue( "This indicates that at least one sidekick should be handled." );
 
             await obs.ModifyThrowAsync( TestHelper.Monitor, null );
 
-            using( obs.AcquireReadLock() )
+            obs.Read( TestHelper.Monitor, () =>
             {
                 obs.Root.OHost.Devices.Should().NotBeEmpty( "Sidekick instantiation done." );
-            }
+            } );
 
         }
 

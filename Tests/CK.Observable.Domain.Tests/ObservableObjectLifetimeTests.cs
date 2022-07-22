@@ -95,30 +95,37 @@ namespace CK.Observable.Domain.Tests
         }
 
         [Test]
-        public async Task Modify_and_AcquireReadLock_reentrant_calls_are_detected_by_the_LockRecursionPolicy_NoRecursion_Async()
+        public async Task Modify_and_Read_reentrant_calls_are_detected_by_the_LockRecursionPolicy_NoRecursion_Async()
         {
             using( var d = new ObservableDomain(TestHelper.Monitor, "TEST", startTimer: true ) )
             {
+                // ModifyAsync( Read ) throws.
                 await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
-                    d.Invoking( sut => sut.AcquireReadLock() )
+                    d.Invoking( sut => sut.Read( TestHelper.Monitor, () => { } ) )
                      .Should().Throw<LockRecursionException>();
                 } );
-                using( d.AcquireReadLock() )
+
+                // This is nonsense but this test that Read( ModifyAsync ) throws.
+                await d.Read( TestHelper.Monitor, async () =>
                 {
                     await d.Awaiting( sut => sut.ModifyThrowAsync( TestHelper.Monitor, null ) )
                             .Should().ThrowAsync<LockRecursionException>();
-                }
+                } );
+
+                // ModifyAsync( ModifyAsync ) throws.
                 await d.ModifyThrowAsync( TestHelper.Monitor, async () =>
                 {
                     await d.Awaiting( sut => sut.ModifyThrowAsync( TestHelper.Monitor, null ) )
                             .Should().ThrowAsync<LockRecursionException>();
                 } );
-                using( d.AcquireReadLock() )
+
+                // Read( Read ) throws.
+                d.Read( TestHelper.Monitor, () =>
                 {
-                    d.Invoking( sut => sut.AcquireReadLock() )
+                    d.Invoking( sut => sut.Read( TestHelper.Monitor, () => { } ) )
                      .Should().Throw<LockRecursionException>();
-                }
+                } );
             }
         }
 

@@ -490,10 +490,10 @@ namespace CK.Observable
             _currentIndex.Clear();
         }
 
-        internal void Load( IBinaryDeserializer s )
+        internal void Load( IBinaryDeserializer d )
         {
             // We don't currently serialize anything but if we do, a version is ready.
-            s.Reader.ReadByte();
+            d.Reader.ReadByte();
             // Captures the Deserializing/RollingBack/DangerousRollingBack status of the deserialization context.
             Debug.Assert( Domain.CurrentTransactionStatus.IsDeserializing() );
             _lastStatus = Domain.CurrentTransactionStatus;

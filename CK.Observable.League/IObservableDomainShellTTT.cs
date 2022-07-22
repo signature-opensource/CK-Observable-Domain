@@ -60,13 +60,19 @@ namespace CK.Observable.League
                                                 bool waitForDomainPostActionsCompletion = false );
 
         /// <inheritdoc cref="IObservableDomainShell.TryRead(IActivityMonitor, Action{IActivityMonitor, IObservableDomain}, int)"/>
-        bool TryRead( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3>> reader, int millisecondsTimeout = -1 );
+        bool TryRead( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3>> reader, int millisecondsTimeout );
 
         /// <inheritdoc cref="ObservableDomain.TryRead{T}(IActivityMonitor, Func{T}, out T, int)"/>
         bool TryRead<TInfo>( IActivityMonitor monitor,
                              Func<IActivityMonitor, IObservableDomain<T1, T2, T3>, TInfo> reader,
                              [MaybeNullWhen( false )] out TInfo result,
-                             int millisecondsTimeout = -1 );
+                             int millisecondsTimeout );
+
+        /// <inheritdoc cref="ObservableDomain.Read{T}(IActivityMonitor, Func{T})"/>
+        TInfo Read<TInfo>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain<T1, T2, T3>, TInfo> reader );
+
+        /// <inheritdoc cref="ObservableDomain.Read(IActivityMonitor, Action)"/>
+        void Read( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<T1, T2, T3>> reader );
 
     }
 }

@@ -60,11 +60,11 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 } );
 
                 Thread.Sleep( deltaTime * 5 );
-                using( d.AcquireReadLock() )
+                d.Read( TestHelper.Monitor, () =>
                 {
                     TestHelper.Monitor.Trace( $"counter.Count = {counter.Count}." );
                     counter.Count.Should().Be( intermediateCount );
-                }
+                } );
                 await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     clock.IsActive = true;
@@ -73,11 +73,11 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 } );
 
                 Thread.Sleep( deltaTime * 5 );
-                using( d.AcquireReadLock() )
+                d.Read( TestHelper.Monitor, () =>
                 {
                     TestHelper.Monitor.Trace( $"counter.Count = {counter.Count}." );
                     counter.Count.Should().BeCloseTo( intermediateCount + 5, 2 );
-                }
+                } );
             }
         }
 
@@ -152,16 +152,16 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             } );
 
 
-            using( handler.Domain.AcquireReadLock() )
+            handler.Domain.Read( TestHelper.Monitor, () =>
             {
                 ClockIsActiveChanged.Should().BeFalse();
                 ReminderHasElapsed.Should().BeFalse();
                 counter.Count.Should().Be( 1, "AutoCounter fires immediately." );
-            }
+            } );
 
             handler.ReloadNewDomain( TestHelper.Monitor, idempotenceCheck: false );
 
-            using( handler.Domain.AcquireReadLock() )
+            handler.Domain.Read( TestHelper.Monitor, () =>
             {
                 ReminderHasElapsed.Should().BeFalse();
                 ClockIsActiveChanged.Should().BeFalse();
@@ -169,11 +169,11 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 counter = handler.Domain.AllObjects.OfType<StupidAutoCounter>().Single();
                 clock = handler.Domain.AllInternalObjects.OfType<SuspendableClock>().Single();
                 reminder = handler.Domain.TimeManager.Reminders.Single();
-            }
+            } );
             TestHelper.Monitor.Info( "Start sleeping..." );
             Thread.Sleep( enoughMilliseconds );
             TestHelper.Monitor.Info( "End sleeping..." );
-            using( handler.Domain.AcquireReadLock() )
+            handler.Domain.Read( TestHelper.Monitor, () =>
             {
                 ReminderHasElapsed.Should().BeTrue();
                 ClockIsActiveChanged.Should().BeFalse();
@@ -181,7 +181,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 reminder.IsActive.Should().BeFalse( "Reminder fired. Is is now inactive." );
                 counter.Count.Should().Be( 2 );
                 counter.IsRunning.Should().BeTrue();
-            }
+            } );
             await handler.Domain.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 ClockIsActiveChanged.Should().BeFalse();
@@ -200,13 +200,13 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             handler.ReloadNewDomain( TestHelper.Monitor, idempotenceCheck: true );
             ReminderHasElapsed.Should().BeFalse();
 
-            using( handler.Domain.AcquireReadLock() )
+            handler.Domain.Read( TestHelper.Monitor, () =>
             {
                 counter = handler.Domain.AllObjects.OfType<StupidAutoCounter>().Single();
                 clock = handler.Domain.AllInternalObjects.OfType<SuspendableClock>().Single();
                 reminder = handler.Domain.TimeManager.Reminders.Single();
                 counter.Count.Should().Be( 2 );
-            }
+            } );
 
             // Reactivating the clock: the counter starts again.
             await handler.Domain.ModifyThrowAsync( TestHelper.Monitor, () =>
@@ -223,12 +223,12 @@ namespace CK.Observable.Domain.Tests.TimedEvents
 
             Thread.Sleep( enoughMilliseconds );
 
-            using( handler.Domain.AcquireReadLock() )
+            handler.Domain.Read( TestHelper.Monitor, () =>
             {
                 ReminderHasElapsed.Should().BeFalse();
                 counter.Count.Should().Be( 4 );
                 reminder.IsActive.Should().BeFalse();
-            }
+            } );
 
             TestHelper.Monitor.Info( "*** Reactivating the Reminder. ***" );
             await handler.Domain.ModifyThrowAsync( TestHelper.Monitor, () =>

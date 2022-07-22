@@ -45,7 +45,7 @@ namespace CK.Observable.Domain.Tests.Sample
 
         public static void CheckSampleGarage( ObservableDomain d )
         {
-            using( d.AcquireReadLock() )
+            d.Read( TestHelper.Monitor, () =>
             {
                 var g1 = d.AllObjects.OfType<Garage>().Where( x => x.CompanyName == "Boite" ).Single();
                 g1.Cars.Select( c => c.Name ).Should().BeEquivalentTo( Enumerable.Range( 0, 10 ).Select( i => $"Renault n°{i}" ) );
@@ -58,7 +58,7 @@ namespace CK.Observable.Domain.Tests.Sample
                 g1.ReplacementCar.Should().HaveCount( 2 );
                 g1.ReplacementCar[g1.Cars[0]].Should().BeSameAs( g1.Cars[1] );
                 g1.ReplacementCar[g1.Cars[2]].Should().BeSameAs( g1.Cars[3] );
-            }
+            } );
         }
     }
 }

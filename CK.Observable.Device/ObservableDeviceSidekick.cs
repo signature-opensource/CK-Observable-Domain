@@ -58,7 +58,7 @@ namespace CK.Observable.Device
         ObservableDeviceObject? IObservableDeviceSidekick.FindObservableDeviceObject( string deviceName ) => FindObservableDeviceObject( deviceName );
 
         /// <summary>
-        /// Gets the bridges: all the <see cref="TDeviceObject"/> that exist in the domain
+        /// Gets the bridges: all the <typeparamref name="TDeviceObject"/> that exist in the domain
         /// (they may not be bound to their respective device: their <see cref="DeviceBridge.Device"/> can be null).
         /// </summary>
         protected IReadOnlyDictionary<string, DeviceBridge> Bridges => _bridges;
@@ -113,8 +113,8 @@ namespace CK.Observable.Device
             return Domain.TryModifyAsync( monitor, () =>
             {
                 var bridge = _bridges.GetValueOrDefault( e.Device.Name );
-                // No bridge (no observable object) and no host: this sidekick is "empty", it is not
-                // concerned by the device.
+                // No bridge (no observable object) and no observable host: this sidekick is "useless", it is not
+                // concerned by the device since no observables are interested.
                 if( bridge == null && _objectHost == null ) return;
 
                 if( e.Device.IsDestroyed )
@@ -125,13 +125,13 @@ namespace CK.Observable.Device
                 {
                     if( bridge != null )
                     {
-                        if( bridge.Device == null ) bridge.SetDevice( monitor, e.Device );
+                        if( bridge.Device == null )
+                        {
+                            bridge.SetDevice( monitor, e.Device );
+                        }
                         else
                         {
-                            var o = bridge.Object;
-                            o.SetIsRunning( e.Device.Status.IsRunning );
-                            o.OnDeviceConfigurationApplied( e.Device.ExternalConfiguration );
-                            o.SetDeviceControlStatus( ObservableDeviceObject.ComputeStatus( e.Device, Domain.DomainName ) );
+                            bridge.UpdateDevice( monitor, e.Device );
                         }
                     }
                 }

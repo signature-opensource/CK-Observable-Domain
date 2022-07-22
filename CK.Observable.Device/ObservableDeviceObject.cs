@@ -13,17 +13,16 @@ namespace CK.Observable.Device
     /// Non generic abstract base class for device. It is not intended to be specialized directly: use the
     /// generic <see cref="ObservableDeviceObject{TSidekick}"/> as the object device base.
     /// </summary>
-    [SerializationVersion( 2 )]
+    [SerializationVersion( 3 )]
     public abstract partial class ObservableDeviceObject : ObservableObject, ISidekickLocator
     {
         ObservableEventHandler _isRunningChanged;
         ObservableEventHandler _configurationChanged;
         ObservableEventHandler _deviceControlStatusChanged;
         internal IInternalDeviceBridge _bridge;
-        DeviceConfiguration? _configuration;
-        DeviceControlStatus _deviceControlStatus;
-        bool? _isRunning;
-        bool _wantPersistentOwnership;
+        internal DeviceConfiguration? _configuration;
+        internal DeviceControlStatus _deviceControlStatus;
+        internal bool? _isRunning;
 
 #pragma warning disable CS8618 // Non-nullable _bridge uninitialized. Consider declaring as nullable.
 
@@ -33,7 +32,9 @@ namespace CK.Observable.Device
             DeviceName = deviceName;
         }
 
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
         protected ObservableDeviceObject( Sliced _ ) : base( _ ) { }
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
         ObservableDeviceObject( IBinaryDeserializer d, ITypeReadInfo info )
             : base( Sliced.Instance )
@@ -49,7 +50,11 @@ namespace CK.Observable.Device
                 _deviceControlStatusChanged = new ObservableEventHandler( d );
                 _isRunning = d.Reader.ReadNullableBool();
                 _deviceControlStatus = (DeviceControlStatus)d.Reader.ReadByte();
-                _wantPersistentOwnership = d.Reader.ReadBoolean();
+                if( info.Version == 2 )
+                {
+                    // Was _wantPersistentOwnership
+                    d.Reader.ReadBoolean();
+                }
             }
         }
 
@@ -61,7 +66,6 @@ namespace CK.Observable.Device
             o._deviceControlStatusChanged.Write( d );
             d.Writer.WriteNullableBool( o._isRunning );
             d.Writer.Write( (byte)o._deviceControlStatus );
-            d.Writer.Write( o._wantPersistentOwnership );
         }
 
 #pragma warning restore CS8618
@@ -78,9 +82,9 @@ namespace CK.Observable.Device
 
             BaseSetControllerKeyDeviceCommand CreateSetControllerKeyCommand();
 
-            IEnumerable<string> CurrentlyAvailableDeviceNames { get; }
+            IDevice? Device { get; }
 
-            //string? ControllerKey { get; }
+            IEnumerable<string> CurrentlyAvailableDeviceNames { get; }
 
             T CreateCommand<T>( Action<T>? configuration ) where T : BaseDeviceCommand, new();
         }
@@ -91,21 +95,20 @@ namespace CK.Observable.Device
         public string DeviceName { get; }
 
         /// <summary>
+        /// Gets the actual device if it exists or null.
+        /// </summary>
+        /// <remarks>
+        /// This is weakly typed and protected because direct interactions with devices from the Observable
+        /// layer should not occur: the commands and events handled by the sidekick must do he job.
+        /// However since some use case require the actual device (like creating events), it is exposed here.
+        /// </remarks>
+        protected IDevice? Device => _bridge?.Device;
+
+        /// <summary>
         /// Gets the device status.
         /// This is null when no device named <see cref="DeviceName"/> exist in the device host.
         /// </summary>
         public bool? IsRunning => _isRunning;
-
-        internal bool SetIsRunning( bool? r )
-        {
-            if( _isRunning != r )
-            {
-                _isRunning = r;
-                OnIsRunningChanged();
-                return true;
-            }
-            return false;
-        }
 
         /// <summary>
         /// Called when <see cref="IsRunning"/> changed.
@@ -113,7 +116,7 @@ namespace CK.Observable.Device
         /// When overridden, this base method MUST be called to raise <see cref="IsRunningChanged"/> event.
         /// </para>
         /// </summary>
-        protected virtual void OnIsRunningChanged()
+        internal protected virtual void OnIsRunningChanged()
         {
             OnPropertyChanged( nameof( IsRunning ), _isRunning );
             if( _isRunningChanged.HasHandlers ) _isRunningChanged.Raise( this );
@@ -141,28 +144,12 @@ namespace CK.Observable.Device
         public DeviceConfiguration? Configuration => _configuration;
 
         /// <summary>
-        /// Called whenever the device's configuration changed.
-        /// </summary>
-        /// <param name="configuration">The updated configuration.</param>
-        internal bool OnDeviceConfigurationApplied( DeviceConfiguration? configuration )
-        {
-            var previous = _configuration;
-            if( previous != configuration )
-            {
-                _configuration = configuration;
-                OnConfigurationChanged( previous );
-                return true;
-            }
-            return false;
-        }
-
-        /// <summary>
         /// Called when <see cref="Configuration"/> changed.
         /// <para>
         /// When overridden, this base method MUST be called to raise <see cref="ConfigurationChanged"/> event.
         /// </para>
         /// </summary>
-        protected virtual void OnConfigurationChanged( DeviceConfiguration? previousConfiguration )
+        internal protected virtual void OnConfigurationChanged( DeviceConfiguration? previousConfiguration )
         {
             OnPropertyChanged( nameof( Configuration ), _configuration );
             if( _configurationChanged.HasHandlers ) _configurationChanged.Raise( this );
@@ -179,19 +166,10 @@ namespace CK.Observable.Device
 
         /// <summary>
         /// Gets this device control status.
+        /// Uses <see cref="SendDeviceControlCommand(DeviceControlAction)"/> to change how
+        /// this device object controls the actual device.
         /// </summary>
         public DeviceControlStatus DeviceControlStatus => _deviceControlStatus;
-
-        internal bool SetDeviceControlStatus( DeviceControlStatus s )
-        {
-            if( _deviceControlStatus != s )
-            {
-                _deviceControlStatus = s;
-                OnDeviceControlStatusChanged();
-                return true;
-            }
-            return false;
-        }
 
         /// <summary>
         /// Called when <see cref="DeviceControlStatus"/> changed.
@@ -199,7 +177,7 @@ namespace CK.Observable.Device
         /// When overridden, this base method MUST be called to raise <see cref="DeviceControlStatusChanged"/> event.
         /// </para>
         /// </summary>
-        protected virtual void OnDeviceControlStatusChanged()
+        internal protected virtual void OnDeviceControlStatusChanged()
         {
             OnPropertyChanged( nameof( DeviceControlStatus ), _deviceControlStatus );
             if( _deviceControlStatusChanged.HasHandlers ) _deviceControlStatusChanged.Raise( this );
@@ -220,6 +198,7 @@ namespace CK.Observable.Device
         /// This flag is [NotExportable].
         /// </summary>
         [NotExportable]
+        [MemberNotNullWhen( true, nameof( Configuration ), nameof( IsRunning ) )]
         public bool IsBoundDevice => IsRunning != null;
 
         ObservableDomainSidekick ISidekickLocator.Sidekick => _bridge.Sidekick;
@@ -309,62 +288,60 @@ namespace CK.Observable.Device
         public void SendDeviceControlCommand( DeviceControlAction action )
         {
             ThrowOnUnboundedDevice();
-            _wantPersistentOwnership = action == DeviceControlAction.TakePersistentOwnership;
             switch( action )
             {
                 case DeviceControlAction.SafeReleaseControl:
-                {
-                    // Nothing special to do: the set controller key command does this
-                    // and our controller key must be honored.
-                    var cmd = _bridge.CreateSetControllerKeyCommand();
-                    Debug.Assert( cmd.NewControllerKey == null );
-                    SendBasicCommand( cmd );
-                    break;
-                }
+                    {
+                        // Nothing special to do: the set controller key command does this
+                        // and our controller key must be honored.
+                        var cmd = _bridge.CreateSetControllerKeyCommand();
+                        Debug.Assert( cmd.NewControllerKey == null );
+                        SendBasicCommand( cmd );
+                        break;
+                    }
                 case DeviceControlAction.SafeTakeControl:
-                {
-                    // Nothing special to do: the set controller key command does this
-                    // and our controller key must be honored.
-                    var cmd = _bridge.CreateSetControllerKeyCommand();
-                    cmd.NewControllerKey = Domain.DomainName;
-                    SendBasicCommand( cmd );
-                    break;
-                }
+                    {
+                        // Nothing special to do: the set controller key command does this
+                        // and our controller key must be honored.
+                        var cmd = _bridge.CreateSetControllerKeyCommand();
+                        cmd.NewControllerKey = Domain.DomainName;
+                        SendBasicCommand( cmd );
+                        break;
+                    }
                 case DeviceControlAction.ForceReleaseControl:
-                {
-                    // This reconfigures the device only if needed.
-                    if( Configuration.ControllerKey != null )
                     {
-                        var c = Configuration.DeepClone();
-                        c.ControllerKey = null;
-                        ApplyDeviceConfiguration( c );
+                        // This reconfigures the device only if needed.
+                        if( Configuration.ControllerKey != null )
+                        {
+                            var c = Configuration.DeepClone();
+                            c.ControllerKey = null;
+                            ApplyDeviceConfiguration( c );
+                        }
+                        else
+                        {
+                            // Uses the ReleaseControl that sends an unsafe command.
+                            Domain.Monitor.Info( $"The device '{DeviceName}' is not controlled by its configuration. Using ReleaseControl action instead of reconfiguring via ForceReleaseControl." );
+                            action = DeviceControlAction.ReleaseControl;
+                        }
+                        break;
                     }
-                    else
-                    {
-                        // Uses the ReleaseControl that sends an unsafe command.
-                        Domain.Monitor.Info( $"The device '{DeviceName}' is not controlled by its configuration. Using ReleaseControl action instead of reconfiguring via ForceReleaseControl." );
-                        action = DeviceControlAction.ReleaseControl;
-                    }
-                    break;
-                }
                 case DeviceControlAction.TakeOwnership:
-                case DeviceControlAction.TakePersistentOwnership:
-                {
-                    // This reconfigures the device only if needed.
-                    if( Configuration.ControllerKey != Domain.DomainName )
                     {
-                        var c = Configuration.DeepClone();
-                        c.ControllerKey = Domain.DomainName;
-                        ApplyDeviceConfiguration( c );
+                        // This reconfigures the device only if needed.
+                        if( Configuration.ControllerKey != Domain.DomainName )
+                        {
+                            var c = Configuration.DeepClone();
+                            c.ControllerKey = Domain.DomainName;
+                            ApplyDeviceConfiguration( c );
+                        }
+                        else
+                        {
+                            // Uses the TakeControl that sends an unsafe command.
+                            Domain.Monitor.Info( $"The device '{DeviceName}' is already owned by this device. Using TakeControl action instead of reconfiguring via {action}." );
+                            action = DeviceControlAction.TakeControl;
+                        }
+                        break;
                     }
-                    else
-                    {
-                        // Uses the TakeControl that sends an unsafe command.
-                        Domain.Monitor.Info( $"The device '{DeviceName}' is already owned by this device. Using TakeControl action instead of reconfiguring via {action}." );
-                        action = DeviceControlAction.TakeControl;
-                    }
-                    break;
-                }
             }
             if( action == DeviceControlAction.TakeControl || action == DeviceControlAction.ReleaseControl )
             {
@@ -384,8 +361,8 @@ namespace CK.Observable.Device
         }
 
         /// <summary>
-        /// Creates a new command of the given type with its <see cref="DeviceCommand.DeviceName"/> and <see cref="DeviceCommand.ControllerKey"/>.
-        /// Note that if the <see cref="DeviceCommand.HostType"/> is not compatible with the actual <see cref="IDeviceHost"/> of this
+        /// Creates a new command of the given type with its <see cref="BaseDeviceCommand.DeviceName"/> and <see cref="BaseDeviceCommand.ControllerKey"/>.
+        /// Note that if the <see cref="BaseDeviceCommand.HostType"/> is not compatible with the actual <see cref="IDeviceHost"/> of this
         /// <see cref="ObservableDeviceObject{TSidekick}"/> sidekick, a <see cref="InvalidOperationException"/> is thrown.
         /// </summary>
         /// <typeparam name="T">The type of the command to create.</typeparam>
@@ -403,6 +380,9 @@ namespace CK.Observable.Device
             Domain.SendCommand( CreateDeviceCommand( configuration ), _bridge.Sidekick );
         }
 
+        /// <summary>
+        /// Overridden to synchronize the sidekick before calling base <see cref="ObservableObject.OnDestroy()"/>.
+        /// </summary>
         protected override void OnDestroy()
         {
             _configurationChanged.RemoveAll();

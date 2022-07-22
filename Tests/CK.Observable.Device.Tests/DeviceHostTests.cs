@@ -76,7 +76,7 @@ namespace CK.Observable.Device.Tests
             // Starts the device.
             await host.GetDevices()["TheOne"].StartAsync( TestHelper.Monitor );
 
-            using( obs.AcquireReadLock() )
+            obs.Read( TestHelper.Monitor, () =>
             {
                 var oInfo = obs.Root.Host.Devices["TheOne"];
                 Debug.Assert( oInfo.Object != null );
@@ -84,19 +84,19 @@ namespace CK.Observable.Device.Tests
                 oInfo.Object.IsRunning.Should().BeTrue();
                 oInfo.IsRunning.Should().BeTrue();
                 oInfo.Status.Should().Be( DeviceControlStatus.HasSharedControl );
-            }
+            } );
 
             // Destroying the Device.
             await host.ClearAsync( TestHelper.Monitor, waitForDeviceDestroyed: true );
 
-            using( obs.AcquireReadLock() )
+            obs.Read( TestHelper.Monitor, () =>
             {
                 var oInfo = obs.Root.Host.Devices["TheOne"];
                 Debug.Assert( oInfo.Object != null );
                 oInfo.Object.IsBoundDevice.Should().BeFalse( "No more bound to the Device." );
                 oInfo.IsRunning.Should().BeFalse();
                 oInfo.Status.Should().Be( DeviceControlStatus.MissingDevice );
-            }
+            } );
 
             // Now we destroy the ObservableObject.
             await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
@@ -167,10 +167,10 @@ namespace CK.Observable.Device.Tests
 
             // Starting the Device. ObservableEvents are raised.
             await host.GetDevices()["TheOne"].StartAsync( TestHelper.Monitor );
-            using( obs.AcquireReadLock() )
+            obs.Read( TestHelper.Monitor, () =>
             {
                 obs.Root.Host.Devices["TheOne"].IsRunning.Should().BeTrue( "The observable has been updated." );
-            }
+            } );
             Debug.Assert( lastEvents != null );
             lastEvents.Should().HaveCount( 1 );
             lastEvents[0].ToString().Should().Be( "PropertyChanged 3.IsRunning = True." );
@@ -183,16 +183,16 @@ namespace CK.Observable.Device.Tests
             {
                 obs.Load( TestHelper.Monitor, read );
             }
-            using( obs.AcquireReadLock() )
+            obs.Read( TestHelper.Monitor, () =>
             {
                 obs.Root.Host.Devices["TheOne"].IsRunning.Should().BeFalse( "No sidekick yet." );
-            }
+            } );
             lastEvents.Should().BeNull( "No real transaction: no event." );
             await obs.ModifyThrowAsync( TestHelper.Monitor, null );
-            using( obs.AcquireReadLock() )
+            obs.Read( TestHelper.Monitor, () =>
             {
                 obs.Root.Host.Devices["TheOne"].IsRunning.Should().BeTrue( "The sidekick has been instantiated." );
-            }
+            } );
             Debug.Assert( lastEvents != null );
             lastEvents.Should().HaveCount( 1 );
             lastEvents[0].ToString().Should().Be( "PropertyChanged 3.IsRunning = True.", "Sidekick resynchronized the value." );
@@ -208,10 +208,10 @@ namespace CK.Observable.Device.Tests
                      obs.Load( TestHelper.Monitor, read );
                  }
              } );
-            using( obs.AcquireReadLock() )
+            obs.Read( TestHelper.Monitor, () =>
             {
                 obs.Root.Host.Devices["TheOne"].IsRunning.Should().BeTrue( "The observable has been updated by the sidekick." );
-            }
+            } );
             Debug.Assert( lastEvents != null, "The initialization of the sidekicks exposes its side effects." );
             lastEvents.Should().HaveCount( 1 );
             lastEvents[0].ToString().Should().Be( "PropertyChanged 3.IsRunning = True." );
@@ -230,10 +230,10 @@ namespace CK.Observable.Device.Tests
                 }
             } );
             // Same as before: the resynchronization is visible through the events.
-            using( obs.AcquireReadLock() )
+            obs.Read( TestHelper.Monitor, () =>
             {
                 obs.Root.Host.Devices.Should().BeEmpty();
-            }
+            } );
             Debug.Assert( lastEvents != null, "The initialization of the sidekicks exposes its side effects." );
             lastEvents.Should().HaveCount( 1 );
             lastEvents[0].ToString().Should().Be( "CollectionRemoveKey 2[TheOne]" );

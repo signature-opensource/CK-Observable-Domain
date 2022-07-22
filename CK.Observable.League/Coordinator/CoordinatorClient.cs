@@ -29,13 +29,13 @@ namespace CK.Observable.League
         {
             BinaryDeserializer.DefaultSharedContext.AddDeserializationHook( t =>
             {
-                if( t.ReadInfo.TypeNamespace == "CK.Observable.League" )
+                if( t.WrittenInfo.TypeNamespace == "CK.Observable.League" )
                 {
-                    if( t.ReadInfo.TypeName == "Domain" )
+                    if( t.WrittenInfo.TypeName == "Domain" )
                     {
                         t.SetTargetType( typeof( ODomain ) );
                     }
-                    else if( t.ReadInfo.TypeName == "Coordinator" )
+                    else if( t.WrittenInfo.TypeName == "Coordinator" )
                     {
                         t.SetTargetType( typeof( OCoordinatorRoot ) );
                     }
@@ -133,22 +133,36 @@ namespace CK.Observable.League
         }
 
         bool IObservableDomainAccess<OCoordinatorRoot>.TryRead<T>( IActivityMonitor monitor,
-                                                              Func<IActivityMonitor, IObservableDomain<OCoordinatorRoot>, T> reader,
-                                                              [MaybeNullWhen(false)]out T result,
-                                                              int millisecondsTimeout )
+                                                                   Func<IActivityMonitor, IObservableDomain<OCoordinatorRoot>, T> reader,
+                                                                   [MaybeNullWhen(false)]out T result,
+                                                                   int millisecondsTimeout )
         {
             var d = Domain;
             return d.TryRead( monitor, () => reader( monitor, d ), out result, millisecondsTimeout );
         }
 
+        T IObservableDomainAccess<OCoordinatorRoot>.Read<T>( IActivityMonitor monitor,
+                                                             Func<IActivityMonitor, IObservableDomain<OCoordinatorRoot>, T> reader )
+        {
+            var d = Domain;
+            return d.Read( monitor, () => reader( monitor, d ) );
+        }
+
+        void IObservableDomainAccess<OCoordinatorRoot>.Read( IActivityMonitor monitor,
+                                                             Action<IActivityMonitor, IObservableDomain<OCoordinatorRoot>> reader )
+        {
+            var d = Domain;
+            d.Read( monitor, () => reader( monitor, d ) );
+        }
+
         Task<TransactionResult> IObservableDomainAccess<OCoordinatorRoot>.ModifyAsync( IActivityMonitor monitor,
-                                                                                  Action<IActivityMonitor,
-                                                                                  IObservableDomain<OCoordinatorRoot>> actions,
-                                                                                  bool throwException,
-                                                                                  int millisecondsTimeout,
-                                                                                  bool considerRolledbackAsFailure,
-                                                                                  bool parallelDomainPostActions,
-                                                                                  bool waitForDomainPostActionsCompletion )
+                                                                                       Action<IActivityMonitor,
+                                                                                       IObservableDomain<OCoordinatorRoot>> actions,
+                                                                                       bool throwException,
+                                                                                       int millisecondsTimeout,
+                                                                                       bool considerRolledbackAsFailure,
+                                                                                       bool parallelDomainPostActions,
+                                                                                       bool waitForDomainPostActionsCompletion )
         {
             var d = Domain;
             return d.ModifyAsync( monitor,
@@ -161,11 +175,11 @@ namespace CK.Observable.League
         }
         
         Task<TransactionResult> IObservableDomainAccess<OCoordinatorRoot>.ModifyThrowAsync( IActivityMonitor monitor,
-                                                                                       Action<IActivityMonitor, IObservableDomain<OCoordinatorRoot>> actions,
-                                                                                       int millisecondsTimeout,
-                                                                                       bool considerRolledbackAsFailure,
-                                                                                       bool parallelDomainPostActions,
-                                                                                       bool waitForDomainPostActionsCompletion )
+                                                                                            Action<IActivityMonitor, IObservableDomain<OCoordinatorRoot>> actions,
+                                                                                            int millisecondsTimeout,
+                                                                                            bool considerRolledbackAsFailure,
+                                                                                            bool parallelDomainPostActions,
+                                                                                            bool waitForDomainPostActionsCompletion )
         {
             var d = Domain;
             return d.ModifyThrowAsync( monitor,
@@ -177,10 +191,10 @@ namespace CK.Observable.League
         }
 
         Task<TResult> IObservableDomainAccess<OCoordinatorRoot>.ModifyThrowAsync<TResult>( IActivityMonitor monitor,
-                                                                                      Func<IActivityMonitor, IObservableDomain<OCoordinatorRoot>, TResult> actions,
-                                                                                      int millisecondsTimeout,
-                                                                                      bool parallelDomainPostActions,
-                                                                                      bool waitForDomainPostActionsCompletion )
+                                                                                           Func<IActivityMonitor, IObservableDomain<OCoordinatorRoot>, TResult> actions,
+                                                                                           int millisecondsTimeout,
+                                                                                           bool parallelDomainPostActions,
+                                                                                           bool waitForDomainPostActionsCompletion )
         {
             var d = Domain;
             return d.ModifyThrowAsync( monitor,
@@ -199,11 +213,11 @@ namespace CK.Observable.League
         {
             var d = Domain;
             return d.TryModifyAsync( monitor,
-                                         () => actions.Invoke( monitor, d ),
-                                         millisecondsTimeout,
-                                         considerRolledbackAsFailure,
-                                         parallelDomainPostActions,
-                                         waitForDomainPostActionsCompletion );
+                                     () => actions.Invoke( monitor, d ),
+                                     millisecondsTimeout,
+                                     considerRolledbackAsFailure,
+                                     parallelDomainPostActions,
+                                     waitForDomainPostActionsCompletion );
         }
         #endregion
 

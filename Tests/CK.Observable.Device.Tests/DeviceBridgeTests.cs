@@ -85,35 +85,35 @@ namespace CK.Observable.Device.Tests
             config.Status = DeviceConfigurationStatus.AlwaysRunning;
             (await host.EnsureDeviceAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.UpdateSucceeded );
 
-            using( obs.AcquireReadLock() )
+            obs.Read( TestHelper.Monitor, () =>
             {
                 device1.Configuration.Status.Should().Be( DeviceConfigurationStatus.AlwaysRunning );
                 device1.IsRunning.Should().BeTrue();
                 oHost.Devices["n°1"].IsRunning.Should().BeTrue();
-            }
+            } );
 
             config.ControllerKey = obs.DomainName;
             (await host.EnsureDeviceAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.UpdateSucceeded );
-            using( obs.AcquireReadLock() )
+            obs.Read( TestHelper.Monitor, () =>
             {
                 device1.DeviceControlStatus.Should().Be( DeviceControlStatus.HasOwnership );
                 oHost.Devices["n°1"].Status.Should().Be( DeviceControlStatus.HasOwnership );
-            }
+            } );
 
             config.ControllerKey = obs.DomainName + "No more!";
             (await host.EnsureDeviceAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.UpdateSucceeded );
 
-            using( obs.AcquireReadLock() )
+            obs.Read( TestHelper.Monitor, () =>
             {
                 device1.DeviceControlStatus.Should().Be( DeviceControlStatus.OutOfControlByConfiguration );
                 oHost.Devices["n°1"].Status.Should().Be( DeviceControlStatus.OutOfControlByConfiguration );
-            }
+            } );
 
             await host.Find( "n°1" )!.DestroyAsync( TestHelper.Monitor );
 
             await Task.Delay( 150 );
 
-            using( obs.AcquireReadLock() )
+            obs.Read( TestHelper.Monitor, () =>
             {
                 device1.Configuration.Should().BeNull();
                 device1.IsRunning.Should().BeNull();
@@ -123,7 +123,7 @@ namespace CK.Observable.Device.Tests
                 oHost.Devices["n°1"].Object.Should().Be( device1 );
                 oHost.Devices["n°1"].IsRunning.Should().BeFalse();
                 oHost.Devices["n°1"].Status.Should().Be( DeviceControlStatus.MissingDevice );
-            }
+            } );
 
             TestHelper.Monitor.Info( "Disposing Domain..." );
             obs.Dispose( TestHelper.Monitor );
@@ -185,10 +185,10 @@ namespace CK.Observable.Device.Tests
 
             while( isRunning )
             {
-                using( obs.AcquireReadLock() )
+                obs.Read( TestHelper.Monitor, () =>
                 {
                     isRunning = device.IsRunning.Value;
-                }
+                } );
             }
             DeviceIsRunningChanged.Should().BeTrue();
             DeviceIsRunningChanged = false;
@@ -200,10 +200,7 @@ namespace CK.Observable.Device.Tests
 
             while( !isRunning )
             {
-                using( obs.AcquireReadLock() )
-                {
-                    isRunning = device.IsRunning.Value;
-                }
+                isRunning = obs.Read( TestHelper.Monitor, () => device.IsRunning.Value );
             }
             DeviceIsRunningChanged.Should().BeTrue();
             DeviceIsRunningChanged = false;
@@ -311,10 +308,10 @@ namespace CK.Observable.Device.Tests
             Debug.Assert( device != null );
 
             System.Threading.Thread.Sleep( 90 );
-            using( obs.AcquireReadLock() )
+            obs.Read( TestHelper.Monitor, () =>
             {
                 device.Message.Should().StartWith( "NEXT", "The device Message has been updated by the bridge." );
-            }
+            } );
 
             // Unloading/Reloading the domain.
             using( TestHelper.Monitor.OpenInfo( "Serializing/Deserializing with a fake transaction. Sidekicks are not instantiated." ) )
@@ -335,10 +332,10 @@ namespace CK.Observable.Device.Tests
                 device.SendSimpleCommand( "NEXT again" );
             } );
             System.Threading.Thread.Sleep( 40 );
-            using( obs.AcquireReadLock() )
+            obs.Read( TestHelper.Monitor, () =>
             {
                 device.Message.Should().StartWith( "NEXT again" );
-            }
+            } );
 
             TestHelper.Monitor.Info( "Disposing Domain..." );
             obs.Dispose( TestHelper.Monitor );

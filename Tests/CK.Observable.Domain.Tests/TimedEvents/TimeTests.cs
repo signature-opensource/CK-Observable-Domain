@@ -94,18 +94,14 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                     TestHelper.Monitor.Info( "Before!" );
                 } );
 
-                d.TryRead( TestHelper.Monitor, () =>
-                {
-                    d.TimeManager.AllObservableTimedEvents.Single().IsActive.Should().BeTrue( "Not yet." );
-                } )
-                .Should().BeTrue();
+                d.Read( TestHelper.Monitor, () => d.TimeManager.AllObservableTimedEvents.Single().IsActive ).Should().BeTrue( "Not yet." );
 
                 Thread.Sleep( 30 );
 
-                using( d.AcquireReadLock() )
+                d.Read( TestHelper.Monitor, () =>
                 {
                     d.TimeManager.AllObservableTimedEvents.Single().IsActive.Should().BeTrue( "No actual timer: +30 ms (whatever the delta is) will never trigger the event." );
-                };
+                } );
 
                 await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
@@ -142,30 +138,28 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                     counter.CountChanged += Counter_CountChanged;
 
                 } );
-                d.TryRead( TestHelper.Monitor, () =>
+                d.Read( TestHelper.Monitor, () =>
                 {
                     TestHelper.Monitor.Trace( $"new AutoCounter( 100 ) done. Waiting {waitTime} ms. NextDueTime: '{d.TimeManager.Timer.NextDueTime}'." );
-                } )
-                .Should().BeTrue();
+
+                } );
 
                 Thread.Sleep( waitTime );
 
-                d.TryRead( TestHelper.Monitor, () =>
+                d.Read( TestHelper.Monitor, () =>
                 {
                     TestHelper.Monitor.Trace( $"End of Waiting. counter.Count = {counter.Count}. NextDueTime: '{d.TimeManager.Timer.NextDueTime}'." );
-                } )
-                .Should().BeTrue();
+                } );
 
                 d.TimeManager.Timer.WaitForNext( 200 ).Should().BeTrue( "AutoTimer must NOT be dead." );
 
-                d.TryRead( TestHelper.Monitor, () =>
+                d.Read( TestHelper.Monitor, () =>
                 {
                     TestHelper.Monitor.Trace( $"counter.Count = {counter.Count}." );
                     d.AllObjects.Single().Should().BeSameAs( counter );
                     counter.Count.Should().Match( c => c >= 11 );
                     RelayedCounter.Should().Be( counter.Count );
-                } )
-                .Should().BeTrue();
+                } );
             }
         }
 
@@ -189,13 +183,12 @@ namespace CK.Observable.Domain.Tests.TimedEvents
 
                 // This is not really safe: the timer MAY be fired here before we acquire the read lock:
                 // this is why we allow the counter to be greater than 1...
-                d.TryRead( TestHelper.Monitor, () =>
+                d.Read( TestHelper.Monitor, () =>
                 {
                     TestHelper.Monitor.Trace( $"counter.Count = {counter.Count}." );
                     d.AllObjects.Single().Should().BeSameAs( counter );
                     counter.Count.Should().BeGreaterOrEqualTo( 1 );
-                } )
-                .Should().BeTrue();
+                } );
             }
             entries.Should().Match( e => e.Any( m => m.Text.Contains( " event(s) lost!" ) ), "We have lost events (around 40)." );
         }
@@ -305,7 +298,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 {
                     using( var d2 = TestHelper.CloneDomain( d, newName: "Secondary", initialDomainDispose: false ) )
                     {
-                        using( d2.AcquireReadLock() )
+                        d2.Read( TestHelper.Monitor, () =>
                         {
                             d2.TimeManager.Timers.Should().HaveCount( 8 );
                             d2.TimeManager.Reminders.Should().HaveCount( 5 );
@@ -316,7 +309,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                             v.ValueFromReminders.Should().Be( 5, "[Secondary] 5 from reminders." );
                             v.Value.Should().BeGreaterOrEqualTo( 9, "[Secondary] 5 reminders have fired, the 4 timers have fired at least once." );
                             secondaryValue = v.Value;
-                        }
+                        } );
                     }
                 }
                 // Wait for next tick...
@@ -324,12 +317,12 @@ namespace CK.Observable.Domain.Tests.TimedEvents
 
                 using( TestHelper.Monitor.OpenInfo( "Checking value on Primary domain." ) )
                 {
-                    using( d.AcquireReadLock() )
+                    d.Read( TestHelper.Monitor, () =>
                     {
                         var v = d.AllObjects.OfType<SimpleValue>().Single();
                         v.ValueFromReminders.Should().Be( 5, "[Primary] 5 from reminders." );
                         v.Value.Should().BeGreaterThan( secondaryValue, "[Primary] Must be greater than the secondary." );
-                    }
+                    } );
                 }
             }
         }
@@ -386,7 +379,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 Thread.Sleep( testTime );
 
                 TestHelper.Monitor.Info( $"Same as before: all counters must have a Count that is {testTime}/IntervalMilliSeconds except the 20 ms one (too small)." );
-                using( d.AcquireReadLock() )
+                d.Read( TestHelper.Monitor, () =>
                 {
                     var deviants = counters.Select( c => (Interval: c.IntervalMilliSeconds, Expected: testTime / c.IntervalMilliSeconds, Delta: c.Count - (testTime / c.IntervalMilliSeconds)) )
                                            .Where( c => Math.Abs( c.Delta ) > 2 );
@@ -401,7 +394,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                     {
                         TestHelper.Monitor.Info( $"For all counters: Count=({testTime}/IntervalMilliSeconds)+/-2 except the 20 ms one (too small)." );
                     }
-                }
+                } );
             }
         }
 
@@ -430,13 +423,13 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 int current = 0, previous = 0, delta = 0;
                 void UpdateCount()
                 {
-                    using( d.AcquireReadLock() )
+                    d.Read( monitor, () =>
                     {
                         var c = AutoTimeFiredCount;
                         delta = c - (previous = current);
                         monitor.Info( $"UpdateCount: Δ = " + delta );
                         current = c;
-                    }
+                    } );
                 }
 
                 await d.ModifyThrowAsync( TestHelper.Monitor, () =>
@@ -453,11 +446,11 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 UpdateCount();
                 delta.Should().BeGreaterThan( 0, "Since we called WaitForNext() again!" );
 
-                using( d.AcquireReadLock() )
+                d.Read( TestHelper.Monitor, () =>
                 {
                     TestHelper.Monitor.Info( "Locking the Domain for 200 ms." );
                     Thread.Sleep( 200 );
-                }
+                } );
 
                 d.TimeManager.Timer.WaitForNext();
                 UpdateCount();
@@ -543,12 +536,12 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                     ReloadIfNeeded();
                 }
                 logs.Select( l => l.Text ).Should().Contain( "TestReminder: Working: Hello! (count:3)", "The 2 other logs are on the domain monitor!" );
-                using( d.Domain.AcquireReadLock() )
+                d.Domain.Read( TestHelper.Monitor, () =>
                 {
                     d.Domain.TimeManager.Reminders.Should().HaveCount( 2, "2 pooled reminders have been created." );
                     d.Domain.AllInternalObjects.OfType<TestCounter>().Single().Count.Should().BeGreaterOrEqualTo( 4, "Counter has been incremented at least four times." );
                     d.Domain.TimeManager.Reminders.All( r => r.IsPooled && !r.IsActive && !r.IsDestroyed ).Should().BeTrue( "Reminders are free to be reused." );
-                }
+                } );
                 ReloadIfNeeded();
                 using( TestHelper.Monitor.CollectEntries( entries => logs = entries, LogLevelFilter.Info ) )
                 {
@@ -561,11 +554,11 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                     ReloadIfNeeded();
                 }
                 logs.Select( l => l.Text ).Should().Contain( "TestReminder: Working: Another Job! (count:0)" );
-                using( d.Domain.AcquireReadLock() )
+                d.Domain.Read( TestHelper.Monitor, () =>
                 {
                     d.Domain.TimeManager.Reminders.Should().HaveCount( 2, "Still 2 pooled reminders." );
                     d.Domain.TimeManager.Reminders.All( r => r.IsPooled && !r.IsActive && !r.IsDestroyed ).Should().BeTrue( "Reminders are free to be reused." );
-                }
+                } );
                 ReloadIfNeeded();
                 await d.Domain.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
@@ -574,11 +567,11 @@ namespace CK.Observable.Domain.Tests.TimedEvents
 
                 } );
                 ReloadIfNeeded();
-                using( d.Domain.AcquireReadLock() )
+                d.Domain.Read( TestHelper.Monitor, () =>
                 {
                     d.Domain.TimeManager.Reminders.Should().HaveCount( 2, "Still 2 pooled reminders." );
                     d.Domain.TimeManager.Reminders.Where( r => !r.IsActive ).Should().HaveCount( 1, "One is in used." );
-                }
+                } );
                 ReloadIfNeeded();
                 await d.Domain.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
@@ -587,11 +580,11 @@ namespace CK.Observable.Domain.Tests.TimedEvents
 
                 } );
                 ReloadIfNeeded();
-                using( d.Domain.AcquireReadLock() )
+                d.Domain.Read( TestHelper.Monitor, () =>
                 {
                     d.Domain.TimeManager.Reminders.Should().HaveCount( 2, "Still 2 pooled reminders." );
                     d.Domain.TimeManager.Reminders.Where( r => !r.IsActive ).Should().BeEmpty( "No more free reminders!" );
-                }
+                } );
                 ReloadIfNeeded();
                 await d.Domain.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
@@ -600,11 +593,11 @@ namespace CK.Observable.Domain.Tests.TimedEvents
 
                 } );
                 ReloadIfNeeded();
-                using( d.Domain.AcquireReadLock() )
+                d.Domain.Read( TestHelper.Monitor, () =>
                 {
                     d.Domain.TimeManager.Reminders.Should().HaveCount( 3, "A third one has been required!" );
                     d.Domain.TimeManager.Reminders.Where( r => !r.IsActive ).Should().BeEmpty( "All 3 are in use." );
-                }
+                } );
                 ReloadIfNeeded();
                 await d.Domain.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
@@ -615,11 +608,11 @@ namespace CK.Observable.Domain.Tests.TimedEvents
 
                 } );
                 ReloadIfNeeded();
-                using( d.Domain.AcquireReadLock() )
+                d.Domain.Read( TestHelper.Monitor, () =>
                 {
                     d.Domain.TimeManager.Reminders.Should().HaveCount( 3, "3 created..." );
                     d.Domain.TimeManager.Reminders.Where( r => !r.IsActive ).Should().HaveCount( 3, "... and free to be reused." );
-                }
+                } );
             }
         }
 
@@ -724,7 +717,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
 
             ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, od );
 
-            using( od.AcquireReadLock() )
+            od.Read( TestHelper.Monitor, () =>
             {
                 int i = 1;
                 while( i < 501 )
@@ -735,7 +728,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 {
                     od.Root.Objects[i++].IsDestroyed.Should().BeFalse();
                 }
-            }
+            } );
 
             ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, od );
         }

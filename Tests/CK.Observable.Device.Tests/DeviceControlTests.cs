@@ -130,11 +130,11 @@ namespace CK.Observable.Device.Tests
 
             static void CheckStatus( ObservableDomain<Root> d, DeviceControlStatus s )
             {
-                using( d.AcquireReadLock() )
+                d.Read( TestHelper.Monitor, () =>
                 {
                     d.Root.TheOne.DeviceControlStatus.Should().Be( s );
                     d.Root.Host.Devices["TheOne"].Status.Should().Be( s );
-                }
+                } );
             }
 
             async Task SetControlAsync( string action, ObservableDomain<Root> d, DeviceControlAction c )
@@ -196,11 +196,11 @@ namespace CK.Observable.Device.Tests
 
             static void CheckStatus( ObservableDomain<Root> d, DeviceControlStatus s )
             {
-                using( d.AcquireReadLock() )
+                d.Read( TestHelper.Monitor, () =>
                 {
                     d.Root.TheOne.DeviceControlStatus.Should().Be( s );
                     d.Root.Host.Devices["TheOne"].Status.Should().Be( s );
-                }
+                } );
             }
 
             async Task SetControlAsync( string action, ObservableDomain<Root> d, DeviceControlAction c )
