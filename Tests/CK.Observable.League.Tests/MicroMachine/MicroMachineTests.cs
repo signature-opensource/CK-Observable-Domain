@@ -47,10 +47,10 @@ namespace CK.Observable.League.Tests.MicroMachine
             ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d, restoreSidekicks: true );
             // AutoDisposed fired.
             Thread.Sleep( 200 );
-            using( d.AcquireReadLock() )
+            d.Read( TestHelper.Monitor, () =>
             {
                 d.Root.Machine.Things.Should().BeEmpty();
-            }
+            } );
         }
 
         [TestCase( 10 )]
@@ -161,11 +161,10 @@ namespace CK.Observable.League.Tests.MicroMachine
 
             // AutoDisposed fired.
             Thread.Sleep( (thingCount * waitTimeBetweenThings) );
-            using( d.AcquireReadLock() )
+            d.Read( TestHelper.Monitor, () =>
             {
                 d.Root.Machine.Things.Should().BeEmpty();
-
-            }
+            } );
         }
 
     }

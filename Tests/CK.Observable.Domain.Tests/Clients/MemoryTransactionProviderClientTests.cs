@@ -89,12 +89,12 @@ namespace CK.Observable.Domain.Tests.Clients
             transactionResult.RollbackedInfo.IsDangerousRollback.Should().BeFalse();
             observableEvents.Should().NotBeNull().And.BeEmpty( "No observable events (but TransactionDone has been called)." );
             observableEvents = null;
-            using( d.AcquireReadLock() )
+            d.Read( TestHelper.Monitor, () =>
             {
                 d.TransactionSerialNumber.Should().Be( 0, "Back to creation." );
                 d.Root.Prop1.Should().BeNull();
                 d.Root.Prop2.Should().BeNull();
-            }
+            } );
 
             // First real transaction (will be lost).
             await d.ModifyThrowAsync( TestHelper.Monitor, () => d.Root.Prop1 = "Hello" );
@@ -120,12 +120,12 @@ namespace CK.Observable.Domain.Tests.Clients
             transactionResult.RollbackedInfo.Failure.Success.Should().BeFalse();
             transactionResult.RollbackedInfo.IsSafeRollback.Should().BeFalse( "Rollback to an older state is..." );
             transactionResult.RollbackedInfo.IsDangerousRollback.Should().BeTrue( "Dangerous!" );
-            using( d.AcquireReadLock() )
+            d.Read( TestHelper.Monitor, () =>
             {
                 d.TransactionSerialNumber.Should().Be( 0, "Back to creation." );
                 d.Root.Prop1.Should().BeNull();
                 d.Root.Prop2.Should().BeNull();
-            }
+            } );
             observableEvents.Should().NotBeNull().And.BeEmpty( "No observable events (but TransactionDone has been called)." );
         }
 
@@ -158,12 +158,12 @@ namespace CK.Observable.Domain.Tests.Clients
             transactionResult.RollbackedInfo.Failure.Success.Should().BeFalse();
             transactionResult.RollbackedInfo.IsSafeRollback.Should().BeTrue( "Rollback to the initial start of the transaction is Safe." );
             transactionResult.RollbackedInfo.IsDangerousRollback.Should().BeFalse();
-            using( d.AcquireReadLock() )
+            d.Read( TestHelper.Monitor, () =>
             {
                 d.TransactionSerialNumber.Should().Be( 1, "Back to loaded state." );
                 d.Root.Prop1.Should().Be( "Loaded State." );
                 d.Root.Prop2.Should().BeNull();
-            }
+            } );
 
             // First real transaction (will be lost).
             await d.ModifyThrowAsync( TestHelper.Monitor, () => d.Root.Prop1 = "Hello" );
@@ -185,12 +185,12 @@ namespace CK.Observable.Domain.Tests.Clients
             transactionResult.RollbackedInfo.Failure.Success.Should().BeFalse();
             transactionResult.RollbackedInfo.IsSafeRollback.Should().BeFalse( "Rollback to an older state is..." );
             transactionResult.RollbackedInfo.IsDangerousRollback.Should().BeTrue( "Dangerous!" );
-            using( d.AcquireReadLock() )
+            d.Read( TestHelper.Monitor, () =>
             {
                 d.TransactionSerialNumber.Should().Be( 1, "Dangerous roll back to loaded state." );
                 d.Root.Prop1.Should().Be( "Loaded State." );
                 d.Root.Prop2.Should().BeNull();
-            }
+            } );
         }
 
         [Test]
@@ -227,11 +227,11 @@ namespace CK.Observable.Domain.Tests.Clients
 
             events.Should().BeNull( "OnSuccessfulTransaction has not been raised." );
             transactionResult.IsCriticalError.Should().BeTrue( "Since Write fails, this is CRITICAL!" );
-            using( d.AcquireReadLock() )
+            d.Read( TestHelper.Monitor, () =>
             {
                 d.Root.Prop1.Should().Be( "This will" );
                 d.Root.Prop2.Should().Be( "be set even when Write fails" );
-            }
+            } );
         }
 
         [Test]
@@ -265,7 +265,7 @@ namespace CK.Observable.Domain.Tests.Clients
             transactionResult.Errors.Should().NotBeEmpty( $"Errors happened during Modify()" );
             transactionResult.ClientError.Should().BeNull( "No client errors happened" );
             transactionResult.IsCriticalError.Should().BeFalse( "The domain is in a valid state, this is not CRITICAL." );
-            using( d.AcquireReadLock() )
+            d.Read( TestHelper.Monitor, () =>
             {
                 d.Root.Prop1.Should().Be( "Hello" );
                 d.Root.Prop2.Should().Be( "World" );
@@ -273,7 +273,7 @@ namespace CK.Observable.Domain.Tests.Clients
                 d.AllRoots.Count.Should().Be( 1 );
                 d.Root.Should().Be( (TestObservableRootObject)d.AllObjects.First() );
                 d.Root.Should().Be( (TestObservableRootObject)d.AllRoots.First() );
-            }
+            } );
         }
 
         [Test]
@@ -298,13 +298,13 @@ namespace CK.Observable.Domain.Tests.Clients
 
                 d2.TimeManager.IsRunning.Should().BeTrue();
 
-                using( d2.AcquireReadLock() )
+                d2.Read( TestHelper.Monitor, () =>
                 {
                     d2.Root.Prop1.Should().Be( "Hello" );
                     d2.Root.Prop2.Should().Be( "World" );
                     d2.AllObjects.Count.Should().Be( 1 );
                     d2.AllRoots.Count.Should().Be( 1 );
-                }
+                } );
             }
         }
 
@@ -333,13 +333,13 @@ namespace CK.Observable.Domain.Tests.Clients
                                                                                client: new TestMemoryTransactionProviderClient( domainStream ) );
                 // The client.OnDomainCreated did its job: the domain has been loaded
                 // from the initial domain stream.
-                using( d2.AcquireReadLock() )
+                d2.Read( TestHelper.Monitor, () =>
                 {
                     d2.Root.Prop1.Should().Be( "Hello" );
                     d2.Root.Prop2.Should().Be( "World" );
                     d2.AllObjects.Count.Should().Be( 1 );
                     d2.AllRoots.Count.Should().Be( 1 );
-                }
+                } );
             }
         }
 
@@ -375,13 +375,13 @@ namespace CK.Observable.Domain.Tests.Clients
                                                                                    new TestMemoryTransactionProviderClient(domainStream2),
                                                                                    RewindableStream.FromStream( domainStream1 ) );
 
-                    using( d2.AcquireReadLock() )
+                    d2.Read( TestHelper.Monitor, () =>
                     {
                         d2.Root.Prop1.Should().Be( "Hello 2" );
                         d2.Root.Prop2.Should().Be( "World 2" );
                         d2.AllObjects.Count.Should().Be( 1 );
                         d2.AllRoots.Count.Should().Be( 1 );
-                    }
+                    } );
                 }
             }
         }
@@ -414,12 +414,12 @@ namespace CK.Observable.Domain.Tests.Clients
                 throw new Exception( "Exception during Modify(). This is a test exception." );
             } );
 
-            using( d.AcquireReadLock() )
+            d.Read( TestHelper.Monitor, () =>
             {
                 restoredObservableObject = d.Root;
                 d.Root.Prop1.Should().Be( "Hello" );
                 d.Root.Prop2.Should().Be( "World" );
-            }
+            } );
 
             restoredObservableObject.Should().NotBe( initialObservableObject );
             initialObservableObject.IsDestroyed.Should().BeTrue( "Root was disposed following a reload" );

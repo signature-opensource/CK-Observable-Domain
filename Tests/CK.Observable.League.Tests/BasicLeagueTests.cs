@@ -70,14 +70,14 @@ namespace CK.Observable.League.Tests
             {
                 Debug.Assert( shell2 != null );
 
-                shell2.TryRead( TestHelper.Monitor, ( m, d ) =>
+                shell2.Read( TestHelper.Monitor, ( m, d ) =>
                 {
                     var p = d.Root.Persons[0];
                     p.FirstName.Should().Be( "X" );
                     p.LastName.Should().Be( "Y" );
-                    p.Age.Should().Be( 22 );
-                } )
-                .Should().BeTrue();
+                    return p.Age;
+                } ).Should().Be( 22 );
+
                 // We dispose the Domain in the Coordinator domain: it is now marked as Destroyed.
                 await league2.Coordinator.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) =>
                 {
@@ -90,10 +90,9 @@ namespace CK.Observable.League.Tests
                 (await loader2.LoadAsync( TestHelper.Monitor )).Should().BeNull( "...and cannot obtain new shells to play with them." );
 
                 await shell2.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) => d.Root.Persons[0].Age = 42 );
-                shell2.TryRead( TestHelper.Monitor, ( m, d ) =>
-                {
-                    d.Root.Persons[0].Age.Should().Be( 42, "Existing shells CAN continue to work with Destroyed domains." );
-                } )
+                shell2.TryRead( TestHelper.Monitor,
+                                ( m, d ) => d.Root.Persons[0].Age.Should().Be( 42, "Existing shells CAN continue to work with Destroyed domains." ),
+                                millisecondsTimeout: -1 )
                 .Should().BeTrue();
             }
         }
@@ -195,14 +194,14 @@ namespace CK.Observable.League.Tests
         {
             await using( var d = await theLeague["4Roots"].LoadAsync<Root1, Root2, Root3, Root4>( TestHelper.Monitor ) )
             {
-                d.TryRead( TestHelper.Monitor, ( m, d ) =>
+                d.Read( TestHelper.Monitor, ( m, d ) =>
                 {
                     d.Root1.Should().BeOfType<Root1>();
                     d.Root2.Should().BeOfType<Root2>();
                     d.Root3.Should().BeOfType<Root3>();
-                    d.Root4.Should().BeOfType<Root4>();
+                    return d.Root4.GetType();
                 } )
-                .Should().BeTrue();
+                .Should().Be( typeof( Root4 ) );
             }
         }
     }

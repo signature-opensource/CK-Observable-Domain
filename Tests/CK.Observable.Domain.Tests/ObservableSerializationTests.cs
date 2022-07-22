@@ -39,7 +39,7 @@ namespace CK.Observable.Domain.Tests
 
             handler.ReloadNewDomain( TestHelper.Monitor, idempotenceCheck: type != "SuspendableClock" );
 
-            using( handler.Domain.AcquireReadLock() )
+            handler.Domain.Read( TestHelper.Monitor, () =>
             {
                 if( o is ObservableObject )
                 {
@@ -57,7 +57,7 @@ namespace CK.Observable.Domain.Tests
                 {
                     handler.Domain.AllInternalObjects.Should().HaveCount( 1 );
                 }
-            }
+            } );
 
             handler.ReloadNewDomain( TestHelper.Monitor, idempotenceCheck: type != "SuspendableClock" );
         }

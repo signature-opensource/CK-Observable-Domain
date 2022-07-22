@@ -174,6 +174,10 @@ namespace CK.Observable.League
                     return Shell.Read( monitor, reader );
                 }
 
+                void IObservableDomainShell.Read( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> reader )
+                {
+                    Shell.Read( monitor, reader );
+                }
 
                 #region Inspector guarded relays.
                 public IObservableDomainInspector DomainInspector
@@ -729,11 +733,17 @@ namespace CK.Observable.League
                 var d = LoadedDomain;
                 return d.Read( monitor, () => reader.Invoke( monitor, d ) );
             }
+
+            void IObservableDomainShell.Read( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> reader )
+            {
+                var d = LoadedDomain;
+                d.Read( monitor, () => reader.Invoke( monitor, d ) );
+            }
             #endregion
 
         }
 
-        class Shell<T> : Shell, IObservableDomainShell<T> where T : ObservableRootObject
+        sealed class Shell<T> : Shell, IObservableDomainShell<T> where T : ObservableRootObject
         {
             public Shell( IActivityMonitor monitor,
                           IObservableDomainAccess<OCoordinatorRoot> coordinator,
@@ -757,7 +767,7 @@ namespace CK.Observable.League
                 return new ObservableDomain<T>( monitor, DomainName, Client, stream, ServiceProvider, startTimer );
             }
 
-            class IndependentShellT : IndependentShell, IObservableDomainShell<T>
+            sealed class IndependentShellT : IndependentShell, IObservableDomainShell<T>
             {
                 public IndependentShellT( Shell<T> s, IActivityMonitor m )
                     : base( s, m )
@@ -843,6 +853,12 @@ namespace CK.Observable.League
                                           Func<IActivityMonitor, IObservableDomain<T>, TInfo> reader )
                 {
                     return Shell.Read( monitor, reader );
+                }
+
+                public void Read( IActivityMonitor monitor,
+                                  Action<IActivityMonitor, IObservableDomain<T>> reader )
+                {
+                    Shell.Read( monitor, reader );
                 }
             }
 
@@ -936,9 +952,16 @@ namespace CK.Observable.League
                 return d.Read( monitor, () => reader.Invoke( monitor, d ) );
             }
 
+            void IObservableDomainAccess<T>.Read( IActivityMonitor monitor,
+                                                  Action<IActivityMonitor, IObservableDomain<T>> reader )
+            {
+                var d = LoadedDomain;
+                d.Read( monitor, () => reader.Invoke( monitor, d ) );
+            }
+
         }
 
-        class Shell<T1, T2> : Shell, IObservableDomainShell<T1, T2>
+        sealed class Shell<T1, T2> : Shell, IObservableDomainShell<T1, T2>
             where T1 : ObservableRootObject
             where T2 : ObservableRootObject
         {
@@ -964,7 +987,7 @@ namespace CK.Observable.League
                 return new ObservableDomain<T1, T2>( monitor, DomainName, Client, stream, ServiceProvider, startTimer );
             }
 
-            class IndependentShellTT : IndependentShell, IObservableDomainShell<T1, T2>
+            sealed class IndependentShellTT : IndependentShell, IObservableDomainShell<T1, T2>
             {
                 public IndependentShellTT( Shell<T1, T2> s, IActivityMonitor m )
                     : base( s, m )
@@ -1144,7 +1167,7 @@ namespace CK.Observable.League
             }
         }
 
-        class Shell<T1, T2, T3> : Shell, IObservableDomainShell<T1, T2, T3>
+        sealed class Shell<T1, T2, T3> : Shell, IObservableDomainShell<T1, T2, T3>
             where T1 : ObservableRootObject
             where T2 : ObservableRootObject
             where T3 : ObservableRootObject
@@ -1171,7 +1194,7 @@ namespace CK.Observable.League
                 return new ObservableDomain<T1, T2, T3>( monitor, DomainName, Client, stream, ServiceProvider, startTimer );
             }
 
-            class IndependentShellTTT : IndependentShell, IObservableDomainShell<T1, T2, T3>
+            sealed class IndependentShellTTT : IndependentShell, IObservableDomainShell<T1, T2, T3>
             {
                 public IndependentShellTTT( Shell<T1, T2, T3> s, IActivityMonitor m )
                     : base( s, m )
@@ -1258,6 +1281,12 @@ namespace CK.Observable.League
                                           Func<IActivityMonitor, IObservableDomain<T1, T2, T3>, TInfo> reader )
                 {
                     return Shell.Read( monitor, reader );
+                }
+
+                public void Read( IActivityMonitor monitor,
+                                  Action<IActivityMonitor, IObservableDomain<T1, T2, T3>> reader )
+                {
+                    Shell.Read( monitor, reader );
                 }
 
             }
@@ -1352,9 +1381,16 @@ namespace CK.Observable.League
                 var d = LoadedDomain;
                 return d.Read( monitor, () => reader.Invoke( monitor, d ) );
             }
+
+            void IObservableDomainShell<T1, T2, T3>.Read( IActivityMonitor monitor,
+                                                          Action<IActivityMonitor, IObservableDomain<T1, T2, T3>> reader )
+            {
+                var d = LoadedDomain;
+                d.Read( monitor, () => reader.Invoke( monitor, d ) );
+            }
         }
 
-        class Shell<T1, T2, T3, T4> : Shell, IObservableDomainShell<T1, T2, T3, T4>
+        sealed class Shell<T1, T2, T3, T4> : Shell, IObservableDomainShell<T1, T2, T3, T4>
             where T1 : ObservableRootObject
             where T2 : ObservableRootObject
             where T3 : ObservableRootObject
@@ -1382,7 +1418,7 @@ namespace CK.Observable.League
                 return new ObservableDomain<T1, T2, T3, T4>( monitor, DomainName, Client, stream, ServiceProvider, startTimer );
             }
 
-            class IndependentShellTTTT : IndependentShell, IObservableDomainShell<T1, T2, T3, T4>
+            sealed class IndependentShellTTTT : IndependentShell, IObservableDomainShell<T1, T2, T3, T4>
             {
                 public IndependentShellTTTT( Shell<T1, T2, T3, T4> s, IActivityMonitor m )
                     : base( s, m )
@@ -1471,10 +1507,15 @@ namespace CK.Observable.League
                     return Shell.Read( monitor, reader );
                 }
 
+                public void Read( IActivityMonitor monitor,
+                                  Action<IActivityMonitor, IObservableDomain<T1, T2, T3, T4>> reader )
+                {
+                    Shell.Read( monitor, reader );
+                }
+
             }
 
             private protected override IObservableDomainShell CreateIndependentShell( IActivityMonitor monitor ) => new IndependentShellTTTT( this, monitor );
-
 
             new ObservableDomain<T1, T2, T3, T4> LoadedDomain => (ObservableDomain<T1, T2, T3, T4>)base.LoadedDomain;
 
@@ -1564,6 +1605,13 @@ namespace CK.Observable.League
             {
                 var d = LoadedDomain;
                 return d.Read( monitor, () => reader.Invoke( monitor, d ) );
+            }
+
+            void IObservableDomainShell<T1, T2, T3, T4>.Read( IActivityMonitor monitor,
+                                                              Action<IActivityMonitor, IObservableDomain<T1, T2, T3, T4>> reader )
+            {
+                var d = LoadedDomain;
+                d.Read( monitor, () => reader.Invoke( monitor, d ) );
             }
 
         }

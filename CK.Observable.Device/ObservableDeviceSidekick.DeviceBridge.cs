@@ -389,6 +389,12 @@ namespace CK.Observable.Device
                 return _sidekick.Domain.Read( monitor, reader );
             }
 
+            /// <inheritdoc cref="ObservableDomain.Read(IActivityMonitor, Action)"/>.
+            protected void Read( IActivityMonitor monitor, Action reader )
+            {
+                _sidekick.Domain.Read( monitor, reader );
+            }
+
             /// <summary>
             /// Can handle the device events.
             /// Note that lifetime events are handled separately and are reflected on the <see cref="ObservableDeviceObject"/>.

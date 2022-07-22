@@ -75,5 +75,8 @@ namespace CK.Observable.League
         /// <inheritdoc cref="ObservableDomain.Read{T}(IActivityMonitor, Func{T})"/>
         TInfo Read<TInfo>( IActivityMonitor monitor, Func<IActivityMonitor, IObservableDomain, TInfo> reader );
 
+        /// <inheritdoc cref="ObservableDomain.Read(IActivityMonitor, Action)"/>
+        void Read( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain> reader );
+
     }
 }

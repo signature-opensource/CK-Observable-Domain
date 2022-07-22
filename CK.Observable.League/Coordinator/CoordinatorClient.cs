@@ -148,6 +148,13 @@ namespace CK.Observable.League
             return d.Read( monitor, () => reader( monitor, d ) );
         }
 
+        void IObservableDomainAccess<OCoordinatorRoot>.Read( IActivityMonitor monitor,
+                                                             Action<IActivityMonitor, IObservableDomain<OCoordinatorRoot>> reader )
+        {
+            var d = Domain;
+            d.Read( monitor, () => reader( monitor, d ) );
+        }
+
         Task<TransactionResult> IObservableDomainAccess<OCoordinatorRoot>.ModifyAsync( IActivityMonitor monitor,
                                                                                        Action<IActivityMonitor,
                                                                                        IObservableDomain<OCoordinatorRoot>> actions,

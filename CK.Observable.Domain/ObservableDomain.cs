@@ -453,21 +453,21 @@ namespace CK.Observable
         /// <summary>
         /// Gets all the observable objects that this domain contains (roots included).
         /// These exposed objects are out of any transactions or reentrancy checks: they should not 
-        /// be used outside of ModifyAsync methods or <see cref="AcquireReadLock(int)"/> scopes.
+        /// be used outside of ModifyAsync or Read methods.
         /// </summary>
         public IObservableAllObjectsCollection AllObjects => _exposedObjects;
 
         /// <summary>
         /// Gets all the internal objects that this domain contains.
         /// These exposed objects are out of any transactions or reentrancy checks: they should not 
-        /// be used outside of ModifyAsync methods or <see cref="AcquireReadLock(int)"/> scopes.
+        /// be used outside of ModifyAsync or Read methods.
         /// </summary>
         public IReadOnlyCollection<InternalObject> AllInternalObjects => _exposedInternalObjects;
 
         /// <summary>
         /// Gets the root observable objects that this domain contains.
         /// These exposed objects are out of any transactions or reentrancy checks: they should not 
-        /// be used outside of ModifyAsync methods or <see cref="AcquireReadLock(int)"/> scopes.
+        /// be used outside of ModifyAsync or Read methods.
         /// </summary>
         public IReadOnlyList<ObservableRootObject> AllRoots => _roots;
 
@@ -1025,7 +1025,7 @@ namespace CK.Observable
                     _domainPostActionExecutor.WaitStopped();
                 }
                 monitor.Info( $"Domain '{DomainName}' disposed." );
-                // There is a race condition here. AcquireReadLock, ModifyAsync (and others)
+                // There is a race condition here. Read, ModifyAsync (and others)
                 // may have also seen a false _transactionStatus and then try to acquire the lock.
                 // If the race is won by this Dispose() thread, then the write lock is taken, released and
                 // the lock itself should be disposed...
