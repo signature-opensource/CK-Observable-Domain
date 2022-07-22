@@ -29,13 +29,13 @@ namespace CK.Observable.League
         {
             BinaryDeserializer.DefaultSharedContext.AddDeserializationHook( t =>
             {
-                if( t.ReadInfo.TypeNamespace == "CK.Observable.League" )
+                if( t.WrittenInfo.TypeNamespace == "CK.Observable.League" )
                 {
-                    if( t.ReadInfo.TypeName == "Domain" )
+                    if( t.WrittenInfo.TypeName == "Domain" )
                     {
                         t.SetTargetType( typeof( ODomain ) );
                     }
-                    else if( t.ReadInfo.TypeName == "Coordinator" )
+                    else if( t.WrittenInfo.TypeName == "Coordinator" )
                     {
                         t.SetTargetType( typeof( OCoordinatorRoot ) );
                     }

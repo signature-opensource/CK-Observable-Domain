@@ -158,17 +158,17 @@ namespace CK.Observable
                 // Note that this code doesn't handle nested Observable objects (the ones with a '+' in
                 // their type name).
                 //
-                if( t.ReadInfo.TypeName.StartsWith( "Observable", StringComparison.Ordinal )
-                    && t.ReadInfo.AssemblyName != "CK.Observable.Domain"
-                    && t.ReadInfo.AssemblyName != "CK.Observable.Device"
-                    && t.ReadInfo.AssemblyName != "CK.Observable.League" )
+                if( t.WrittenInfo.TypeName.StartsWith( "Observable", StringComparison.Ordinal )
+                    && t.WrittenInfo.AssemblyName != "CK.Observable.Domain"
+                    && t.WrittenInfo.AssemblyName != "CK.Observable.Device"
+                    && t.WrittenInfo.AssemblyName != "CK.Observable.League" )
                 {
-                    var aqn = $"{t.ReadInfo.TypeNamespace}.{t.ReadInfo.TypeName}, {t.ReadInfo.AssemblyName}";
+                    var aqn = $"{t.WrittenInfo.TypeNamespace}.{t.WrittenInfo.TypeName}, {t.WrittenInfo.AssemblyName}";
                     if( Type.GetType( aqn, throwOnError: false ) == null )
                     {
                         // Before mutating, check that the O type exists.
-                        var oTypeName = t.ReadInfo.TypeName.Remove( 1, 9 );
-                        aqn = $"{t.ReadInfo.TypeNamespace}.{oTypeName}, {t.ReadInfo.AssemblyName}";
+                        var oTypeName = t.WrittenInfo.TypeName.Remove( 1, 9 );
+                        aqn = $"{t.WrittenInfo.TypeNamespace}.{oTypeName}, {t.WrittenInfo.AssemblyName}";
                         if( Type.GetType( aqn, throwOnError: false ) != null )
                         {
                             // The O type exists.
