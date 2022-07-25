@@ -1,0 +1,24 @@
+{
+  "name": "@signature-code/ck-observable-domain-mqtt",
+  "packageManager": "yarn@3.2.2",
+  "scripts": {
+    "test": "mocha -r ts-node/register test/**/*.ts",
+    "build": "tsc",
+    "preversion": "npm test",
+    "version": "npm run build",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@aspnet/signalr": "^1.0.27",
+    "@microsoft/signalr": "^6.0.7",
+    "@signature-code/ck-observable-domain": "portal:../ck-observable-domain",
+    "async-mqtt": "^2.6.2",
+    "rxjs": "^7.5.6"
+  },
+  "devDependencies": {
+    "@types/mocha": "^5.2.5",
+    "@types/node": "^18.6.0",
+    "mocha": "^8.0.1",
+    "typescript": "^4.7.4"
+  }
+}

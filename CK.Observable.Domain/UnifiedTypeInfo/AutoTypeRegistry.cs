@@ -31,7 +31,6 @@ namespace CK.Observable
         class AutoTypeDriver : IUnifiedTypeDriver, IObjectExportTypeDriver
         {
             readonly Type _type;
-            readonly AutoTypeDriver? _baseType;
             readonly AutoTypeDriver[] _typePath;
 
             // Export.
@@ -63,9 +62,6 @@ namespace CK.Observable
                                                                 && _exporterBase == null;
 
             Type IObjectExportTypeDriver.BaseType => Type;
-
-
-            string SimpleTypeName => _type.AssemblyQualifiedName.Split( ',' )[0];
 
             void IObjectExportTypeDriver.Export( object o, int num, ObjectExporter exporter )
             {
@@ -111,7 +107,6 @@ namespace CK.Observable
             {
                 GetAndCheckTypeAutoParts( t, out _exporter, out _exporterBase );
                 _type = t;
-                _baseType = baseType;
                 if( baseType != null )
                 {
                     var p = new AutoTypeDriver[baseType._typePath.Length + 1];
