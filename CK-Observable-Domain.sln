@@ -40,9 +40,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.MQTTWatcher",
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.DefaultMQTTObservableServer", "CK.Observable.DefaultMQTTObservableServer\CK.Observable.DefaultMQTTObservableServer.csproj", "{677D7882-38F0-4B76-8419-C995A33D0E69}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CK.Observable.ServerSample", "CK.Observable.ServerSample\CK.Observable.ServerSample.csproj", "{D9CD2C0F-79FB-4DB7-B5E1-2C98BF07565B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.ServerSample", "CK.Observable.ServerSample\CK.Observable.ServerSample.csproj", "{D9CD2C0F-79FB-4DB7-B5E1-2C98BF07565B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CKSetup", "CKSetup\CKSetup.csproj", "{0E315C17-1BD2-4A50-BBFE-A91EC871923F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CKSetup", "CKSetup\CKSetup.csproj", "{0E315C17-1BD2-4A50-BBFE-A91EC871923F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CK.Observable.ServerSample.App", "CK.Observable.ServerSample.App\CK.Observable.ServerSample.App.csproj", "{9EAEBFBE-0E86-486D-A774-3482AC88E6F0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -98,6 +100,10 @@ Global
 		{0E315C17-1BD2-4A50-BBFE-A91EC871923F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0E315C17-1BD2-4A50-BBFE-A91EC871923F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0E315C17-1BD2-4A50-BBFE-A91EC871923F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9EAEBFBE-0E86-486D-A774-3482AC88E6F0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9EAEBFBE-0E86-486D-A774-3482AC88E6F0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9EAEBFBE-0E86-486D-A774-3482AC88E6F0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9EAEBFBE-0E86-486D-A774-3482AC88E6F0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

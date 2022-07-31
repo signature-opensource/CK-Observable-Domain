@@ -1,5 +1,5 @@
 import { WatchEvent } from '@signature-code/ck-observable-domain';
-import { HttpTransportType, HubConnection, HubConnectionBuilder } from '@aspnet/signalr';
+import { HttpTransportType, HubConnection, HubConnectionBuilder, HubConnectionState } from '@aspnet/signalr';
 import { IObservableDomainLeagueDriver } from './iod-league-driver';
 
 export class SignalRObservableLeagueDomainService implements IObservableDomainLeagueDriver {
@@ -11,7 +11,7 @@ export class SignalRObservableLeagueDomainService implements IObservableDomainLe
     this.connection.start();
   }
 
-  public start() : Promise<void> {
+  public start(): Promise<void> {
     return this.connection.start();
   }
 
@@ -22,6 +22,10 @@ export class SignalRObservableLeagueDomainService implements IObservableDomainLe
   }
 
   public onClose(eventHandler: (error: Error) => void) {
+    if (this.connection.state == HubConnectionState.Disconnected) {
+      eventHandler(null);
+      return;
+    }
     this.connection.onclose(eventHandler);
   }
 

@@ -13,6 +13,9 @@ using Microsoft.Extensions.Options;
 
 namespace CK.Observable.MQTTWatcher
 {
+    /// <summary>
+    /// 
+    /// </summary>
     public class MqttObservableServer : IHostedService
     {
         readonly IOptionsMonitor<MQTTObservableWatcherConfig> _config;
@@ -34,22 +37,18 @@ namespace CK.Observable.MQTTWatcher
         }
 
         [CommandHandler]
-        public async Task<MQTTObservableWatcherStartOrRestartCommandResult> HandleStartOrRestartWatchAsync(IActivityMonitor m,
-            IMqttObservableWatcherStartOrRestartCommand command)
+        public async Task<string> HandleStartOrRestartWatchAsync(IActivityMonitor m,
+            IMQTTObservableWatcherStartOrRestartCommand command)
         {
             _processNewClientLock.EnterReadLock();
             try
             {
-                if( !_watchers.TryGetValue( command.MqttClientId, out var watcher ) ) return new MQTTObservableWatcherStartOrRestartCommandResult()
+                if( !_watchers.TryGetValue( command.MqttClientId, out var watcher ) )
                 {
-                    Success = false
-                };
+                    throw new InvalidDataException( $"{command.MqttClientId} does not exists, or is not identified as you. " );
+                }
                 var watchEvent = await watcher.GetStartOrRestartEventAsync( m, command.DomainName, command.TransactionNumber );
-                return new MQTTObservableWatcherStartOrRestartCommandResult()
-                {
-                    JsonExport = watchEvent.JsonExport,
-                    Success = true
-                };
+                return watchEvent.JsonExport;
             }
             finally
             {

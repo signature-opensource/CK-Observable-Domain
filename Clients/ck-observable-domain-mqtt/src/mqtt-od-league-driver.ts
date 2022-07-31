@@ -11,10 +11,20 @@ export class MqttObservableLeagueDomainService implements IObservableDomainLeagu
     constructor(private readonly serverUrl: string, private readonly mqttTopic: string) {
     }
 
-    public async start(): Promise<void> {
-        this.client = await connectAsync(this.serverUrl, {
-            clean: true
-        }, true);
+    startListening(domainsNames: { domainName: string; transactionCount: number; }[]): Promise<{ [domainName: string]: WatchEvent; }> {
+        
+    }
+
+    public async start(): Promise<boolean> {
+        try {
+            this.client = await connectAsync(this.serverUrl, {
+                clean: true
+            }, true);
+            return true;
+        } catch (e) {
+            console.error(e);
+            return false;
+        }
     }
 
     public onMessage(eventHandler: (domainName: string, eventsJson: WatchEvent) => void): void {
@@ -28,7 +38,11 @@ export class MqttObservableLeagueDomainService implements IObservableDomainLeagu
         })
     }
     public onClose(eventHandler: (error: Error) => void): void {
-        this.client.on("disconnect", ()=> {
+        if (!this.client.connected) {
+            eventHandler(null);
+            return;
+        }
+        this.client.on("disconnect", () => {
             eventHandler(null);
         })
     }

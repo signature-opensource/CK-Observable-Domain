@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CK.Cris.Engine" Version="0.10.1--0001-develop" />
+    <PackageReference Include="CK.Cris.TypeScript" Version="0.10.1--0001-develop" />
+    <PackageReference Include="CK.Cris.AspNet" Version="0.10.1--0001-develop" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CK.Observable.DefaultMQTTObservableServer\CK.Observable.DefaultMQTTObservableServer.csproj" />
+  </ItemGroup>
+
+</Project>

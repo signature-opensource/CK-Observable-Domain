@@ -3,13 +3,19 @@
   <WorkingDirectory>WorkingDir</WorkingDirectory>
   <LogLevel>Debug</LogLevel>
   <UseSignatureFiles>True</UseSignatureFiles>
+  <ForceSetup>Full</ForceSetup>
 
   <BinPaths>
-    <BinPath Path="../CK.Observable.DefaultMQTTObservableServer/bin/[Debug|Release]/net6.0">
+    <BinPath Path="../CK.Observable.ServerSample.App/bin/[Debug|Release]/net6.0">
       <ProjectPath>../CK.Observable.ServerSample</ProjectPath>
+      <TypeScript>
+        <OutputPath>../Clients/ck-observable-domain-mqtt/src/generated</OutputPath>
+      </TypeScript>
     </BinPath>
   </BinPaths>
 
+  <Aspect Type="CK.Setup.TypeScriptAspectConfiguration, CK.StObj.TypeScript">
+  </Aspect>
   <WorkingDirectory>WorkingDir</WorkingDirectory>
 
 </Setup>
