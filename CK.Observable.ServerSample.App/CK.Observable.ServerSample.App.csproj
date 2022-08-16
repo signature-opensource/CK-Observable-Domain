@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
@@ -7,9 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CK.Cris.Engine" Version="0.10.1--0001-develop" />
-    <PackageReference Include="CK.Cris.TypeScript" Version="0.10.1--0001-develop" />
-    <PackageReference Include="CK.Cris.AspNet" Version="0.10.1--0001-develop" />
+    <PackageReference Include="CK.Cris.TypeScript" Version="0.0.0--03yku79-explo+v0.10.0" />
+    <PackageReference Include="CK.Cris.AspNet" Version="0.0.0--03yku79-explo+v0.10.0" />
   </ItemGroup>
 
   <ItemGroup>

@@ -15,8 +15,10 @@ applyAmbientValues: (values: { [index: string]: any }, force?: boolean ) =>  {
 };
 
 [SymbolType]: 'CK.Cris.AmbientValues.IAmbientValuesCollectCommand';
-// This SHOULD NOT be called! It's unfortunately public (waiting for the Default Values issue to be solved).
-/*private*/ constructor() {
+/**
+ * This SHOULD NOT be called! It's unfortunately public (waiting for the Default Values issue to be solved).
+ **/
+constructor() {
 
 }
 /**

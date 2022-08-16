@@ -13,9 +13,6 @@ using Microsoft.Extensions.Options;
 
 namespace CK.Observable.MQTTWatcher
 {
-    /// <summary>
-    /// 
-    /// </summary>
     public class MqttObservableServer : IHostedService
     {
         readonly IOptionsMonitor<MQTTObservableWatcherConfig> _config;
@@ -37,8 +34,8 @@ namespace CK.Observable.MQTTWatcher
         }
 
         [CommandHandler]
-        public async Task<string> HandleStartOrRestartWatchAsync(IActivityMonitor m,
-            IMQTTObservableWatcherStartOrRestartCommand command)
+        public async Task<string> HandleStartOrRestartWatchAsync( IActivityMonitor m,
+            IMQTTObservableWatcherStartOrRestartCommand command )
         {
             _processNewClientLock.EnterReadLock();
             try

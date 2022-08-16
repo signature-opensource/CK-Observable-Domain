@@ -11,13 +11,12 @@ using CommunityToolkit.HighPerformance;
 
 namespace CK.Observable.MQTTWatcher
 {
-    public class MqttObservableWatcher : ObservableWatcher
+    class MqttObservableWatcher : ObservableWatcher
     {
         readonly MqttObservableServer _parent;
         readonly IOptionsMonitor<MQTTObservableWatcherConfig> _config;
         readonly MQTTServerAgent _mqttAgent;
         readonly IObservableLeague _league;
-        readonly int _partsCount;
         public MqttObservableWatcher( MqttObservableServer parent, IOptionsMonitor<MQTTObservableWatcherConfig> config, MQTTServerAgent mqttAgent, IObservableLeague league )
             : base( league )
         {

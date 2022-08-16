@@ -3,8 +3,10 @@ import { SymbolType } from '../../Core/IPoco';
 export class AmbientValues {
 
 [SymbolType]: 'CK.Cris.AmbientValues.IAmbientValues';
-// This SHOULD NOT be called! It's unfortunately public (waiting for the Default Values issue to be solved).
-/*private*/ constructor() {
+/**
+ * This SHOULD NOT be called! It's unfortunately public (waiting for the Default Values issue to be solved).
+ **/
+constructor() {
 
 }
 /**

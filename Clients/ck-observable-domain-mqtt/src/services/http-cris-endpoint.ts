@@ -1,11 +1,10 @@
-import { IPoco } from "../generated/CK/Core/IPoco";
-import { CommandModel, ICrisEndpoint } from "../generated/CK/Cris/Model";
+import { CommandModel, ICrisEndpoint, CommandResult, Command } from "@signature/generated/CK/Cris/Model";
 import { AxiosInstance } from "axios";
-export class HttpCrisEndpoint {
+export class HttpCrisEndpoint implements ICrisEndpoint {
     constructor(private readonly axios: AxiosInstance) {
     }
 
-    send<T>(command: { commandModel: CommandModel<T> }): Promise<T> {
+    send<T>(command: T): Promise<CommandResult<T>> {
         
         this.axios.post('', this.crisified(command) );
         return undefined;

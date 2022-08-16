@@ -9,7 +9,7 @@
     <BinPath Path="../CK.Observable.ServerSample.App/bin/[Debug|Release]/net6.0">
       <ProjectPath>../CK.Observable.ServerSample</ProjectPath>
       <TypeScript>
-        <OutputPath>../Clients/ck-observable-domain-mqtt/src/generated</OutputPath>
+        <OutputPath>../Clients/signature-generated/</OutputPath>
       </TypeScript>
     </BinPath>
   </BinPaths>
