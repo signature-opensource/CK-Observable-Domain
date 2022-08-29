@@ -255,11 +255,12 @@ namespace CK.Observable
         (Transaction?, Exception?) DoCreateObservableTransaction( IActivityMonitor m, bool throwException )
         {
             Debug.Assert( m != null && _lock.IsWriteLockHeld );
-            // This group is left Open on success. It will be closed at the end of the transaction.
-            var group = m.OpenTrace( "Starting transaction." );
             var startTime = DateTime.UtcNow;
+            // This group is left Open on success. It will be closed at the end of the transaction.
+            IDisposableGroup group = null!;
             try
             {
+                group = m.OpenTrace( "Starting transaction." );
                 // This could throw and be handled just like other pre-transaction errors (when a buggy client throws during OnTransactionStart).
                 // Depending on throwException parameter, it will be re-thrown or returned (returning the exception is for TryModifyAsync).
                 // See DoDispose method for the discussion about disposal...
