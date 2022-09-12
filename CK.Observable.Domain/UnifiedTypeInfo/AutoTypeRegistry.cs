@@ -65,8 +65,6 @@ namespace CK.Observable
             Type IObjectExportTypeDriver.BaseType => Type;
 
 
-            string SimpleTypeName => _type.AssemblyQualifiedName.Split( ',' )[0];
-
             void IObjectExportTypeDriver.Export( object o, int num, ObjectExporter exporter )
             {
                 DoExport( o, num, exporter );
@@ -235,7 +233,7 @@ namespace CK.Observable
 
             if( exporter != null && exporterBase != null )
             {
-                throw new InvalidOperationException( $"Ambiguous methods 'void {t.Name}.Export()'. Choose among the two the Export method that must be used." );
+                Throw.InvalidOperationException( $"Ambiguous methods 'void {t.Name}.Export()'. Choose among the two the Export method that must be used." );
             }
         }
 

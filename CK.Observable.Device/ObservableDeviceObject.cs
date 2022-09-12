@@ -215,7 +215,7 @@ namespace CK.Observable.Device
             if( !IsBoundDevice )
             {
                 var msg = $"Device '{DeviceName}' of type '{GetType().Name}' is not bound to any device. Available device names: '{_bridge.CurrentlyAvailableDeviceNames.Concatenate( "', '" )}'.";
-                throw new InvalidOperationException( msg );
+                Throw.InvalidOperationException( msg );
             }
         }
 

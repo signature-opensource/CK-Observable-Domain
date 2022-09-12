@@ -28,8 +28,8 @@ namespace CK.Core
                                       bool parametersAreRequired,
                                       IEnumerable<object>? parameters = null )
         {
-            if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
-            if( t == null ) throw new ArgumentNullException( nameof( t ) );
+            Throw.CheckNotNullArgument( monitor );
+            Throw.CheckNotNullArgument( t );
             using( monitor.OpenDebug( $"Creating instance of type: {t}." ) )
                 try
                 {

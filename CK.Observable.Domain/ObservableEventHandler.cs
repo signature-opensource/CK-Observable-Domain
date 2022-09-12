@@ -84,7 +84,7 @@ namespace CK.Observable
         /// <returns>True on success, false if at least one handler has thrown.</returns>
         public bool SafeRaise( IActivityMonitor monitor, object sender )
         {
-            if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
+            Throw.CheckNotNullArgument( monitor );
             bool success = true;
             var h = _handler.Cleanup();
             for( int i = 0; i < h.Length; ++i )

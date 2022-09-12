@@ -55,7 +55,7 @@ namespace CK.Observable.League
         /// <returns>The new domain.</returns>
         public ODomain CreateDomain( string domainName, IEnumerable<string>? rootTypes, ManagedDomainOptions? initialOptions = null )
         {
-            if( String.IsNullOrWhiteSpace( domainName ) ) throw new ArgumentOutOfRangeException( nameof( domainName ) );
+            Throw.CheckNotNullOrWhiteSpaceArgument( domainName );
             Debug.Assert( _league != null );
             var roots = rootTypes?.ToArray() ?? Array.Empty<string>();
             IInternalManagedDomain shell = _league.CreateDomain( Domain.Monitor, domainName, roots );

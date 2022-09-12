@@ -1,3 +1,4 @@
+using CK.Core;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -23,7 +24,7 @@ namespace CK.Observable
 
         public void Export( IEnumerable<KeyValuePair<TKey, TValue>> o, int num, ObjectExporter exporter )
         {
-            if( exporter == null ) throw new ArgumentNullException( nameof( exporter ) );
+            Throw.CheckNotNullArgument( exporter );
             exporter.ExportMap( num, o, null, null );
         }
 

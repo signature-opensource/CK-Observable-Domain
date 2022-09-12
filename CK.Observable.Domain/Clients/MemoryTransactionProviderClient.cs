@@ -247,14 +247,18 @@ namespace CK.Observable
                 var k = (CompressionKind)s.ReadByte();
                 if( k == CompressionKind.None || k == CompressionKind.GZiped ) return (k, 2);
             }
-            throw new InvalidDataException( "Invalid Snapshot header." );
+            Throw.InvalidDataException( "Invalid Snapshot header." );
+            // Unreachable.
+            return default;
         }
 
         static CompressionKind ReadHeader( ReadOnlySpan<byte> bytes )
         {
             if( bytes.SequenceEqual( _headerNone.AsSpan() ) ) return CompressionKind.None;
             else if( bytes.SequenceEqual( _headerGZip.AsSpan() ) ) return CompressionKind.GZiped;
-            throw new InvalidDataException( "Invalid Snapshot header." );
+            Throw.InvalidDataException( "Invalid Snapshot header." );
+            // Unreachable.
+            return default;
         }
 
         /// <summary>
