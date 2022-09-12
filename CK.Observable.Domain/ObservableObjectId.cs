@@ -71,8 +71,8 @@ namespace CK.Observable
         /// <param name="uniquifier">The uniquifier. Must not be negative nor greater than <see cref="MaxUniquifierValue"/>.</param>
         public ObservableObjectId( int idx, int uniquifier )
         {
-            if( idx < 0 || idx > MaxIndexValue ) throw new ArgumentOutOfRangeException( nameof( idx ) );
-            if( uniquifier < 0 || uniquifier > MaxUniquifierValue ) throw new ArgumentOutOfRangeException( nameof( uniquifier ) );
+            Throw.CheckOutOfRangeArgument( idx >= 0 && idx <= MaxIndexValue );
+            Throw.CheckOutOfRangeArgument( uniquifier >= 0 && uniquifier <= MaxUniquifierValue );
             UniqueId = (long)(((ulong)uniquifier) << IndexBitCount) | (uint)idx;
             Debug.Assert( UniqueId < MaxValue, "UniqueId < MaxValue" );
             Debug.Assert( IsValid, $"IsValid ({idx},{uniquifier}) => {UniqueId}" );
@@ -90,7 +90,7 @@ namespace CK.Observable
         /// <param name="throwOnInvalid">Whether this must throw an <see cref="ArgumentOutOfRangeException"/> if the id is negative or greater or equal to <see cref="MaxValue"/>.</param>
         public ObservableObjectId( long id, bool throwOnInvalid = true )
         {
-            if( throwOnInvalid && (id < 0 || id >= MaxValue) ) throw new ArgumentOutOfRangeException( nameof( id ) );
+            if( throwOnInvalid && (id < 0 || id >= MaxValue) ) Throw.ArgumentOutOfRangeException( nameof( id ) );
             UniqueId = id;
         }
 

@@ -1240,7 +1240,7 @@ namespace CK.Observable
             if( !_lock.IsWriteLockHeld )
             {
                 // Since the lock is not held, we may be disposing or disposed.
-                if( _transactionStatus == CurrentTransactionStatus.Disposing ) throw new ObjectDisposedException( $"Domain {DomainName}" );
+                if( _transactionStatus == CurrentTransactionStatus.Disposing ) Throw.ObjectDisposedException( $"Domain {DomainName}" );
                 if( _currentTran == null ) Throw.InvalidOperationException( "A transaction is required." );
                 if( _lock.IsReadLockHeld ) Throw.InvalidOperationException( "Concurrent access: only Read lock has been acquired." );
                 Throw.InvalidOperationException( "Concurrent access: write lock must be acquired." );
@@ -1274,14 +1274,14 @@ namespace CK.Observable
             {
                 if( !domain.Save( monitor, s, millisecondsTimeout: milliSecondsTimeout, debugMode: useDebugMode ) )
                 {
-                    throw new Exception( "First Save failed: Unable to acquire lock." );
+                    Throw.Exception( "First Save failed: Unable to acquire lock." );
                 }
                 var originalBytes = s.ToArray();
                 var originalTransactionSerialNumber = domain.TransactionSerialNumber;
                 s.Position = 0;
                 if( !domain.Load( monitor, RewindableStream.FromStream( s ), millisecondsTimeout: milliSecondsTimeout, startTimer: null ) )
                 {
-                    throw new Exception( "Reload failed: Unable to acquire lock." );
+                    Throw.Exception( "Reload failed: Unable to acquire lock." );
                 }
                 if( restoreSidekicks && domain._sidekickManager.HasWaitingSidekick )
                 {
@@ -1290,7 +1290,7 @@ namespace CK.Observable
                 using var checker = BinarySerializer.CreateCheckedWriteStream( originalBytes );
                 if( !domain.Save( monitor, checker, millisecondsTimeout: milliSecondsTimeout, debugMode: useDebugMode ) )
                 {
-                    throw new Exception( "Second Save failed: Unable to acquire lock." );
+                    Throw.Exception( "Second Save failed: Unable to acquire lock." );
                 }
                 return domain.CurrentLostObjectTracker!;
             }

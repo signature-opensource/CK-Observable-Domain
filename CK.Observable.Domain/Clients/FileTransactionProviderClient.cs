@@ -51,7 +51,7 @@ namespace CK.Observable
         public FileTransactionProviderClient( NormalizedPath filePath, int minimumDueTimeMs, IObservableDomainClient? next = null )
             : base( next )
         {
-            if( minimumDueTimeMs < -1 ) throw new ArgumentException( $"{minimumDueTimeMs} is not a valid value. Valid values are -1, 0, or above.", nameof( minimumDueTimeMs ) );
+            if( minimumDueTimeMs < -1 ) Throw.ArgumentException( $"{minimumDueTimeMs} is not a valid value. Valid values are -1, 0, or above.", nameof( minimumDueTimeMs ) );
             _filePath = filePath;
             _tmpFilePath = _filePath + ".tmp";
             _bakFilePath = _filePath + ".bak";
@@ -206,7 +206,9 @@ namespace CK.Observable
         [DoesNotReturn]
         protected override ObservableDomain DeserializeDomain( IActivityMonitor monitor, RewindableStream stream, bool? startTimer )
         {
-            throw new NotSupportedException( "FileTransactionProviderClient is not a domain manager." );
+            Throw.NotSupportedException( "FileTransactionProviderClient is not a domain manager." );
+            // Unreachable.
+            return null!;
         }
 
 

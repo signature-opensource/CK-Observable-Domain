@@ -1,3 +1,4 @@
+using CK.Core;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -80,7 +81,7 @@ namespace CK.Observable
                 {
                     if( kind != ObjectExportedKind.List )
                     {
-                        throw new InvalidOperationException( $"Only List and Object export support untracked (non numbered) objects: ObjectExportedKind = {kind}" );
+                        Throw.InvalidOperationException( $"Only List and Object export support untracked (non numbered) objects: ObjectExportedKind = {kind}" );
                     }
                     _w.Write( "[" );
                     _commaNeeded = false;

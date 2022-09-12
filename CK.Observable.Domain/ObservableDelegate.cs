@@ -62,7 +62,7 @@ namespace CK.Observable
             {
                 var msg = $"Unable to find {(isStatic ? "static" : "")} method {methodName} on type {typeName} with parameters {paramTypes.Select( t => t.Name ).Concatenate()}.";
                 msg += Environment.NewLine + "If the event has been suppressed, please use the static helper: ObservableEventHandler.Skip( IBinaryDeserializer d ).";
-                throw new Exception( msg );
+                Throw.Exception( msg );
             }
 
             _d = null;
@@ -243,13 +243,13 @@ namespace CK.Observable
 
         static void CheckNonNullAndValidTarget( Delegate value, string? eventName )
         {
-            if( value == null ) throw new ArgumentNullException( eventName );
+            Throw.CheckNotNullArgument( value );
             if( value.Target != null
                 && !(value.Target is IDestroyable)
                 && !(value.Target is ObservableDomainSidekick))
             {
                 if( eventName == null ) eventName = "<missing event name>";
-                throw new ArgumentException( $"Only static methods or Observable/InternalObject or Sidekick's instance methods can be registered on '{eventName}' event.", eventName );
+                Throw.ArgumentException( eventName, $"Only static methods or Observable/InternalObject or Sidekick's instance methods can be registered on '{eventName}' event." );
             }
         }
     }
