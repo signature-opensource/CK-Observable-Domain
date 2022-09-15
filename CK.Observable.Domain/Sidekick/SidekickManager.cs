@@ -415,7 +415,7 @@ namespace CK.Observable
                 }
                 if( !foundHandler )
                 {
-                    var msg = $"No sidekick found to handle command type '{c.GetType()}'.";
+                    var msg = $"No sidekick found to handle command type '{c.Command.GetType()}'.";
                     if( known != null )
                     {
                         msg += $" The presumably known target '{known}' rejected it.";
