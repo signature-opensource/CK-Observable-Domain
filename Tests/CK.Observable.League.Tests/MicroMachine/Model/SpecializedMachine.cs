@@ -30,7 +30,7 @@ namespace CK.Observable.League.Tests.MicroMachine
         public void CmdToTheMachine( string bugOrNot )
         {
             ++CommandReceivedCount;
-            Domain.SendCommand( new MachineCommand( bugOrNot ) );
+            Domain.SendBroadcastCommand( new MachineCommand( bugOrNot ) );
             if( bugOrNot == "bug in sending" ) throw new Exception( "Bug in sending command (inside the transaction)." );
         }
 

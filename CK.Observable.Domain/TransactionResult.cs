@@ -15,7 +15,7 @@ namespace CK.Observable
     {
         static readonly Task<Exception?> _noErrorResult = Task.FromResult((Exception?)null );
 
-        // These are used by SideKickManager.
+        // These are used by SidekickManager.
         internal ActionRegistrar<PostActionContext>? _postActions;
         internal ActionRegistrar<PostActionContext>? _domainPostActions;
 
