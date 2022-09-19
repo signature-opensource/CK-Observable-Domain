@@ -64,7 +64,7 @@ namespace CK.Observable.Device.Tests
 
             // Send command during OnConfigurationChanged
             var deviceCommand = CreateDeviceCommand<SampleCommand>();
-            Domain.SendCommand( deviceCommand );
+            Domain.SendBroadcastCommand( deviceCommand );
         }
     }
 }

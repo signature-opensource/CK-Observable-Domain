@@ -169,7 +169,7 @@ namespace CK.Observable.Domain.Tests
 
             public ObservableChannel<string> ErrorOnSuccefulTransactionError { get; } = new ObservableChannel<string>();
 
-            public void SendNumber( HandlerTarget t, bool useAsync = false ) => Domain.SendCommand( CreateCommand( t, useAsync ) );
+            public void SendNumber( HandlerTarget t, bool useAsync = false ) => Domain.SendBroadcastCommand( CreateCommand( t, useAsync ) );
 
             public void RaiseError( int number )
             {
@@ -186,11 +186,11 @@ namespace CK.Observable.Domain.Tests
                         t = HandlerTarget.Domain;
                         number = -3;
                     }
-                    Domain.SendCommand( new SimpleCommand() { Target = t, Number = number } );
+                    Domain.SendBroadcastCommand( new SimpleCommand() { Target = t, Number = number } );
                 }
             }
 
-            public void SendWait( int time, WaitTarget target ) => Domain.SendCommand( new WaitCommand { WaitTime = time, Target = target } );
+            public void SendWait( int time, WaitTarget target ) => Domain.SendBroadcastCommand( new WaitCommand { WaitTime = time, Target = target } );
 
             public void CreateNewTimers( int nbTimers, HandlerTarget target, int ms, int maxCount )
             {

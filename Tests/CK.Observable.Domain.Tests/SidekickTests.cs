@@ -146,7 +146,7 @@ namespace CK.Observable.Domain.Tests
             {
                 if( Domain.CurrentTransactionStatus.IsRegular() )
                 {
-                    Domain.SendCommand( new CmdSimple() { Text = CommandMessage } );
+                    Domain.SendBroadcastCommand( new CmdSimple() { Text = CommandMessage } );
                 }
             }
 
@@ -247,7 +247,7 @@ namespace CK.Observable.Domain.Tests
                     {
                         _message = value;
                         // This doesn't use FodyWeaving and OnCommandMessageChanged hook.
-                        Domain.SendCommand( new CmdSimple() { Text = _message } );
+                        Domain.SendBroadcastCommand( new CmdSimple() { Text = _message } );
                     }
 
                 }
