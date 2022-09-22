@@ -115,7 +115,7 @@ namespace CK.Observable
         /// (at least one <see cref="ObservableDomainSidekick.ExecuteCommand(IActivityMonitor, in SidekickCommand)"/> must return true).
         /// When set to true, a simple warning is emitted if the command failed to be handled.
         /// </param>
-        public void SendCommand( object command, bool isOptionalExecution = false )
+        public void SendBroadcastCommand( object command, bool isOptionalExecution = false )
         {
             _d.SendCommand( _o, new ObservableDomainCommand( command, null, isOptionalExecution ) );
         }

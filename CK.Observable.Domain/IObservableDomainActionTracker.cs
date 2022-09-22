@@ -17,8 +17,7 @@ namespace CK.Observable
         /// </summary>
         /// <param name="monitor">The monitor of the current transaction.</param>
         /// <param name="time">The <see cref="TransactionResult.StartTimeUtc"/>.</param>
-        /// <returns>True to continue the process, false to silently skip the call modify actions.</returns>
-        bool BeforeModify( IActivityMonitor monitor, DateTime time );
+        void BeforeModify( IActivityMonitor monitor, DateTime time );
 
         /// <summary>
         /// Called after the <see cref="ObservableDomain.Modify(IActivityMonitor, Action, int)"/> action execution

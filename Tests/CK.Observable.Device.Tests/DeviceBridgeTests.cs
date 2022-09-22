@@ -257,7 +257,8 @@ namespace CK.Observable.Device.Tests
             {
                 var directState = device.GetSafeState();
                 Debug.Assert( directState != null );
-                directState.SyncCommandCount.Should().Be( 1 );
+                // The OnConfigurationChanged sent a SampleCommad.
+                directState.SyncCommandCount.Should().Be( 2 );
                 device.SendSimpleCommand();
             } );
 
@@ -266,7 +267,7 @@ namespace CK.Observable.Device.Tests
             {
                 var directState = device.GetSafeState();
                 Debug.Assert( directState != null );
-                directState.SyncCommandCount.Should().Be( 2 );
+                directState.SyncCommandCount.Should().Be( 3 );
             } );
 
             TestHelper.Monitor.Info( "Disposing Domain..." );

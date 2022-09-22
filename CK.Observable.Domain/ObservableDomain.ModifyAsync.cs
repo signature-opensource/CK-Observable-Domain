@@ -304,29 +304,24 @@ namespace CK.Observable
                 {
                     _timeManager.RaiseElapsedEvent( t.Monitor, t.StartTime );
                 }
-                bool skipped = false;
                 foreach( var tracker in _trackers )
                 {
-                    if( !tracker.BeforeModify( t.Monitor, t.StartTime ) )
-                    {
-                        skipped = true;
-                        break;
-                    }
+                    tracker.BeforeModify( t.Monitor, t.StartTime );
                 }
                 bool updatedMinHeapDone = false;
-                if( !skipped && actions != null )
+                if( actions != null )
                 {
                     actions();
-                    // Always call the "final call" to update the lock free sidekick index.
-                    if( _sidekickManager.CreateWaitingSidekicks( t.Monitor, t.AddError, true ) )
+                }
+                // Always call the "final call" to update the lock free sidekick index.
+                if( _sidekickManager.CreateWaitingSidekicks( t.Monitor, t.AddError, true ) )
+                {
+                    var now = DateTime.UtcNow;
+                    foreach( var tracker in _trackers ) tracker.AfterModify( t.Monitor, t.StartTime, now - t.StartTime );
+                    if( _timeManager.IsRunning )
                     {
-                        var now = DateTime.UtcNow;
-                        foreach( var tracker in _trackers ) tracker.AfterModify( t.Monitor, t.StartTime, now - t.StartTime );
-                        if( _timeManager.IsRunning )
-                        {
-                            updatedMinHeapDone = true;
-                            _timeManager.RaiseElapsedEvent( t.Monitor, now );
-                        }
+                        updatedMinHeapDone = true;
+                        _timeManager.RaiseElapsedEvent( t.Monitor, now );
                     }
                 }
                 if( !updatedMinHeapDone )

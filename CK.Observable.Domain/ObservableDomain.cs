@@ -47,7 +47,7 @@ namespace CK.Observable
         public const int DomainSecretKeyLength = 512;
 
         /// <summary>
-        /// Gets an opaque object that is a command (can be send to <see cref="DomainView.SendCommand(object, bool)"/>) that
+        /// Gets an opaque object that is a command (can be send to <see cref="DomainView.SendBroadcastCommand(object, bool)"/>) that
         /// triggers a snapshot of the domain (if a <see cref="IObservableDomainClient"/> can honor it).
         /// </summary>
         public static readonly object SnapshotDomainCommand = DBNull.Value;

@@ -54,5 +54,17 @@ namespace CK.Observable.Device.Tests
         /// The SendDeviceCommand helper enables easy command sending.
         /// </summary>
         public void SendSimpleCommand( string? messagePrefix = null ) => SendDeviceCommand<SampleCommand>( c => c.MessagePrefix = messagePrefix );
+
+        protected override void OnConfigurationChanged( DeviceConfiguration? previousConfiguration )
+        {
+            if( Configuration != null && Configuration is not SampleDeviceConfiguration configuration )
+            {
+                Throw.ArgumentException( $"{nameof( Configuration )} must be of type {nameof( SampleDeviceConfiguration )}, but was {Configuration?.GetType().Name ?? "<null>"}." );
+            }
+
+            // Send command during OnConfigurationChanged
+            var deviceCommand = CreateDeviceCommand<SampleCommand>();
+            Domain.SendBroadcastCommand( deviceCommand );
+        }
     }
 }
