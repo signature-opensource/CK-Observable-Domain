@@ -5,10 +5,10 @@
     <LangVersion>9</LangVersion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.StObj.Model" Version="20.0.0" />
+    <PackageReference Include="CK.StObj.Model" Version="21.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
     <PackageReference Include="Fody" PrivateAssets="all" Version="6.6.3" />
-    <PackageReference Include="PropertyChanged.Fody" PrivateAssets="all" Version="4.0.0" />
+    <PackageReference Include="PropertyChanged.Fody" PrivateAssets="all" Version="4.0.3" />
     <ProjectReference Include="..\CK.Observable.Domain\CK.Observable.Domain.csproj" />
   </ItemGroup>
 </Project>
