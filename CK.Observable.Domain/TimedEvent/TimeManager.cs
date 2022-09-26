@@ -71,7 +71,7 @@ namespace CK.Observable
             get => _autoTimer;
             set
             {
-                if( value == null ) throw new ArgumentNullException( nameof( Timer ) );
+                Throw.CheckNotNullArgument( value );
                 if( _autoTimer != value )
                 {
                     _autoTimer = value;
@@ -173,8 +173,8 @@ namespace CK.Observable
         public void Remind( DateTime dueTimeUtc, SafeEventHandler<ObservableReminderEventArgs> callback, SuspendableClock? clock, object? tag )
         {
             // Utc is checked by the DueTimeUtc setter below.
-            if( dueTimeUtc == Util.UtcMinValue || dueTimeUtc == Util.UtcMaxValue ) throw new ArgumentException( nameof( dueTimeUtc ), $"Must be a Utc DateTime, not UtcMinValue nor UtcMaxValue: {dueTimeUtc.ToString( "o" )}." );
-            if( callback == null ) throw new ArgumentNullException( nameof( callback ) );
+            Throw.CheckArgument( dueTimeUtc != Util.UtcMinValue && dueTimeUtc != Util.UtcMaxValue );
+            Throw.CheckNotNullArgument( callback );
             var r = GetPooledReminder();
             r.Elapsed += callback;
             r.Tag = tag;

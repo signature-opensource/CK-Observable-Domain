@@ -86,7 +86,7 @@ namespace CK.Observable
                     _exporterBase.Invoke( o, new object[] { num, exporter, props } );
                 }
                 else
-                { 
+                {
                     if( _exportableProperties.Count == 0 )
                     {
                         exporter.Target.EmitEmptyObject( num );
@@ -230,7 +230,7 @@ namespace CK.Observable
 
             if( exporter != null && exporterBase != null )
             {
-                throw new InvalidOperationException( $"Ambiguous methods 'void {t.Name}.Export()'. Choose among the two the Export method that must be used." );
+                Throw.InvalidOperationException( $"Ambiguous methods 'void {t.Name}.Export()'. Choose among the two the Export method that must be used." );
             }
         }
 

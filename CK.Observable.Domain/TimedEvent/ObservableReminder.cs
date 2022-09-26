@@ -31,7 +31,7 @@ namespace CK.Observable
         /// </param>
         public ObservableReminder( DateTime dueTimeUtc )
         {
-            if( dueTimeUtc.Kind != DateTimeKind.Utc ) throw new ArgumentException( nameof( dueTimeUtc ), "Must be a Utc DateTime." );
+            Throw.CheckArgument( dueTimeUtc.Kind == DateTimeKind.Utc );
             ExpectedDueTimeUtc = dueTimeUtc;
             ReusableArgs = new ObservableReminderEventArgs( this );
         }
@@ -83,7 +83,7 @@ namespace CK.Observable
         /// </summary>
         public override void Destroy()
         {
-            if( IsPooled ) throw new InvalidOperationException( "A pooled ObservableReminder cannot be disposed." );
+            if( IsPooled ) Throw.InvalidOperationException( "A pooled ObservableReminder cannot be disposed." );
             base.Destroy();
         }
 

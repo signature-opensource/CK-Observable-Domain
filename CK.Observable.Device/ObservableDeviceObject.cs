@@ -166,6 +166,8 @@ namespace CK.Observable.Device
 
         /// <summary>
         /// Gets this device control status.
+        /// Uses <see cref="SendDeviceControlCommand(DeviceControlAction)"/> to change how
+        /// this device object controls the actual device.
         /// </summary>
         public DeviceControlStatus DeviceControlStatus => _deviceControlStatus;
 
@@ -213,7 +215,7 @@ namespace CK.Observable.Device
             if( !IsBoundDevice )
             {
                 var msg = $"Device '{DeviceName}' of type '{GetType().Name}' is not bound to any device. Available device names: '{_bridge.CurrentlyAvailableDeviceNames.Concatenate( "', '" )}'.";
-                throw new InvalidOperationException( msg );
+                Throw.InvalidOperationException( msg );
             }
         }
 
@@ -289,57 +291,57 @@ namespace CK.Observable.Device
             switch( action )
             {
                 case DeviceControlAction.SafeReleaseControl:
-                {
-                    // Nothing special to do: the set controller key command does this
-                    // and our controller key must be honored.
-                    var cmd = _bridge.CreateSetControllerKeyCommand();
-                    Debug.Assert( cmd.NewControllerKey == null );
-                    SendBasicCommand( cmd );
-                    break;
-                }
+                    {
+                        // Nothing special to do: the set controller key command does this
+                        // and our controller key must be honored.
+                        var cmd = _bridge.CreateSetControllerKeyCommand();
+                        Debug.Assert( cmd.NewControllerKey == null );
+                        SendBasicCommand( cmd );
+                        break;
+                    }
                 case DeviceControlAction.SafeTakeControl:
-                {
-                    // Nothing special to do: the set controller key command does this
-                    // and our controller key must be honored.
-                    var cmd = _bridge.CreateSetControllerKeyCommand();
-                    cmd.NewControllerKey = Domain.DomainName;
-                    SendBasicCommand( cmd );
-                    break;
-                }
+                    {
+                        // Nothing special to do: the set controller key command does this
+                        // and our controller key must be honored.
+                        var cmd = _bridge.CreateSetControllerKeyCommand();
+                        cmd.NewControllerKey = Domain.DomainName;
+                        SendBasicCommand( cmd );
+                        break;
+                    }
                 case DeviceControlAction.ForceReleaseControl:
-                {
-                    // This reconfigures the device only if needed.
-                    if( Configuration.ControllerKey != null )
                     {
-                        var c = Configuration.DeepClone();
-                        c.ControllerKey = null;
-                        ApplyDeviceConfiguration( c );
+                        // This reconfigures the device only if needed.
+                        if( Configuration.ControllerKey != null )
+                        {
+                            var c = Configuration.DeepClone();
+                            c.ControllerKey = null;
+                            ApplyDeviceConfiguration( c );
+                        }
+                        else
+                        {
+                            // Uses the ReleaseControl that sends an unsafe command.
+                            Domain.Monitor.Info( $"The device '{DeviceName}' is not controlled by its configuration. Using ReleaseControl action instead of reconfiguring via ForceReleaseControl." );
+                            action = DeviceControlAction.ReleaseControl;
+                        }
+                        break;
                     }
-                    else
-                    {
-                        // Uses the ReleaseControl that sends an unsafe command.
-                        Domain.Monitor.Info( $"The device '{DeviceName}' is not controlled by its configuration. Using ReleaseControl action instead of reconfiguring via ForceReleaseControl." );
-                        action = DeviceControlAction.ReleaseControl;
-                    }
-                    break;
-                }
                 case DeviceControlAction.TakeOwnership:
-                {
-                    // This reconfigures the device only if needed.
-                    if( Configuration.ControllerKey != Domain.DomainName )
                     {
-                        var c = Configuration.DeepClone();
-                        c.ControllerKey = Domain.DomainName;
-                        ApplyDeviceConfiguration( c );
+                        // This reconfigures the device only if needed.
+                        if( Configuration.ControllerKey != Domain.DomainName )
+                        {
+                            var c = Configuration.DeepClone();
+                            c.ControllerKey = Domain.DomainName;
+                            ApplyDeviceConfiguration( c );
+                        }
+                        else
+                        {
+                            // Uses the TakeControl that sends an unsafe command.
+                            Domain.Monitor.Info( $"The device '{DeviceName}' is already owned by this device. Using TakeControl action instead of reconfiguring via {action}." );
+                            action = DeviceControlAction.TakeControl;
+                        }
+                        break;
                     }
-                    else
-                    {
-                        // Uses the TakeControl that sends an unsafe command.
-                        Domain.Monitor.Info( $"The device '{DeviceName}' is already owned by this device. Using TakeControl action instead of reconfiguring via {action}." );
-                        action = DeviceControlAction.TakeControl;
-                    }
-                    break;
-                }
             }
             if( action == DeviceControlAction.TakeControl || action == DeviceControlAction.ReleaseControl )
             {

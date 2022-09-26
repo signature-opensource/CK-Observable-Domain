@@ -44,7 +44,8 @@ namespace CK.Observable
         public ObservableTimer( string name, DateTime firstDueTimeUtc, int intervalMilliSeconds = 1000, bool isActive = true )
             : this( firstDueTimeUtc, intervalMilliSeconds, isActive )
         {
-            Name = name ?? throw new ArgumentNullException( nameof( name ) );
+            Throw.CheckNotNullArgument( name );
+            Name = name;
         }
 
         ObservableTimer( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
@@ -248,8 +249,8 @@ namespace CK.Observable
 
         static void CheckArguments( DateTime firstDueTimeUtc, int intervalMilliSeconds )
         {
-            if( firstDueTimeUtc.Kind != DateTimeKind.Utc ) throw new ArgumentException( nameof( firstDueTimeUtc ), "Must be a Utc DateTime." );
-            if( intervalMilliSeconds <= 0 ) throw new ArgumentOutOfRangeException( nameof( intervalMilliSeconds ) );
+            Throw.CheckArgument( firstDueTimeUtc.Kind == DateTimeKind.Utc );
+            Throw.CheckOutOfRangeArgument( intervalMilliSeconds > 0 );
         }
 
         /// <summary>

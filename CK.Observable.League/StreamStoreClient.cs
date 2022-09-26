@@ -184,7 +184,7 @@ namespace CK.Observable.League
                     CreateSnapshot( monitor, result, true, true );
                     if( !await SaveSnapshotAsync( monitor, false ) )
                     {
-                        throw new Exception( $"Unable to initialize the store for '{_storeName}'." );
+                        Throw.Exception( $"Unable to initialize the store for '{_storeName}'." );
                     }
                 }
             }

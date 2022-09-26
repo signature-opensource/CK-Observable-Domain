@@ -22,7 +22,7 @@ namespace CK.Observable
         /// <summary>
         /// Exports an instance.
         /// </summary>
-        /// <param name="o">The object instance. Must not ne null.</param>
+        /// <param name="o">The object instance. Must not be null.</param>
         /// <param name="num">The reference number for this object. Always -1 for value type.</param>
         /// <param name="exporter">The exporter.</param>
         void Export( object o, int num, ObjectExporter exporter );

@@ -28,7 +28,9 @@ namespace CK.Core
         internal ActionRegistrar<T> AcquireOnce( object owner )
         {
             if( Interlocked.Exchange( ref _owner, owner ) == null ) return this;
-            throw new InvalidOperationException();
+            Throw.InvalidOperationException();
+            // Unreached.
+            return null!;
         }
 
         /// <summary>
@@ -93,7 +95,7 @@ namespace CK.Core
                     case Func<T, Task> tA: _actions.Add( tA ); break;
                     case Func<T, ValueTask> vAsync: _actions.Add( c => vAsync( c ).AsTask() ); break;
                     case Action<T> sync: _actions.Add( c => { sync( c ); return Task.CompletedTask; } ); break;
-                    default: throw new ArgumentException( "Expected AsyncExecutionContext action function.", nameof( actions ) );
+                    default: Throw.ArgumentException( "Expected AsyncExecutionContext action function.", nameof( actions ) ); break;
                 }
             }
         }
@@ -216,20 +218,20 @@ namespace CK.Core
 
         void GuardAdd( bool nullArg )
         {
-            if( nullArg ) throw new ArgumentNullException( "action" );
+            if( nullArg ) Throw.ArgumentNullException( "action" );
             if( _handlingStep != null )
             {
-                throw new InvalidOperationException( _handlingStep );
+                Throw.InvalidOperationException( _handlingStep );
             }
         }
 
         [MemberNotNull( nameof( _onSuccess ) )]
         void GuardSuccess( bool nullArg )
         {
-            if( nullArg ) throw new ArgumentNullException( "handler" );
+            if( nullArg ) Throw.ArgumentNullException( "handler" );
             if( ReferenceEquals( _handlingStep, _errorStep ) || ReferenceEquals( _handlingStep, _finallyStep ) )
             {
-                throw new InvalidOperationException( _handlingStep );
+                Throw.InvalidOperationException( _handlingStep );
             }
             if( _onSuccess == null ) _onSuccess = new List<Func<T, Task>>();
         }
@@ -237,10 +239,10 @@ namespace CK.Core
         [MemberNotNull( nameof( _onError ) )]
         void GuardError( bool nullArg )
         {
-            if( nullArg ) throw new ArgumentNullException( "errorHandler" );
+            if( nullArg ) Throw.ArgumentNullException( "errorHandler" );
             if( ReferenceEquals( _handlingStep, _successStep ) || ReferenceEquals( _handlingStep, _finallyStep ) )
             {
-                throw new InvalidOperationException( _handlingStep );
+                Throw.InvalidOperationException( _handlingStep );
             }
             if( _onError == null ) _onError = new List<Func<T, Exception, Task>>();
         }
@@ -248,7 +250,7 @@ namespace CK.Core
         [MemberNotNull( nameof( _onFinally ) )]
         void GuardFinally( bool nullArg )
         {
-            if( nullArg ) throw new ArgumentNullException( "finalHandler" );
+            if( nullArg ) Throw.ArgumentNullException( "finalHandler" );
             if( _onFinally == null ) _onFinally = new List<Func<T, Task>>();
         }
     }

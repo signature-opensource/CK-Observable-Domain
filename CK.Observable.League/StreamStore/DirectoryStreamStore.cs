@@ -30,7 +30,7 @@ namespace CK.Observable
 
         string GetFullPath( ref string name )
         {
-            if( String.IsNullOrEmpty( name ) ) throw new ArgumentNullException( nameof( name ) );
+            Throw.CheckNotNullOrEmptyArgument( name );
             name = name.ToLowerInvariant();
             return _path + name;
         }
@@ -38,7 +38,7 @@ namespace CK.Observable
         string GetFullWritePath( ref string name )
         {
             var p = GetFullPath( ref name );
-            if( FileUtil.IndexOfInvalidFileNameChars( name ) >= 0 ) throw new ArgumentException( "Invalid characters in name.", nameof( name ) );
+            Throw.CheckArgument( FileUtil.IndexOfInvalidFileNameChars( name ) < 0 );
             return p;
         }
 

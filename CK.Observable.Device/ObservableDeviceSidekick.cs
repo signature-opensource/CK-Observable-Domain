@@ -76,7 +76,7 @@ namespace CK.Observable.Device
             {
                 if( _bridges.TryGetValue( device.DeviceName, out var bridge ) )
                 {
-                    throw new Exception( $"Duplicate device error: A device named '{device.DeviceName}' already exists in the domain (index {bridge.Object.OId.Index})." );
+                    Throw.Exception( $"Duplicate device error: A device named '{device.DeviceName}' already exists in the domain (index {bridge.Object.OId.Index})." );
                 }
                 if( !_deviceTracking )
                 {
@@ -93,7 +93,7 @@ namespace CK.Observable.Device
             {
                 if( _objectHost != null )
                 {
-                    throw new Exception( $"There must be at most one device host object in a ObservableDomain. Object at index {_objectHost.OId.Index} is already registered." );
+                    Throw.Exception( $"There must be at most one device host object in a ObservableDomain. Object at index {_objectHost.OId.Index} is already registered." );
                 }
                 if( !_deviceTracking )
                 {

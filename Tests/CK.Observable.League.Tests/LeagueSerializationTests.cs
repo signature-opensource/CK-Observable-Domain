@@ -48,16 +48,14 @@ namespace CK.Observable.League.Tests
             var league2 = await ObservableLeague.LoadAsync( TestHelper.Monitor, store );
             Debug.Assert( league2 != null );
 
-            league2.Coordinator.TryRead( TestHelper.Monitor, ( m, d ) => d.Root.Domains.Count, out var dCount ).Should().BeTrue();
-            dCount.Should().Be( 1 );
+            league2.Coordinator.Read( TestHelper.Monitor, ( m, d ) => d.Root.Domains.Count ).Should().Be( 1 );
 
             var first2 = league2.Find( "First" )!;
             first2.Should().NotBeNull();
             // Using the strongly typed IObservableDomain<T>.
             await using( var f = await first2.LoadAsync<Model.School>( TestHelper.Monitor ) )
             {
-                f.TryRead( TestHelper.Monitor, ( m, d ) => d.Root.Persons[0].FirstName, out var firstName ).Should().BeTrue();
-                firstName.Should().Be( "A" );
+                f.Read( TestHelper.Monitor, ( m, d ) => d.Root.Persons[0].FirstName ).Should().Be( "A" );
             }
             await league2.CloseAsync( TestHelper.Monitor );
         }

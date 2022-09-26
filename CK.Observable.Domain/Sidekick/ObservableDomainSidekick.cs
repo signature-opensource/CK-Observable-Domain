@@ -88,7 +88,7 @@ namespace CK.Observable
         /// </para>
         /// <para>
         /// When this method is called the domain lock is held, any interaction can take place.
-        /// After that registering phase, interactions must be protected in <see cref="ObservableDomain.AcquireReadLock(int)"/> or one of the Modify method.
+        /// After that registering phase, interactions must be protected in one of the Read or ModifyAsync methods.
         /// </para>
         /// <para>
         /// When a sidekick keeps a reference on a client object, it should either check its IsDestroyed or registers

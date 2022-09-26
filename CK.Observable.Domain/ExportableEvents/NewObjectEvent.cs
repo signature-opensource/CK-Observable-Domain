@@ -54,7 +54,7 @@ namespace CK.Observable
                 case ObjectExportedKind.List: e.Target.EmitString( "A" ); break;
                 case ObjectExportedKind.Map: e.Target.EmitString( "M" ); break;
                 case ObjectExportedKind.Set: e.Target.EmitString( "S" ); break;
-                default: throw new NotSupportedException();
+                default: Throw.NotSupportedException(); break;
             }
         }
 

@@ -35,7 +35,8 @@ namespace CK.Observable
             /// <param name="domain">The associated domain.</param>
             public AutoTimer( ObservableDomain domain )
             {
-                Domain = domain ?? throw new ArgumentNullException( nameof( domain ) );
+                Throw.CheckNotNullArgument( domain );
+                Domain = domain;
                 _timer = new Timer( _timerCallback, this, Timeout.Infinite, Timeout.Infinite );
                 _fromWorkItem = new TrampolineWorkItem( this );
                 _nextDueTime = Util.UtcMinValue;

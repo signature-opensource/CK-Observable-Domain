@@ -176,13 +176,13 @@ namespace CK.Observable.Domain.Tests
                     SampleDomain.CheckSampleGarage( d2 );
                 }
 
-                using( domain.AcquireReadLock() )
+                domain.Read( TestHelper.Monitor, () =>
                 {
                     using( var d = TestHelper.CloneDomain( domain, initialDomainDispose: false ) )
                     {
                         SampleDomain.CheckSampleGarage( d );
                     }
-                }
+                } );
             }
         }
 
@@ -281,18 +281,18 @@ namespace CK.Observable.Domain.Tests
             using var d2 = TestHelper.CloneDomain( d, startTimer: false, pauseMilliseconds: 150 );
             d.IsDisposed.Should().BeTrue( "Initial domain has been disposed.");
 
-            using( d2.AcquireReadLock() )
+            d2.Read( TestHelper.Monitor, () =>
             {
                 d2.TimeManager.IsRunning.Should().BeFalse();
                 d2.TimeManager.Reminders.Single().IsActive.Should().BeTrue( "Not triggered by Load." );
-            }
+            } );
             Thread.Sleep( 100 );
-            using( d2.AcquireReadLock() )
+            d2.Read( TestHelper.Monitor, () =>
             {
                 d2.TimeManager.IsRunning.Should().BeFalse();
                 d2.TimeManager.Reminders.Single().IsActive.Should().BeTrue( "Waiting for TimeManager.Start()." );
                 ElapsedFired.Should().BeFalse();
-            }
+            } );
             await d2.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 d2.TimeManager.IsRunning.Should().BeFalse();

@@ -84,7 +84,7 @@ namespace CK.Observable
 
         public void Export<T>( T o, IObjectExportTypeDriver<T> typedExporter )
         {
-            if( typedExporter == null ) throw new ArgumentNullException( nameof( typedExporter ) );
+            Throw.CheckNotNullArgument( typedExporter );
             if( o == null )
             {
                 _target.EmitNull();

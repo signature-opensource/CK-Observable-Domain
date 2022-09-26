@@ -47,7 +47,7 @@ namespace CK.Observable
         public const int DomainSecretKeyLength = 512;
 
         /// <summary>
-        /// Gets an opaque object that is a command (can be send to <see cref="DomainView.SendCommand(object, bool)"/>) that
+        /// Gets an opaque object that is a command (can be send to <see cref="DomainView.SendBroadcastCommand(object, bool)"/>) that
         /// triggers a snapshot of the domain (if a <see cref="IObservableDomainClient"/> can honor it).
         /// </summary>
         public static readonly object SnapshotDomainCommand = DBNull.Value;
@@ -147,10 +147,45 @@ namespace CK.Observable
 
         private protected CurrentTransactionStatus _transactionStatus;
 
+        static ObservableDomain()
+        {
+            BinaryDeserializer.DefaultSharedContext.AddDeserializationHook( t =>
+            {
+                // Do not handle "Observable" prefix in our base libraries: these base libraries
+                // still use full prefix, only the observable objects in "application layers" should
+                // use simpler "O" prefix.
+                //
+                // Note that this code doesn't handle nested Observable objects (the ones with a '+' in
+                // their type name).
+                //
+                if( t.WrittenInfo.TypeName.StartsWith( "Observable", StringComparison.Ordinal )
+                    && t.WrittenInfo.AssemblyName != "CK.Observable.Domain"
+                    && t.WrittenInfo.AssemblyName != "CK.Observable.Device"
+                    && t.WrittenInfo.AssemblyName != "CK.Observable.League" )
+                {
+                    var aqn = $"{t.WrittenInfo.TypeNamespace}.{t.WrittenInfo.TypeName}, {t.WrittenInfo.AssemblyName}";
+                    if( Type.GetType( aqn, throwOnError: false ) == null )
+                    {
+                        // Before mutating, check that the O type exists.
+                        var oTypeName = t.WrittenInfo.TypeName.Remove( 1, 9 );
+                        aqn = $"{t.WrittenInfo.TypeNamespace}.{oTypeName}, {t.WrittenInfo.AssemblyName}";
+                        if( Type.GetType( aqn, throwOnError: false ) != null )
+                        {
+                            // The O type exists.
+                            // Use the resolution by type name instead of setting the target type:
+                            // if other hooks set the type, it will have precedence.
+                            t.SetLocalTypeName( oTypeName );
+                        }
+                    }
+                }
+            } );
+        }
+
+
         /// <summary>
         /// Exposes the non null objects in _objects as a collection.
         /// </summary>
-        class AllCollection : IObservableAllObjectsCollection
+        sealed class AllCollection : IObservableAllObjectsCollection
         {
             readonly ObservableDomain _d;
 
@@ -453,21 +488,21 @@ namespace CK.Observable
         /// <summary>
         /// Gets all the observable objects that this domain contains (roots included).
         /// These exposed objects are out of any transactions or reentrancy checks: they should not 
-        /// be used outside of ModifyAsync methods or <see cref="AcquireReadLock(int)"/> scopes.
+        /// be used outside of ModifyAsync or Read methods.
         /// </summary>
         public IObservableAllObjectsCollection AllObjects => _exposedObjects;
 
         /// <summary>
         /// Gets all the internal objects that this domain contains.
         /// These exposed objects are out of any transactions or reentrancy checks: they should not 
-        /// be used outside of ModifyAsync methods or <see cref="AcquireReadLock(int)"/> scopes.
+        /// be used outside of ModifyAsync or Read methods.
         /// </summary>
         public IReadOnlyCollection<InternalObject> AllInternalObjects => _exposedInternalObjects;
 
         /// <summary>
         /// Gets the root observable objects that this domain contains.
         /// These exposed objects are out of any transactions or reentrancy checks: they should not 
-        /// be used outside of ModifyAsync methods or <see cref="AcquireReadLock(int)"/> scopes.
+        /// be used outside of ModifyAsync or Read methods.
         /// </summary>
         public IReadOnlyList<ObservableRootObject> AllRoots => _roots;
 
@@ -1025,7 +1060,7 @@ namespace CK.Observable
                     _domainPostActionExecutor.WaitStopped();
                 }
                 monitor.Info( $"Domain '{DomainName}' disposed." );
-                // There is a race condition here. AcquireReadLock, ModifyAsync (and others)
+                // There is a race condition here. Read, ModifyAsync (and others)
                 // may have also seen a false _transactionStatus and then try to acquire the lock.
                 // If the race is won by this Dispose() thread, then the write lock is taken, released and
                 // the lock itself should be disposed...
@@ -1205,7 +1240,7 @@ namespace CK.Observable
             if( !_lock.IsWriteLockHeld )
             {
                 // Since the lock is not held, we may be disposing or disposed.
-                if( _transactionStatus == CurrentTransactionStatus.Disposing ) throw new ObjectDisposedException( $"Domain {DomainName}" );
+                if( _transactionStatus == CurrentTransactionStatus.Disposing ) Throw.ObjectDisposedException( $"Domain {DomainName}" );
                 if( _currentTran == null ) Throw.InvalidOperationException( "A transaction is required." );
                 if( _lock.IsReadLockHeld ) Throw.InvalidOperationException( "Concurrent access: only Read lock has been acquired." );
                 Throw.InvalidOperationException( "Concurrent access: write lock must be acquired." );
@@ -1239,14 +1274,14 @@ namespace CK.Observable
             {
                 if( !domain.Save( monitor, s, millisecondsTimeout: milliSecondsTimeout, debugMode: useDebugMode ) )
                 {
-                    throw new Exception( "First Save failed: Unable to acquire lock." );
+                    Throw.Exception( "First Save failed: Unable to acquire lock." );
                 }
                 var originalBytes = s.ToArray();
                 var originalTransactionSerialNumber = domain.TransactionSerialNumber;
                 s.Position = 0;
                 if( !domain.Load( monitor, RewindableStream.FromStream( s ), millisecondsTimeout: milliSecondsTimeout, startTimer: null ) )
                 {
-                    throw new Exception( "Reload failed: Unable to acquire lock." );
+                    Throw.Exception( "Reload failed: Unable to acquire lock." );
                 }
                 if( restoreSidekicks && domain._sidekickManager.HasWaitingSidekick )
                 {
@@ -1255,7 +1290,7 @@ namespace CK.Observable
                 using var checker = BinarySerializer.CreateCheckedWriteStream( originalBytes );
                 if( !domain.Save( monitor, checker, millisecondsTimeout: milliSecondsTimeout, debugMode: useDebugMode ) )
                 {
-                    throw new Exception( "Second Save failed: Unable to acquire lock." );
+                    Throw.Exception( "Second Save failed: Unable to acquire lock." );
                 }
                 return domain.CurrentLostObjectTracker!;
             }

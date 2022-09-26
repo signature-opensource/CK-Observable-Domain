@@ -255,11 +255,12 @@ namespace CK.Observable
         (Transaction?, Exception?) DoCreateObservableTransaction( IActivityMonitor m, bool throwException )
         {
             Debug.Assert( m != null && _lock.IsWriteLockHeld );
-            // This group is left Open on success. It will be closed at the end of the transaction.
-            var group = m.OpenTrace( "Starting transaction." );
             var startTime = DateTime.UtcNow;
+            // This group is left Open on success. It will be closed at the end of the transaction.
+            IDisposableGroup group = null!;
             try
             {
+                group = m.OpenTrace( "Starting transaction." );
                 // This could throw and be handled just like other pre-transaction errors (when a buggy client throws during OnTransactionStart).
                 // Depending on throwException parameter, it will be re-thrown or returned (returning the exception is for TryModifyAsync).
                 // See DoDispose method for the discussion about disposal...
@@ -303,29 +304,24 @@ namespace CK.Observable
                 {
                     _timeManager.RaiseElapsedEvent( t.Monitor, t.StartTime );
                 }
-                bool skipped = false;
                 foreach( var tracker in _trackers )
                 {
-                    if( !tracker.BeforeModify( t.Monitor, t.StartTime ) )
-                    {
-                        skipped = true;
-                        break;
-                    }
+                    tracker.BeforeModify( t.Monitor, t.StartTime );
                 }
                 bool updatedMinHeapDone = false;
-                if( !skipped && actions != null )
+                if( actions != null )
                 {
                     actions();
-                    // Always call the "final call" to update the lock free sidekick index.
-                    if( _sidekickManager.CreateWaitingSidekicks( t.Monitor, t.AddError, true ) )
+                }
+                // Always call the "final call" to update the lock free sidekick index.
+                if( _sidekickManager.CreateWaitingSidekicks( t.Monitor, t.AddError, true ) )
+                {
+                    var now = DateTime.UtcNow;
+                    foreach( var tracker in _trackers ) tracker.AfterModify( t.Monitor, t.StartTime, now - t.StartTime );
+                    if( _timeManager.IsRunning )
                     {
-                        var now = DateTime.UtcNow;
-                        foreach( var tracker in _trackers ) tracker.AfterModify( t.Monitor, t.StartTime, now - t.StartTime );
-                        if( _timeManager.IsRunning )
-                        {
-                            updatedMinHeapDone = true;
-                            _timeManager.RaiseElapsedEvent( t.Monitor, now );
-                        }
+                        updatedMinHeapDone = true;
+                        _timeManager.RaiseElapsedEvent( t.Monitor, now );
                     }
                 }
                 if( !updatedMinHeapDone )
