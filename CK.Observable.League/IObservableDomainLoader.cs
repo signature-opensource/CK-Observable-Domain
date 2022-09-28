@@ -29,6 +29,11 @@ namespace CK.Observable.League
         bool IsDestroyed { get; }
 
         /// <summary>
+        /// Gets the type of the domain's roots.
+        /// </summary>
+        IReadOnlyList<Type> RootTypes { get; }
+
+        /// <summary>
         /// Gets the transaction events if possible from a given transaction number.
         /// This returns null if an export is required (the <paramref name="transactionNumber"/> is too old),
         /// and an empty array if the transactionNumber is greater or equal to the current transaction number

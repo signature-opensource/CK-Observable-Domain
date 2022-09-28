@@ -2,6 +2,9 @@ using CK.Core;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -17,6 +20,7 @@ namespace CK.Observable.League
         readonly IDefaultObservableDomainInitializer? _initializer;
         readonly IServiceProvider _serviceProvider;
         readonly IActivityMonitor _monitor;
+        readonly DefaultObservableLeagueOptions _options;
 
         public DefaultObservableLeague( IServiceProvider serviceProvider,
                                         IOptions<DefaultObservableLeagueOptions> options,
@@ -24,6 +28,7 @@ namespace CK.Observable.League
         {
             _initializer = initializer;
             _serviceProvider = serviceProvider;
+            _options = options.Value;
             _monitor = new ActivityMonitor( nameof( DefaultObservableLeague ) );
 
             NormalizedPath p = AppContext.BaseDirectory;
@@ -46,6 +51,10 @@ namespace CK.Observable.League
             using( _monitor.OpenInfo( "Loading DefaultObservableLeague." ) )
             {
                 _default = await ObservableLeague.LoadAsync( _monitor, _store, _initializer, _serviceProvider );
+                if( _default != null )
+                {
+                    await _default.ApplyEnsureDomainOptionsAsync( _monitor, _options.EnsureDomains );
+                }
             }
         }
 

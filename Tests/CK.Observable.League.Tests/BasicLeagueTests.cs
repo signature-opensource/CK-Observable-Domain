@@ -15,9 +15,15 @@ namespace CK.Observable.League.Tests
 
         public static DirectoryStreamStore CreateStore( string name )
         {
+            NormalizedPath p = GetStorePath( name );
+            return new DirectoryStreamStore( p );
+        }
+
+        public static NormalizedPath GetStorePath( string name )
+        {
             var p = TestFolder.AppendPart( name );
             TestHelper.CleanupFolder( p );
-            return new DirectoryStreamStore( p );
+            return p;
         }
 
         [Test]

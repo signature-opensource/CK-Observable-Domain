@@ -248,7 +248,7 @@ namespace CK.Observable.League
                 }
                 _coordinator = coordinator;
                 _rootTypes = rootTypes;
-                RootTypes = rootTypeNames;
+                RootTypeNames = rootTypeNames;
                 _initialMonitor = monitor;
                 _domainInitializer = initializer;
                 ServiceProvider = serviceProvider;
@@ -318,7 +318,9 @@ namespace CK.Observable.League
 
             public bool IsDestroyed { get; private set; }
 
-            public IReadOnlyList<string> RootTypes { get; }
+            public IReadOnlyList<Type> RootTypes => _rootTypes;
+
+            public IReadOnlyList<string> RootTypeNames { get; }
 
             public bool IsLoadable => _domainType != null;
 
