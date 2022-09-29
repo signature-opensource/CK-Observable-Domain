@@ -161,9 +161,9 @@ namespace CK.Observable.League
                                          n => Shell.Create( monitor, _coordinator, name, _streamStore, _initializer, _serviceProvider, rootTypes ),
                                          ( n, s ) =>
                                          {
-                                             if( !s.RootTypes.SequenceEqual( rootTypes ) )
+                                             if( !s.RootTypeNames.SequenceEqual( rootTypes ) )
                                              {
-                                                 throw new Exception( $"Unable to rebind domain named '{n}', root types differ: existing are '{s.RootTypes.Concatenate()}', reloaded ones want to be '{rootTypes.Concatenate()}'." );
+                                                 throw new Exception( $"Unable to rebind domain named '{n}', root types differ: existing are '{s.RootTypeNames.Concatenate()}', reloaded ones want to be '{rootTypes.Concatenate()}'." );
                                              }
                                              return s;
                                          } );
