@@ -279,7 +279,6 @@ namespace CK.Observable.Device.Tests
 
 
         [Test]
-        [Timeout( 2 * 1000 )]
         public async Task bridges_rebind_to_their_Device_when_reloaded_Async()
         {
             using var gLog = TestHelper.Monitor.OpenInfo( nameof( bridges_rebind_to_their_Device_when_reloaded_Async ) );
@@ -295,54 +294,60 @@ namespace CK.Observable.Device.Tests
             };
             (await host.EnsureDeviceAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.CreateAndStartSucceeded );
 
-            using var obs = new ObservableDomain( TestHelper.Monitor, nameof( bridges_rebind_to_their_Device_when_reloaded_Async ), true, serviceProvider: sp );
-
-            // The bridge relay the event: the message is updated.
-            OSampleDevice? device = null;
-            await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
+            var obs = new ObservableDomain( TestHelper.Monitor, nameof( bridges_rebind_to_their_Device_when_reloaded_Async ), true, serviceProvider: sp );
+            try
             {
-                device = new OSampleDevice( "n°1" );
-                device.DeviceControlStatus.Should().Be( DeviceControlStatus.HasSharedControl );
-                device.IsRunning.Should().BeTrue( "ConfigurationStatus is RunnableStarted." );
-                device.SendSimpleCommand( "NEXT" );
-            } );
-            Debug.Assert( device != null );
+                // The bridge relay the event: the message is updated.
+                OSampleDevice? device = null;
+                await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
+                {
+                    device = new OSampleDevice( "n°1" );
+                    device.DeviceControlStatus.Should().Be( DeviceControlStatus.HasSharedControl );
+                    device.IsRunning.Should().BeTrue( "ConfigurationStatus is RunnableStarted." );
+                    device.SendSimpleCommand( "NEXT" );
+                } );
+                Debug.Assert( device != null );
 
-            System.Threading.Thread.Sleep( 90 );
-            obs.Read( TestHelper.Monitor, () =>
-            {
-                device.Message.Should().StartWith( "NEXT", "The device Message has been updated by the bridge." );
-            } );
+                System.Threading.Thread.Sleep( 90 );
+                obs.Read( TestHelper.Monitor, () =>
+                {
+                    device.Message.Should().StartWith( "NEXT", "The device Message has been updated by the bridge." );
+                } );
 
-            // Unloading/Reloading the domain.
-            using( TestHelper.Monitor.OpenInfo( "Serializing/Deserializing with a fake transaction. Sidekicks are not instantiated." ) )
-            {
-                using var s = new MemoryStream();
-                if( !obs.Save( TestHelper.Monitor, s, true ) ) throw new Exception( "Failed to save." );
-                s.Position = 0;
-                if( !obs.Load( TestHelper.Monitor, RewindableStream.FromStream( s ) ) ) throw new Exception( "Reload failed." );
+                // Unloading/Reloading the domain.
+                using( TestHelper.Monitor.OpenInfo( "Serializing/Deserializing with a fake transaction. Sidekicks are not instantiated." ) )
+                {
+                    using var s = new MemoryStream();
+                    if( !obs.Save( TestHelper.Monitor, s, true ) ) throw new Exception( "Failed to save." );
+                    s.Position = 0;
+                    if( !obs.Load( TestHelper.Monitor, RewindableStream.FromStream( s ) ) ) throw new Exception( "Reload failed." );
+                }
+                obs.HasWaitingSidekicks.Should().BeTrue();
+                await obs.ModifyThrowAsync( TestHelper.Monitor, null );
+                obs.HasWaitingSidekicks.Should().BeFalse();
+
+                device = obs.AllObjects.OfType<OSampleDevice>().Single();
+                await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
+                {
+                    device.Message.Should().StartWith( "NEXT" );
+                    device.SendSimpleCommand( "NEXT again" );
+                } );
+                int loopRequiredCount = 0;
+                while( !obs.Read( TestHelper.Monitor, () => device.Message!.StartsWith( "NEXT again" ) ) )
+                {
+                    ++loopRequiredCount;
+                    System.Threading.Thread.Sleep( 20 );
+                }
+                TestHelper.Monitor.Info( $"loopRequiredCount = {loopRequiredCount}." );
             }
-            obs.HasWaitingSidekicks.Should().BeTrue();
-            await obs.ModifyThrowAsync( TestHelper.Monitor, null );
-            obs.HasWaitingSidekicks.Should().BeFalse();
-
-            device = obs.AllObjects.OfType<OSampleDevice>().Single();
-            await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
+            finally
             {
-                device.Message.Should().StartWith( "NEXT" );
-                device.SendSimpleCommand( "NEXT again" );
-            } );
-            System.Threading.Thread.Sleep( 40 );
-            obs.Read( TestHelper.Monitor, () =>
-            {
-                device.Message.Should().StartWith( "NEXT again" );
-            } );
-
-            TestHelper.Monitor.Info( "Disposing Domain..." );
-            obs.Dispose( TestHelper.Monitor );
-            TestHelper.Monitor.Info( "...Domain disposed, clearing host..." );
-            await host.ClearAsync( TestHelper.Monitor, waitForDeviceDestroyed: true );
-            TestHelper.Monitor.Info( "Host cleared." );
+                TestHelper.Monitor.Info( "Disposing Domain..." );
+                obs.Dispose( TestHelper.Monitor );
+                TestHelper.Monitor.Info( "...Domain disposed, clearing host..." );
+                await host.ClearAsync( TestHelper.Monitor, waitForDeviceDestroyed: true );
+                TestHelper.Monitor.Info( "Host cleared." );
+            }
         }
 
 

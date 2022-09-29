@@ -112,21 +112,6 @@ namespace CK.Observable
         }
 
         /// <summary>
-        /// Called when the domain instance is created.
-        /// By default, does nothing.
-        /// </summary>
-        /// <param name="monitor">The monitor to use.</param>
-        /// <param name="d">The newly created domain.</param>
-        /// <param name="startTimer">
-        /// Whether the <see cref="ObservableDomain.TimeManager"/> must be running or stopped.
-        /// A client can alter the value (typically setting it to false if needed).
-        /// </param>
-        public virtual void OnDomainCreated( IActivityMonitor monitor, ObservableDomain d, ref bool startTimer )
-        {
-            Next?.OnDomainCreated( monitor, d, ref startTimer );
-        }
-
-        /// <summary>
         /// Default behavior is FIRST to relay the call to the next client if any, and
         /// THEN to create a snapshot (simply calls <see cref="CreateSnapshot"/> protected method)
         /// if <see cref="TransactionDoneEventArgs.RollbackedInfo"/> is null.
