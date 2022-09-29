@@ -14,7 +14,8 @@
     "build": "tsc",
     "preversion": "npm test",
     "version": "npm run build",
-    "clean": "rimraf dist"
+    "clean": "rimraf dist",
+    "pwd": "echo $INIT_CWD"
   },
   "repository": {
     "type": "git",

@@ -1,5 +1,5 @@
 import { WatchEvent } from '@signature-code/ck-observable-domain';
-import { HttpTransportType, HubConnection, HubConnectionBuilder, HubConnectionState } from '@aspnet/signalr';
+import { HttpTransportType, HubConnection, HubConnectionBuilder, HubConnectionState } from '@microsoft/signalr';
 import { IObservableDomainLeagueDriver } from './iod-league-driver';
 
 export class SignalRObservableLeagueDomainService implements IObservableDomainLeagueDriver {
@@ -11,8 +11,13 @@ export class SignalRObservableLeagueDomainService implements IObservableDomainLe
     this.connection.start();
   }
 
-  public start(): Promise<void> {
-    return this.connection.start();
+  public start(): Promise<boolean> {
+    this.connection.start();
+    throw new Error("todo");
+  }
+
+  public startListening(domainsNames: {domainName: string, transactionCount: number}[]): Promise<{[domainName: string]: WatchEvent}> {
+    throw new Error("todo");
   }
 
   public onMessage(eventHandler: (domainName: string, eventsJson: WatchEvent) => void) {

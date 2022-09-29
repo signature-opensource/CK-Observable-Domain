@@ -12,7 +12,7 @@ export class MqttObservableLeagueDomainService implements IObservableDomainLeagu
     }
 
     startListening(domainsNames: { domainName: string; transactionCount: number; }[]): Promise<{ [domainName: string]: WatchEvent; }> {
-        
+        throw new Error();
     }
 
     public async start(): Promise<boolean> {

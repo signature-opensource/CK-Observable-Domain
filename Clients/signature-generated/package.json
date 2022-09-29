@@ -1,8 +1,16 @@
 {
   "name": "@signature/generated",
+  "devDependencies": {
+    "typescript": "4.7.4"
+  },
   "private": true,
-  "type": "module",
-  "dependencies": {
-    "luxon": "3.0.1"
+  "files": [
+    "dist/"
+  ],
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json",
+    "pwd": "echo $INIT_CWD"
   }
 }

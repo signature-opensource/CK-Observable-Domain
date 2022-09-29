@@ -1,18 +1,18 @@
 {
   "name": "@signature-code/ck-observable-domain-mqtt",
-  "packageManager": "yarn@3.2.2",
   "type": "module",
   "scripts": {
     "test": "mocha -r ts-node/register test/**/*.ts",
     "build": "tsc",
     "preversion": "npm test",
     "version": "npm run build",
-    "clean": "rimraf dist"
+    "clean": "rimraf dist",
+    "pwd": "echo $INIT_CWD"
   },
   "dependencies": {
     "@microsoft/signalr": "^6.0.7",
-    "@signature-code/ck-observable-domain": "file:../ck-observable-domain",
-    "@signature/generated": "file:../signature-generated/",
+    "@signature-code/ck-observable-domain": "workspace:*",
+    "@signature/generated": "workspace:*",
     "async-mqtt": "^2.6.2",
     "axios": "^0.27.2",
     "rxjs": "7.5.6"
