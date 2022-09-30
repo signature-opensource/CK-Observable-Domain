@@ -10,7 +10,6 @@
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
   "scripts": {
-    "build": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json",
-    "pwd": "echo $INIT_CWD"
+    "build": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json"
   }
 }

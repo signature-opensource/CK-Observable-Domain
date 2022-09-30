@@ -1,15 +1,17 @@
-import { CommandModel, ICrisEndpoint, Command } from "@signature/generated/dist/esm/CK/Cris/Model";
+import { CommandModel, ICrisEndpoint, Command, ICommandResult } from "@signature/generated";
 import { AxiosInstance } from "axios";
-export class HttpCrisEndpoint /*implements ICrisEndpoint*/ {
+export class HttpCrisEndpoint implements ICrisEndpoint {
     constructor(private readonly axios: AxiosInstance) {
     }
 
-    /*send<T>(command: Command<T>): Promise<ICommandResult<T>> {
+    async send<T>(command: Command<T>): Promise<ICommandResult<T>> {
         
-        this.axios.post('', this.crisified(command) );
-        return undefined;
+       const resp = await this.axios.post('', this.crisified(command) );
+       if(resp.status != 200) {
+        
+       }
     }
-*/
+
     private crisified( command: { commandModel: CommandModel<any>; } ): any {
         let string = `["${command.commandModel.commandName}"`;
         string += `,${JSON.stringify( command, ( key, value ) => {

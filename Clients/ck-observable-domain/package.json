@@ -15,7 +15,7 @@
     "preversion": "npm test",
     "version": "npm run build",
     "clean": "rimraf dist",
-    "pwd": "echo $INIT_CWD"
+    "b": "echo scriptB"
   },
   "repository": {
     "type": "git",

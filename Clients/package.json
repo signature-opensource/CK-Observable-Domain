@@ -1,7 +1,14 @@
 {
   "name": "base",
   "private": true,
+  "scripts": {
+    "g:ab": "yarn workspaces foreach run a"
+  },
   "workspaces": [
     "*"
-  ]
+  ],
+  "devDependencies": {
+    "typescript": "^4.8.4"
+  },
+  "packageManager": "yarn@4.0.0-rc.22"
 }
