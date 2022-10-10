@@ -316,11 +316,7 @@ namespace CK.Observable
             using( monitor.OpenInfo( $"Loading new {runtimeType} '{domainName}' from stream." ) )
             using( new InitializationTransaction( monitor, this, true ) )
             {
-                DoLoad( monitor, stream, domainName, startTimer, mustStartTimer =>
-                {
-                    client?.OnDomainCreated( monitor, this, ref mustStartTimer );
-                    return mustStartTimer;
-                } );
+                DoLoad( monitor, stream, domainName, startTimer );
             }
             _transactionStatus = CurrentTransactionStatus.Regular;
         }
@@ -392,12 +388,8 @@ namespace CK.Observable
             if( (_transactionStatus = instantionKind) == CurrentTransactionStatus.Instantiating )
             {
                 // We are not called by the deserializer constructors: we are simply initializing a
-                // new domain. However, OnDomainCreated may call Load() to restore the domain from a persistent store.
-                // In such case, Load will temporarily overwrite the _transactionStatus to be Deserializing.
-                // If a Load is done, the secret is restored.
-                DomainClient?.OnDomainCreated( monitor, this, ref startTimer );
-                // If the secret has not been restored, initializes a new one.
-                if( _domainSecret == null ) _domainSecret = CreateSecret();
+                // new domain.
+                _domainSecret = CreateSecret();
                 if( startTimer ) _timeManager.DoStartOrStop( monitor, true );
                 if( isNakedDomain )
                 {

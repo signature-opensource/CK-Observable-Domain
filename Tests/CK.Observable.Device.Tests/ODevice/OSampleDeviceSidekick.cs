@@ -39,8 +39,8 @@ namespace CK.Observable.Device.Tests
             protected override void OnDeviceAppeared( IActivityMonitor monitor )
             {
                 Debug.Assert( Device != null );
-                Device.MessageChanged.Async += OnMessageChangedAsync;
                 Object.Message = Device.DangerousCurrentMessage;
+                Device.MessageChanged.Async += OnMessageChangedAsync;
             }
 
             Task OnMessageChangedAsync( IActivityMonitor monitor, SampleDevice sender, string e )

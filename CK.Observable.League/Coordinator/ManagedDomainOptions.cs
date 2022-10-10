@@ -88,36 +88,40 @@ namespace CK.Observable.League
         /// </summary>
         /// <param name="lifeCycleOption">The life cycle option.</param>
         /// <returns>This or a new option instance.</returns>
-        public ManagedDomainOptions SetLifeCycleOption( DomainLifeCycleOption lifeCycleOption ) => LifeCycleOption == lifeCycleOption ? this : new ManagedDomainOptions
-            (
-                lifeCycleOption,
-                CompressionKind,
-                SkipTransactionCount,
-                SnapshotSaveDelay,
-                SnapshotKeepDuration,
-                SnapshotMaximalTotalKiB,
-                ExportedEventKeepDuration,
-                ExportedEventKeepLimit,
-                HousekeepingRate
-            );
+        public ManagedDomainOptions SetLifeCycleOption( DomainLifeCycleOption lifeCycleOption ) => LifeCycleOption == lifeCycleOption
+                                                                                                        ? this
+                                                                                                        : new ManagedDomainOptions
+                                                                                                            (
+                                                                                                                lifeCycleOption,
+                                                                                                                CompressionKind,
+                                                                                                                SkipTransactionCount,
+                                                                                                                SnapshotSaveDelay,
+                                                                                                                SnapshotKeepDuration,
+                                                                                                                SnapshotMaximalTotalKiB,
+                                                                                                                ExportedEventKeepDuration,
+                                                                                                                ExportedEventKeepLimit,
+                                                                                                                HousekeepingRate
+                                                                                                            );
 
         /// <summary>
         /// Returns a new immutable option with an updated <see cref="CompressionKind"/>.
         /// </summary>
         /// <param name="k">The compression kind.</param>
         /// <returns>This or a new option instance.</returns>
-        public ManagedDomainOptions SetCompressionKind( CompressionKind k ) => CompressionKind == k ? this : new ManagedDomainOptions
-            (
-                LifeCycleOption,
-                k,
-                SkipTransactionCount,
-                SnapshotSaveDelay,
-                SnapshotKeepDuration,
-                SnapshotMaximalTotalKiB,
-                ExportedEventKeepDuration,
-                ExportedEventKeepLimit,
-                HousekeepingRate
-            );
+        public ManagedDomainOptions SetCompressionKind( CompressionKind k ) => CompressionKind == k
+                                                                                ? this
+                                                                                : new ManagedDomainOptions
+                                                                                    (
+                                                                                        LifeCycleOption,
+                                                                                        k,
+                                                                                        SkipTransactionCount,
+                                                                                        SnapshotSaveDelay,
+                                                                                        SnapshotKeepDuration,
+                                                                                        SnapshotMaximalTotalKiB,
+                                                                                        ExportedEventKeepDuration,
+                                                                                        ExportedEventKeepLimit,
+                                                                                        HousekeepingRate
+                                                                                    );
 
 
         /// <summary>

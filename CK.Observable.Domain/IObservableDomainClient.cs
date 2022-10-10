@@ -15,18 +15,6 @@ namespace CK.Observable
     public interface IObservableDomainClient
     {
         /// <summary>
-        /// Called when the domain instance is created. It may be brand new (<see cref="IObservableDomain.TransactionSerialNumber"/> is 0)
-        /// or has been loaded from a stream (<see cref="IObservableDomain.TransactionSerialNumber"/> is greater than 0).
-        /// </summary>
-        /// <param name="monitor">The monitor to use.</param>
-        /// <param name="d">The newly created or loaded domain.</param>
-        /// <param name="startTimer">
-        /// Whether the <see cref="ObservableDomain.TimeManager"/> must be running or stopped.
-        /// A client can alter the value (typically setting it to false if needed).
-        /// </param>
-        void OnDomainCreated( IActivityMonitor monitor, ObservableDomain d, ref bool startTimer );
-
-        /// <summary>
         /// Called before a transaction starts.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>

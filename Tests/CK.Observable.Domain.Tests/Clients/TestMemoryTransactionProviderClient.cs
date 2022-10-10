@@ -14,15 +14,6 @@ namespace CK.Observable.Domain.Tests.Clients
             _domainCreatedStream = domainCreatedStream;
         }
 
-        public override void OnDomainCreated( IActivityMonitor monitor, ObservableDomain d, ref bool startTimer )
-        {
-            if( _domainCreatedStream != null )
-            {
-                d.Load( monitor, RewindableStream.FromStream( _domainCreatedStream ) );
-            }
-            base.OnDomainCreated( monitor, d, ref startTimer );
-        }
-
         public MemoryStream CreateStreamFromSnapshot()
         {
             MemoryStream ms = new MemoryStream();
