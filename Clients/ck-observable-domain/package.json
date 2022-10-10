@@ -14,8 +14,7 @@
     "build": "tsc",
     "preversion": "npm test",
     "version": "npm run build",
-    "clean": "rimraf dist",
-    "b": "echo scriptB"
+    "clean": "rimraf dist"
   },
   "repository": {
     "type": "git",

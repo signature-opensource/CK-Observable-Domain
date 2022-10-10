@@ -4,15 +4,24 @@ import { filter, map, share } from 'rxjs/operators';
 import { WatchEvent } from '@signature-code/ck-observable-domain';
 import { IObservableDomainLeagueDriver } from "./iod-league-driver";
 import { json } from "stream/consumers";
+import { ICrisEndpoint, MQTTObservableWatcherStartOrRestartCommand } from "@signature/generated";
 
 export class MqttObservableLeagueDomainService implements IObservableDomainLeagueDriver {
 
     private client: AsyncMqttClient;
-    constructor(private readonly serverUrl: string, private readonly mqttTopic: string) {
+    constructor(private readonly serverUrl: string, private readonly crisEndpoint: ICrisEndpoint, private readonly mqttTopic: string) {
     }
 
-    startListening(domainsNames: { domainName: string; transactionCount: number; }[]): Promise<{ [domainName: string]: WatchEvent; }> {
-        throw new Error();
+    async startListening(domainsNames: { domainName: string; transactionCount: number; }[]): Promise<{ [domainName: string]: WatchEvent; }> {
+        const clientId = this.client.options.clientId!;
+        const res = {};
+        const promises = domainsNames.map( async element => {
+            const poco = MQTTObservableWatcherStartOrRestartCommand.create(clientId, element.domainName, element.transactionCount);
+            const resp = await this.crisEndpoint.send(poco);
+            res[element.domainName] = resp;
+        });
+        await Promise.all(promises);
+        return res;
     }
 
     public async start(): Promise<boolean> {

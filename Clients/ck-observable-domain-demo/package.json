@@ -1,0 +1,11 @@
+{
+  "packageManager": "yarn@3.2.2",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "clean": "rimraf dist"
+  },
+  "devDependencies": {
+    "typescript": "^4.8.4"
+  }
+}

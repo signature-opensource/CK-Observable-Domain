@@ -1,22 +1,42 @@
-import { CommandModel, ICrisEndpoint, Command, ICommandResult } from "@signature/generated";
+import { CommandModel, ICrisEndpoint, Command, ICommandResult, CrisResult, VESACode, CrisResultError } from "@signature/generated";
 import { AxiosInstance } from "axios";
 export class HttpCrisEndpoint implements ICrisEndpoint {
-    constructor(private readonly axios: AxiosInstance) {
-    }
+  constructor(private readonly axios: AxiosInstance) {
+  }
 
-    async send<T>(command: Command<T>): Promise<ICommandResult<T>> {
-        
-       const resp = await this.axios.post('', this.crisified(command) );
-       if(resp.status != 200) {
-        
-       }
-    }
-
-    private crisified( command: { commandModel: CommandModel<any>; } ): any {
-        let string = `["${command.commandModel.commandName}"`;
-        string += `,${JSON.stringify( command, ( key, value ) => {
-          return key == "commandModel" ? undefined : value;
-        } )}]`
-        return string;
+  async send<T>(command: Command<T>): Promise<ICommandResult<T>> {
+    try {
+      let string = `["${command.commandModel.commandName}"`;
+      string += `,${JSON.stringify(command, (key, value) => {
+        return key == "commandModel" ? undefined : value;
+      })}]`
+      const resp = await this.axios.post<CrisResult>('', string);
+      const result = resp.data;
+      if (result.code == VESACode.Synchronous) {
+        return {
+          code: VESACode.Synchronous,
+          result: result.result as T,
+          correlationId: result.correlationId
+        };
       }
+      else if (result.code == VESACode.Error || result.code == VESACode.ValidationError) {
+        return {
+          code: result.code as VESACode.Error | VESACode.ValidationError,
+          result: result.result as CrisResultError,
+          correlationId: result.correlationId
+        };
+      }
+      else if (result.code == VESACode.Asynchronous) {
+        throw new Error("Endpoint returned VESACode.Asynchronous which is not yet supported by this client.");
+      }
+      else {
+        throw new Error("Endpoint returned an unknown VESA Code.");
+      }
+    } catch (e) {
+      return {
+        code: 'CommunicationError',
+        result: e
+      };
+    }
+  }
 }

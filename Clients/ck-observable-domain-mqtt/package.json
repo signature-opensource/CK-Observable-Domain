@@ -6,9 +6,7 @@
     "build": "tsc",
     "preversion": "npm test",
     "version": "npm run build",
-    "clean": "rimraf dist",
-    "pwd": "echo $INIT_CWD",
-    "a": "echo $INIT_CWD"
+    "clean": "rimraf dist"
   },
   "dependencies": {
     "@microsoft/signalr": "^6.0.7",
