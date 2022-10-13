@@ -71,10 +71,12 @@ namespace CK.Observable.MQTTWatcher
         {
             Throw.CheckNotNullArgument( newAgent.ClientId );
             _processNewClientLock.EnterReadLock();
-            if( _processNewClients ) return;
-            using( m.OpenInfo( "MQTT Agent connected, pairing it with Observable League." ) )
+            if( !_processNewClients )
             {
-                _watchers.TryAdd( newAgent.ClientId, new MqttObservableWatcher( this, _config, newAgent, _league ) );
+                using( m.OpenInfo( "MQTT Agent connected, pairing it with Observable League." ) )
+                {
+                    _watchers.TryAdd( newAgent.ClientId, new MqttObservableWatcher( this, _config, newAgent, _league ) );
+                }
             }
             _processNewClientLock.ExitReadLock(); // we exit lock later because we don't want to do this while StopAsync runs.
         }

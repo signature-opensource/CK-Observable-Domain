@@ -1,7 +1,7 @@
 import { CommandModel, ICrisEndpoint, Command, ICommandResult, CrisResult, VESACode, CrisResultError } from "@signature/generated";
-import { AxiosInstance } from "axios";
+import { Axios, AxiosInstance } from "axios";
 export class HttpCrisEndpoint implements ICrisEndpoint {
-  constructor(private readonly axios: AxiosInstance) {
+  constructor(private readonly axios: Axios) {
   }
 
   async send<T>(command: Command<T>): Promise<ICommandResult<T>> {

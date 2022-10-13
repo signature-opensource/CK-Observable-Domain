@@ -1,9 +1,14 @@
 using CK.Core;
+using CK.Observable.ServerSample.App;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 
@@ -11,37 +16,67 @@ namespace CK.Observable.ServerSample
 {
     public class Program
     {
-        public static Task Main( string[] args )
+        public static async Task Main( string[] args )
         {
-            var m = new ActivityMonitor( "App Startup" );
+            // Set default ActivityMonitor filter
+            ActivityMonitor.DefaultFilter = LogFilter.Debug;
+            IHost host;
 
-            var host = new HostBuilder()
-                .UseContentRoot( Directory.GetCurrentDirectory() )
-                .ConfigureHostConfiguration( config =>
+            // Note that GrandOutput initialization is NOT EFFECTIVE until host.RunAsync() below.
+            // This monitor will NOT be logged.
+            ActivityMonitor m = new ActivityMonitor();
+            m.Output.RegisterClient( new ActivityMonitorConsoleClient() );
+            m.Info( "Preparing host." );
+            try
+            {
+                // Run as Console from either Debugger is attached or --console is passed
+                var isService = !(Debugger.IsAttached || args.Contains( "--console" ));
+                var builder = CreateHostBuilder( isService, args.Where( arg => arg != "--console" ).ToArray() );
+
+                Assembly callingAssembly = Assembly.GetExecutingAssembly();
+
+                m.Info( $"Running as console. Using default content root: {Environment.CurrentDirectory}" );
+
+                builder.ConfigureAppConfiguration( ( context, configuration ) =>
                 {
-                    config.AddEnvironmentVariables( prefix: "DOTNET_" );
-                    config.AddCommandLine( args );
-                } )
-                .ConfigureAppConfiguration( ( hostingContext, config ) =>
-                {
-                    config.AddJsonFile( "appsettings.json", optional: true, reloadOnChange: true )
-                          .AddJsonFile( $"appsettings.{hostingContext.HostingEnvironment.EnvironmentName}.json", optional: true, reloadOnChange: true );
+                    configuration
+                        .AddJsonFile( "appsettings.json",
+                            optional: false, reloadOnChange: true )
+                        .AddJsonFile( $"appsettings.{context.HostingEnvironment.EnvironmentName}.json",
+                            optional: true, reloadOnChange: true )
+                        .AddJsonFile( "appsettings.local.json",
+                            optional: true, reloadOnChange: true )
+                        .AddJsonFile(
+                            Environment.ExpandEnvironmentVariables( "%AppProgramData%/appsettings.local.json" ),
+                            optional: true, reloadOnChange: true );
+                } );
 
-                    // Configuration coming from the environment variables are considered safer than appsettings configuration.
-                    // We add them after the appsettings.
-                    config.AddEnvironmentVariables();
+                m.Info( "Building host..." );
+                host = builder.Build();
+            }
+            catch( Exception ex )
+            {
+                m.Fatal( ex );
+                throw;
+            }
 
-                    // Finally comes the configuration values from the command line: these configurations override
-                    // any previous ones.
-                    config.AddCommandLine( args );
-                } )
+            m.MonitorEnd( "Host preparation complete. Starting up..." );
+            await host.RunAsync().ConfigureAwait( false );
+        }
+        static IHostBuilder CreateHostBuilder( bool isService, string[] args )
+        {
+            var host = Microsoft.Extensions.Hosting.Host.CreateDefaultBuilder( args );
+            host = host
                 .UseCKMonitoring()
-                .ConfigureServices( ( context, s ) =>
+                .ConfigureWebHostDefaults( webBuilder =>
                 {
-                    s.AddStObjMap( m, Assembly.GetExecutingAssembly() );
-                } ).Build();
+                    webBuilder
+                        .UseKestrel()
+                    .UseIISIntegration()
+                        .UseStartup<Startup>();
+                } );
 
-            return host.RunAsync();
+            return host;
         }
     }
 }

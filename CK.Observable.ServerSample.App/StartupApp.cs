@@ -20,8 +20,8 @@ namespace CK.Observable.ServerSample.App
             services.Configure<DefaultObservableLeagueOptions>( c =>
             {
                 c.StorePath = Configuration[ "CK-ObservableLeague:StorePath" ];
-                var domainOpts = new EnsureDomainOptions { DomainName = "Agent" };
-                domainOpts.RootTypes.Add( typeof( OAgentRoot ).AssemblyQualifiedName! );
+                var domainOpts = new EnsureDomainOptions { DomainName = "Test-Domain" };
+                domainOpts.RootTypes.Add( typeof( Root ).AssemblyQualifiedName! );
                 c.EnsureDomains.Add( domainOpts );
             } );
         }

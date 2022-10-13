@@ -9,14 +9,13 @@ export class ObservableDomainClient {
     private readonly connectionState: BehaviorSubject<ObservableDomainClientConnectionState> = new BehaviorSubject<ObservableDomainClientConnectionState>(ObservableDomainClientConnectionState.Disconnected);
     public readonly connectionState$: Observable<ObservableDomainClientConnectionState> = this.connectionState.asObservable();
     private stopping = false;
-    private driver: IObservableDomainLeagueDriver | null = null;
     private buffering = false;
     private bufferedEvents: { domainName: string, watchEvent: WatchEvent }[] = [];
     private readonly domains: {
         [domainName: string]: { domain: ObservableDomain, obs: BehaviorSubject<ReadonlyArray<any>> };
     } = {};
     constructor(
-        private readonly driverBuilder: () => IObservableDomainLeagueDriver
+        private readonly driver: IObservableDomainLeagueDriver
     ) {
     }
 
@@ -34,10 +33,12 @@ export class ObservableDomainClient {
 
     public async listenToDomain(domainName: string): Promise<Observable<ReadonlyArray<any>>> {
         if (this.domains[domainName] === undefined) {
-            const res = await this.driver.startListening([{ domainName: domainName, transactionCount: 0 }])[domainName];
             const od = new ObservableDomain();
             const subject = new BehaviorSubject<ReadonlyArray<any>>(od.roots);
-            od.applyWatchEvent(res);
+            if(this.connectionState.value != ObservableDomainClientConnectionState.Disconnected) {
+                const res = await this.driver.startListening([{ domainName: domainName, transactionCount: 0 }])[domainName];
+                od.applyWatchEvent(res);
+            }
             this.domains[domainName] = {
                 domain: od,
                 obs: subject
@@ -46,15 +47,12 @@ export class ObservableDomainClient {
         return this.domains[domainName].obs;
     }
 
-
-
     private async loopReconnect(): Promise<void> {
         while (!this.stopping) {
-            this.driver = this.driverBuilder();
             this.buffering = true;
             this.bufferedEvents = [];
-            this.driver.onMessage((d, e) => this.onMessage(d, e));
             if (!await this.driver.start()) continue;
+            this.driver.onMessage((d, e) => this.onMessage(d, e));
             this.connectionState.next(ObservableDomainClientConnectionState.CatchingUp);
             const domainExports = await this.driver.startListening(Object.keys(this.domains).map((d => {
                 return {
