@@ -6,7 +6,7 @@ using Microsoft.Extensions.Options;
 
 namespace CK.Observable.DefaultMQTTObservableServer
 {
-    public class DefaultMQTTObservableServer : MqttObservableServer, IAutoService
+    public class DefaultMQTTObservableServer : MqttObservableServer, ISingletonAutoService
     {
         public DefaultMQTTObservableServer( IOptionsMonitor<MQTTObservableWatcherConfig> config,
                                            LocalMQTTDemiServer server,
