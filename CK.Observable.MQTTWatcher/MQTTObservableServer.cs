@@ -37,7 +37,7 @@ namespace CK.Observable.MQTTWatcher
         public async Task<string> HandleStartOrRestartWatchAsync( IActivityMonitor m,
             IMQTTObservableWatcherStartOrRestartCommand command )
         {
-            _processNewClientLock.EnterReadLock();
+            await _processNewClientLock.WaitAsync();
             try
             {
                 if( !_watchers.TryGetValue( command.MqttClientId, out var watcher ) )
@@ -49,7 +49,7 @@ namespace CK.Observable.MQTTWatcher
             }
             finally
             {
-                _processNewClientLock.ExitReadLock();
+                _processNewClientLock.Release();
             }
         }
 
@@ -60,32 +60,32 @@ namespace CK.Observable.MQTTWatcher
                 // thread safe thanks to the concurrent dictionary, only the one removing it will run this code.
                 if( _watchers.TryRemove( watcher.ClientId, out _ ) )
                 {
+                    m.Info($"Removed MQTT Agent {watcher.ClientId} from OD watcher.");
                     watcher.Dispose();
                 }
             }
         }
-
-        readonly ReaderWriterLockSlim _processNewClientLock = new();
+        readonly SemaphoreSlim _processNewClientLock = new( 1 );//TODO: upgrade to read/Write lock with async support.
         bool _processNewClients = true;
         void OnNewClient( IActivityMonitor m, MQTTServerAgent newAgent )
         {
             Throw.CheckNotNullArgument( newAgent.ClientId );
-            _processNewClientLock.EnterReadLock();
-            if( !_processNewClients )
+            _processNewClientLock.Wait();
+            if( _processNewClients )
             {
-                using( m.OpenInfo( "MQTT Agent connected, pairing it with Observable League." ) )
+                using( m.OpenInfo( $"MQTT Agent '{newAgent.ClientId}' connected, pairing it with Observable League." ) )
                 {
                     _watchers.TryAdd( newAgent.ClientId, new MqttObservableWatcher( this, _config, newAgent, _league ) );
                 }
             }
-            _processNewClientLock.ExitReadLock(); // we exit lock later because we don't want to do this while StopAsync runs.
+            _processNewClientLock.Release(); // we exit lock later because we don't want to do this while StopAsync runs.
         }
 
-        public Task StopAsync( CancellationToken cancellationToken )
+        public async Task StopAsync( CancellationToken cancellationToken )
         {
-            _processNewClientLock.EnterWriteLock();
+            await _processNewClientLock.WaitAsync( cancellationToken );
             _processNewClients = false;
-            _processNewClientLock.ExitWriteLock();
+            _processNewClientLock.Release();
             _server.OnNewClient.Sync -= OnNewClient;
             ActivityMonitor? m = null;
             foreach( var clientId in _watchers.Keys.ToArray() ) //capture keys
@@ -100,7 +100,6 @@ namespace CK.Observable.MQTTWatcher
                 }
             }
             _watchers.Clear();
-            return Task.CompletedTask;
         }
     }
 }

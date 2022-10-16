@@ -9,9 +9,10 @@ export class HttpCrisEndpoint implements ICrisEndpoint {
       let string = `["${command.commandModel.commandName}"`;
       string += `,${JSON.stringify(command, (key, value) => {
         return key == "commandModel" ? undefined : value;
-      })}]`
-      const resp = await this.axios.post<CrisResult>('', string);
-      const result = resp.data;
+      })}]`;
+      const resp = await this.axios.post<string>('', string);
+      
+      const result = JSON.parse(resp.data) as CrisResult; // TODO: @Dan implement io-ts.
       if (result.code == VESACode.Synchronous) {
         return {
           code: VESACode.Synchronous,

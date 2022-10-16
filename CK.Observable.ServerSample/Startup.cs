@@ -49,10 +49,8 @@ namespace CK.Observable.ServerSample.App
             {
                 app.UseDeveloperExceptionPage();
             }
-           var super = app.ApplicationServices.GetService<DefaultMQTTObservableServer.DefaultMQTTObservableServer>();
-            var baseObj = app.ApplicationServices.GetService<MqttObservableServer>();
-            app.UseCris();
             app.UseCors();
+            app.UseCris();
 
             app.UseDefaultFiles()
                .UseStaticFiles();

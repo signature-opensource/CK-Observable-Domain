@@ -56,12 +56,12 @@ namespace CK.Observable.MQTTWatcher
 
             protected override ValueTask WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken )
             {
-                var size = _domainNameSize + 4;
+                var size = _domainNameSize + 4 + 4 + _jsonExportSize;
                 Span<byte> span = pw.GetSpan( size );
                 BinaryPrimitives.WriteInt32LittleEndian( span, _domainNameSize );
                 _utf8.GetBytes( _domainName, span[4..] );
-                pw.Advance( size );
                 size = _jsonExportSize + 4;
+                span = span[(4+ _domainNameSize)..];
                 BinaryPrimitives.WriteInt32LittleEndian( span, _jsonExportSize );
                 _utf8.GetBytes( _jsonExport, span[4..] );
                 pw.Advance( size );
