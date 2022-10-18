@@ -21,7 +21,7 @@ namespace CK.Observable.ServerSample.App
             {
                 c.StorePath = Configuration[ "CK-ObservableLeague:StorePath" ];
                 var domainOpts = new EnsureDomainOptions { DomainName = "Test-Domain" };
-                domainOpts.CreateSnapshotKeepDuration = TimeSpan.FromSeconds(10);
+                domainOpts.CreateSnapshotSaveDelay = TimeSpan.FromSeconds( 10 );
                 domainOpts.RootTypes.Add( typeof( Root ).AssemblyQualifiedName! );
                 c.EnsureDomains.Add( domainOpts );
             } );

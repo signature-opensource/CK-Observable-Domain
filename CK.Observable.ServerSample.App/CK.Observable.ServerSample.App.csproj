@@ -7,8 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CK.Cris.TypeScript" Version="0.15.0" />
-    <PackageReference Include="CK.Cris.AspNet" Version="0.15.0" />
+    <PackageReference Include="CK.Cris.TypeScript" Version="0.15.1--0000-develop" />
+    <PackageReference Include="CK.Cris.AspNet" Version="0.15.1--0000-develop" />
     <PackageReference Include="CK.Monitoring.Hosting" Version="16.0.1--0000-develop" />
     <PackageReference Include="CK.WeakAssemblyNameResolver" Version="0.5.3--0031-develop" />
   </ItemGroup>

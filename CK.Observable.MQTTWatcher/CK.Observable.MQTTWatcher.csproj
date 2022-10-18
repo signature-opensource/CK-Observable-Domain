@@ -7,8 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CK.Cris.Typescript" Version="0.15.0" />
-    <PackageReference Include="CK.MQTT.Server" Version="0.15.1--0008-develop" />
+    <PackageReference Include="CK.Cris.Typescript" Version="0.15.1--0000-develop" />
+    <PackageReference Include="CK.MQTT.Server" Version="0.15.1--0009-develop" />
   </ItemGroup>
 
   <ItemGroup>
