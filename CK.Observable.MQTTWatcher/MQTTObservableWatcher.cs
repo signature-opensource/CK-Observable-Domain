@@ -60,7 +60,6 @@ namespace CK.Observable.MQTTWatcher
                 Span<byte> span = pw.GetSpan( size );
                 BinaryPrimitives.WriteInt32LittleEndian( span, _domainNameSize );
                 _utf8.GetBytes( _domainName, span[4..] );
-                size = _jsonExportSize + 4;
                 span = span[(4+ _domainNameSize)..];
                 BinaryPrimitives.WriteInt32LittleEndian( span, _jsonExportSize );
                 _utf8.GetBytes( _jsonExport, span[4..] );

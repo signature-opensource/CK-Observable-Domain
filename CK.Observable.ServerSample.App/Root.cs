@@ -11,7 +11,7 @@ namespace CK.Observable.ServerSample.App
     [SerializationVersion( 0 )]
     public class Root : ObservableRootObject
     {
-        public float Slider { get; }
+        public float Slider { get; set; }
 
         public Root()
         {

@@ -12,7 +12,7 @@ export class HttpCrisEndpoint implements ICrisEndpoint {
       })}]`;
       const resp = await this.axios.post<string>('', string);
       
-      const result = JSON.parse(resp.data) as CrisResult; // TODO: @Dan implement io-ts.
+      const result = JSON.parse(resp.data)[1] as CrisResult; // TODO: @Dan implement io-ts.
       if (result.code == VESACode.Synchronous) {
         return {
           code: VESACode.Synchronous,

@@ -34,8 +34,7 @@ namespace CK.Observable.MQTTWatcher
         }
 
         [CommandHandler]
-        public async Task<string> HandleStartOrRestartWatchAsync( IActivityMonitor m,
-            IMQTTObservableWatcherStartOrRestartCommand command )
+        public async Task<string> HandleStartOrRestartWatchAsync( IActivityMonitor m, IMQTTObservableWatcherStartOrRestartCommand command )
         {
             await _processNewClientLock.WaitAsync();
             try

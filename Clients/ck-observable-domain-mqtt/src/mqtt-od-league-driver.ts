@@ -22,7 +22,7 @@ export class MqttObservableLeagueDomainService implements IObservableDomainLeagu
             const resp = await this.crisEndpoint.send(poco);
             if(resp.code == 'CommunicationError' ) throw resp.result;
             if(resp.code != VESACode.Synchronous) throw new Error(JSON.stringify(resp.result));
-            res[element.domainName] = resp;
+            res[element.domainName] = JSON.parse(resp.result);
         });
         await Promise.all(promises);
         return res;
@@ -52,7 +52,7 @@ export class MqttObservableLeagueDomainService implements IObservableDomainLeagu
             const jsonExportSize = payload.readInt32LE(4 + domainNameSize);
             const jsonExport = payload.toString("utf-8", 4 + 4 + domainNameSize, 4 + 4 + domainNameSize+jsonExportSize);
             eventHandler(domainName, JSON.parse(jsonExport));
-        })
+        });
     }
     public onClose(eventHandler: (error: Error) => void): void {
         if (!this.client.connected) {
@@ -60,6 +60,7 @@ export class MqttObservableLeagueDomainService implements IObservableDomainLeagu
             return;
         }
         this.client.on("disconnect", () => {
+            console.log("mqtt disconnected");
             eventHandler(null);
         })
     }
