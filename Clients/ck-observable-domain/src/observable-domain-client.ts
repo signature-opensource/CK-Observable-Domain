@@ -1,9 +1,12 @@
-import { ObservableDomain, WatchEvent } from '@signature-code/ck-observable-domain';
+import { ObservableDomain, WatchEvent } from './observable-domain';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { IObservableDomainLeagueDriver } from './iod-league-driver';
-import { ObservableDomainClientConnectionState } from './ObservableDomainClientConnectionState';
 
-(window as any).enableObservableDomainClientLog = false;
+export enum ObservableDomainClientConnectionState {
+    Disconnected,
+    Connected,
+    CatchingUp
+}
 
 export class ObservableDomainClient {
     private readonly connectionState: BehaviorSubject<ObservableDomainClientConnectionState> = new BehaviorSubject<ObservableDomainClientConnectionState>(ObservableDomainClientConnectionState.Disconnected);
@@ -20,7 +23,7 @@ export class ObservableDomainClient {
     }
 
     get domainsRoots(): { [domainName: string]: ReadonlyArray<any> } {
-        const newObj = {};
+        const newObj : { [domainName: string]: ReadonlyArray<any> } = {};
         Object.keys(this.domains).forEach((domainName) => {
             newObj[domainName] = this.domains[domainName].domain.roots;
         });
@@ -36,7 +39,7 @@ export class ObservableDomainClient {
             const od = new ObservableDomain();
             const subject = new BehaviorSubject<ReadonlyArray<any>>(od.roots);
             if(this.connectionState.value != ObservableDomainClientConnectionState.Disconnected) {
-                const res = await this.driver.startListening([{ domainName: domainName, transactionCount: 0 }])[domainName];
+                const res = (await this.driver.startListening([{ domainName: domainName, transactionCount: 0 }]))[domainName];
                 od.applyWatchEvent(res);
             }
             this.domains[domainName] = {
@@ -115,10 +118,6 @@ export class ObservableDomainClient {
             curr.domain = new ObservableDomain(); // reset the domain
             this.driver.stop(); // kill the whole connection, which will reload this domain from scratch.
             return;
-        }
-
-        if ((window as any).enableObservableDomainClientLog) {
-            console.log(`Domain ${domainName} update`, curr.obs.value);
         }
     }
 }

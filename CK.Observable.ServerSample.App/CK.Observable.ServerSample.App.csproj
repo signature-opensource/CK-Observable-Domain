@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="CK.AspNet.Auth" Version="18.0.0" />
     <PackageReference Include="CK.Cris.TypeScript" Version="0.15.1--0000-develop" />
     <PackageReference Include="CK.Cris.AspNet" Version="0.15.1--0000-develop" />
     <PackageReference Include="CK.Monitoring.Hosting" Version="16.0.1--0000-develop" />
@@ -15,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CK.Observable.DefaultMQTTObservableServer\CK.Observable.DefaultMQTTObservableServer.csproj" />
+    <ProjectReference Include="..\CK.Observable.SignalRWatcher\CK.Observable.SignalRWatcher.csproj" />
   </ItemGroup>
 
 </Project>

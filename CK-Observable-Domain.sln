@@ -44,7 +44,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.ServerSample"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CKSetup", "CKSetup\CKSetup.csproj", "{0E315C17-1BD2-4A50-BBFE-A91EC871923F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CK.Observable.ServerSample.App", "CK.Observable.ServerSample.App\CK.Observable.ServerSample.App.csproj", "{9EAEBFBE-0E86-486D-A774-3482AC88E6F0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.ServerSample.App", "CK.Observable.ServerSample.App\CK.Observable.ServerSample.App.csproj", "{9EAEBFBE-0E86-486D-A774-3482AC88E6F0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CK.Observable.SignalRWatcher", "CK.Observable.SignalRWatcher\CK.Observable.SignalRWatcher.csproj", "{477E5728-B812-4BEA-AA55-11AC634F1D73}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -104,6 +106,10 @@ Global
 		{9EAEBFBE-0E86-486D-A774-3482AC88E6F0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9EAEBFBE-0E86-486D-A774-3482AC88E6F0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9EAEBFBE-0E86-486D-A774-3482AC88E6F0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{477E5728-B812-4BEA-AA55-11AC634F1D73}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{477E5728-B812-4BEA-AA55-11AC634F1D73}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{477E5728-B812-4BEA-AA55-11AC634F1D73}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{477E5728-B812-4BEA-AA55-11AC634F1D73}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

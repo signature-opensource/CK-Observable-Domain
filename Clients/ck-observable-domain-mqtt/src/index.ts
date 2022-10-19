@@ -1,28 +1,24 @@
 import { AsyncMqttClient, IPublishPacket, connectAsync, AsyncClient } from "async-mqtt";
-import { Observable, Subject } from 'rxjs';
-import { filter, map, share } from 'rxjs/operators';
 import { WatchEvent } from '@signature-code/ck-observable-domain';
-import { IObservableDomainLeagueDriver } from "./iod-league-driver";
-import { json } from "stream/consumers";
+import { IObservableDomainLeagueDriver } from "@signature-code/ck-observable-domain/src/iod-league-driver";
 import { ICrisEndpoint, MQTTObservableWatcherStartOrRestartCommand, VESACode } from "@signature/generated";
-import { debug } from "console";
 
 export class MqttObservableLeagueDomainService implements IObservableDomainLeagueDriver {
 
-    private client: AsyncMqttClient;
+    private client!: AsyncMqttClient;
     private clientId: string;
     constructor(private readonly serverUrl: string, private readonly crisEndpoint: ICrisEndpoint, private readonly mqttTopic: string) {
         this.clientId = "od-watcher-"+ crypto.randomUUID();
     }
 
     async startListening(domainsNames: { domainName: string; transactionCount: number; }[]): Promise<{ [domainName: string]: WatchEvent; }> {
-        const res = {};
+        const res : { [domainName: string]: WatchEvent; } = {};
         const promises = domainsNames.map( async element => {
             const poco = MQTTObservableWatcherStartOrRestartCommand.create(this.clientId, element.domainName, element.transactionCount);
             const resp = await this.crisEndpoint.send(poco);
             if(resp.code == 'CommunicationError' ) throw resp.result;
             if(resp.code != VESACode.Synchronous) throw new Error(JSON.stringify(resp.result));
-            res[element.domainName] = JSON.parse(resp.result);
+            res[element.domainName] = JSON.parse(resp.result!);
         });
         await Promise.all(promises);
         return res;
@@ -54,14 +50,14 @@ export class MqttObservableLeagueDomainService implements IObservableDomainLeagu
             eventHandler(domainName, JSON.parse(jsonExport));
         });
     }
-    public onClose(eventHandler: (error: Error) => void): void {
+    public onClose(eventHandler: (error: Error | undefined) => void): void {
         if (!this.client.connected) {
-            eventHandler(null);
+            eventHandler(undefined);
             return;
         }
         this.client.on("disconnect", () => {
             console.log("mqtt disconnected");
-            eventHandler(null);
+            eventHandler(undefined);
         })
     }
     public async stop(): Promise<void> {
