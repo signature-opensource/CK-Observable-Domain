@@ -7,17 +7,19 @@ export class MqttObservableLeagueDomainService implements IObservableDomainLeagu
 
     private client!: AsyncMqttClient;
     private clientId: string;
+    private messageHandlers: ((domainName: string, eventsJson: WatchEvent) => void)[] = [];
+    private closeHandlers: ((e: Error | undefined) => void)[] = [(e) => console.log("mqtt disconnected: "+e)];
     constructor(private readonly serverUrl: string, private readonly crisEndpoint: ICrisEndpoint, private readonly mqttTopic: string) {
-        this.clientId = "od-watcher-"+ crypto.randomUUID();
+        this.clientId = "od-watcher-" + crypto.randomUUID();
     }
 
     async startListening(domainsNames: { domainName: string; transactionCount: number; }[]): Promise<{ [domainName: string]: WatchEvent; }> {
-        const res : { [domainName: string]: WatchEvent; } = {};
-        const promises = domainsNames.map( async element => {
+        const res: { [domainName: string]: WatchEvent; } = {};
+        const promises = domainsNames.map(async element => {
             const poco = MQTTObservableWatcherStartOrRestartCommand.create(this.clientId, element.domainName, element.transactionCount);
             const resp = await this.crisEndpoint.send(poco);
-            if(resp.code == 'CommunicationError' ) throw resp.result;
-            if(resp.code != VESACode.Synchronous) throw new Error(JSON.stringify(resp.result));
+            if (resp.code == 'CommunicationError') throw resp.result;
+            if (resp.code != VESACode.Synchronous) throw new Error(JSON.stringify(resp.result));
             res[element.domainName] = JSON.parse(resp.result!);
         });
         await Promise.all(promises);
@@ -31,6 +33,8 @@ export class MqttObservableLeagueDomainService implements IObservableDomainLeagu
                 clean: true,
                 clientId: this.clientId
             }, true);
+            this.client.on("message", this.handleMessages);
+            this.client.on("disconnect", this.handleClose);
             console.log("connected");
             return true;
         } catch (e) {
@@ -40,25 +44,29 @@ export class MqttObservableLeagueDomainService implements IObservableDomainLeagu
         }
     }
 
-    public onMessage(eventHandler: (domainName: string, eventsJson: WatchEvent) => void): void {
-        this.client.on("message", (topic: string, payload: Buffer, packet: IPublishPacket) => {
-            if (!topic.startsWith(this.mqttTopic)) return;
-            const domainNameSize = payload.readInt32LE();
-            const domainName = payload.toString("utf-8", 4, domainNameSize+4);
-            const jsonExportSize = payload.readInt32LE(4 + domainNameSize);
-            const jsonExport = payload.toString("utf-8", 4 + 4 + domainNameSize, 4 + 4 + domainNameSize+jsonExportSize);
-            eventHandler(domainName, JSON.parse(jsonExport));
+    private handleMessages(topic: string, payload: Buffer, packet: IPublishPacket) {
+        if (!topic.startsWith(this.mqttTopic)) return;
+        const domainNameSize = payload.readInt32LE();
+        const domainName = payload.toString("utf-8", 4, domainNameSize + 4);
+        const jsonExportSize = payload.readInt32LE(4 + domainNameSize);
+        const jsonExport = payload.toString("utf-8", 4 + 4 + domainNameSize, 4 + 4 + domainNameSize + jsonExportSize);
+        this.messageHandlers.forEach(handler => {
+            handler(domainName, JSON.parse(jsonExport));
         });
     }
+
+    private handleClose(e: Error | undefined) {
+        this.closeHandlers.forEach(handler => {
+            handler(e);
+        });
+    }
+
+    public onMessage(eventHandler: (domainName: string, eventsJson: WatchEvent) => void): void {
+        this.messageHandlers.push(eventHandler);
+
+    }
     public onClose(eventHandler: (error: Error | undefined) => void): void {
-        if (!this.client.connected) {
-            eventHandler(undefined);
-            return;
-        }
-        this.client.on("disconnect", () => {
-            console.log("mqtt disconnected");
-            eventHandler(undefined);
-        })
+        this.closeHandlers.push(eventHandler);
     }
     public async stop(): Promise<void> {
         await this.client.end(true);

@@ -30,6 +30,7 @@ export async function startPage(): Promise<void> {
 
     signalROdObs.forEach((s) =>  {
         if(s.length < 1) return;
+        console.log(s[0].Slider);
         right.value = s[0].Slider;
     })
 }

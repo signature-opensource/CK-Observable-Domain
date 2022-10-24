@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using CK.PerfectEvent;
 
 namespace CK.Observable
 {
@@ -20,14 +21,13 @@ namespace CK.Observable
         readonly SemaphoreSlim _lock;
         readonly List<DomainWatcher> _watched;
 
-        readonly struct DomainWatcher : IDisposable
+        class DomainWatcher : IDisposable
         {
-            readonly ObservableWatcher W;
+            readonly ObservableWatcher _w;
             public readonly IObservableDomainLoader D;
-
             public DomainWatcher( ObservableWatcher w, IObservableDomainLoader d )
             {
-                W = w;
+                _w = w;
                 D = d;
                 d.DomainChanged.Async += DomainChangedAsync;
             }
@@ -39,10 +39,10 @@ namespace CK.Observable
 
             async Task DomainChangedAsync( IActivityMonitor monitor, JsonEventCollector.TransactionEvent e )
             {
-                if( e.TransactionNumber == 1 ) await W.HandleEventAsync( monitor, new WatchEvent( D.DomainName, "{\"N\":1,\"E\":[]}" ) );
+                if( e.TransactionNumber == 1 ) await _w.HandleEventAsync( monitor, new WatchEvent( D.DomainName, "{\"N\":1,\"E\":[]}" ) );
                 else
                 {
-                    await W.HandleEventAsync( monitor, new WatchEvent( D.DomainName, "{\"N\":"+e.TransactionNumber+",\"E\":[["+ e.ExportedEvents +"]]}" ) );
+                    await _w.HandleEventAsync( monitor, new WatchEvent( D.DomainName, "{\"N\":" + e.TransactionNumber + ",\"E\":[[" + e.ExportedEvents + "]]}" ) );
                 }
             }
         }

@@ -73,6 +73,7 @@ namespace CK.Observable.ServerSample
                     webBuilder
                         .UseKestrel()
                     .UseIISIntegration()
+                        .UseScopedHttpContext()
                         .UseStartup<Startup>();
                 } );
 

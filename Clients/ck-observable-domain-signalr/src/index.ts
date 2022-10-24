@@ -8,6 +8,7 @@ export class SignalRObservableLeagueDomainService implements IObservableDomainLe
   constructor(hubUrl: string, private readonly crisEndpoint: ICrisEndpoint) {
     this.connection = new HubConnectionBuilder()
       .withUrl(hubUrl, HttpTransportType.None)
+      .withAutomaticReconnect()
       .build();
   }
 
@@ -24,7 +25,7 @@ export class SignalRObservableLeagueDomainService implements IObservableDomainLe
   public async startListening(domainsNames: { domainName: string, transactionCount: number }[]): Promise<{ [domainName: string]: WatchEvent }> {
     const res: { [domainName: string]: WatchEvent; } = {};
     const promises = domainsNames.map(async element => {
-      const poco = SignalRObservableWatcherStartOrRestartCommand.create(element.domainName, element.transactionCount);
+      const poco = SignalRObservableWatcherStartOrRestartCommand.create(this.connection.connectionId!, element.domainName, element.transactionCount);
       const resp = await this.crisEndpoint.send(poco);
       if (resp.code == 'CommunicationError') throw resp.result;
       if (resp.code != VESACode.Synchronous) throw new Error(JSON.stringify(resp.result));
@@ -35,20 +36,16 @@ export class SignalRObservableLeagueDomainService implements IObservableDomainLe
   }
 
   public onMessage(eventHandler: (domainName: string, eventsJson: WatchEvent) => void) {
-    this.connection.on('OnStateEvents', (domainName, eventText) => {
+    this.connection.on('OnStateEventsAsync', (domainName: string, eventText: string) => {
       eventHandler(domainName, JSON.parse(eventText));
     });
   }
 
   public onClose(eventHandler: (error: Error | undefined) => void) {
-    if (this.connection.state == HubConnectionState.Disconnected) {
-      eventHandler(undefined);
-      return;
-    }
     this.connection.onclose(eventHandler);
   }
 
-  public stop(): Promise<void> {
-    return this.connection.stop();
+  public async stop(): Promise<void> {
+    await this.connection.stop();
   }
 }

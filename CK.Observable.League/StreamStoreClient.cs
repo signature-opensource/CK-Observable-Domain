@@ -231,9 +231,10 @@ namespace CK.Observable.League
                 bool isWaitingSave;
                 lock( _saveLock )
                 {
-                    _waitingSaveTransactionNumber = Math.Max( CurrentSerialNumber, _waitingSaveTransactionNumber );
 
                     isTransactionOlderThanSave = _waitingSaveTransactionNumber >= CurrentSerialNumber;
+                    _waitingSaveTransactionNumber = Math.Max( CurrentSerialNumber, _waitingSaveTransactionNumber );
+
                     if( isTransactionOlderThanSave )
                     {
                         // Waiting Task will save this transaction for us.

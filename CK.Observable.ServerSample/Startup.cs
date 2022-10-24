@@ -25,8 +25,8 @@ namespace CK.Observable.ServerSample.App
         {
             services.Configure<MQTTDemiServerConfig>( Configuration.GetSection( "MQTTDemiServerConfig" ) );
             base.ConfigureServices( services );
-            //services.AddAuthentication()
-            //    .AddWebFrontAuth();
+            services.AddAuthentication()
+                .AddWebFrontAuth();
             services.AddCors
             (
                 o =>
