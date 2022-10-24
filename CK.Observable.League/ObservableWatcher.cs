@@ -37,7 +37,7 @@ namespace CK.Observable
                 D.DomainChanged.Async -= DomainChangedAsync;
             }
 
-            async Task DomainChangedAsync( IActivityMonitor monitor, JsonEventCollector.TransactionEvent e )
+            async Task DomainChangedAsync( IActivityMonitor monitor, JsonEventCollector.TransactionEvent e, CancellationToken cancellation )
             {
                 if( e.TransactionNumber == 1 ) await _w.HandleEventAsync( monitor, new WatchEvent( D.DomainName, "{\"N\":1,\"E\":[]}" ) );
                 else

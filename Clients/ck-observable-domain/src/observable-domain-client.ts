@@ -15,7 +15,7 @@ export class ObservableDomainClient {
     private stopping = false;
     private buffering = false;
     private bufferedEvents: { domainName: string, watchEvent: WatchEvent }[] = [];
-    private onCloseHandler : ((e: Error | undefined) => void) | undefined;
+    private onCloseHandler: ((e: Error | undefined) => void) | undefined;
     private readonly domains: {
         [domainName: string]: { domain: ObservableDomain, obs: BehaviorSubject<ReadonlyArray<any>> };
     } = {};
@@ -25,14 +25,14 @@ export class ObservableDomainClient {
         this.driver.onMessage(this.onMessage);
         this.driver.onClose(this.onClose);
     }
-    private onClose = (e: Error|undefined) => {
-        if(this.onCloseHandler != undefined) {
+    private onClose = (e: Error | undefined) => {
+        if (this.onCloseHandler != undefined) {
             this.onCloseHandler(e);
         }
     }
 
     get domainsRoots(): { [domainName: string]: ReadonlyArray<any> } {
-        const newObj : { [domainName: string]: ReadonlyArray<any> } = {};
+        const newObj: { [domainName: string]: ReadonlyArray<any> } = {};
         Object.keys(this.domains).forEach((domainName) => {
             newObj[domainName] = this.domains[domainName].domain.roots;
         });
@@ -51,54 +51,64 @@ export class ObservableDomainClient {
                 domain: od,
                 obs: subject
             };
-            if(this.connectionState.value != ObservableDomainClientConnectionState.Disconnected) {
+            if (this.connectionState.value != ObservableDomainClientConnectionState.Disconnected) {
                 const res = (await this.driver.startListening([{ domainName: domainName, transactionCount: 0 }]))[domainName];
                 od.applyWatchEvent(res);
             }
-            
+
         }
         return this.domains[domainName].obs;
     }
 
     private async loopReconnect(): Promise<void> {
         while (!this.stopping) {
-            this.buffering = true;
-            this.bufferedEvents = [];
-            if (!await this.driver.start()) continue;
-            this.connectionState.next(ObservableDomainClientConnectionState.CatchingUp);
-            const domainExports = await this.driver.startListening(Object.keys(this.domains).map((d => {
-                return {
-                    domainName: d,
-                    transactionCount: this.domains[d]?.domain.transactionNumber ?? 0
+            try {
+                this.buffering = true;
+                this.bufferedEvents = [];
+                if (!await this.driver.start()) continue;
+                this.connectionState.next(ObservableDomainClientConnectionState.CatchingUp);
+                const domainExports = await this.driver.startListening(Object.keys(this.domains).map((d => {
+                    return {
+                        domainName: d,
+                        transactionCount: this.domains[d]?.domain.transactionNumber ?? 0
+                    }
+                })));
+                this.buffering = false;
+                Object.keys(domainExports).forEach((domainName) => {
+                    this.onMessage(domainName, domainExports[domainName]);
+                    const currDomain = this.domains[domainName];
+                    console.log(
+                        `Domain ${domainName}: Loaded state. ${currDomain.domain.allObjectsCount} objects in domain. `
+                        + `${currDomain.domain.roots.length} roots. Last transaction number: ${currDomain.domain.transactionNumber}`
+                    );
+                });
+                for (const event of this.bufferedEvents) {
+                    this.onMessage(event.domainName, event.watchEvent);
                 }
-            })));
-            this.buffering = false;
-            Object.keys(domainExports).forEach((domainName) => {
-                this.onMessage(domainName, domainExports[domainName]);
-                const currDomain = this.domains[domainName];
-                console.log(
-                    `Domain ${domainName}: Loaded state. ${currDomain.domain.allObjectsCount} objects in domain. `
-                    + `${currDomain.domain.roots.length} roots. Last transaction number: ${currDomain.domain.transactionNumber}`
+
+                this.connectionState.next(ObservableDomainClientConnectionState.Connected);
+                await new Promise<void>(
+                    (resolve) => {
+                        this.onCloseHandler = ((error) => {
+                            if (error != null) {
+                                console.log("OD driver Disconnected due to : " + error);
+                            } else {
+                                console.log("OD driver Disconnected for an unknown reason");
+                            }
+                            resolve();
+                        });
+                    }
                 );
-            });
-            for (const event of this.bufferedEvents) {
-                this.onMessage(event.domainName, event.watchEvent);
+            }
+            catch (e) {
+                console.error("Error in OD reconnect loop:", e);
+                //we don't throw since we retry forever to reconnect.
+            }
+            finally {
+                this.connectionState.next(ObservableDomainClientConnectionState.Disconnected);
+                this.driver.stop();
             }
 
-            this.connectionState.next(ObservableDomainClientConnectionState.Connected);
-            await new Promise<void>(
-                (resolve) => {
-                    this.onCloseHandler = ((error) => {
-                        if (error != null) {
-                            console.log("OD driver Disconnected due to : " + error);
-                        } else {
-                            console.log("OD driver Disconnected for an unknown reason");
-                        }
-                        resolve();
-                    });
-                }
-            );
-            this.connectionState.next(ObservableDomainClientConnectionState.Disconnected);
         }
     }
 
@@ -108,23 +118,23 @@ export class ObservableDomainClient {
         this.connectionState.complete();
     }
 
-    private onMessage = (domainName: string, event: WatchEvent)=>  {
+    private onMessage = (domainName: string, event: WatchEvent) => {
         const curr = this.domains[domainName];
         if (curr === undefined) {
             console.log(`Received event for unknown domain ${domainName}, ignoring this event.`);
             return;
         }
         if (this.buffering) {
-            console.log("OD Client is starting, buffering an event for "+domainName);
+            console.log("OD Client is starting, buffering an event for " + domainName);
             this.bufferedEvents.push({ domainName: domainName, watchEvent: event });
             return;
         }
 
         try {
-            if(ObservableDomain.isTransactionSetEvent(event)) {
-                console.log("Received OD event for domain "+domainName+", transction count:"+event.N);
-            } else if(ObservableDomain.isDomainExportEvent(event)) {
-                console.log("Received domain export for domain "+domainName+", transaction count:"+event.N);
+            if (ObservableDomain.isTransactionSetEvent(event)) {
+                console.log("Received OD event for domain " + domainName + ", transction count:" + event.N);
+            } else if (ObservableDomain.isDomainExportEvent(event)) {
+                console.log("Received domain export for domain " + domainName + ", transaction count:" + event.N);
             }
             curr.domain.applyWatchEvent(event);
             curr.obs.next(curr.domain.roots);
