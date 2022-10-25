@@ -17,7 +17,7 @@ namespace CodeCake
             Cake.Log.Verbosity = Verbosity.Diagnostic;
             StandardGlobalInfo globalInfo = CreateStandardGlobalInfo()
                                                 .AddDotnet()
-                                                .AddNPM()
+                                                .AddYarn()
                                                 .SetCIBuildTag();
             Task( "Check-Repository" )
                 .Does( () =>
