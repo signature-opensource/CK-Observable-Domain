@@ -1,0 +1,31 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Launch localhost",
+        "type": "firefox",
+        "request": "launch",
+        "reAttach": true,
+        "url": "http://localhost:1234/",
+        "webRoot": "${workspaceFolder}",
+        "pathMappings": [
+          {
+            "url": "http://localhost:1234/__parcel_source_root/",
+            "path": "${workspaceFolder}"
+          }
+        ],
+        "suggestPathMappingWizard": true
+      },
+      {
+        "type": "chrome",
+        "request": "launch",
+        "name": "Launch Chrome against localhost",
+        "url": "http://localhost:1234",
+        "webRoot": "${workspaceFolder}",
+        "breakOnLoad": true,
+        "sourceMapPathOverrides": {
+          "/__parcel_source_root/*": "${workspaceFolder}/*"
+        }
+      }
+    ]
+}

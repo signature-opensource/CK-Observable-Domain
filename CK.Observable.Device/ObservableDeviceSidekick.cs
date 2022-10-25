@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CK.Observable.Device
@@ -108,7 +109,7 @@ namespace CK.Observable.Device
             }
         }
 
-        Task OnAllDevicesLifetimeEventAsync( IActivityMonitor monitor, IDeviceHost sender, DeviceLifetimeEvent e )
+        Task OnAllDevicesLifetimeEventAsync( IActivityMonitor monitor, IDeviceHost sender, DeviceLifetimeEvent e, CancellationToken cancellationToken )
         {
             return Domain.TryModifyAsync( monitor, () =>
             {

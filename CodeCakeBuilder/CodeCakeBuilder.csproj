@@ -9,7 +9,7 @@
     <Nullable>annotations</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.Core" Version="16.0.0" />
+    <PackageReference Include="CK.Core" Version="16.0.1--0001-develop" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="NUnit.Runners.Net4" Version="2.6.4" />
@@ -17,7 +17,7 @@
     <PackageReference Include="NuGet.Credentials" Version="6.3.0" />
     <PackageReference Include="Cake.Npm" Version="2.0.0" />
     <PackageReference Include="Cake.Yarn" Version="0.4.8" />
-    <PackageReference Include="SimpleGitVersion.Cake" Version="8.0.0" />
+    <PackageReference Include="SimpleGitVersion.Cake" Version="8.0.1--0001-develop" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
   </ItemGroup>
 </Project>

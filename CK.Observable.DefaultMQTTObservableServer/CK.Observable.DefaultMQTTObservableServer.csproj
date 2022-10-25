@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CK.MQTT.LocalMQTTDemiServer" Version="0.15.1--0014-develop" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CK.Observable.MQTTWatcher\CK.Observable.MQTTWatcher.csproj" />
+  </ItemGroup>
+
+</Project>

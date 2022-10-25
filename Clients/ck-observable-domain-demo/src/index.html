@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title></title>
+<script type="module" src="./index.ts">
+</script>
+</head>
+
+<body style="display: flex; flex-direction: row; justify-content: space-between;">
+  <div style="width: 40%;">
+    <span>MQTT</span>
+    <input type="range" id="slider-left" min="0" max="1000" style="width: 100%;" oninput="sliderUpdate(this.value)">
+  </div>
+  <div style="width: 40%;">
+    <span>SignalR</span>
+    <input type="range" id="slider-right" min="0" max="1000" style="width: 100%;" oninput="sliderUpdate(this.value)">
+  </div>
+</body>
+
+</html>

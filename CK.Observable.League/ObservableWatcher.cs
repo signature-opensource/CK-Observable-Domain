@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using CK.PerfectEvent;
 
 namespace CK.Observable
 {
@@ -20,29 +21,28 @@ namespace CK.Observable
         readonly SemaphoreSlim _lock;
         readonly List<DomainWatcher> _watched;
 
-        readonly struct DomainWatcher : IDisposable
+        class DomainWatcher : IDisposable
         {
-            readonly ObservableWatcher W;
+            readonly ObservableWatcher _w;
             public readonly IObservableDomainLoader D;
-
             public DomainWatcher( ObservableWatcher w, IObservableDomainLoader d )
             {
-                W = w;
+                _w = w;
                 D = d;
-                d.DomainChanged.Sync += DomainChanged;
+                d.DomainChanged.Async += DomainChangedAsync;
             }
 
             public void Dispose()
             {
-                D.DomainChanged.Sync -= DomainChanged;
+                D.DomainChanged.Async -= DomainChangedAsync;
             }
 
-            void DomainChanged( IActivityMonitor monitor, JsonEventCollector.TransactionEvent e )
+            async Task DomainChangedAsync( IActivityMonitor monitor, JsonEventCollector.TransactionEvent e, CancellationToken cancellation )
             {
-                if( e.TransactionNumber == 1 ) W.HandleEvent( monitor, new WatchEvent( D.DomainName, "{\"N\":1,\"E\":[]}" ) );
+                if( e.TransactionNumber == 1 ) await _w.HandleEventAsync( monitor, new WatchEvent( D.DomainName, "{\"N\":1,\"E\":[]}" ) );
                 else
                 {
-                    W.HandleEvent( monitor, new WatchEvent( D.DomainName, "{\"N\":"+e.TransactionNumber+",\"E\":[["+ e.ExportedEvents +"]]}" ) );
+                    await _w.HandleEventAsync( monitor, new WatchEvent( D.DomainName, "{\"N\":" + e.TransactionNumber + ",\"E\":[[" + e.ExportedEvents + "]]}" ) );
                 }
             }
         }
@@ -114,7 +114,7 @@ namespace CK.Observable
 
         /// <summary>
         /// Starts the watch of a domain.
-        /// The <see cref="HandleEvent(IActivityMonitor, WatchEvent)"/> is called with the
+        /// The <see cref="HandleEventAsync(IActivityMonitor, WatchEvent)"/> is called with the
         /// appropriate <see cref="WatchEvent"/>.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
@@ -127,10 +127,10 @@ namespace CK.Observable
         public async Task StartOrRestartWatchAsync( IActivityMonitor monitor, string domainName, int transactionNumber )
         {
             WatchEvent msg = await GetStartOrRestartEventAsync( monitor, domainName, transactionNumber );
-            HandleEvent( monitor, msg );
+            await HandleEventAsync( monitor, msg );
         }
 
-        async Task<WatchEvent> GetStartOrRestartEventAsync( IActivityMonitor monitor, string domainName, int transactionNumber )
+        public async Task<WatchEvent> GetStartOrRestartEventAsync( IActivityMonitor monitor, string domainName, int transactionNumber )
         {
             int currentTransactionNumber;
             IReadOnlyList<JsonEventCollector.TransactionEvent>? events = null;
@@ -250,7 +250,7 @@ namespace CK.Observable
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="e">The watch event.</param>
-        internal protected abstract void HandleEvent( IActivityMonitor monitor, WatchEvent e );
+        internal protected abstract ValueTask HandleEventAsync( IActivityMonitor monitor, WatchEvent e );
 
         /// <summary>
         /// Gets the watcher identifier.

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CK.Observable.Device
@@ -408,7 +409,7 @@ namespace CK.Observable.Device
             /// <param name="monitor">The monitor to use.</param>
             /// <param name="deviceEvent">The event to handle.</param>
             /// <returns>The awaitable.</returns>
-            protected abstract Task OnDeviceEventAsync( IActivityMonitor monitor, TDeviceEvent deviceEvent );
+            protected abstract Task OnDeviceEventAsync( IActivityMonitor monitor, TDeviceEvent deviceEvent, CancellationToken cancellationToken );
         }
     }
 

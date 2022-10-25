@@ -1,0 +1,22 @@
+<Setup Engine="CK.Setup.StObjEngine, CK.StObj.Engine">
+
+  <WorkingDirectory>WorkingDir</WorkingDirectory>
+  <LogLevel>Debug</LogLevel>
+  <UseSignatureFiles>True</UseSignatureFiles>
+  <ForceSetup>Full</ForceSetup>
+
+  <BinPaths>
+    <BinPath Path="../CK.Observable.ServerSample.App/bin/[Debug|Release]/net6.0">
+      <ProjectPath>../CK.Observable.ServerSample</ProjectPath>
+      <TypeScript>
+        <OutputPath>../Clients/signature-generated/</OutputPath>
+      </TypeScript>
+    </BinPath>
+  </BinPaths>
+
+  <Aspect Type="CK.Setup.TypeScriptAspectConfiguration, CK.StObj.TypeScript">
+  </Aspect>
+  <WorkingDirectory>WorkingDir</WorkingDirectory>
+
+</Setup>
+

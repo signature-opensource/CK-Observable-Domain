@@ -232,8 +232,7 @@ namespace CK.Observable
         {
             Debug.Assert( _domain != null );
             var monitor = new ActivityMonitor( $"JsonEvent collector for '{_domain.DomainName}'." );
-            bool mustExit = false;
-            while( !mustExit )
+            while( true )
             {
                 var ev = await _channel.Reader.ReadAsync();
                 if( ev == null ) break;
