@@ -8,7 +8,7 @@ export class MqttObservableLeagueDomainService implements IObservableDomainLeagu
     private client!: AsyncMqttClient;
     private clientId: string;
     private messageHandlers: ((domainName: string, eventsJson: WatchEvent) => void)[] = [];
-    private closeHandlers: ((e: Error | undefined) => void)[] = [(e) => console.log("mqtt disconnected: "+e)];
+    private closeHandlers: ((e: Error | undefined) => void)[] = [(e) => console.log("mqtt disconnected: " + e)];
     constructor(private readonly serverUrl: string, private readonly crisEndpoint: ICrisEndpoint, private readonly mqttTopic: string) {
         this.clientId = "od-watcher-" + crypto.randomUUID();
     }
@@ -33,8 +33,8 @@ export class MqttObservableLeagueDomainService implements IObservableDomainLeagu
                 clean: true,
                 clientId: this.clientId
             }, true);
-            this.client.on("message", this.handleMessages);
-            this.client.on("disconnect", this.handleClose);
+            this.client.on("message", (a, b, c) => this.handleMessages(a, b, c));
+            this.client.on("disconnect", (a) => this.handleClose(undefined));
             console.log("connected");
             return true;
         } catch (e) {
@@ -45,6 +45,7 @@ export class MqttObservableLeagueDomainService implements IObservableDomainLeagu
     }
 
     private handleMessages(topic: string, payload: Buffer, packet: IPublishPacket) {
+        console.log(this);
         if (!topic.startsWith(this.mqttTopic)) return;
         const domainNameSize = payload.readInt32LE();
         const domainName = payload.toString("utf-8", 4, domainNameSize + 4);

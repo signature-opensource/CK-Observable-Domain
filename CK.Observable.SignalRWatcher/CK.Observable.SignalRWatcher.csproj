@@ -10,7 +10,7 @@
   <ItemGroup>
     <PackageReference Include="CK.AspNet.Auth" Version="18.0.1--0000-develop" />
     <PackageReference Include="CK.Auth.Abstractions" Version="3.0.1--0000-develop" />
-    <PackageReference Include="CK.Cris.Typescript" Version="0.15.1--0000-develop" />
+    <PackageReference Include="CK.Cris.Typescript" Version="0.15.1--0001-develop" />
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 

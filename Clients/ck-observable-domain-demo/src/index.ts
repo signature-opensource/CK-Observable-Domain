@@ -1,8 +1,7 @@
 import axios, { Axios } from "axios";
-import { HttpCrisEndpoint } from "./services/http-cris-endpoint";
 import { MqttObservableLeagueDomainService } from "@signature-code/ck-observable-domain-mqtt"
 import { ObservableDomainClient } from "@signature-code/ck-observable-domain";
-import { SignalRObservableWatcherStartOrRestartCommand, SliderCommand } from "@signature/generated";
+import { SignalRObservableWatcherStartOrRestartCommand, SliderCommand, HttpCrisEndpoint } from "@signature/generated";
 import { SignalRObservableLeagueDomainService } from "@signature-code/ck-observable-domain-signalr";
 const crisAxios = new Axios({
     baseURL: "http://localhost:5000/.cris"
@@ -15,7 +14,7 @@ export async function startPage(): Promise<void> {
     const signalROdDriver = new SignalRObservableLeagueDomainService("http://localhost:5000/hub/league", crisEndpoint);
 
     const mqttOdClient = new ObservableDomainClient(mqttOdDriver);
-    // mqttOdClient.start();
+    mqttOdClient.start();
     const signalrOdClient = new ObservableDomainClient(signalROdDriver);
     signalrOdClient.start();
     const mqttOdObs = await mqttOdClient.listenToDomain("Test-Domain");
@@ -25,12 +24,12 @@ export async function startPage(): Promise<void> {
 
     mqttOdObs.forEach((s) =>  {
         if(s.length < 1) return;
+        console.log(s[0].Slider);
         left.value = s[0].Slider
     });
 
     signalROdObs.forEach((s) =>  {
         if(s.length < 1) return;
-        console.log(s[0].Slider);
         right.value = s[0].Slider;
     })
 }
@@ -38,7 +37,6 @@ export async function startPage(): Promise<void> {
 export async function sliderUpdate(sliderValue): Promise<void> {
     crisEndpoint.send<void>(SliderCommand.create(Number(sliderValue)));
 }
-
 
 startPage();
 

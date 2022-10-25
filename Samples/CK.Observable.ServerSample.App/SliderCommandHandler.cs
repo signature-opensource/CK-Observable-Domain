@@ -2,6 +2,7 @@ using CK.Core;
 using CK.Cris;
 using CK.Observable.League;
 using CK.Observable.MQTTWatcher;
+using System.Threading.Tasks;
 
 namespace CK.Observable.ServerSample.App
 {
@@ -16,7 +17,7 @@ namespace CK.Observable.ServerSample.App
         }
 
         [CommandHandler]
-        public async Task HandleSliderCommand( IActivityMonitor m, ISliderCommand command )
+        public async Task HandleSliderCommandAsync( IActivityMonitor m, ISliderCommand command )
         {
            await using var shell = await _league.GetShellAsync( m );
            await shell.ModifyThrowAsync(m, ( monitor, domain ) =>

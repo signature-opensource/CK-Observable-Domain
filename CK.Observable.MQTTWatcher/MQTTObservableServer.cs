@@ -36,20 +36,17 @@ namespace CK.Observable.MQTTWatcher
         [CommandHandler]
         public async Task<string> HandleStartOrRestartWatchAsync( IActivityMonitor m, IMQTTObservableWatcherStartOrRestartCommand command )
         {
-            await _processNewClientLock.WaitAsync();
-            try
+            MqttObservableWatcher? watcher;
+            await Task.Delay( 20 );//https://github.com/signature-opensource/CK-MQTT/issues/36
+            lock( _processNewClientLock )
             {
-                if( !_watchers.TryGetValue( command.MqttClientId, out var watcher ) )
+                if( !_watchers.TryGetValue( command.MqttClientId, out watcher ) )
                 {
                     throw new InvalidDataException( $"{command.MqttClientId} does not exists, or is not identified as you. " );
                 }
-                var watchEvent = await watcher.GetStartOrRestartEventAsync( m, command.DomainName, command.TransactionNumber );
-                return watchEvent.JsonExport;
             }
-            finally
-            {
-                _processNewClientLock.Release();
-            }
+            var watchEvent = await watcher.GetStartOrRestartEventAsync( m, command.DomainName, command.TransactionNumber );
+            return watchEvent.JsonExport;
         }
 
         internal void OnClientConnectionChange( IActivityMonitor m, MqttObservableWatcher watcher, DisconnectReason reason )
@@ -59,32 +56,34 @@ namespace CK.Observable.MQTTWatcher
                 // thread safe thanks to the concurrent dictionary, only the one removing it will run this code.
                 if( _watchers.TryRemove( watcher.ClientId, out _ ) )
                 {
-                    m.Info($"Removed MQTT Agent {watcher.ClientId} from OD watcher.");
+                    m.Info( $"Removed MQTT Agent {watcher.ClientId} from OD watcher." );
                     watcher.Dispose();
                 }
             }
         }
-        readonly SemaphoreSlim _processNewClientLock = new( 1 );//TODO: upgrade to read/Write lock with async support.
+        readonly object _processNewClientLock = new object();//TODO: upgrade to read/Write lock with async support.
         bool _processNewClients = true;
         void OnNewClient( IActivityMonitor m, MQTTServerAgent newAgent )
         {
             Throw.CheckNotNullArgument( newAgent.ClientId );
-            _processNewClientLock.Wait();
-            if( _processNewClients )
+            lock( _processNewClientLock )
             {
-                using( m.OpenInfo( $"MQTT Agent '{newAgent.ClientId}' connected, pairing it with Observable League." ) )
+                if( _processNewClients )
                 {
-                    _watchers.TryAdd( newAgent.ClientId, new MqttObservableWatcher( this, _config, newAgent, _league ) );
+                    using( m.OpenInfo( $"MQTT Agent '{newAgent.ClientId}' connected, pairing it with Observable League." ) )
+                    {
+                        _watchers.TryAdd( newAgent.ClientId, new MqttObservableWatcher( this, _config, newAgent, _league ) );
+                    }
                 }
             }
-            _processNewClientLock.Release(); // we exit lock later because we don't want to do this while StopAsync runs.
         }
 
         public async Task StopAsync( CancellationToken cancellationToken )
         {
-            await _processNewClientLock.WaitAsync( cancellationToken );
-            _processNewClients = false;
-            _processNewClientLock.Release();
+            lock( _processNewClientLock )
+            {
+                _processNewClients = false;
+            }
             _server.OnNewClient.Sync -= OnNewClient;
             ActivityMonitor? m = null;
             foreach( var clientId in _watchers.Keys.ToArray() ) //capture keys

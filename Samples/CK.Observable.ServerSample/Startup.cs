@@ -1,12 +1,9 @@
-using CK.MQTT;
 using CK.MQTT.Server;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using CK.Observable.DefaultMQTTObservableServer;
-using CK.Observable.MQTTWatcher;
 using CK.Observable.SignalRWatcher;
 
 namespace CK.Observable.ServerSample.App
@@ -55,7 +52,6 @@ namespace CK.Observable.ServerSample.App
             }
             app.UseCors();
             app.UseCris();
-            app.UseAuthorization();
             app.UseRouting();
             app.UseEndpoints( endpoints =>
             {

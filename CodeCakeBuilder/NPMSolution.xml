@@ -1,3 +1,6 @@
 <NPMSolution>
-  <Project Path="js" IsPublished="true" OutputFolder="js" ExpectedName="@signature-code/ck-observable-domain" />
+  <Project Path="Clients/ck-observable-domain" IsPublished="true"  ExpectedName="@signature-code/ck-observable-domain" />
+  <Project Path="Clients/ck-observable-domain-mqtt" IsPublished="true" ExpectedName="@signature-code/ck-observable-domain-mqtt" />
+  <Project Path="Clients/ck-observable-domain-signalr" IsPublished="true" ExpectedName="@signature-code/ck-observable-domain-signalr" />
+
 </NPMSolution>
