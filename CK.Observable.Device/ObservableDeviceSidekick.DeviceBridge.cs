@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace CK.Observable.Device
 {
-    public abstract partial class ObservableDeviceSidekick<THost,TDeviceObject,TDeviceHostObject>
+    public abstract partial class ObservableDeviceSidekick<THost,TDeviceObject,TDeviceHostObject,TConfig>
     {
         /// <summary>
         /// Must create a <see cref="PassiveBridge{TSidekick, TDevice}"/> between <typeparamref name="TDeviceObject"/> and its actual <see cref="PassiveBridge{TSidekick, TDevice}.Device"/>.
@@ -34,7 +34,7 @@ namespace CK.Observable.Device
         /// </summary>
         internal protected abstract class DeviceBridge : ObservableDeviceObject.IInternalDeviceBridge
         {
-            internal ObservableDeviceSidekick<THost,TDeviceObject,TDeviceHostObject> _sidekick;
+            internal ObservableDeviceSidekick<THost,TDeviceObject,TDeviceHostObject,TConfig> _sidekick;
 
             /// <summary>
             /// Gets the observable object device.
@@ -70,7 +70,7 @@ namespace CK.Observable.Device
             IEnumerable<string> ObservableDeviceObject.IInternalDeviceBridge.CurrentlyAvailableDeviceNames => _sidekick._objectHost?.GetAvailableDeviceNames()
                                                                                                                 ?? _sidekick.Host.GetDevices().Keys;
 
-            internal void Initialize( IActivityMonitor monitor, ObservableDeviceSidekick<THost, TDeviceObject, TDeviceHostObject> owner, IDevice? initialDevice )
+            internal void Initialize( IActivityMonitor monitor, ObservableDeviceSidekick<THost, TDeviceObject, TDeviceHostObject, TConfig> owner, IDevice? initialDevice )
             {
                 _sidekick = owner;
                 if( initialDevice != null ) SetDevice( monitor, initialDevice );
@@ -237,7 +237,7 @@ namespace CK.Observable.Device
         /// <typeparam name="TSidekick">The type of the sidekick that manages this bridge.</typeparam>
         /// <typeparam name="TDevice">The type of the actual device.</typeparam>
         internal protected abstract class PassiveBridge<TSidekick, TDevice> : DeviceBridge
-            where TSidekick : ObservableDeviceSidekick<THost, TDeviceObject, TDeviceHostObject>
+            where TSidekick : ObservableDeviceSidekick<THost, TDeviceObject, TDeviceHostObject, TConfig>
             where TDevice : class, IDevice
         {
             /// <summary>
@@ -275,7 +275,7 @@ namespace CK.Observable.Device
         /// <typeparam name="TDevice">The type of the actual device.</typeparam>
         /// <typeparam name="TDeviceEvent">The base type of the device event.</typeparam>
         internal protected abstract class ActiveBridge<TSidekick, TDevice, TDeviceEvent> : DeviceBridge
-            where TSidekick : ObservableDeviceSidekick<THost, TDeviceObject, TDeviceHostObject>
+            where TSidekick : ObservableDeviceSidekick<THost, TDeviceObject, TDeviceHostObject, TConfig>
             where TDevice : class, IActiveDevice<TDeviceEvent>
             where TDeviceEvent : ActiveDeviceEvent<TDevice>
         {

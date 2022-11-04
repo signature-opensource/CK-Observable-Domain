@@ -7,7 +7,7 @@ using System.Text;
 namespace CK.Observable.Device.Tests
 {
     [SerializationVersion( 0 )]
-    public class OSampleDevice : ObservableDeviceObject<OSampleDeviceSidekick>
+    public class OSampleDevice : ObservableDeviceObject<OSampleDeviceSidekick,SampleDeviceConfiguration>
     {
 
 #pragma warning disable CS8618 // Non-nullable _bridgeAccess uninitialized. Consider declaring as nullable.

@@ -17,10 +17,11 @@ namespace CK.Observable.Device
     /// <typeparam name="THost">Type of the device host.</typeparam>
     /// <typeparam name="TDeviceObject">Type of the observable object device.</typeparam>
     /// <typeparam name="TDeviceHostObject">Type of the observable device host.</typeparam>
-    public abstract partial class ObservableDeviceSidekick<THost,TDeviceObject,TDeviceHostObject> : ObservableDomainSidekick, IInternalObservableDeviceSidekick
+    public abstract partial class ObservableDeviceSidekick<THost,TDeviceObject,TDeviceHostObject,TConfig> : ObservableDomainSidekick, IInternalObservableDeviceSidekick
         where THost : IDeviceHost
         where TDeviceObject : ObservableDeviceObject
         where TDeviceHostObject: ObservableDeviceHostObject
+        where TConfig : DeviceConfiguration
     {
         // A Bridge exists if and only if the ObservableDeviceObject exists.
         // Actual devices that have no corresponding ObservableDeviceObject don't appear here.

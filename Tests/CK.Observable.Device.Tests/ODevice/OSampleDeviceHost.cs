@@ -9,7 +9,7 @@ namespace CK.Observable.Device.Tests
     /// The observable host is totally optional.
     /// </summary>
     [SerializationVersion(0)]
-    public class OSampleDeviceHost : ObservableDeviceHostObject<OSampleDeviceSidekick,OSampleDevice>
+    public class OSampleDeviceHost : ObservableDeviceHostObject<OSampleDeviceSidekick,OSampleDevice, SampleDeviceConfiguration>
     {
         public OSampleDeviceHost()
         {

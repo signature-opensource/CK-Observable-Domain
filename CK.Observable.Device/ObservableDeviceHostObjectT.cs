@@ -14,9 +14,10 @@ namespace CK.Observable.Device
     /// <typeparam name="TSidekick">The type of the sidekick.</typeparam>
     /// <typeparam name="TDeviceObject">The type of the device object.</typeparam>
     [SerializationVersion( 0 )]
-    public abstract class ObservableDeviceHostObject<TSidekick, TDeviceObject> : ObservableDeviceHostObject, ISidekickClientObject<TSidekick>
+    public abstract class ObservableDeviceHostObject<TSidekick, TDeviceObject,TConfig> : ObservableDeviceHostObject, ISidekickClientObject<TSidekick>
         where TSidekick : ObservableDomainSidekick, IObservableDeviceSidekick
         where TDeviceObject : ObservableDeviceObject
+        where TConfig : DeviceConfiguration
     {
 
         ObservableDictionary<string, ODeviceInfo<TDeviceObject>> _devices;
@@ -54,7 +55,7 @@ namespace CK.Observable.Device
             _devices = d.ReadObject<ObservableDictionary<string, ODeviceInfo<TDeviceObject>>>();
         }
 
-        public static void Write( IBinarySerializer s, in ObservableDeviceHostObject<TSidekick, TDeviceObject> o )
+        public static void Write( IBinarySerializer s, in ObservableDeviceHostObject<TSidekick, TDeviceObject,TConfig> o )
         {
             s.WriteObject( o._devices );
         }

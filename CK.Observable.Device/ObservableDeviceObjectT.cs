@@ -7,7 +7,9 @@ namespace CK.Observable.Device
     /// Abstract base class for device.
     /// </summary>
     [SerializationVersion( 0 )]
-    public abstract class ObservableDeviceObject<TSidekick> : ObservableDeviceObject, ISidekickClientObject<TSidekick> where TSidekick : ObservableDomainSidekick
+    public abstract class ObservableDeviceObject<TSidekick,TConfig> : ObservableDeviceObject, ISidekickClientObject<TSidekick>
+        where TSidekick : ObservableDomainSidekick
+        where TConfig : DeviceConfiguration
     {
         /// <summary>
         /// Initializes a new observable object device.
@@ -25,7 +27,7 @@ namespace CK.Observable.Device
         {
         }
 
-        public static void Write( BinarySerialization.IBinarySerializer s, in ObservableDeviceObject<TSidekick> o )
+        public static void Write( BinarySerialization.IBinarySerializer s, in ObservableDeviceObject<TSidekick,TConfig> o )
         {
         }
 

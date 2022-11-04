@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace CK.Observable.Device.Tests
 {
-    public class OSampleDeviceSidekick : ObservableDeviceSidekick<SampleDeviceHost, OSampleDevice, OSampleDeviceHost>
+    public class OSampleDeviceSidekick : ObservableDeviceSidekick<SampleDeviceHost, OSampleDevice, OSampleDeviceHost, SampleDeviceConfiguration>
     {
         public OSampleDeviceSidekick( IObservableDomainSidekickManager manager, SampleDeviceHost host )
             : base( manager, host )
