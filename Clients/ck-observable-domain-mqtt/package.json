@@ -1,6 +1,5 @@
 {
   "name": "@signature-code/ck-observable-domain-mqtt",
-  "private": true,
   "type": "module",
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
