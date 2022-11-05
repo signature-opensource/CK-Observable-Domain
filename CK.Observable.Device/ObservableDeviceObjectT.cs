@@ -9,7 +9,7 @@ namespace CK.Observable.Device
     [SerializationVersion( 1 )]
     public abstract class ObservableDeviceObject<TSidekick,TConfig> : ObservableDeviceObject, ISidekickClientObject<TSidekick>
         where TSidekick : ObservableDomainSidekick
-        where TConfig : DeviceConfiguration
+        where TConfig : DeviceConfiguration,new()
     {
         readonly DeviceConfigurationEditor<TConfig> _deviceConfigurationEditor;
 

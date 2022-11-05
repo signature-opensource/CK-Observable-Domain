@@ -4,7 +4,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.DeviceModel" Version="3.3.0" />
+    <PackageReference Include="CK.DeviceModel" Version="3.3.1" />
     <ProjectReference Include="..\CK.Observable.Domain\CK.Observable.Domain.csproj" />
   </ItemGroup>
 </Project>

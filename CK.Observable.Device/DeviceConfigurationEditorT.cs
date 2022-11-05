@@ -13,12 +13,16 @@ namespace CK.Observable.Device
 {
     [SerializationVersion( 0 )]
     public class DeviceConfigurationEditor<TConfig> : DeviceConfigurationEditor
-        where TConfig : DeviceConfiguration
+        where TConfig : DeviceConfiguration, new()
     {
+
         internal protected DeviceConfigurationEditor( ObservableDeviceObject owner)
             : base(owner)
         {
-         
+            if(base.Local == null )
+            {
+                _local = new TConfig();
+            }
         }
 
         DeviceConfigurationEditor( IBinaryDeserializer r,ITypeReadInfo info ) : base( r, info ) 
@@ -29,6 +33,7 @@ namespace CK.Observable.Device
         {
         }
 
+        public new TConfig Local => (TConfig)base.Local;
     }
 
 }
