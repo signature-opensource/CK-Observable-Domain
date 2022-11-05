@@ -108,7 +108,7 @@ namespace CK.Observable.Device.Tests
                 d1.Root.Default.DeviceConfigurationEditor.Local.Message = "WillChange";
 
                 //THIS IS NOT NORMAL, PROBLEM WITH INITIALIZATION CONFIG/EVENT CONFIG CHANGD
-                d1.Root.Default.DeviceConfigurationEditor.Local.Name = "Default";
+                //d1.Root.Default.DeviceConfigurationEditor.Local.Name = "Default";
 
             } );
 
@@ -117,49 +117,45 @@ namespace CK.Observable.Device.Tests
             CheckStatus( d2, DeviceControlStatus.OutOfControl );
             device.ExternalConfiguration.Message.Should().Be( "WillChange" );
 
-            //await d2.ModifyThrowAsync( TestHelper.Monitor, () =>
-            //{
-            //    d2.Root.Default.DeviceConfigurationEditor.Local.Strips[0].Mappings[0].DeviceName = "WillChange2";
-            //} );
+            await d2.ModifyThrowAsync( TestHelper.Monitor, () =>
+            {
+                d2.Root.Default.DeviceConfigurationEditor.Local.Message = "WillChange2";
+            } );
 
-            //await ApplyLocalConfigAsync( d2, DeviceControlAction.SafeTakeControl, device );
-            //CheckStatus( d1, DeviceControlStatus.HasControl );
-            //CheckStatus( d2, DeviceControlStatus.OutOfControl );
-            //device.ExternalConfiguration.Strips[0].Mappings.Where( m => m.DeviceName == "WillChange2" ).Should().HaveCount( 0 );
+            await ApplyLocalConfigAsync( d2, DeviceControlAction.SafeTakeControl, device );
+            CheckStatus( d1, DeviceControlStatus.HasControl );
+            CheckStatus( d2, DeviceControlStatus.OutOfControl );
+            device.ExternalConfiguration.Message.Should().NotBe( "WillChange2" );
 
-            //await ApplyLocalConfigAsync( d2, DeviceControlAction.SafeReleaseControl, device );
-            //CheckStatus( d1, DeviceControlStatus.HasControl );
-            //CheckStatus( d2, DeviceControlStatus.OutOfControl );
-            //device.ExternalConfiguration.Strips[0].Mappings.Where( m => m.DeviceName == "WillChange2" ).Should().HaveCount( 0 );
+            await ApplyLocalConfigAsync( d2, DeviceControlAction.SafeReleaseControl, device );
+            CheckStatus( d1, DeviceControlStatus.HasControl );
+            CheckStatus( d2, DeviceControlStatus.OutOfControl );
+            device.ExternalConfiguration.Message.Should().NotBe( "WillChange2" );
 
-            //await ApplyLocalConfigAsync( d1, DeviceControlAction.SafeReleaseControl, device );
-            //CheckStatus( d1, DeviceControlStatus.HasSharedControl );
-            //CheckStatus( d2, DeviceControlStatus.HasSharedControl );
-            //device.ExternalConfiguration.Strips[0].Mappings.Where( m => m.DeviceName == "WillChange2" ).Should().HaveCount( 0 );
+            await ApplyLocalConfigAsync( d1, DeviceControlAction.SafeReleaseControl, device );
+            CheckStatus( d1, DeviceControlStatus.HasSharedControl );
+            CheckStatus( d2, DeviceControlStatus.HasSharedControl );
+            device.ExternalConfiguration.Message.Should().NotBe( "WillChange2" );
 
-            //await ApplyLocalConfigAsync( d2, DeviceControlAction.SafeTakeControl, device );
-            //CheckStatus( d1, DeviceControlStatus.OutOfControl );
-            //CheckStatus( d2, DeviceControlStatus.HasControl );
-            //device.ExternalConfiguration.Strips[0].Mappings.Where( m => m.DeviceName == "WillChange" ).Should().HaveCount( 0 );
-            //device.ExternalConfiguration.Strips[0].Mappings.Where( m => m.DeviceName == "WillChange2" ).Should().HaveCount( 1 );
+            await ApplyLocalConfigAsync( d2, DeviceControlAction.SafeTakeControl, device );
+            CheckStatus( d1, DeviceControlStatus.OutOfControl );
+            CheckStatus( d2, DeviceControlStatus.HasControl );
+            device.ExternalConfiguration.Message.Should().Be( "WillChange2" );
 
-            //await ApplyLocalConfigAsync( d1, DeviceControlAction.ReleaseControl, device );
-            //CheckStatus( d1, DeviceControlStatus.HasSharedControl );
-            //CheckStatus( d2, DeviceControlStatus.HasSharedControl );
-            //device.ExternalConfiguration.Strips[0].Mappings.Where( m => m.DeviceName == "WillChange" ).Should().HaveCount( 1 );
-            //device.ExternalConfiguration.Strips[0].Mappings.Where( m => m.DeviceName == "WillChange2" ).Should().HaveCount( 0 );
+            await ApplyLocalConfigAsync( d1, DeviceControlAction.ReleaseControl, device );
+            CheckStatus( d1, DeviceControlStatus.HasSharedControl );
+            CheckStatus( d2, DeviceControlStatus.HasSharedControl );
+            device.ExternalConfiguration.Message.Should().Be( "WillChange" );
 
-            //await ApplyLocalConfigAsync( d2, DeviceControlAction.TakeControl, device );
-            //CheckStatus( d1, DeviceControlStatus.OutOfControl );
-            //CheckStatus( d2, DeviceControlStatus.HasControl );
-            //device.ExternalConfiguration.Strips[0].Mappings.Where( m => m.DeviceName == "WillChange" ).Should().HaveCount( 0 );
-            //device.ExternalConfiguration.Strips[0].Mappings.Where( m => m.DeviceName == "WillChange2" ).Should().HaveCount( 1 );
+            await ApplyLocalConfigAsync( d2, DeviceControlAction.TakeControl, device );
+            CheckStatus( d1, DeviceControlStatus.OutOfControl );
+            CheckStatus( d2, DeviceControlStatus.HasControl );
+            device.ExternalConfiguration.Message.Should().Be( "WillChange2" );
 
-            //await ApplyLocalConfigAsync( d1, DeviceControlAction.TakeControl, device );
-            //CheckStatus( d1, DeviceControlStatus.HasControl );
-            //CheckStatus( d2, DeviceControlStatus.OutOfControl );
-            //device.ExternalConfiguration.Strips[0].Mappings.Where( m => m.DeviceName == "WillChange" ).Should().HaveCount( 1 );
-            //device.ExternalConfiguration.Strips[0].Mappings.Where( m => m.DeviceName == "WillChange2" ).Should().HaveCount( 0 );
+            await ApplyLocalConfigAsync( d1, DeviceControlAction.TakeControl, device );
+            CheckStatus( d1, DeviceControlStatus.HasControl );
+            CheckStatus( d2, DeviceControlStatus.OutOfControl );
+            device.ExternalConfiguration.Message.Should().Be( "WillChange" );
 
             void CheckStatus( ObservableDomain<Root> d, DeviceControlStatus s )
             {
