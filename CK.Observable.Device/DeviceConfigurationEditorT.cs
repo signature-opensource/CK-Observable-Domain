@@ -13,9 +13,9 @@ namespace CK.Observable.Device
 {
     [SerializationVersion( 0 )]
     public class DeviceConfigurationEditor<TConfig> : DeviceConfigurationEditor
-        where TConfig : DeviceConfiguration, new()
+        where TConfig : DeviceConfiguration
     {
-        private protected DeviceConfigurationEditor( ObservableDeviceObject owner)
+        internal protected DeviceConfigurationEditor( ObservableDeviceObject owner)
             : base(owner)
         {
          
