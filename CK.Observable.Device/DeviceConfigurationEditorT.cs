@@ -18,10 +18,7 @@ namespace CK.Observable.Device
         private protected DeviceConfigurationEditor( ObservableDeviceObject owner)
             : base(owner)
         {
-            if(owner.Configuration == null )
-            {
-                Local = new TConfig();
-            }
+         
         }
 
         DeviceConfigurationEditor( IBinaryDeserializer r,ITypeReadInfo info ) : base( r, info ) 

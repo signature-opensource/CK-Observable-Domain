@@ -17,7 +17,7 @@ namespace CK.Observable.Device
         readonly ObservableDeviceObject _owner;
         internal DeviceConfiguration _local;
 
-        public DeviceConfiguration Local { get; set; }
+        public DeviceConfiguration Local => _local;
 
         private protected DeviceConfigurationEditor( ObservableDeviceObject owner )
         {
@@ -25,7 +25,6 @@ namespace CK.Observable.Device
             if( _owner.Configuration != null )
             {
                 _local = _owner.Configuration.DeepClone();
-                Local = _local;
             }
             else
             {
