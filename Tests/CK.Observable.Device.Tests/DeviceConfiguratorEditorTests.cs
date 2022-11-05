@@ -180,169 +180,174 @@ namespace CK.Observable.Device.Tests
             }
         }
 
-        //[Test]
-        //public async Task apply_local_config_ownership_Async()
-        //{
-        //    var sc = new SimpleServiceContainer();
-        //    var config = new SampleDeviceConfiguration()
-        //    {
-        //        Name = "Default",
-        //        ControllerKey = "Domain 1",
-        //        Status = DeviceConfigurationStatus.AlwaysRunning,
-        //        PeriodMilliseconds = 100,
-        //        Message = "Not used here."
-        //    };
-        //    var host = new SampleDeviceHost();
+        [Test]
+        public async Task apply_local_config_ownership_Async()
+        {
 
+            var config = new SampleDeviceConfiguration()
+            {
+                Name = "Default",
+                ControllerKey = "Domain 1",
+                Status = DeviceConfigurationStatus.AlwaysRunning,
+                PeriodMilliseconds = 100,
+                Message = "Not used here."
+            };
+         
+            var host = new SampleDeviceHost();
 
-        //    (await host.EnsureDeviceAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.CreateAndStartSucceeded );
-        //    var device = host["Default"];
-        //    Debug.Assert( device != null );
-        //    await device.WaitForSynchronizationAsync( considerDeferredCommands: false );
+            (await host.EnsureDeviceAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.CreateAndStartSucceeded );
+            var device = host["Default"];
+            Debug.Assert( device != null );
+            await device.WaitForSynchronizationAsync( considerDeferredCommands: false );
 
-        //    using var d1 = new ObservableDomain<Root>( TestHelper.Monitor, "Domain 1", startTimer: false, sc );
-        //    using var d2 = new ObservableDomain<Root>( TestHelper.Monitor, "Domain 2", startTimer: false, sc );
+            var sc = new SimpleServiceContainer();
+            sc.Add( host );
 
-        //    d1.HasWaitingSidekicks.Should().BeTrue();
-        //    await d1.ModifyThrowAsync( TestHelper.Monitor, null );
+            using var d1 = new ObservableDomain<Root>( TestHelper.Monitor, "Domain 1", startTimer: false, sc );
+            using var d2 = new ObservableDomain<Root>( TestHelper.Monitor, "Domain 2", startTimer: false, sc );
 
-        //    d2.HasWaitingSidekicks.Should().BeTrue();
-        //    await d2.ModifyThrowAsync( TestHelper.Monitor, null );
+            d1.HasWaitingSidekicks.Should().BeTrue();
+            await d1.ModifyThrowAsync( TestHelper.Monitor, null );
 
-        //    CheckStatus( d1, DeviceControlStatus.HasOwnership );
-        //    CheckStatus( d2, DeviceControlStatus.OutOfControlByConfiguration );
+            d2.HasWaitingSidekicks.Should().BeTrue();
+            await d2.ModifyThrowAsync( TestHelper.Monitor, null );
 
-        //    await d2.ModifyThrowAsync( TestHelper.Monitor, () =>
-        //    {
-        //        d2.Root.Default.DeviceConfigurationEditor.Local.Message = "WillChange";
-        //        d2.Root.Default.DeviceConfigurationEditor.Local.PeriodMilliseconds = 2000;
-        //    } );
+            CheckStatus( d1, DeviceControlStatus.HasOwnership );
+            CheckStatus( d2, DeviceControlStatus.OutOfControlByConfiguration );
 
-        //    await ApplyLocalConfigAsync( d2, DeviceControlAction.TakeControl, device );
-        //    CheckStatus( d1, DeviceControlStatus.HasOwnership );
-        //    CheckStatus( d2, DeviceControlStatus.OutOfControlByConfiguration );
-        //    device.ControllerKey.Should().Be( "Domain 1" );
-        //    device.ExternalConfiguration.Message.Should().NotBe( "WillChange" );
+            await d2.ModifyThrowAsync( TestHelper.Monitor, () =>
+            {
+                d2.Root.Default.DeviceConfigurationEditor.Local.Message = "WillChange";
+                d2.Root.Default.DeviceConfigurationEditor.Local.PeriodMilliseconds = 2000;
+            } );
 
-        //    await ApplyLocalConfigAsync( d2, DeviceControlAction.TakeOwnership, device );
-        //    CheckStatus( d1, DeviceControlStatus.OutOfControlByConfiguration );
-        //    CheckStatus( d2, DeviceControlStatus.HasOwnership );
-        //    device.ControllerKey.Should().Be( "Domain 2" );
-        //    device.ExternalConfiguration.Message.Should().Be( "WillChange" );
+            await ApplyLocalConfigAsync( d2, DeviceControlAction.TakeControl, device );
+            CheckStatus( d1, DeviceControlStatus.HasOwnership );
+            CheckStatus( d2, DeviceControlStatus.OutOfControlByConfiguration );
+            device.ControllerKey.Should().Be( "Domain 1" );
+            device.ExternalConfiguration.Message.Should().NotBe( "WillChange" );
 
-        //    await ApplyLocalConfigAsync( d2, DeviceControlAction.ForceReleaseControl, device );
-        //    CheckStatus( d1, DeviceControlStatus.HasSharedControl );
-        //    CheckStatus( d2, DeviceControlStatus.HasSharedControl );
-        //    device.ControllerKey.Should().BeNull();
-        //    device.ExternalConfiguration.Message.Should().Be( "WillChange" );
+            await ApplyLocalConfigAsync( d2, DeviceControlAction.TakeOwnership, device );
+            CheckStatus( d1, DeviceControlStatus.OutOfControlByConfiguration );
+            CheckStatus( d2, DeviceControlStatus.HasOwnership );
+            device.ControllerKey.Should().Be( "Domain 2" );
+            device.ExternalConfiguration.Message.Should().Be( "WillChange" );
 
-        //    void CheckStatus( ObservableDomain<Root> d, DeviceControlStatus s )
-        //    {
-        //        d.Read( TestHelper.Monitor, () =>
-        //        {
-        //            d.Root.Default.DeviceControlStatus.Should().Be( s );
-        //            d.Root.Host.Devices["Default"].Status.Should().Be( s );
-        //        } );
-        //    }
+            await ApplyLocalConfigAsync( d2, DeviceControlAction.ForceReleaseControl, device );
+            CheckStatus( d1, DeviceControlStatus.HasSharedControl );
+            CheckStatus( d2, DeviceControlStatus.HasSharedControl );
+            device.ControllerKey.Should().BeNull();
+            device.ExternalConfiguration.Message.Should().Be( "WillChange" );
 
-        //    async Task ApplyLocalConfigAsync( ObservableDomain<Root> d, DeviceControlAction dca, SampleDevice device )
-        //    {
-        //        await d.ModifyThrowAsync( TestHelper.Monitor, () =>
-        //        {
-        //            d.Root.Default.DeviceConfigurationEditor.ApplyLocalConfig( dca );
-        //        } );
-        //        // Since the reconfiguration currently goes through the host that sends an InternalConfigureDeviceCommand
-        //        // to the device, waiting here for the synchronization is not enough: we unfortunately have
-        //        // to wait for the InternalConfigureDeviceCommand to reach the command queue.
-        //        await Task.Delay( 100 );
-        //        await device.WaitForSynchronizationAsync( false );
+            void CheckStatus( ObservableDomain<Root> d, DeviceControlStatus s )
+            {
+                d.Read( TestHelper.Monitor, () =>
+                {
+                    d.Root.Default.DeviceControlStatus.Should().Be( s );
+                    d.Root.Host.Devices["Default"].Status.Should().Be( s );
+                } );
+            }
 
-        //    }
+            async Task ApplyLocalConfigAsync( ObservableDomain<Root> d, DeviceControlAction dca, SampleDevice device )
+            {
+                await d.ModifyThrowAsync( TestHelper.Monitor, () =>
+                {
+                    d.Root.Default.DeviceConfigurationEditor.ApplyLocalConfig( dca );
+                } );
+                // Since the reconfiguration currently goes through the host that sends an InternalConfigureDeviceCommand
+                // to the device, waiting here for the synchronization is not enough: we unfortunately have
+                // to wait for the InternalConfigureDeviceCommand to reach the command queue.
+                await Task.Delay( 100 );
+                await device.WaitForSynchronizationAsync( false );
 
-        //}
+            }
 
-        //[Test]
-        //public async Task apply_local_config_null_Async()
-        //{
-        //    var sc = new SimpleServiceContainer();
-        //    var config = new SampleDeviceConfiguration()
-        //    {
-        //        Name = "Default",
-        //        ControllerKey = "Domain 1",
-        //        Status = DeviceConfigurationStatus.AlwaysRunning,
-        //        PeriodMilliseconds = 100,
-        //        Message = "Not used here."
-        //    };
-        //    var host = new SampleDeviceHost();
+        }
 
-        //    (await host.EnsureDeviceAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.CreateAndStartSucceeded );
-        //    var device = host["Default"];
-        //    Debug.Assert( device != null );
-        //    await device.WaitForSynchronizationAsync( considerDeferredCommands: false );
+        [Test]
+        public async Task apply_local_config_null_Async()
+        {
+            var config = new SampleDeviceConfiguration()
+            {
+                Name = "Default",
+                ControllerKey = "Domain 1",
+                Status = DeviceConfigurationStatus.AlwaysRunning,
+                PeriodMilliseconds = 100,
+                Message = "Not used here."
+            };
+            var host = new SampleDeviceHost();
 
-        //    var sc = new SimpleServiceContainer();
-        //    sc.Add( host );
+            (await host.EnsureDeviceAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.CreateAndStartSucceeded );
+            var device = host["Default"];
+            Debug.Assert( device != null );
+            await device.WaitForSynchronizationAsync( considerDeferredCommands: false );
 
-        //    using var d1 = new ObservableDomain<Root>( TestHelper.Monitor, "Domain 1", startTimer: false, sc );
-        //    using var d2 = new ObservableDomain<Root>( TestHelper.Monitor, "Domain 2", startTimer: false, sc );
+            var sc = new SimpleServiceContainer();
+            sc.Add( host );
 
-        //    d1.HasWaitingSidekicks.Should().BeTrue();
-        //    await d1.ModifyThrowAsync( TestHelper.Monitor, null );
+            using var d1 = new ObservableDomain<Root>( TestHelper.Monitor, "Domain 1", startTimer: false, sc );
+            using var d2 = new ObservableDomain<Root>( TestHelper.Monitor, "Domain 2", startTimer: false, sc );
 
-        //    d2.HasWaitingSidekicks.Should().BeTrue();
-        //    await d2.ModifyThrowAsync( TestHelper.Monitor, null );
+            d1.HasWaitingSidekicks.Should().BeTrue();
+            await d1.ModifyThrowAsync( TestHelper.Monitor, null );
 
-        //    CheckStatus( d1, DeviceControlStatus.HasOwnership );
-        //    CheckStatus( d2, DeviceControlStatus.OutOfControlByConfiguration );
+            d2.HasWaitingSidekicks.Should().BeTrue();
+            await d2.ModifyThrowAsync( TestHelper.Monitor, null );
 
-        //    await d1.ModifyThrowAsync( TestHelper.Monitor, () =>
-        //    {
-        //        d1.Root.Default.DeviceConfigurationEditor.Local.Strips[0].Mappings[0].DeviceName = "WillChange";
-        //    } );
+            CheckStatus( d1, DeviceControlStatus.HasOwnership );
+            CheckStatus( d2, DeviceControlStatus.OutOfControlByConfiguration );
 
-        //    await ApplyLocalConfigAsync( d1, null, device );
-        //    CheckStatus( d1, DeviceControlStatus.HasOwnership );
-        //    CheckStatus( d2, DeviceControlStatus.OutOfControlByConfiguration );
-        //    device.ExternalConfiguration.Strips[0].Mappings.Where( m => m.DeviceName == "WillChange" ).Should().HaveCount( 1 );
+            await d1.ModifyThrowAsync( TestHelper.Monitor, () =>
+            {
+                d1.Root.Default.DeviceConfigurationEditor.Local.Message = "WillChange";
+                d1.Root.Default.DeviceConfigurationEditor.Local.PeriodMilliseconds = 2000;
+            } );
 
-        //    await ApplyLocalConfigAsync( d2, DeviceControlAction.TakeOwnership, device );
-        //    CheckStatus( d1, DeviceControlStatus.OutOfControlByConfiguration );
-        //    CheckStatus( d2, DeviceControlStatus.HasOwnership );
+            await ApplyLocalConfigAsync( d1, null, device );
+            CheckStatus( d1, DeviceControlStatus.HasOwnership );
+            CheckStatus( d2, DeviceControlStatus.OutOfControlByConfiguration );
+            device.ExternalConfiguration.Message.Should().Be( "WillChange" );
 
-        //    await d1.ModifyThrowAsync( TestHelper.Monitor, () =>
-        //    {
-        //        d1.Root.Default.DeviceConfigurationEditor.Local.Strips[0].Mappings[0].DeviceName = "WontChange";
-        //    } );
+            await ApplyLocalConfigAsync( d2, DeviceControlAction.TakeOwnership, device );
+            CheckStatus( d1, DeviceControlStatus.OutOfControlByConfiguration );
+            CheckStatus( d2, DeviceControlStatus.HasOwnership );
 
-        //    await ApplyLocalConfigAsync( d1, null, device );
-        //    CheckStatus( d1, DeviceControlStatus.OutOfControlByConfiguration );
-        //    CheckStatus( d2, DeviceControlStatus.HasOwnership );
-        //    device.ExternalConfiguration.Strips[0].Mappings.Where( m => m.DeviceName == "WontChange" ).Should().HaveCount( 0 );
+            await d1.ModifyThrowAsync( TestHelper.Monitor, () =>
+            {
+                d1.Root.Default.DeviceConfigurationEditor.Local.Message = "WontChange";
+                d1.Root.Default.DeviceConfigurationEditor.Local.PeriodMilliseconds = 4000;
+            } );
 
-        //    void CheckStatus( ObservableDomain<Root> d, DeviceControlStatus s )
-        //    {
-        //        d.Read( TestHelper.Monitor, () =>
-        //        {
-        //            d.Root.Default.DeviceControlStatus.Should().Be( s );
-        //            d.Root.Host.Devices["Default"].Status.Should().Be( s );
-        //        } );
-        //    }
+            await ApplyLocalConfigAsync( d1, null, device );
+            CheckStatus( d1, DeviceControlStatus.OutOfControlByConfiguration );
+            CheckStatus( d2, DeviceControlStatus.HasOwnership );
+            device.ExternalConfiguration.Message.Should().NotBe( "WontChange" );
+            device.ExternalConfiguration.Message.Should().Be( "Not used here." );
 
-        //    async Task ApplyLocalConfigAsync( ObservableDomain<Root> d, DeviceControlAction? dca, LEDStripDevice device )
-        //    {
-        //        await d.ModifyThrowAsync( TestHelper.Monitor, () =>
-        //        {
-        //            d.Root.Default.DeviceConfigurationEditor.ApplyLocalConfig( dca );
-        //        } );
-        //        // Since the reconfiguration currently goes through the host that sends an InternalConfigureDeviceCommand
-        //        // to the device, waiting here for the synchronization is not enough: we unfortunately have
-        //        // to wait for the InternalConfigureDeviceCommand to reach the command queue.
-        //        await Task.Delay( 100 );
-        //        await device.WaitForSynchronizationAsync( false );
+            void CheckStatus( ObservableDomain<Root> d, DeviceControlStatus s )
+            {
+                d.Read( TestHelper.Monitor, () =>
+                {
+                    d.Root.Default.DeviceControlStatus.Should().Be( s );
+                    d.Root.Host.Devices["Default"].Status.Should().Be( s );
+                } );
+            }
 
-        //    }
+            async Task ApplyLocalConfigAsync( ObservableDomain<Root> d, DeviceControlAction? dca, SampleDevice device )
+            {
+                await d.ModifyThrowAsync( TestHelper.Monitor, () =>
+                {
+                    d.Root.Default.DeviceConfigurationEditor.ApplyLocalConfig( dca );
+                } );
+                // Since the reconfiguration currently goes through the host that sends an InternalConfigureDeviceCommand
+                // to the device, waiting here for the synchronization is not enough: we unfortunately have
+                // to wait for the InternalConfigureDeviceCommand to reach the command queue.
+                await Task.Delay( 100 );
+                await device.WaitForSynchronizationAsync( false );
 
-        //}
+            }
+
+        }
 
 
         [Test]
