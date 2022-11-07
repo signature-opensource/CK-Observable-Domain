@@ -4,7 +4,6 @@
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
   "scripts": {
-    "test": "mocha -r ts-node/register test/**/*.ts",
     "build": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json",
     "clean": "rimraf dist"
   },
