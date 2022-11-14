@@ -285,7 +285,7 @@ namespace CK.Observable.Device
         /// Sends a command to release or take the control of the device. See <see cref="DeviceControlAction"/>.
         /// </summary>
         /// <param name="action">The action to take.</param>
-        public void SendDeviceControlCommand( DeviceControlAction action )
+        public void SendDeviceControlCommand( DeviceControlAction action, DeviceConfiguration? newConfig = null )
         {
             ThrowOnUnboundedDevice();
             switch( action )
@@ -313,7 +313,7 @@ namespace CK.Observable.Device
                         // This reconfigures the device only if needed.
                         if( Configuration.ControllerKey != null )
                         {
-                            var c = Configuration.DeepClone();
+                            var c = newConfig != null ? newConfig.DeepClone() : Configuration.DeepClone();
                             c.ControllerKey = null;
                             ApplyDeviceConfiguration( c );
                         }
@@ -330,7 +330,7 @@ namespace CK.Observable.Device
                         // This reconfigures the device only if needed.
                         if( Configuration.ControllerKey != Domain.DomainName )
                         {
-                            var c = Configuration.DeepClone();
+                            var c = newConfig != null ? newConfig.DeepClone() : Configuration.DeepClone();
                             c.ControllerKey = Domain.DomainName;
                             ApplyDeviceConfiguration( c );
                         }

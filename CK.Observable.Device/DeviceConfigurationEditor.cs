@@ -111,53 +111,74 @@ namespace CK.Observable.Device
 
         public void ApplyLocalConfig( DeviceControlAction? deviceControlAction )
         {
-            if( !_local.CheckValid( Domain.Monitor ) ) Throw.InvalidOperationException( "Local config is invalid" );
-
-            var shouldApply = false;
-
-            var status = _owner.DeviceControlStatus;
-
-            switch( deviceControlAction )
+            using( Domain.Monitor.OpenInfo( "Apply Local Config" ) )
             {
-                case DeviceControlAction.TakeControl:
-                case DeviceControlAction.ReleaseControl:
-                    if( status != DeviceControlStatus.OutOfControlByConfiguration )
-                    {
-                        shouldApply = true;
-                    }
-                    break;
-                case DeviceControlAction.ForceReleaseControl:
-                    if( _owner.Configuration!.ControllerKey != null )
-                    {
-                        _local.ControllerKey = null;
-                        shouldApply = true;
-                    }
-                    break;
-                case DeviceControlAction.SafeTakeControl:
-                case DeviceControlAction.SafeReleaseControl:
-                    if( status == DeviceControlStatus.HasControl || status == DeviceControlStatus.HasSharedControl )
-                    {
-                        shouldApply = true;
-                    }
-                    break;
-                case DeviceControlAction.TakeOwnership:
-                    if( _owner.Configuration!.ControllerKey != Domain.DomainName )
-                    {
-                        _local.ControllerKey = Domain.DomainName;
-                        shouldApply = true;
-                    }
-                    break;
-                case null:
-                    shouldApply = status == DeviceControlStatus.HasControl ||
-                                  status == DeviceControlStatus.HasSharedControl ||
-                                  status == DeviceControlStatus.HasOwnership;
-                    break;
-            }
 
-            if( shouldApply )
-            {
-                if( deviceControlAction != null ) _owner.SendDeviceControlCommand( deviceControlAction.Value );
-                _owner.ApplyDeviceConfiguration( _local.DeepClone() );
+                if( !_local.CheckValid( Domain.Monitor ) ) Throw.InvalidOperationException( "Local config is invalid" );
+
+                var shouldApply = false;
+
+                var status = _owner.DeviceControlStatus;
+                Domain.Monitor.Info( $"Actual Status : {status}, Action: {deviceControlAction}" );
+
+                switch( deviceControlAction )
+                {
+                    case DeviceControlAction.TakeControl:
+                    case DeviceControlAction.ReleaseControl:
+                        if( status != DeviceControlStatus.OutOfControlByConfiguration )
+                        {
+                            shouldApply = true;
+                        }
+                        break;
+                    case DeviceControlAction.ForceReleaseControl:
+                        if( _owner.Configuration!.ControllerKey != null )
+                        {
+                            _local.ControllerKey = null;
+                            shouldApply = true;
+                        }
+                        break;
+                    case DeviceControlAction.SafeTakeControl:
+                    case DeviceControlAction.SafeReleaseControl:
+                        if( status == DeviceControlStatus.HasControl || status == DeviceControlStatus.HasSharedControl )
+                        {
+                            shouldApply = true;
+                        }
+                        break;
+                    case DeviceControlAction.TakeOwnership:
+                        if( _owner.Configuration!.ControllerKey != Domain.DomainName )
+                        {
+                            _local.ControllerKey = Domain.DomainName;
+                            shouldApply = true;
+                        }
+                        break;
+                    case null:
+                        shouldApply = status == DeviceControlStatus.HasControl ||
+                                      status == DeviceControlStatus.HasSharedControl ||
+                                      status == DeviceControlStatus.HasOwnership;
+                        break;
+                }
+
+                if( shouldApply )
+                {
+                    Domain.Monitor.Info( $"Can apply" );
+
+                    if( deviceControlAction != null )
+                    {
+                        Domain.Monitor.Info( $"Sending device controll command, {deviceControlAction}" );
+                        _owner.SendDeviceControlCommand( deviceControlAction.Value, _local );
+                    }
+
+                    if( deviceControlAction != DeviceControlAction.TakeOwnership ||
+                        deviceControlAction != DeviceControlAction.ForceReleaseControl )
+                    {
+                        Domain.Monitor.Info( $"Apply local config, {deviceControlAction}" );
+                        _owner.ApplyDeviceConfiguration( _local.DeepClone() );
+                    }
+                }
+                else
+                {
+                    Domain.Monitor.Info( $"Cant apply" );
+                }
             }
         }
 
