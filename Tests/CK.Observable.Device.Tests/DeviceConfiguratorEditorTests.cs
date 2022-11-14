@@ -63,7 +63,7 @@ namespace CK.Observable.Device.Tests
 
             await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
-                d.Root.Default.Configuration.Should().NotBeNull();
+                d.Root.Default.DeviceConfiguration.Should().NotBeNull();
                 d.Root.Default.DeviceConfigurationEditor.Should().NotBeNull();
                 d.Root.Default.DeviceConfigurationEditor.IsSame().Should().BeTrue();
 
@@ -375,7 +375,7 @@ namespace CK.Observable.Device.Tests
 
             await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
-                d.Root.Default.Configuration.Should().NotBeNull();
+                d.Root.Default.DeviceConfiguration.Should().NotBeNull();
                 d.Root.Default.DeviceConfigurationEditor.Should().NotBeNull();
 
                 d.Root.Default.DeviceConfigurationEditor.IsSame().Should().BeTrue();

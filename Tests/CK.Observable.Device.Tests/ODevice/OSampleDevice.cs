@@ -57,9 +57,9 @@ namespace CK.Observable.Device.Tests
 
         protected override void OnConfigurationChanged( DeviceConfiguration? previousConfiguration )
         {
-            if( Configuration != null && Configuration is not SampleDeviceConfiguration configuration )
+            if( DeviceConfiguration != null && DeviceConfiguration is not SampleDeviceConfiguration configuration )
             {
-                Throw.ArgumentException( $"{nameof( Configuration )} must be of type {nameof( SampleDeviceConfiguration )}, but was {Configuration?.GetType().Name ?? "<null>"}." );
+                Throw.ArgumentException( $"{nameof( DeviceConfiguration )} must be of type {nameof( SampleDeviceConfiguration )}, but was {DeviceConfiguration?.GetType().Name ?? "<null>"}." );
             }
 
             // Send command during OnConfigurationChanged

@@ -141,22 +141,22 @@ namespace CK.Observable.Device
         /// </para>
         /// </summary>
         [NotExportable]
-        public DeviceConfiguration? Configuration => _configuration;
+        public DeviceConfiguration? DeviceConfiguration => _configuration;
 
         /// <summary>
-        /// Called when <see cref="Configuration"/> changed.
+        /// Called when <see cref="DeviceConfiguration"/> changed.
         /// <para>
         /// When overridden, this base method MUST be called to raise <see cref="ConfigurationChanged"/> event.
         /// </para>
         /// </summary>
         internal protected virtual void OnConfigurationChanged( DeviceConfiguration? previousConfiguration )
         {
-            OnPropertyChanged( nameof( Configuration ), _configuration );
+            OnPropertyChanged( nameof( DeviceConfiguration ), _configuration );
             if( _configurationChanged.HasHandlers ) _configurationChanged.Raise( this );
         }
 
         /// <summary>
-        /// Raised whenever <see cref="Configuration"/> has changed.
+        /// Raised whenever <see cref="DeviceConfiguration"/> has changed.
         /// </summary>
         public event SafeEventHandler ConfigurationChanged
         {
@@ -194,11 +194,11 @@ namespace CK.Observable.Device
 
         /// <summary>
         /// Gets whether this observable object device is bound to a <see cref="IDevice"/>.
-        /// Note that <see cref="IsRunning"/> and <see cref="Configuration"/> are both null if this device is unbound.
+        /// Note that <see cref="IsRunning"/> and <see cref="DeviceConfiguration"/> are both null if this device is unbound.
         /// This flag is [NotExportable].
         /// </summary>
         [NotExportable]
-        [MemberNotNullWhen( true, nameof( Configuration ), nameof( IsRunning ) )]
+        [MemberNotNullWhen( true, nameof( DeviceConfiguration ), nameof( IsRunning ) )]
         public bool IsBoundDevice => IsRunning != null;
 
         ObservableDomainSidekick ISidekickLocator.Sidekick => _bridge.Sidekick;
@@ -206,9 +206,9 @@ namespace CK.Observable.Device
         /// <summary>
         /// Throws an <see cref="InvalidOperationException"/> if this observable object device is not bound
         /// to a <see cref="IDevice"/>.
-        /// Note that <see cref="DeviceStatus"/> and <see cref="Configuration"/> are both null if this device is unbound.
+        /// Note that <see cref="DeviceStatus"/> and <see cref="DeviceConfiguration"/> are both null if this device is unbound.
         /// </summary>
-        [MemberNotNull( nameof( Configuration ) )]
+        [MemberNotNull( nameof( DeviceConfiguration ) )]
         [MemberNotNull( nameof( IsRunning ) )]
         public void ThrowOnUnboundedDevice()
         {
@@ -220,7 +220,7 @@ namespace CK.Observable.Device
         }
 
         /// <summary>
-        /// Sends a <see cref="DeviceConfiguration"/> command to the device with the wanted configuration.
+        /// Sends a <see cref="DeviceModel.DeviceConfiguration"/> command to the device with the wanted configuration.
         /// <para>
         /// This device may obviously not be bound (<see cref="IsBoundDevice"/> can be false): this configuration
         /// may create the device.
@@ -311,9 +311,9 @@ namespace CK.Observable.Device
                 case DeviceControlAction.ForceReleaseControl:
                     {
                         // This reconfigures the device only if needed.
-                        if( Configuration.ControllerKey != null )
+                        if( DeviceConfiguration.ControllerKey != null )
                         {
-                            var c = newConfig != null ? newConfig.DeepClone() : Configuration.DeepClone();
+                            var c = newConfig != null ? newConfig.DeepClone() : DeviceConfiguration.DeepClone();
                             c.ControllerKey = null;
                             ApplyDeviceConfiguration( c );
                         }
@@ -328,9 +328,9 @@ namespace CK.Observable.Device
                 case DeviceControlAction.TakeOwnership:
                     {
                         // This reconfigures the device only if needed.
-                        if( Configuration.ControllerKey != Domain.DomainName )
+                        if( DeviceConfiguration.ControllerKey != Domain.DomainName )
                         {
-                            var c = newConfig != null ? newConfig.DeepClone() : Configuration.DeepClone();
+                            var c = newConfig != null ? newConfig.DeepClone() : DeviceConfiguration.DeepClone();
                             c.ControllerKey = Domain.DomainName;
                             ApplyDeviceConfiguration( c );
                         }

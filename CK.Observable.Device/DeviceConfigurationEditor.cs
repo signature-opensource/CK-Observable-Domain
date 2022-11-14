@@ -22,9 +22,9 @@ namespace CK.Observable.Device
         private protected DeviceConfigurationEditor( ObservableDeviceObject owner )
         {
             _owner = owner;
-            if( _owner.Configuration != null )
+            if( _owner.DeviceConfiguration != null )
             {
-                _local = _owner.Configuration.DeepClone();
+                _local = _owner.DeviceConfiguration.DeepClone();
             }
             else
             {
@@ -34,14 +34,12 @@ namespace CK.Observable.Device
 
         private void OnConfigChanged( object sender )
         {
-            var config = ((ObservableDeviceObject)sender).Configuration;
-            if( config != null )
+            if( sender is ObservableDeviceObject { DeviceConfiguration: var config } && config != null )
             {
                 _local = config.DeepClone();
                 _owner.ConfigurationChanged -= OnConfigChanged;
             }
         }
-
 
         protected DeviceConfigurationEditor( Sliced _ ) : base( _ ) { }
         DeviceConfigurationEditor( IBinaryDeserializer d, ITypeReadInfo info )
@@ -66,7 +64,7 @@ namespace CK.Observable.Device
                     Throw.InvalidOperationException( "Local config is invalid" );
                 }
 
-                if( _owner.Configuration == null )
+                if( _owner.DeviceConfiguration == null )
                 {
                     Domain.Monitor.Warn( "Config owner is null" );
                     return false;
@@ -84,7 +82,7 @@ namespace CK.Observable.Device
                     using( var serializer = BinarySerializer.Create( ownerConfigStream, new BinarySerializerContext() ) )
                     {
                         Domain.Monitor.Info( "Serialize Owner Config" );
-                        serializer.WriteObject( _owner.Configuration );
+                        serializer.WriteObject( _owner.DeviceConfiguration );
                     }
 
                     if( localConfigStream.Length != ownerConfigStream.Length )
@@ -131,7 +129,7 @@ namespace CK.Observable.Device
                         }
                         break;
                     case DeviceControlAction.ForceReleaseControl:
-                        if( _owner.Configuration!.ControllerKey != null )
+                        if( _owner.DeviceConfiguration!.ControllerKey != null )
                         {
                             _local.ControllerKey = null;
                             shouldApply = true;
@@ -145,7 +143,7 @@ namespace CK.Observable.Device
                         }
                         break;
                     case DeviceControlAction.TakeOwnership:
-                        if( _owner.Configuration!.ControllerKey != Domain.DomainName )
+                        if( _owner.DeviceConfiguration!.ControllerKey != Domain.DomainName )
                         {
                             _local.ControllerKey = Domain.DomainName;
                             shouldApply = true;

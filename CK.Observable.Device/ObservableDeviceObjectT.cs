@@ -40,7 +40,7 @@ namespace CK.Observable.Device
         }
 
         [NotExportable]
-        public new TConfig? Configuration => (TConfig?)base.Configuration;
+        public new TConfig? DeviceConfiguration => (TConfig?)base.DeviceConfiguration;
 
         [NotExportable]
         public DeviceConfigurationEditor<TConfig> DeviceConfigurationEditor => _deviceConfigurationEditor;

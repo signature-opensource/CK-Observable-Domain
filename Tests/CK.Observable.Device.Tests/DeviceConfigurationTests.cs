@@ -39,7 +39,7 @@ namespace CK.Observable.Device.Tests
                 device1.ApplyDeviceConfiguration( config );
                 // We have to wait for the event to be handled.
                 device1.IsBoundDevice.Should().BeFalse();
-                device1.Configuration.Should().BeNull();
+                device1.DeviceConfiguration.Should().BeNull();
             } );
             Debug.Assert( device1 != null );
             await Task.Delay( 20 );
@@ -47,11 +47,11 @@ namespace CK.Observable.Device.Tests
             obs.Read( TestHelper.Monitor, () =>
             {
                 device1.IsBoundDevice.Should().BeTrue( "The ObservableDevice has created its Device!" );
-                Debug.Assert( device1.Configuration != null );
-                ((SampleDeviceConfiguration)device1.Configuration).Message.Should().Be( "Hello World!" );
+                Debug.Assert( device1.DeviceConfiguration != null );
+                ((SampleDeviceConfiguration)device1.DeviceConfiguration).Message.Should().Be( "Hello World!" );
                 // The ObservableDevice.Configuration is a safe clone.
-                device1.Configuration.Should().NotBeSameAs( config );
-                device1.Configuration.Should().BeEquivalentTo( config );
+                device1.DeviceConfiguration.Should().NotBeSameAs( config );
+                device1.DeviceConfiguration.Should().BeEquivalentTo( config );
             } );
 
             // Even if the ObservableDevice.Configuration is a safe clone and COULD be used to reconfigure the device,
@@ -66,7 +66,7 @@ namespace CK.Observable.Device.Tests
 
             obs.Read( TestHelper.Monitor, () =>
             {
-                ((SampleDeviceConfiguration)device1.Configuration!).Message.Should().Be( "Hello World!" );
+                ((SampleDeviceConfiguration)device1.DeviceConfiguration!).Message.Should().Be( "Hello World!" );
             } );
 
             // By sending the destroy command from the domain, the Device is destroyed...
@@ -79,7 +79,7 @@ namespace CK.Observable.Device.Tests
             obs.Read( TestHelper.Monitor, () =>
             {
                 device1.IsBoundDevice.Should().BeFalse( "The Device has been destroyed." );
-                device1.Configuration.Should().BeNull();
+                device1.DeviceConfiguration.Should().BeNull();
             } );
         }
 

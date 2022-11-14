@@ -177,7 +177,7 @@ namespace CK.Observable.Device
 
             /// <summary>
             /// Called whenever a change occur in the bound <see cref="Device"/> that impacts
-            /// <see cref="ObservableDeviceObject.IsRunning"/>, <see cref="ObservableDeviceObject.Configuration"/>
+            /// <see cref="ObservableDeviceObject.IsRunning"/>, <see cref="ObservableDeviceObject.DeviceConfiguration"/>
             /// or <see cref="ObservableDeviceObject.DeviceControlStatus"/>.
             /// The <see cref="Object"/> (and any other objects of the domain) can be safely modified
             /// since the domain's write lock is held.
@@ -187,7 +187,7 @@ namespace CK.Observable.Device
             /// </summary>
             /// <param name="monitor">The monitor to use.</param>
             /// <param name="runningChanged">True if the <see cref="ObservableDeviceObject.IsRunning"/> has changed.</param>
-            /// <param name="configurationChanged">True if the <see cref="ObservableDeviceObject.Configuration"/> has changed (<paramref name="previous"/> references the previous one).</param>
+            /// <param name="configurationChanged">True if the <see cref="ObservableDeviceObject.DeviceConfiguration"/> has changed (<paramref name="previous"/> references the previous one).</param>
             /// <param name="statusChanged">True if the <see cref="ObservableDeviceObject.DeviceControlStatus"/> changed.</param>
             /// <param name="previous">The previous configuration if it has changed, the current one otherwise.</param>
             protected virtual void OnDeviceChanged( IActivityMonitor monitor,
