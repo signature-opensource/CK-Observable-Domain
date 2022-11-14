@@ -370,9 +370,9 @@ namespace CK.Observable.Device.Tests
                     var d1 = new OSampleDevice( "n°1" );
                     d1.IsRunning.Should().BeNull();
                     d1.IsBoundDevice.Should().BeFalse();
-                    //var d2 = new OSampleDevice( "n°2" );
-                    //d2.IsRunning.Should().BeNull();
-                    //d2.IsBoundDevice.Should().BeFalse();
+                    var d2 = new OSampleDevice( "n°2" );
+                    d2.IsRunning.Should().BeNull();
+                    d2.IsBoundDevice.Should().BeFalse();
                 } );
                 ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, obs );
             }
