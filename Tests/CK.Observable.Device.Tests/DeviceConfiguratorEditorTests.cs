@@ -389,5 +389,34 @@ namespace CK.Observable.Device.Tests
 
         }
 
+        [Test]
+        public async Task check_idempotence_Async()
+        {
+            using var gLog = TestHelper.Monitor.OpenInfo( nameof( check_idempotence_Async ) );
+            bool error = false;
+            using( TestHelper.Monitor.OnError( () => error = true ) )
+            {
+                // There is no device.
+                var host = new SampleDeviceHost();
+                var sp = new SimpleServiceContainer();
+                sp.Add( host );
+
+                using var obs = new ObservableDomain( TestHelper.Monitor, nameof( check_idempotence_Async ), false, serviceProvider: sp );
+
+                await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
+                {
+                    var d1 = new OSampleDevice( "n°1" );
+                    d1.DeviceConfigurationEditor.Local.Message = "Number1";
+                    d1.DeviceConfigurationEditor.Local.PeriodMilliseconds = 2;
+
+                    var d2 = new OSampleDevice( "n°2" );
+                    d2.DeviceConfigurationEditor.Local.Message = "Number2";
+                    d2.DeviceConfigurationEditor.Local.PeriodMilliseconds = 2;
+
+                } );
+                ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, obs );
+            }
+            error.Should().BeFalse( "There should be no error." );
+        }
     }
 }
