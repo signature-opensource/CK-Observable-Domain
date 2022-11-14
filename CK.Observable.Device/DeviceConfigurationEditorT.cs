@@ -19,13 +19,14 @@ namespace CK.Observable.Device
         internal protected DeviceConfigurationEditor( ObservableDeviceObject owner)
             : base(owner)
         {
-            if(base.Local == null )
+            if(_local == null )
             {
                 _local = new TConfig();
             }
         }
 
-        DeviceConfigurationEditor( IBinaryDeserializer r,ITypeReadInfo info ) : base( r, info ) 
+        protected DeviceConfigurationEditor( IBinaryDeserializer r,ITypeReadInfo info )
+            : base( Sliced.Instance )
         {
         }
 
@@ -33,7 +34,7 @@ namespace CK.Observable.Device
         {
         }
 
-        public new TConfig Local => (TConfig)base.Local;
+        public new TConfig Local => (TConfig)_local;
     }
 
 }

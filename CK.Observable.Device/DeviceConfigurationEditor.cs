@@ -42,7 +42,9 @@ namespace CK.Observable.Device
             }
         }
 
-        protected DeviceConfigurationEditor( IBinaryDeserializer d, ITypeReadInfo info )
+
+        protected DeviceConfigurationEditor( Sliced _ ) : base( _ ) { }
+        DeviceConfigurationEditor( IBinaryDeserializer d, ITypeReadInfo info )
         : base( Sliced.Instance )
         {
             _owner = d.ReadObject<ObservableDeviceObject>();
