@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Text;
 
 namespace CK.Observable.Device
 {
@@ -14,7 +15,7 @@ namespace CK.Observable.Device
     /// generic <see cref="ObservableDeviceObject{TSidekick,TConfig}"/> as the object device base.
     /// </summary>
     [SerializationVersion( 3 )]
-    public abstract partial class ObservableDeviceObject : ObservableObject, ISidekickLocator
+    public abstract partial class ObservableDeviceObject : ObservableObject, ISidekickLocator, ILocalConfiguration<DeviceConfiguration>
     {
         ObservableEventHandler _isRunningChanged;
         ObservableEventHandler _deviceConfigurationChanged;
@@ -137,7 +138,7 @@ namespace CK.Observable.Device
         /// <para>
         /// A DeviceConfiguration is mutable by design and this is a clone of the last applied configuration:
         /// it can be updated, but this has no effect on the actual device's configuration: to apply
-        /// the configuration, <see cref="ApplyDeviceConfiguration"/> must be used.
+        /// the configuration, <see cref="SendApplyDeviceConfigurationCommand"/> must be used.
         /// </para>
         /// </summary>
         [NotExportable]
@@ -163,6 +164,132 @@ namespace CK.Observable.Device
             add => _deviceConfigurationChanged.Add( value );
             remove => _deviceConfigurationChanged.Remove( value );
         }
+
+        /// <summary>
+        /// Gets the local configuration.
+        /// </summary>
+        public ILocalConfiguration<DeviceConfiguration> LocalConfiguration => this;
+
+        DeviceConfiguration ILocalConfiguration<DeviceConfiguration>.Value
+        {
+            get => GetLocalConfiguration();
+            set => SetLocalConfiguration( value );
+        }
+
+        private protected abstract DeviceConfiguration GetLocalConfiguration();
+        private protected abstract void SetLocalConfiguration( DeviceConfiguration value );
+
+        bool ILocalConfiguration<DeviceConfiguration>.IsDirty
+        {
+            get
+            {
+                Throw.CheckState( Domain.CurrentTransactionStatus == CurrentTransactionStatus.Regular );
+
+                var local = GetLocalConfiguration();
+                if( _deviceConfiguration == null
+                    || !local.CheckValid( Domain.Monitor ) )
+                {
+                    return true;
+                }
+
+                using( var localConfigStream = Util.RecyclableStreamManager.GetStream() )
+                using( var writer = new CKBinaryWriter( localConfigStream, Encoding.UTF8 ) )
+                {
+                    local.Write( writer );
+
+                    try
+                    {
+                        using var checker = BinarySerializer.CreateCheckedWriteStream( localConfigStream.ToArray() );
+                        using var checkedWriter = new CKBinaryWriter( checker, Encoding.UTF8 );
+                        _deviceConfiguration.Write( checkedWriter );
+                    }
+                    catch( Exception )
+                    {
+                        Domain.Monitor.Warn( "Should be updated to use CK.Core.StreamChecker once it is available." );
+                        return true;
+                    }
+                }
+                return false;
+            }
+        }
+
+        void ILocalConfiguration<DeviceConfiguration>.SendDeviceConfigureCommand( DeviceControlAction? deviceControlAction )
+        {
+            var status = _deviceControlStatus;
+            var local = GetLocalConfiguration();
+            using( Domain.Monitor.OpenInfo( $"Applying Local configuration: Actual Status : {status}, Action: {deviceControlAction}" ) )
+            {
+                if( !local.CheckValid( Domain.Monitor ) ) Throw.InvalidOperationException( "Local configuration is invalid" );
+
+                var shouldApply = false;
+                switch( deviceControlAction )
+                {
+                    case DeviceControlAction.TakeControl:
+                    case DeviceControlAction.ReleaseControl:
+                        if( status != DeviceControlStatus.OutOfControlByConfiguration )
+                        {
+                            shouldApply = true;
+                        }
+                        break;
+                    case DeviceControlAction.ForceReleaseControl:
+                        Debug.Assert( _deviceConfiguration != null );
+                        if( _deviceConfiguration.ControllerKey != null )
+                        {
+                            local.ControllerKey = null;
+                            shouldApply = true;
+                        }
+                        break;
+                    case DeviceControlAction.SafeTakeControl:
+                        if( status == DeviceControlStatus.HasControl
+                            || status == DeviceControlStatus.HasSharedControl
+                            || status == DeviceControlStatus.MissingDevice )
+                        {
+                            shouldApply = true;
+                        }
+                        break;
+                    case DeviceControlAction.SafeReleaseControl:
+                        if( status == DeviceControlStatus.HasControl || status == DeviceControlStatus.HasSharedControl )
+                        {
+                            shouldApply = true;
+                        }
+                        break;
+                    case DeviceControlAction.TakeOwnership:
+                        Debug.Assert( _deviceConfiguration != null );
+                        if( _deviceConfiguration.ControllerKey != Domain.DomainName )
+                        {
+                            local.ControllerKey = Domain.DomainName;
+                            shouldApply = true;
+                        }
+                        break;
+                    case null:
+                        shouldApply = status == DeviceControlStatus.MissingDevice ||
+                                      status == DeviceControlStatus.HasControl ||
+                                      status == DeviceControlStatus.HasSharedControl ||
+                                      status == DeviceControlStatus.HasOwnership;
+                        break;
+                }
+
+                if( shouldApply )
+                {
+                    if( deviceControlAction != null )
+                    {
+                        SendDeviceControlCommand( deviceControlAction.Value, local );
+                    }
+
+                    if( deviceControlAction != DeviceControlAction.TakeOwnership ||
+                        deviceControlAction != DeviceControlAction.ForceReleaseControl )
+                    {
+                        SendApplyDeviceConfigurationCommand( local.DeepClone() );
+                    }
+                }
+                else
+                {
+                    Domain.Monitor.CloseGroup( "Inapplicable Action." );
+                }
+            }
+        }
+
+
 
         /// <summary>
         /// Gets this device control status.
@@ -219,18 +346,7 @@ namespace CK.Observable.Device
             }
         }
 
-        /// <summary>
-        /// Sends a <see cref="DeviceConfiguration"/> command to the device with the wanted configuration.
-        /// <para>
-        /// This device may obviously not be bound (<see cref="IsBoundDevice"/> can be false): this configuration
-        /// may create the device.
-        /// </para>
-        /// <para>
-        /// To take full control of a newly created device, <see cref="DeviceConfiguration.ControllerKey"/> can be
-        /// set to this <see cref="DomainView.DomainName"/>.
-        /// </para>
-        /// </summary>
-        public void ApplyDeviceConfiguration( DeviceConfiguration configuration )
+        void SendApplyDeviceConfigurationCommand( DeviceConfiguration configuration )
         {
             Throw.CheckNotNullArgument( configuration );
             if( configuration.Name == null ) configuration.Name = DeviceName;
@@ -315,7 +431,7 @@ namespace CK.Observable.Device
                         {
                             var c = newConfig != null ? newConfig.DeepClone() : DeviceConfiguration.DeepClone();
                             c.ControllerKey = null;
-                            ApplyDeviceConfiguration( c );
+                            SendApplyDeviceConfigurationCommand( c );
                         }
                         else
                         {
@@ -332,7 +448,7 @@ namespace CK.Observable.Device
                         {
                             var c = newConfig != null ? newConfig.DeepClone() : DeviceConfiguration.DeepClone();
                             c.ControllerKey = Domain.DomainName;
-                            ApplyDeviceConfiguration( c );
+                            SendApplyDeviceConfigurationCommand( c );
                         }
                         else
                         {
@@ -411,5 +527,6 @@ namespace CK.Observable.Device
                     ? DeviceControlStatus.OutOfControlByConfiguration
                     : DeviceControlStatus.OutOfControl;
         }
+
     }
 }

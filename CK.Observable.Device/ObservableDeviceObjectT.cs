@@ -7,11 +7,11 @@ namespace CK.Observable.Device
     /// Abstract base class for device.
     /// </summary>
     [SerializationVersion( 1 )]
-    public abstract class ObservableDeviceObject<TSidekick,TConfig> : ObservableDeviceObject, ISidekickClientObject<TSidekick>
+    public abstract class ObservableDeviceObject<TSidekick,TConfig> : ObservableDeviceObject, ILocalConfiguration<TConfig>, ISidekickClientObject<TSidekick>
         where TSidekick : ObservableDomainSidekick
-        where TConfig : DeviceConfiguration,new()
+        where TConfig : DeviceConfiguration, new()
     {
-        readonly DeviceConfigurationEditor<TConfig> _deviceConfigurationEditor;
+        TConfig _localConfiguration;
 
         /// <summary>
         /// Initializes a new observable object device.
@@ -20,7 +20,15 @@ namespace CK.Observable.Device
         protected ObservableDeviceObject( string deviceName )
             : base( deviceName )
         {
-            _deviceConfigurationEditor = new DeviceConfigurationEditor<TConfig>(this);
+            Domain.EnsureSidekicks();
+            if( _deviceConfiguration != null )
+            {
+                _localConfiguration = (TConfig)_deviceConfiguration.DeepClone();
+            }
+            else
+            {
+                _localConfiguration = new TConfig();
+            }
         }
 
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
@@ -30,22 +38,48 @@ namespace CK.Observable.Device
         ObservableDeviceObject( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
                 : base( BinarySerialization.Sliced.Instance )
         {
-            if(info.Version > 0 )
+            if( info.Version > 0 )
             {
-                _deviceConfigurationEditor = r.ReadObject<DeviceConfigurationEditor<TConfig>>();
+                _localConfiguration = r.ReadObject<TConfig>();
             }
         }
 
         public static void Write( BinarySerialization.IBinarySerializer s, in ObservableDeviceObject<TSidekick,TConfig> o )
         {
-            s.WriteObject( o._deviceConfigurationEditor );
+            s.WriteObject( o._localConfiguration );
         }
 
-        [NotExportable]
-        public new TConfig? DeviceConfiguration => (TConfig?)base.DeviceConfiguration;
+        private protected override DeviceConfiguration GetLocalConfiguration() => _localConfiguration;
+        private protected override void SetLocalConfiguration( DeviceConfiguration value ) => DoSetLocalConfiguraton( (TConfig)value );
 
         [NotExportable]
-        public DeviceConfigurationEditor<TConfig> DeviceConfigurationEditor => _deviceConfigurationEditor;
+        public new TConfig? DeviceConfiguration => (TConfig?)_deviceConfiguration;
+
+        [NotExportable]
+        public new ILocalConfiguration<TConfig> LocalConfiguration => this;
+
+        TConfig ILocalConfiguration<TConfig>.Value
+        {
+            get => _localConfiguration;
+            set => DoSetLocalConfiguraton( value );
+        }
+
+        void DoSetLocalConfiguraton( TConfig value )
+        {
+            Throw.CheckNotNullArgument( value );
+            if( value == _deviceConfiguration )
+            {
+                _localConfiguration = (TConfig)_deviceConfiguration.DeepClone();
+            }
+            else
+            {
+                _localConfiguration = value;
+            }
+        }
+
+        bool ILocalConfiguration<TConfig>.IsDirty => base.LocalConfiguration.IsDirty;
+
+        void ILocalConfiguration<TConfig>.SendDeviceConfigureCommand( DeviceControlAction? deviceControlAction ) => base.LocalConfiguration.SendDeviceConfigureCommand( deviceControlAction );
 
     }
 }

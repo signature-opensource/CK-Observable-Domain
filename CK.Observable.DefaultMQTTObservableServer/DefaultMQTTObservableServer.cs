@@ -9,8 +9,8 @@ namespace CK.Observable.DefaultMQTTObservableServer
     public class DefaultMQTTObservableServer : MqttObservableServer, ISingletonAutoService
     {
         public DefaultMQTTObservableServer( IOptionsMonitor<MQTTObservableWatcherConfig> config,
-                                           LocalMQTTDemiServer server,
-                                           DefaultObservableLeague league )
+                                            LocalMQTTDemiServer server,
+                                            DefaultObservableLeague league )
             : base( config, server, league )
         {
         }

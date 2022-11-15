@@ -36,13 +36,14 @@ namespace CK.Observable.Device.Tests
             await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 device1 = new OSampleDevice( "n°1" );
-                device1.ApplyDeviceConfiguration( config );
+                device1.LocalConfiguration.Value = config;
+                device1.LocalConfiguration.SendDeviceConfigureCommand();
                 // We have to wait for the event to be handled.
                 device1.IsBoundDevice.Should().BeFalse();
                 device1.DeviceConfiguration.Should().BeNull();
             } );
             Debug.Assert( device1 != null );
-            await Task.Delay( 20 );
+            await Task.Delay( 2000 );
 
             obs.Read( TestHelper.Monitor, () =>
             {
@@ -60,7 +61,8 @@ namespace CK.Observable.Device.Tests
             await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 config.Message = "I've been reconfigured!";
-                device1.ApplyDeviceConfiguration( config );
+                device1.LocalConfiguration.Value = config;
+                device1.LocalConfiguration.SendDeviceConfigureCommand();
             } );
             await Task.Delay( 20 );
 

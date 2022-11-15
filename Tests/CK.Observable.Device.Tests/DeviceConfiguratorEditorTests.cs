@@ -64,8 +64,8 @@ namespace CK.Observable.Device.Tests
             await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 d.Root.Default.DeviceConfiguration.Should().NotBeNull();
-                d.Root.Default.DeviceConfigurationEditor.Should().NotBeNull();
-                d.Root.Default.DeviceConfigurationEditor.IsSame().Should().BeTrue();
+                d.Root.Default.LocalConfiguration.Value.Should().NotBeNull();
+                d.Root.Default.LocalConfiguration.IsDirty.Should().BeFalse();
 
             } );
 
@@ -105,8 +105,8 @@ namespace CK.Observable.Device.Tests
 
             await d1.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
-                d1.Root.Default.DeviceConfigurationEditor.Local.Message = "WillChange";
-                d1.Root.Default.DeviceConfigurationEditor.Local.PeriodMilliseconds = 2000;
+                d1.Root.Default.LocalConfiguration.Value.Message = "WillChange";
+                d1.Root.Default.LocalConfiguration.Value.PeriodMilliseconds = 2000;
 
             } );
 
@@ -117,8 +117,8 @@ namespace CK.Observable.Device.Tests
 
             await d2.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
-                d2.Root.Default.DeviceConfigurationEditor.Local.Message = "WillChange2";
-                d2.Root.Default.DeviceConfigurationEditor.Local.PeriodMilliseconds = 4000;
+                d2.Root.Default.LocalConfiguration.Value.Message = "WillChange2";
+                d2.Root.Default.LocalConfiguration.Value.PeriodMilliseconds = 4000;
 
             } );
 
@@ -170,7 +170,7 @@ namespace CK.Observable.Device.Tests
             {
                 await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
-                    d.Root.Default.DeviceConfigurationEditor.ApplyLocalConfig( dca );
+                    d.Root.Default.LocalConfiguration.SendDeviceConfigureCommand( dca );
                 } );
 
                 await Task.Delay( 100 );
@@ -217,8 +217,8 @@ namespace CK.Observable.Device.Tests
 
             await d2.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
-                d2.Root.Default.DeviceConfigurationEditor.Local.Message = "WillChange";
-                d2.Root.Default.DeviceConfigurationEditor.Local.PeriodMilliseconds = 2000;
+                d2.Root.Default.LocalConfiguration.Value.Message = "WillChange";
+                d2.Root.Default.LocalConfiguration.Value.PeriodMilliseconds = 2000;
             } );
 
             await ApplyLocalConfigAsync( d2, DeviceControlAction.TakeControl, device );
@@ -252,7 +252,7 @@ namespace CK.Observable.Device.Tests
             {
                 await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
-                    d.Root.Default.DeviceConfigurationEditor.ApplyLocalConfig( dca );
+                    d.Root.Default.LocalConfiguration.SendDeviceConfigureCommand( dca );
                 } );
                 // Since the reconfiguration currently goes through the host that sends an InternalConfigureDeviceCommand
                 // to the device, waiting here for the synchronization is not enough: we unfortunately have
@@ -299,8 +299,8 @@ namespace CK.Observable.Device.Tests
 
             await d1.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
-                d1.Root.Default.DeviceConfigurationEditor.Local.Message = "WillChange";
-                d1.Root.Default.DeviceConfigurationEditor.Local.PeriodMilliseconds = 2000;
+                d1.Root.Default.LocalConfiguration.Value.Message = "WillChange";
+                d1.Root.Default.LocalConfiguration.Value.PeriodMilliseconds = 2000;
             } );
 
             await ApplyLocalConfigAsync( d1, null, device );
@@ -314,8 +314,8 @@ namespace CK.Observable.Device.Tests
 
             await d1.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
-                d1.Root.Default.DeviceConfigurationEditor.Local.Message = "WontChange";
-                d1.Root.Default.DeviceConfigurationEditor.Local.PeriodMilliseconds = 4000;
+                d1.Root.Default.LocalConfiguration.Value.Message = "WontChange";
+                d1.Root.Default.LocalConfiguration.Value.PeriodMilliseconds = 4000;
             } );
 
             await ApplyLocalConfigAsync( d1, null, device );
@@ -337,7 +337,7 @@ namespace CK.Observable.Device.Tests
             {
                 await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
-                    d.Root.Default.DeviceConfigurationEditor.ApplyLocalConfig( dca );
+                    d.Root.Default.LocalConfiguration.SendDeviceConfigureCommand( dca );
                 } );
                 // Since the reconfiguration currently goes through the host that sends an InternalConfigureDeviceCommand
                 // to the device, waiting here for the synchronization is not enough: we unfortunately have
@@ -376,14 +376,14 @@ namespace CK.Observable.Device.Tests
             await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 d.Root.Default.DeviceConfiguration.Should().NotBeNull();
-                d.Root.Default.DeviceConfigurationEditor.Should().NotBeNull();
+                d.Root.Default.LocalConfiguration.Value.Should().NotBeNull();
 
-                d.Root.Default.DeviceConfigurationEditor.IsSame().Should().BeTrue();
+                d.Root.Default.LocalConfiguration.IsDirty.Should().BeFalse();
 
-                d.Root.Default.DeviceConfigurationEditor.Local.Message = "WillChange2";
-                d.Root.Default.DeviceConfigurationEditor.Local.PeriodMilliseconds = 4000;
+                d.Root.Default.LocalConfiguration.Value.Message = "WillChange2";
+                d.Root.Default.LocalConfiguration.Value.PeriodMilliseconds = 4000;
 
-                d.Root.Default.DeviceConfigurationEditor.IsSame().Should().BeFalse();
+                d.Root.Default.LocalConfiguration.IsDirty.Should().BeTrue();
 
             } );
 
@@ -406,12 +406,12 @@ namespace CK.Observable.Device.Tests
                 await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     var d1 = new OSampleDevice( "n°1" );
-                    d1.DeviceConfigurationEditor.Local.Message = "Number1";
-                    d1.DeviceConfigurationEditor.Local.PeriodMilliseconds = 2;
+                    d1.LocalConfiguration.Value.Message = "Number1";
+                    d1.LocalConfiguration.Value.PeriodMilliseconds = 2;
 
                     var d2 = new OSampleDevice( "n°2" );
-                    d2.DeviceConfigurationEditor.Local.Message = "Number2";
-                    d2.DeviceConfigurationEditor.Local.PeriodMilliseconds = 2;
+                    d1.LocalConfiguration.Value.Message = "Number2";
+                    d1.LocalConfiguration.Value.PeriodMilliseconds = 2;
 
                 } );
                 ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, obs );
