@@ -220,7 +220,7 @@ namespace CK.Observable.Device
         }
 
         /// <summary>
-        /// Sends a <see cref="DeviceModel.DeviceConfiguration"/> command to the device with the wanted configuration.
+        /// Sends a <see cref="DeviceConfiguration"/> command to the device with the wanted configuration.
         /// <para>
         /// This device may obviously not be bound (<see cref="IsBoundDevice"/> can be false): this configuration
         /// may create the device.
