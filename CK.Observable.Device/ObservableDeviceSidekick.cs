@@ -17,6 +17,7 @@ namespace CK.Observable.Device
     /// <typeparam name="THost">Type of the device host.</typeparam>
     /// <typeparam name="TDeviceObject">Type of the observable object device.</typeparam>
     /// <typeparam name="TDeviceHostObject">Type of the observable device host.</typeparam>
+    /// <typeparam name="TConfig">Type of the device config.</typeparam>
     public abstract partial class ObservableDeviceSidekick<THost,TDeviceObject,TDeviceHostObject,TConfig> : ObservableDomainSidekick, IInternalObservableDeviceSidekick
         where THost : IDeviceHost
         where TDeviceObject : ObservableDeviceObject
@@ -30,7 +31,7 @@ namespace CK.Observable.Device
         bool _deviceTracking;
 
         /// <summary>
-        /// Initializes a new <see cref="ObservableDeviceSidekick{THost, TObjectDevice, TObjectDeviceHost}"/>.
+        /// Initializes a new <see cref="ObservableDeviceSidekick{THost, TObjectDevice, TObjectDeviceHost,TConfig}"/>.
         /// </summary>
         /// <param name="manager">The domain's sidekick manager.</param>
         /// <param name="host">The device host.</param>

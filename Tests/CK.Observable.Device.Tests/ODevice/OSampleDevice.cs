@@ -55,7 +55,7 @@ namespace CK.Observable.Device.Tests
         /// </summary>
         public void SendSimpleCommand( string? messagePrefix = null ) => SendDeviceCommand<SampleCommand>( c => c.MessagePrefix = messagePrefix );
 
-        protected override void OnConfigurationChanged( DeviceConfiguration? previousConfiguration )
+        protected override void OnDeviceConfigurationChanged( DeviceConfiguration? previousConfiguration )
         {
             if( DeviceConfiguration != null && DeviceConfiguration is not SampleDeviceConfiguration configuration )
             {
@@ -66,7 +66,7 @@ namespace CK.Observable.Device.Tests
             var deviceCommand = CreateDeviceCommand<SampleCommand>();
             Domain.SendBroadcastCommand( deviceCommand );
 
-            base.OnConfigurationChanged( previousConfiguration );
+            base.OnDeviceConfigurationChanged( previousConfiguration );
         }
     }
 }

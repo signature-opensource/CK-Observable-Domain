@@ -83,7 +83,7 @@ namespace CK.Observable.Device
                 SubscribeDeviceEvent();
 
                 Object._isRunning = d.Status.IsRunning;
-                Object._configuration = d.ExternalConfiguration;
+                Object._deviceConfiguration = d.ExternalConfiguration;
                 Object._deviceControlStatus = ObservableDeviceObject.ComputeStatus( d, _sidekick.Domain.DomainName );
                 OnDeviceAppeared( monitor );
                 RaiseDevicePropertiesChanged( true, true, true, null );
@@ -94,9 +94,9 @@ namespace CK.Observable.Device
                 Debug.Assert( Device == d, "This is called to update the current Device." );
                 bool rC = Object._isRunning != d.Status.IsRunning;
                 if( rC ) Object._isRunning = d.Status.IsRunning;
-                var previous = Object._configuration;
+                var previous = Object._deviceConfiguration;
                 bool cC = previous != d.ExternalConfiguration;
-                if( cC ) Object._configuration = d.ExternalConfiguration;
+                if( cC ) Object._deviceConfiguration = d.ExternalConfiguration;
                 var s = ObservableDeviceObject.ComputeStatus( d, _sidekick.Domain.DomainName );
                 bool sC = Object._deviceControlStatus != s;
                 if( sC ) Object._deviceControlStatus = s;
@@ -115,8 +115,8 @@ namespace CK.Observable.Device
 
                 Device = null;
                 Object._isRunning = null;
-                var previous = Object._configuration;
-                Object._configuration = null;
+                var previous = Object._deviceConfiguration;
+                Object._deviceConfiguration = null;
                 Object._deviceControlStatus = DeviceControlStatus.MissingDevice;
                 RaiseDevicePropertiesChanged( true, true, true, previous );
             }
@@ -124,7 +124,7 @@ namespace CK.Observable.Device
             void RaiseDevicePropertiesChanged( bool runningChanged, bool configurationChanged, bool statusChanged, DeviceConfiguration? previous )
             {
                 if( runningChanged ) Object.OnIsRunningChanged();
-                if( configurationChanged ) Object.OnConfigurationChanged( previous );
+                if( configurationChanged ) Object.OnDeviceConfigurationChanged( previous );
                 if( statusChanged ) Object.OnDeviceControlStatusChanged();
             }
 

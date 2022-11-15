@@ -17,10 +17,10 @@ namespace CK.Observable.Device
     public abstract partial class ObservableDeviceObject : ObservableObject, ISidekickLocator
     {
         ObservableEventHandler _isRunningChanged;
-        ObservableEventHandler _configurationChanged;
+        ObservableEventHandler _deviceConfigurationChanged;
         ObservableEventHandler _deviceControlStatusChanged;
         internal IInternalDeviceBridge _bridge;
-        internal DeviceConfiguration? _configuration;
+        internal DeviceConfiguration? _deviceConfiguration;
         internal DeviceControlStatus _deviceControlStatus;
         internal bool? _isRunning;
 
@@ -43,7 +43,7 @@ namespace CK.Observable.Device
             _isRunningChanged = new ObservableEventHandler( d );
             if( info.Version > 0 )
             {
-                _configurationChanged = new ObservableEventHandler( d );
+                _deviceConfigurationChanged = new ObservableEventHandler( d );
             }
             if( info.Version > 1 )
             {
@@ -62,7 +62,7 @@ namespace CK.Observable.Device
         {
             d.Writer.Write( o.DeviceName );
             o._isRunningChanged.Write( d );
-            o._configurationChanged.Write( d );
+            o._deviceConfigurationChanged.Write( d );
             o._deviceControlStatusChanged.Write( d );
             d.Writer.WriteNullableBool( o._isRunning );
             d.Writer.Write( (byte)o._deviceControlStatus );
@@ -141,27 +141,27 @@ namespace CK.Observable.Device
         /// </para>
         /// </summary>
         [NotExportable]
-        public DeviceConfiguration? DeviceConfiguration => _configuration;
+        public DeviceConfiguration? DeviceConfiguration => _deviceConfiguration;
 
         /// <summary>
         /// Called when <see cref="DeviceConfiguration"/> changed.
         /// <para>
-        /// When overridden, this base method MUST be called to raise <see cref="ConfigurationChanged"/> event.
+        /// When overridden, this base method MUST be called to raise <see cref="DeviceConfigurationChanged"/> event.
         /// </para>
         /// </summary>
-        internal protected virtual void OnConfigurationChanged( DeviceConfiguration? previousConfiguration )
+        internal protected virtual void OnDeviceConfigurationChanged( DeviceConfiguration? previousDeviceConfiguration )
         {
-            OnPropertyChanged( nameof( DeviceConfiguration ), _configuration );
-            if( _configurationChanged.HasHandlers ) _configurationChanged.Raise( this );
+            OnPropertyChanged( nameof( DeviceConfiguration ), _deviceConfiguration );
+            if( _deviceConfigurationChanged.HasHandlers ) _deviceConfigurationChanged.Raise( this );
         }
 
         /// <summary>
         /// Raised whenever <see cref="DeviceConfiguration"/> has changed.
         /// </summary>
-        public event SafeEventHandler ConfigurationChanged
+        public event SafeEventHandler DeviceConfigurationChanged
         {
-            add => _configurationChanged.Add( value );
-            remove => _configurationChanged.Remove( value );
+            add => _deviceConfigurationChanged.Add( value );
+            remove => _deviceConfigurationChanged.Remove( value );
         }
 
         /// <summary>
@@ -385,7 +385,7 @@ namespace CK.Observable.Device
         /// </summary>
         protected override void OnDestroy()
         {
-            _configurationChanged.RemoveAll();
+            _deviceConfigurationChanged.RemoveAll();
             _isRunningChanged.RemoveAll();
             // Using nullable just in case EnsureDomainSidekick has not been called.
             ((IInternalObservableDeviceSidekick?)_bridge?.Sidekick)?.OnObjectDestroyed( Domain.Monitor, this );

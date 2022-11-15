@@ -19,6 +19,7 @@ namespace CK.Observable.Device
 
         public DeviceConfiguration Local => _local;
 
+#pragma warning disable CS8618
         private protected DeviceConfigurationEditor( ObservableDeviceObject owner )
         {
             _owner = owner;
@@ -28,16 +29,17 @@ namespace CK.Observable.Device
             }
             else
             {
-                _owner.ConfigurationChanged += OnConfigChanged;
+                _owner.DeviceConfigurationChanged += OnConfigChanged;
             }
         }
+#pragma warning disable CS8618 
 
         private void OnConfigChanged( object sender )
         {
             if( sender is ObservableDeviceObject { DeviceConfiguration: var config } && config != null )
             {
                 _local = config.DeepClone();
-                _owner.ConfigurationChanged -= OnConfigChanged;
+                _owner.DeviceConfigurationChanged -= OnConfigChanged;
             }
         }
 
