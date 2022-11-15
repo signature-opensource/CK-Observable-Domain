@@ -29,7 +29,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
         {
             IReadOnlyList<ActivityMonitorSimpleCollector.Entry> entries = null!;
 
-            using( TestHelper.Monitor.CollectEntries( e => entries = e, LogLevelFilter.Info ) )
+            using( TestHelper.Monitor.CollectEntries( out entries, LogLevelFilter.Info ) )
             using( var d = new ObservableDomain( TestHelper.Monitor, nameof( timed_events_trigger_at_the_end_of_the_Modify_for_immediate_handling_Async ), startTimer: true ) )
             {
                 await d.ModifyThrowAsync( TestHelper.Monitor, () =>
@@ -80,7 +80,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
             // We start the AutoTimer here otherwise the timed events are not processed.
             // To be able to test at_the_start_of_the_Modify we need to do an awful thing: dispose the actual timer.
             //
-            using( TestHelper.Monitor.CollectEntries( e => entries = e, LogLevelFilter.Info ) )
+            using( TestHelper.Monitor.CollectEntries( out entries , LogLevelFilter.Info ) )
             using( var d = new ObservableDomain( TestHelper.Monitor, nameof( timed_event_trigger_at_the_start_of_the_Modify_Async ), startTimer: true ) )
             {
                 // Here is the infamy.
@@ -168,7 +168,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
         {
             IReadOnlyList<ActivityMonitorSimpleCollector.Entry> entries = null;
 
-            using( TestHelper.Monitor.CollectEntries( e => entries = e ) )
+            using( TestHelper.Monitor.CollectEntries(out  entries) )
             using( var d = new ObservableDomain( TestHelper.Monitor, nameof( auto_counter_works_uses_Critical_mode_Async ), startTimer: true ) )
             {
                 StupidAutoCounter counter = null!;
@@ -522,7 +522,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                     return DateTime.UtcNow - n;
                 }
 
-                using( TestHelper.Monitor.CollectEntries( entries => logs = entries, LogLevelFilter.Info ) )
+                using( TestHelper.Monitor.CollectEntries( out logs, LogLevelFilter.Info ) )
                 {
                     await d.Domain.ModifyThrowAsync( TestHelper.Monitor, () =>
                     {
@@ -543,7 +543,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                     d.Domain.TimeManager.Reminders.All( r => r.IsPooled && !r.IsActive && !r.IsDestroyed ).Should().BeTrue( "Reminders are free to be reused." );
                 } );
                 ReloadIfNeeded();
-                using( TestHelper.Monitor.CollectEntries( entries => logs = entries, LogLevelFilter.Info ) )
+                using( TestHelper.Monitor.CollectEntries( out logs, LogLevelFilter.Info ) )
                 {
                     await d.Domain.ModifyThrowAsync( TestHelper.Monitor, () =>
                     {

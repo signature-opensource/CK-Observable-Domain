@@ -322,7 +322,7 @@ namespace CK.Observable.Domain.Tests
             var obs = new ObservableDomain( TestHelper.Monitor, nameof( sidekick_simple_instantiation_and_serialization_Async ) + '-' + mode, startTimer: true );
 
             IReadOnlyList<ActivityMonitorSimpleCollector.Entry> logs = null!;
-            using( TestHelper.Monitor.CollectEntries( entries => logs = entries, LogLevelFilter.Info ) )
+            using( TestHelper.Monitor.CollectEntries( out logs, LogLevelFilter.Info ) )
             {
                 await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
@@ -355,7 +355,7 @@ namespace CK.Observable.Domain.Tests
                     .Should().NotBeNull();
             }
 
-            using( TestHelper.Monitor.CollectEntries( entries => logs = entries, LogLevelFilter.Info ) )
+            using( TestHelper.Monitor.CollectEntries( out logs, LogLevelFilter.Info ) )
             {
                 await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
@@ -395,7 +395,7 @@ namespace CK.Observable.Domain.Tests
                     .Should().NotBeNull();
             }
 
-            using( TestHelper.Monitor.CollectEntries( entries => logs = entries, LogLevelFilter.Info ) )
+            using( TestHelper.Monitor.CollectEntries( out logs, LogLevelFilter.Info ) )
             using( var obs2 = TestHelper.CloneDomain( obs ) )
             {
                 await obs2.ModifyThrowAsync( TestHelper.Monitor, () =>

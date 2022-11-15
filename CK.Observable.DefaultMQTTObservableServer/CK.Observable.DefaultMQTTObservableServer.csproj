@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CK.MQTT.LocalMQTTDemiServer" Version="0.15.1--0014-develop" />
+    <PackageReference Include="CK.MQTT.LocalMQTTDemiServer" Version="0.15.1--0016-develop" />
   </ItemGroup>
 
   <ItemGroup>
