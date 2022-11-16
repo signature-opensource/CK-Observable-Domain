@@ -28,6 +28,17 @@ namespace CK.Observable.Device
             else
             {
                 _localConfiguration = new TConfig();
+                // This should not be occurs. Waiting for EnsureSidekicks Instantiating.
+                DeviceConfigurationChanged += OnConfigChanged;
+            }
+        }
+
+        private void OnConfigChanged( object sender )
+        {
+            if( sender is ObservableDeviceObject { DeviceConfiguration: var config } && config != null )
+            {
+                _localConfiguration = (TConfig)config.DeepClone();
+                DeviceConfigurationChanged -= OnConfigChanged;
             }
         }
 
