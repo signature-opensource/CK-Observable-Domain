@@ -20,6 +20,16 @@ namespace CK.Observable.Device
         bool IsDirty { get; }
 
         /// <summary>
+        /// Check the dirtness of local configuration.
+        /// </summary>
+        bool CheckDirty();
+
+        /// <summary>
+        /// Raised whenever <see cref="IsDirty"/> has changed.
+        /// </summary>
+        public event SafeEventHandler IsDirtyChanged;
+
+        /// <summary>
         /// Applies this local <see cref="Value"/> to the device by sending a <see cref="ConfigureDeviceCommand{THost, TConfiguration}"/>
         /// to the device.
         /// Whatever the <paramref name="action"/> is, the device is created if it's currently <see cref="DeviceControlStatus.MissingDevice"/>.

@@ -14,16 +14,19 @@ namespace CK.Observable.Device
     /// Non generic abstract base class for device. It is not intended to be specialized directly: use the
     /// generic <see cref="ObservableDeviceObject{TSidekick,TConfig}"/> as the object device base.
     /// </summary>
-    [SerializationVersion( 3 )]
+    [SerializationVersion( 4 )]
     public abstract partial class ObservableDeviceObject : ObservableObject, ISidekickLocator, ILocalConfiguration<DeviceConfiguration>
     {
         ObservableEventHandler _isRunningChanged;
         ObservableEventHandler _deviceConfigurationChanged;
         ObservableEventHandler _deviceControlStatusChanged;
+        ObservableEventHandler _isDirtyChanged;
         internal IInternalDeviceBridge _bridge;
         internal DeviceConfiguration? _deviceConfiguration;
         internal DeviceControlStatus _deviceControlStatus;
         internal bool? _isRunning;
+        internal bool _isDirty;
+        internal bool _hasConfiguredLocalOnce;
 
 #pragma warning disable CS8618 // Non-nullable _bridge uninitialized. Consider declaring as nullable.
 
@@ -56,6 +59,14 @@ namespace CK.Observable.Device
                     // Was _wantPersistentOwnership
                     d.Reader.ReadBoolean();
                 }
+
+            }
+
+            if( info.Version > 3 )
+            {
+                d.Reader.ReadBoolean();
+                _isDirtyChanged = new ObservableEventHandler(d);
+                d.Reader.ReadBoolean();
             }
         }
 
@@ -67,6 +78,12 @@ namespace CK.Observable.Device
             o._deviceControlStatusChanged.Write( d );
             d.Writer.WriteNullableBool( o._isRunning );
             d.Writer.Write( (byte)o._deviceControlStatus );
+
+            // version 4
+            d.Writer.Write( o._isDirty );
+            o._isDirtyChanged.Write( d );
+            d.Writer.Write( o._hasConfiguredLocalOnce );
+
         }
 
 #pragma warning restore CS8618
@@ -144,13 +161,27 @@ namespace CK.Observable.Device
         [NotExportable]
         public DeviceConfiguration? DeviceConfiguration => _deviceConfiguration;
 
+
+        internal void InternalDeviceConfigurationChanged( DeviceConfiguration? previousDeviceConfiguration )
+        {
+            if( !_hasConfiguredLocalOnce )
+            {
+                Debug.Assert( _deviceConfiguration != null );
+                LocalConfiguration.Value = _deviceConfiguration;
+                _hasConfiguredLocalOnce = true;
+            }
+
+            CheckDirty();
+            OnDeviceConfigurationChanged( previousDeviceConfiguration );
+        }
+
         /// <summary>
         /// Called when <see cref="DeviceConfiguration"/> changed.
         /// <para>
         /// When overridden, this base method MUST be called to raise <see cref="DeviceConfigurationChanged"/> event.
         /// </para>
         /// </summary>
-        internal protected virtual void OnDeviceConfigurationChanged( DeviceConfiguration? previousDeviceConfiguration )
+        protected virtual void OnDeviceConfigurationChanged( DeviceConfiguration? previousDeviceConfiguration )
         {
             OnPropertyChanged( nameof( DeviceConfiguration ), _deviceConfiguration );
             if( _deviceConfigurationChanged.HasHandlers ) _deviceConfigurationChanged.Raise( this );
@@ -179,38 +210,43 @@ namespace CK.Observable.Device
         private protected abstract DeviceConfiguration GetLocalConfiguration();
         private protected abstract void SetLocalConfiguration( DeviceConfiguration value );
 
-        bool ILocalConfiguration<DeviceConfiguration>.IsDirty
-        {
-            get
-            {
-                Throw.CheckState( Domain.CurrentTransactionStatus == CurrentTransactionStatus.Regular );
+        bool ILocalConfiguration<DeviceConfiguration>.IsDirty => _isDirty;
 
-                var local = GetLocalConfiguration();
-                if( _deviceConfiguration == null
-                    || !local.CheckValid( Domain.Monitor ) )
+        public bool CheckDirty()
+        {
+            Throw.CheckState( Domain.CurrentTransactionStatus == CurrentTransactionStatus.Regular );
+
+            var local = GetLocalConfiguration();
+            if( _deviceConfiguration == null
+                || !local.CheckValid( Domain.Monitor ) )
+            {
+                _isDirty = true;
+                _isDirtyChanged.Raise( _isDirty );
+                return true;
+            }
+
+            using( var localConfigStream = Util.RecyclableStreamManager.GetStream() )
+            using( var writer = new CKBinaryWriter( localConfigStream, Encoding.UTF8 ) )
+            {
+                local.Write( writer );
+
+                try
                 {
+                    using var checker = BinarySerializer.CreateCheckedWriteStream( localConfigStream.ToArray() );
+                    using var checkedWriter = new CKBinaryWriter( checker, Encoding.UTF8 );
+                    _deviceConfiguration.Write( checkedWriter );
+                }
+                catch( Exception )
+                {
+                    Domain.Monitor.Warn( "Should be updated to use CK.Core.StreamChecker once it is available." );
+                    _isDirty = true;
+                    _isDirtyChanged.Raise( _isDirty );
                     return true;
                 }
-
-                using( var localConfigStream = Util.RecyclableStreamManager.GetStream() )
-                using( var writer = new CKBinaryWriter( localConfigStream, Encoding.UTF8 ) )
-                {
-                    local.Write( writer );
-
-                    try
-                    {
-                        using var checker = BinarySerializer.CreateCheckedWriteStream( localConfigStream.ToArray() );
-                        using var checkedWriter = new CKBinaryWriter( checker, Encoding.UTF8 );
-                        _deviceConfiguration.Write( checkedWriter );
-                    }
-                    catch( Exception )
-                    {
-                        Domain.Monitor.Warn( "Should be updated to use CK.Core.StreamChecker once it is available." );
-                        return true;
-                    }
-                }
-                return false;
             }
+            _isDirty = false;
+            _isDirtyChanged.Raise( _isDirty );
+            return false;
         }
 
         void ILocalConfiguration<DeviceConfiguration>.SendDeviceConfigureCommand( DeviceControlAction? deviceControlAction )
@@ -289,8 +325,6 @@ namespace CK.Observable.Device
             }
         }
 
-
-
         /// <summary>
         /// Gets this device control status.
         /// Uses <see cref="SendDeviceControlCommand(DeviceControlAction)"/> to change how
@@ -317,6 +351,16 @@ namespace CK.Observable.Device
         {
             add => _deviceControlStatusChanged.Add( value );
             remove => _deviceControlStatusChanged.Remove( value );
+        }
+
+
+        /// <summary>
+        /// Raised whenever <see cref="_isDirty"/> has changed.
+        /// </summary>
+        public event SafeEventHandler IsDirtyChanged
+        {
+            add => _isDirtyChanged.Add( value );
+            remove => _isDirtyChanged.Remove( value );
         }
 
         /// <summary>

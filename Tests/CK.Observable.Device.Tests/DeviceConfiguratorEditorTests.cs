@@ -192,7 +192,7 @@ namespace CK.Observable.Device.Tests
                 PeriodMilliseconds = 100,
                 Message = "Not used here."
             };
-         
+
             var host = new SampleDeviceHost();
 
             (await host.EnsureDeviceAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.CreateAndStartSucceeded );
@@ -378,11 +378,13 @@ namespace CK.Observable.Device.Tests
                 d.Root.Default.DeviceConfiguration.Should().NotBeNull();
                 d.Root.Default.LocalConfiguration.Value.Should().NotBeNull();
 
+                d.Root.Default.LocalConfiguration.CheckDirty().Should().BeFalse();
                 d.Root.Default.LocalConfiguration.IsDirty.Should().BeFalse();
 
                 d.Root.Default.LocalConfiguration.Value.Message = "WillChange2";
                 d.Root.Default.LocalConfiguration.Value.PeriodMilliseconds = 4000;
 
+                d.Root.Default.LocalConfiguration.CheckDirty().Should().BeTrue();
                 d.Root.Default.LocalConfiguration.IsDirty.Should().BeTrue();
 
             } );
@@ -418,5 +420,49 @@ namespace CK.Observable.Device.Tests
             }
             error.Should().BeFalse( "There should be no error." );
         }
+
+        [Test]
+        public async Task check_dirty_event_should_raised_Async()
+        {
+            var sc = new SimpleServiceContainer();
+            var config = new SampleDeviceConfiguration()
+            {
+                Name = "Default",
+                Status = DeviceConfigurationStatus.AlwaysRunning,
+                PeriodMilliseconds = 100,
+                Message = "Not used here."
+            };
+            var host = new SampleDeviceHost();
+
+            sc.Add( host );
+
+            (await host.EnsureDeviceAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.CreateAndStartSucceeded );
+            var device = host["Default"];
+            Debug.Assert( device != null );
+            await device.WaitForSynchronizationAsync( considerDeferredCommands: false );
+
+            var d = new ObservableDomain<Root>( TestHelper.Monitor, "Test", startTimer: false, sc );
+
+
+            await d.ModifyThrowAsync( TestHelper.Monitor, () =>
+            {
+                d.Root.Default.DeviceConfiguration.Should().NotBeNull();
+                d.Root.Default.LocalConfiguration.Value.Should().NotBeNull();
+
+                d.Root.Default.LocalConfiguration.IsDirty.Should().Be( d.Root.Default._dirtyRaisedEventValue );
+
+                d.Root.Default.LocalConfiguration.Value.Message = "WillChange2";
+                d.Root.Default.LocalConfiguration.Value.PeriodMilliseconds = 4000;
+
+                d.Root.Default.LocalConfiguration.IsDirty.Should().Be( d.Root.Default._dirtyRaisedEventValue );
+
+                d.Root.Default.LocalConfiguration.CheckDirty().Should().BeTrue();
+
+
+            } );
+
+        }
     }
+
+
 }

@@ -124,7 +124,7 @@ namespace CK.Observable.Device
             void RaiseDevicePropertiesChanged( bool runningChanged, bool configurationChanged, bool statusChanged, DeviceConfiguration? previous )
             {
                 if( runningChanged ) Object.OnIsRunningChanged();
-                if( configurationChanged ) Object.OnDeviceConfigurationChanged( previous );
+                if( configurationChanged ) Object.InternalDeviceConfigurationChanged( previous );
                 if( statusChanged ) Object.OnDeviceControlStatusChanged();
             }
 
