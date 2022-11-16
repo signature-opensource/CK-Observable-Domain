@@ -70,7 +70,9 @@ namespace CK.Observable.Device
             IEnumerable<string> ObservableDeviceObject.IInternalDeviceBridge.CurrentlyAvailableDeviceNames => _sidekick._objectHost?.GetAvailableDeviceNames()
                                                                                                                 ?? _sidekick.Host.GetDevices().Keys;
 
-            internal void Initialize( IActivityMonitor monitor, ObservableDeviceSidekick<THost, TDeviceObject, TDeviceHostObject, TConfig> owner, IDevice? initialDevice )
+            internal void Initialize( IActivityMonitor monitor,
+                                      ObservableDeviceSidekick<THost, TDeviceObject, TDeviceHostObject, TConfig> owner,
+                                      IDevice? initialDevice )
             {
                 _sidekick = owner;
                 if( initialDevice != null ) SetDevice( monitor, initialDevice );

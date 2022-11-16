@@ -215,7 +215,6 @@ namespace CK.Observable
                 Debug.Assert( _transactionStatus is CurrentTransactionStatus.Instantiating or CurrentTransactionStatus.Deserializing or CurrentTransactionStatus.Regular );
                 // Either we come from:
                 //   - the domain's deserialization constructor (Deserializing);
-                //   - or from a constructor with a client.OnDomainCreated that wants to load this domain (Instantiating);
                 //   - or directly from the Load method (Regular - and we may be in a fake transaction):
                 // To keep things and the CurrentTransactionStatus as simple as possible:
                 //  - Instantiating and Regular transition to Deserializing (because we ARE deserializing!).
@@ -228,11 +227,6 @@ namespace CK.Observable
                 // And it makes perfect sense that RollingBack/DangerousRollingback/Deserializing also apply to the explicit
                 // call to Load() on an existing domain (the check of the name provides a kind of identity check).
                 //
-                // Distinguishing between calls to Load() from DomainClient that rolls back or initialize from their OnDomainCreated
-                // and from "external world" would require to add one or more explicit parameter(s) to the public Load() that will
-                // be difficult to understand or to provide an internal Load from clients.
-                // This is useless since this API can be used in different ways (for instance, ObservableLeague doesn't use
-                // DomainClient.OnDomainCreated to load existing snapshots).
                 //
                 var tNumber = d.Reader.ReadInt32();
                 var tTime = d.Reader.ReadDateTime();
