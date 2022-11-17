@@ -1,6 +1,7 @@
 using CK.BinarySerialization;
 using CK.Core;
 using CK.DeviceModel;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -65,7 +66,7 @@ namespace CK.Observable.Device
             if( info.Version > 3 )
             {
                 d.Reader.ReadBoolean();
-                _isDirtyChanged = new ObservableEventHandler(d);
+                _isDirtyChanged = new ObservableEventHandler( d );
                 d.Reader.ReadBoolean();
             }
         }
@@ -257,7 +258,7 @@ namespace CK.Observable.Device
             {
                 if( !local.CheckValid( Domain.Monitor ) ) Throw.InvalidOperationException( "Local configuration is invalid" );
 
-                var shouldApply = false;
+                var shouldApply = status == DeviceControlStatus.MissingDevice || false;
                 switch( deviceControlAction )
                 {
                     case DeviceControlAction.TakeControl:
@@ -268,17 +269,24 @@ namespace CK.Observable.Device
                         }
                         break;
                     case DeviceControlAction.ForceReleaseControl:
-                        Debug.Assert( _deviceConfiguration != null );
-                        if( _deviceConfiguration.ControllerKey != null )
+                        if( status != DeviceControlStatus.MissingDevice )
+                        {
+                            Debug.Assert( _deviceConfiguration != null );
+                            if( _deviceConfiguration.ControllerKey != null )
+                            {
+                                local.ControllerKey = null;
+                                shouldApply = true;
+                            }
+                        }
+                        else
                         {
                             local.ControllerKey = null;
                             shouldApply = true;
                         }
+
                         break;
                     case DeviceControlAction.SafeTakeControl:
-                        if( status == DeviceControlStatus.HasControl
-                            || status == DeviceControlStatus.HasSharedControl
-                            || status == DeviceControlStatus.MissingDevice )
+                        if( status == DeviceControlStatus.HasControl || status == DeviceControlStatus.HasSharedControl )
                         {
                             shouldApply = true;
                         }
@@ -290,33 +298,65 @@ namespace CK.Observable.Device
                         }
                         break;
                     case DeviceControlAction.TakeOwnership:
-                        Debug.Assert( _deviceConfiguration != null );
-                        if( _deviceConfiguration.ControllerKey != Domain.DomainName )
+                        if( status != DeviceControlStatus.MissingDevice )
+                        {
+                            Debug.Assert( _deviceConfiguration != null );
+                            if( _deviceConfiguration.ControllerKey != Domain.DomainName )
+                            {
+                                local.ControllerKey = Domain.DomainName;
+                                shouldApply = true;
+                            }
+                        }
+                        else
                         {
                             local.ControllerKey = Domain.DomainName;
                             shouldApply = true;
                         }
                         break;
                     case null:
-                        shouldApply = status == DeviceControlStatus.MissingDevice ||
-                                      status == DeviceControlStatus.HasControl ||
-                                      status == DeviceControlStatus.HasSharedControl ||
-                                      status == DeviceControlStatus.HasOwnership;
+                        shouldApply = status == DeviceControlStatus.HasControl
+                                   || status == DeviceControlStatus.HasSharedControl
+                                   || status == DeviceControlStatus.MissingDevice
+                                   || status == DeviceControlStatus.HasOwnership;
                         break;
                 }
 
                 if( shouldApply )
                 {
-                    if( deviceControlAction != null )
+                    if( status == DeviceControlStatus.MissingDevice )
                     {
-                        SendDeviceControlCommand( deviceControlAction.Value, local );
+                        if( deviceControlAction == DeviceControlAction.TakeControl ||
+                            deviceControlAction == DeviceControlAction.SafeTakeControl 
+                           )
+                        {
+                            var setControllerKeyCommand = _bridge.CreateSetControllerKeyCommand();
+                            setControllerKeyCommand.ControllerKey = Domain.DomainName;
+                            setControllerKeyCommand.DeviceName = DeviceName;
+                            setControllerKeyCommand.NewControllerKey = Domain.DomainName;
+
+                            var applyAndSetControllerKeyCommand = new ApplyAndSetControllerKeyDeviceCommand( setControllerKeyCommand, local.DeepClone() );
+
+                            Domain.SendCommand( applyAndSetControllerKeyCommand, _bridge );
+                        }
+                        else if( deviceControlAction == DeviceControlAction.TakeOwnership || deviceControlAction == null )
+                        {
+                            SendApplyDeviceConfigurationCommand( local.DeepClone() );
+                        }
+                    }
+                    else
+                    {
+                        if( deviceControlAction != null )
+                        {
+                            SendDeviceControlCommand( deviceControlAction.Value, local );
+                        }
+
+                        if( deviceControlAction != DeviceControlAction.TakeOwnership ||
+                            deviceControlAction != DeviceControlAction.ForceReleaseControl )
+                        {
+                            SendApplyDeviceConfigurationCommand( local.DeepClone() );
+                        }
                     }
 
-                    if( deviceControlAction != DeviceControlAction.TakeOwnership ||
-                        deviceControlAction != DeviceControlAction.ForceReleaseControl )
-                    {
-                        SendApplyDeviceConfigurationCommand( local.DeepClone() );
-                    }
                 }
                 else
                 {
@@ -438,6 +478,20 @@ namespace CK.Observable.Device
         {
             public ForceSendCommand( BaseSetControllerKeyDeviceCommand setControllerKeyCommand ) => SetControllerKeyCommand = setControllerKeyCommand;
             public readonly BaseSetControllerKeyDeviceCommand SetControllerKeyCommand;
+        }
+
+        internal class ApplyAndSetControllerKeyDeviceCommand
+        {
+            public ApplyAndSetControllerKeyDeviceCommand(
+                BaseSetControllerKeyDeviceCommand setControllerKeyCommand,
+                DeviceConfiguration deviceConfiguration
+            )
+            {
+                SetControllerKeyCommand = setControllerKeyCommand;
+                DeviceConfiguration = deviceConfiguration;
+            }
+            public readonly BaseSetControllerKeyDeviceCommand SetControllerKeyCommand;
+            public readonly DeviceConfiguration DeviceConfiguration;
         }
 
 

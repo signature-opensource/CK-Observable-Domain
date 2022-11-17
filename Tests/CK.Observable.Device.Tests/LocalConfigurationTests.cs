@@ -6,12 +6,13 @@ using NUnit.Framework;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
 
 namespace CK.Observable.Device.Tests
 {
-    public class DeviceConfiguratorEditorTests
+    public class LocalConfigurationTests
     {
         [SerializationVersion( 0 )]
         public class Root : ObservableRootObject
@@ -344,6 +345,76 @@ namespace CK.Observable.Device.Tests
                 // to wait for the InternalConfigureDeviceCommand to reach the command queue.
                 await Task.Delay( 100 );
                 await device.WaitForSynchronizationAsync( false );
+
+            }
+
+        }
+
+        [TestCase( DeviceControlAction.TakeOwnership, DeviceControlStatus.HasOwnership, DeviceControlStatus.OutOfControlByConfiguration )]
+        [TestCase( DeviceControlAction.TakeControl, DeviceControlStatus.HasControl, DeviceControlStatus.OutOfControl )]
+        [TestCase( DeviceControlAction.SafeTakeControl, DeviceControlStatus.HasControl, DeviceControlStatus.OutOfControl )]
+        [TestCase( null, DeviceControlStatus.HasSharedControl, DeviceControlStatus.HasSharedControl )]
+        public async Task apply_local_config_with_missing_device_Async(
+            DeviceControlAction? applyOnDomain1,
+            DeviceControlStatus statusExceptedOnDomain1,
+            DeviceControlStatus statusExceptedOnDomain2 )
+        {
+            var host = new SampleDeviceHost();
+            var sp = new SimpleServiceContainer();
+            sp.Add( host );
+
+            using var d1 = new ObservableDomain<Root>( TestHelper.Monitor, "Domain 1", startTimer: false, sp );
+            using var d2 = new ObservableDomain<Root>( TestHelper.Monitor, "Domain 2", startTimer: false, sp );
+
+            d1.HasWaitingSidekicks.Should().BeTrue();
+            await d1.ModifyThrowAsync( TestHelper.Monitor, null );
+
+            d2.HasWaitingSidekicks.Should().BeTrue();
+            await d2.ModifyThrowAsync( TestHelper.Monitor, null );
+
+
+            await d1.ModifyThrowAsync( TestHelper.Monitor, () =>
+            {
+                d1.Root.Default.IsBoundDevice.Should().BeFalse();
+                d1.Root.Default.DeviceControlStatus.Should().Be( DeviceControlStatus.MissingDevice );
+                d1.Root.Default.DeviceConfiguration.Should().BeNull();
+                d1.Root.Default.Message.Should().BeNull();
+                d1.Root.Default.IsRunning.Should().BeNull();
+
+                d1.Root.Default.LocalConfiguration.Value.Name = "Default";
+                d1.Root.Default.LocalConfiguration.Value.Status = DeviceConfigurationStatus.AlwaysRunning;
+                d1.Root.Default.LocalConfiguration.Value.Message = "WillChange";
+                d1.Root.Default.LocalConfiguration.Value.PeriodMilliseconds = 2000;
+
+            } );
+
+            await ApplyLocalConfigAsync( d1, applyOnDomain1 );
+            var device = host["Default"];
+            Debug.Assert( device != null );
+            await device.WaitForSynchronizationAsync( false );
+            CheckStatus( d1, statusExceptedOnDomain1 );
+            CheckStatus( d2, statusExceptedOnDomain2 );
+
+            void CheckStatus( ObservableDomain<Root> d, DeviceControlStatus s )
+            {
+                d.Read( TestHelper.Monitor, () =>
+                {
+                    d.Root.Default.DeviceControlStatus.Should().Be( s );
+                    d.Root.Host.Devices["Default"].Status.Should().Be( s );
+                } );
+            }
+
+            async Task ApplyLocalConfigAsync( ObservableDomain<Root> d, DeviceControlAction? dca )
+            {
+                await d.ModifyThrowAsync( TestHelper.Monitor, () =>
+                {
+                    d.Root.Default.LocalConfiguration.SendDeviceConfigureCommand( dca );
+                } );
+                // Since the reconfiguration currently goes through the host that sends an InternalConfigureDeviceCommand
+                // to the device, waiting here for the synchronization is not enough: we unfortunately have
+                // to wait for the InternalConfigureDeviceCommand to reach the command queue.
+                await Task.Delay( 2000 );
+                //await device.WaitForSynchronizationAsync( false );
 
             }
 
