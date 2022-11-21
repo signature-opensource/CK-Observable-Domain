@@ -17,7 +17,11 @@ namespace CK.Observable.MQTTWatcher
         readonly IOptionsMonitor<MQTTObservableWatcherConfig> _config;
         readonly MQTTServerAgent _mqttAgent;
         readonly IObservableLeague _league;
-        public MqttObservableWatcher( MqttObservableServer parent, IOptionsMonitor<MQTTObservableWatcherConfig> config, MQTTServerAgent mqttAgent, IObservableLeague league )
+
+        public MqttObservableWatcher( MqttObservableServer parent,
+                                      IOptionsMonitor<MQTTObservableWatcherConfig> config,
+                                      MQTTServerAgent mqttAgent,
+                                      IObservableLeague league )
             : base( league )
         {
             _parent = parent;
@@ -74,6 +78,7 @@ namespace CK.Observable.MQTTWatcher
         }
 
         public string ClientId => _mqttAgent.ClientId!;
+
         protected override string WatcherId => $"{nameof( MqttObservableServer )}-{_mqttAgent}";
 
     }
