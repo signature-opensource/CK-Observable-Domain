@@ -1,6 +1,5 @@
-import { WatchEvent } from '@signature-code/ck-observable-domain';
-import { HttpTransportType, HubConnection, HubConnectionBuilder, HubConnectionState, IRetryPolicy, RetryContext } from '@microsoft/signalr';
-import { IObservableDomainLeagueDriver } from '@signature-code/ck-observable-domain/src/iod-league-driver';
+import { WatchEvent, IObservableDomainLeagueDriver } from '@signature-code/ck-observable-domain';
+import { HttpTransportType, HubConnection, HubConnectionBuilder, IRetryPolicy, RetryContext } from '@microsoft/signalr';
 import { ICrisEndpoint, SignalRObservableWatcherStartOrRestartCommand, VESACode } from "@signature/generated";
 
 class NoRetryPolicy implements IRetryPolicy {
@@ -11,13 +10,13 @@ class NoRetryPolicy implements IRetryPolicy {
 
 export class SignalRObservableLeagueDomainService implements IObservableDomainLeagueDriver {
   private readonly connection: HubConnection;
-  private static noRetryPolicity = new NoRetryPolicy();
+  private static noRetryPolicy = new NoRetryPolicy();
   
 
   constructor(hubUrl: string, private readonly crisEndpoint: ICrisEndpoint) {
     this.connection = new HubConnectionBuilder()
       .withUrl(hubUrl, HttpTransportType.None)
-      .withAutomaticReconnect(SignalRObservableLeagueDomainService.noRetryPolicity)
+      .withAutomaticReconnect(SignalRObservableLeagueDomainService.noRetryPolicy)
       .build();
   }
 
