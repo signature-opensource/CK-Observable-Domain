@@ -9,7 +9,7 @@ namespace CK.Observable
     /// As soon as possible, this must extend the new IReadOnlySet{T} interface available in .Net 5.0.
     /// </summary>
     /// <typeparam name="T">Type of the item.</typeparam>
-    public interface IObservableReadOnlySet<T> : IReadOnlyCollection<T>
+    public interface IObservableReadOnlySet<out T> : IReadOnlyCollection<T>
     {
         /// <summary>
         /// Raised when a new item has been added by <see cref="ObservableSet{T}.Add(T)"/>.
