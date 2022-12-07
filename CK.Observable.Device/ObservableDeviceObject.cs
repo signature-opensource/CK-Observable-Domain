@@ -65,9 +65,9 @@ namespace CK.Observable.Device
 
             if( info.Version > 3 )
             {
-                d.Reader.ReadBoolean();
+                _isDirty = d.Reader.ReadBoolean();
                 _isDirtyChanged = new ObservableEventHandler( d );
-                d.Reader.ReadBoolean();
+                _hasConfiguredLocalOnce = d.Reader.ReadBoolean();
             }
         }
 
@@ -326,7 +326,7 @@ namespace CK.Observable.Device
                     if( status == DeviceControlStatus.MissingDevice )
                     {
                         if( deviceControlAction == DeviceControlAction.TakeControl ||
-                            deviceControlAction == DeviceControlAction.SafeTakeControl 
+                            deviceControlAction == DeviceControlAction.SafeTakeControl
                            )
                         {
                             var setControllerKeyCommand = _bridge.CreateSetControllerKeyCommand();
