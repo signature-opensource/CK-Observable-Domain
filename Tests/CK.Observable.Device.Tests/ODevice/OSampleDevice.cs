@@ -7,13 +7,13 @@ using System.Text;
 namespace CK.Observable.Device.Tests
 {
     [SerializationVersion( 0 )]
-    public class OSampleDevice : ObservableDeviceObject<OSampleDeviceSidekick,SampleDeviceConfiguration>
+    public class OSampleDevice : ObservableDeviceObject<OSampleDeviceSidekick, SampleDeviceConfiguration>
     {
         internal bool _dirtyRaisedEventValue;
 #pragma warning disable CS8618 // Non-nullable _bridgeAccess uninitialized. Consider declaring as nullable.
 
         public OSampleDevice( string deviceName )
-            : base( deviceName )
+            : base( deviceName, true )
         {
             // This ensures that the sidekicks have been instantiated.
             // This is called here since it must be called once the object has been fully initialized

@@ -7,7 +7,7 @@ namespace CK.Observable.Device
     /// Abstract base class for device.
     /// </summary>
     [SerializationVersion( 1 )]
-    public abstract class ObservableDeviceObject<TSidekick,TConfig> : ObservableDeviceObject, ILocalConfiguration<TConfig>, ISidekickClientObject<TSidekick>
+    public abstract class ObservableDeviceObject<TSidekick, TConfig> : ObservableDeviceObject, ILocalConfiguration<TConfig>, ISidekickClientObject<TSidekick>
         where TSidekick : ObservableDomainSidekick
         where TConfig : DeviceConfiguration, new()
     {
@@ -17,10 +17,11 @@ namespace CK.Observable.Device
         /// Initializes a new observable object device.
         /// </summary>
         /// <param name="deviceName">The device name.</param>
-        protected ObservableDeviceObject( string deviceName )
+        protected ObservableDeviceObject( string deviceName, bool callEnsureSidekick )
             : base( deviceName )
         {
-            Domain.EnsureSidekicks();
+
+            if( callEnsureSidekick ) Domain.EnsureSidekicks();
             if( _deviceConfiguration != null )
             {
                 _localConfiguration = (TConfig)_deviceConfiguration.DeepClone();
@@ -44,7 +45,7 @@ namespace CK.Observable.Device
             }
         }
 
-        public static void Write( BinarySerialization.IBinarySerializer s, in ObservableDeviceObject<TSidekick,TConfig> o )
+        public static void Write( BinarySerialization.IBinarySerializer s, in ObservableDeviceObject<TSidekick, TConfig> o )
         {
             s.WriteObject( o._localConfiguration );
         }
