@@ -43,6 +43,10 @@ namespace CK.Observable.Device
             {
                 _localConfiguration = r.ReadObject<TConfig>();
             }
+            else
+            {
+                _localConfiguration = new TConfig();
+            }
         }
 
         public static void Write( BinarySerialization.IBinarySerializer s, in ObservableDeviceObject<TSidekick, TConfig> o )
