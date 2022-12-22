@@ -1,4 +1,4 @@
-import { Axios, AxiosInstance } from "axios";
+import { Axios, AxiosHeaders, AxiosRequestConfig } from "axios";
 import { VESACode } from "./VESACode";
 import { CrisResultError } from "./CrisResultError";
 import { CrisResult } from "./CrisResult";
@@ -34,8 +34,20 @@ export interface ICrisEndpoint {
  send<T>(command: Command<T>): Promise<ICommandResult<T>>;
 }
 
+const defaultCrisAxiosConfig: AxiosRequestConfig = {
+  responseType: 'text',
+  headers: {
+    common: new AxiosHeaders({
+      'Content-Type': 'application/json'
+    })
+  }
+};
+
 export class HttpCrisEndpoint implements ICrisEndpoint {
-  constructor(private readonly axios: Axios) {
+  public axiosConfig: AxiosRequestConfig; // Allow user replace
+
+  constructor(private readonly axios: Axios, private readonly crisEndpointUrl: string) {
+    this.axiosConfig = defaultCrisAxiosConfig;
   }
 
   async send<T>(command: Command<T>): Promise<ICommandResult<T>> {
@@ -44,8 +56,8 @@ export class HttpCrisEndpoint implements ICrisEndpoint {
       string += `,${JSON.stringify(command, (key, value) => {
         return key == "commandModel" ? undefined : value;
       })}]`;
-      const resp = await this.axios.post<string>('', string);
-      
+      const resp = await this.axios.post<string>(this.crisEndpointUrl, string, this.axiosConfig);
+
       const result = JSON.parse(resp.data)[1] as CrisResult; // TODO: @Dan implement io-ts.
       if (result.code == VESACode.Synchronous) {
         return {

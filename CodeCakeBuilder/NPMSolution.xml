@@ -3,5 +3,4 @@
   <Project Path="Clients/ck-observable-domain-demo" IsPublished="false" OutputFolder="Clients/ck-observable-domain-demo" />
   <Project Path="Clients/ck-observable-domain-mqtt" IsPublished="false" OutputFolder="Clients/ck-observable-domain-mqtt" ExpectedName="@signature-code/ck-observable-domain-mqtt" />
   <Project Path="Clients/ck-observable-domain-signalr" IsPublished="false" OutputFolder="Clients/ck-observable-domain-signalr" ExpectedName="@signature-code/ck-observable-domain-signalr" />
-  <Project Path="Clients/signature-generated" IsPublished="false" OutputFolder="Clients/signature-generated" ExpectedName="@signature/generated" />
 </NPMSolution>
