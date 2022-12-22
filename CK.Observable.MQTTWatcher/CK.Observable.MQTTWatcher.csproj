@@ -1,18 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
-
   <ItemGroup>
-    <PackageReference Include="CK.Cris.Typescript" Version="0.15.1--0009-develop" />
-    <PackageReference Include="CK.MQTT.Server" Version="0.15.1--0016-develop" />
+    <PackageReference Include="CK.Cris.Typescript" Version="0.16.0" />
+    <PackageReference Include="CK.MQTT.Server" Version="0.16.0" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\CK.Observable.League\CK.Observable.League.csproj" />
   </ItemGroup>
-
 </Project>

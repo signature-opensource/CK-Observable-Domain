@@ -55,7 +55,7 @@
   <!--</ZeroVersion>-->
   <!--<Analyzers>: This analyzer provides very welcome guidelines about async and threading issues.-->
   <ItemGroup Condition=" '$(MSBuildProjectName)' != 'CodeCakeBuilder' ">
-    <PackageReference Include="Microsoft.VisualStudio.Threading.Analyzers" Version="17.3.48" PrivateAssets="All" IncludeAssets="runtime;build;native;contentfiles;analyzers" />
+    <PackageReference Include="Microsoft.VisualStudio.Threading.Analyzers" Version="17.4.27" PrivateAssets="All" IncludeAssets="runtime;build;native;contentfiles;analyzers" />
   </ItemGroup>
   <!--</Analyzers>-->
   <!--<GenerateDocumentation>: When in IsInTestsFolder and in Release or during ContinuousIntegrationBuild builds. Each project can override GenerateDocumentationFile property. -->
@@ -63,7 +63,6 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
   <!--</GenerateDocumentation>-->
-
   <!--<_CopyXmlDocFiles>:
     It's a mess... See  https://github.com/dotnet/sdk/issues/1458#issuecomment-695119194
     This solution works and filters out System and Microsoft packages.
