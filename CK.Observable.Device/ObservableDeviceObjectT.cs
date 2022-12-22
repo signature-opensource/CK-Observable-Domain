@@ -17,11 +17,11 @@ namespace CK.Observable.Device
         /// Initializes a new observable object device.
         /// </summary>
         /// <param name="deviceName">The device name.</param>
-        protected ObservableDeviceObject( string deviceName, bool callEnsureSidekick )
+        protected ObservableDeviceObject( string deviceName, bool ensureSidekicks )
             : base( deviceName )
         {
 
-            if( callEnsureSidekick ) Domain.EnsureSidekicks();
+            if( ensureSidekicks ) Domain.EnsureSidekicks();
             if( _deviceConfiguration != null )
             {
                 _localConfiguration = (TConfig)_deviceConfiguration.DeepClone();
@@ -42,6 +42,10 @@ namespace CK.Observable.Device
             if( info.Version > 0 )
             {
                 _localConfiguration = r.ReadObject<TConfig>();
+            }
+            else
+            {
+                _localConfiguration = new TConfig();
             }
         }
 
