@@ -3,10 +3,8 @@ import { MqttObservableLeagueDomainService } from "@signature-code/ck-observable
 import { ObservableDomainClient } from "@signature-code/ck-observable-domain";
 import { SignalRObservableWatcherStartOrRestartCommand, SliderCommand, HttpCrisEndpoint } from "@signature/generated";
 import { SignalRObservableLeagueDomainService } from "@signature-code/ck-observable-domain-signalr";
-const crisAxios = new Axios({
-    baseURL: "http://localhost:5000/.cris"
-});
-const crisEndpoint = new HttpCrisEndpoint(crisAxios);
+const crisAxios = axios.create();
+const crisEndpoint = new HttpCrisEndpoint(crisAxios, "http://localhost:5000/.cris");
 
 export async function startPage(): Promise<void> {
 
