@@ -1,5 +1,6 @@
 {
   "name": "@signature-code/ck-observable-domain",
+  "private": true,
   "packageManager": "yarn@3.2.2",
   "version": "0.0.0-0",
   "description": "CK-Observable-Domain client implementation using json-graph-serializer",
