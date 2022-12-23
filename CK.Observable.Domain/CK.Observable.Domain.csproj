@@ -9,6 +9,6 @@
     <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="17.0.0" />
     <PackageReference Include="CK.PerfectEvent" Version="18.0.0" />
     <PackageReference Include="System.Threading.Channels" Version="6.0.0" />
-    <PackageReference Include="CK.BinarySerialization.Sliced" Version="3.0.1--0001-develop" />
+    <PackageReference Include="CK.BinarySerialization.Sliced" Version="3.0.0" />
   </ItemGroup>
 </Project>
