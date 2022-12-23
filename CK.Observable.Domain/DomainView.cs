@@ -49,6 +49,19 @@ namespace CK.Observable
         public DateTime TransactionCommitTimeUtc => _d.TransactionCommitTimeUtc;
 
         /// <summary>
+        /// Gets the PocoDirectory. <see cref="HasPocoDirectory"/> must be true otherwise
+        /// an <see cref="InvalidOperationException"/> is raised.
+        /// This requires a ServiceProvider to be provided to the ObservableDomain constructor (of course,
+        /// a PocoDirectory must be available).
+        /// </summary>
+        public PocoDirectory PocoDirectory => _d.PocoDirectory;
+
+        /// <summary>
+        /// Gets whether the <see cref="PocoDirectory"/> is available.
+        /// </summary>
+        public bool HasPocoDirectory => _d.HasPocoDirectory;
+
+        /// <summary>
         /// Sends a <see cref="ObservableDomainCommand"/> to the external world only if <see cref="CurrentTransactionStatus"/>
         /// is <see cref="CurrentTransactionStatus.Regular"/> (otherwise the command is ignored and a warning is emitted).
         /// Commands are enlisted into <see cref="TransactionResult.Commands"/>  and will be processed by one (or more)
