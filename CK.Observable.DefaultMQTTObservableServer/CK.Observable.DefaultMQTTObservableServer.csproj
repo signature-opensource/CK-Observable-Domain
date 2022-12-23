@@ -5,7 +5,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.MQTT.LocalMQTTDemiServer" Version="0.16.0" />
+    <PackageReference Include="CK.MQTT.LocalMQTTDemiServer" Version="0.16.1--0000-develop" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CK.Observable.MQTTWatcher\CK.Observable.MQTTWatcher.csproj" />

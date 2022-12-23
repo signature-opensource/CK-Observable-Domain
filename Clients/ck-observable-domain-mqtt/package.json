@@ -9,8 +9,8 @@
     "clean": "rimraf dist"
   },
   "dependencies": {
+    "@local/ck-gen": "workspace:*",
     "@signature-code/ck-observable-domain": "workspace:*",
-    "@signature/generated": "workspace:*",
     "async-mqtt": "^2.6.3",
     "axios": "^1.2.1"
   },

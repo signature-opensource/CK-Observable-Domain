@@ -9,9 +9,9 @@
     "clean": "rimraf dist"
   },
   "dependencies": {
+    "@local/ck-gen": "workspace:*",
     "@microsoft/signalr": "^6.0.10",
     "@signature-code/ck-observable-domain": "workspace:*",
-    "@signature/generated": "workspace:*",
     "axios": "^1.2.1"
   },
   "devDependencies": {

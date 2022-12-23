@@ -1,6 +1,6 @@
 import { WatchEvent, IObservableDomainLeagueDriver } from '@signature-code/ck-observable-domain';
 import { HttpTransportType, HubConnection, HubConnectionBuilder, IRetryPolicy, RetryContext } from '@microsoft/signalr';
-import { ICrisEndpoint, SignalRObservableWatcherStartOrRestartCommand, VESACode } from "@signature/generated";
+import { ICrisEndpoint, SignalRObservableWatcherStartOrRestartCommand, VESACode } from "@local/ck-gen";
 
 class NoRetryPolicy implements IRetryPolicy {
   nextRetryDelayInMilliseconds(retryContext: RetryContext): number | null {

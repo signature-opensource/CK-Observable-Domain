@@ -1,7 +1,7 @@
 import { AsyncMqttClient, IPublishPacket, connectAsync, AsyncClient } from "async-mqtt";
 import { WatchEvent } from '@signature-code/ck-observable-domain';
 import { IObservableDomainLeagueDriver } from "@signature-code/ck-observable-domain/src/iod-league-driver";
-import { ICrisEndpoint, MQTTObservableWatcherStartOrRestartCommand, VESACode } from "@signature/generated";
+import { ICrisEndpoint, MQTTObservableWatcherStartOrRestartCommand, VESACode } from "@local/ck-gen";
 
 export class MqttObservableLeagueDomainService implements IObservableDomainLeagueDriver {
 

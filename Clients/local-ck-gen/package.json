@@ -1,5 +1,5 @@
 {
-  "name": "@signature/generated",
+  "name": "@local/ck-gen",
   "devDependencies": {
     "typescript": "4.7.4"
   },
