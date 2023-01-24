@@ -41,8 +41,8 @@ namespace CodeCake
 
 
             protected override IEnumerable<ArtifactFeed> GetRemoteFeeds()
-            {
-yield break;}
+            {if( GlobalInfo.BuildInfo.Version.PackageQuality <= CSemVer.PackageQuality.Stable ) yield return new AzureNPMFeed( this, "Signature-Code", "Default", null );
+}
 
             protected override IEnumerable<ArtifactFeed> GetLocalFeeds()
             {
