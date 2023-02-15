@@ -5,7 +5,8 @@
   "browserslist": "> 0.5%, last 2 versions, not dead",
   "scripts": {
     "test": "",
-    "build": "tsc",
+    "build": "cd ../ck-observable-domain && tsc && echo 'ck-observable-domain built.'  && cd ../ck-observable-domain-mqtt && echo 'ck-observable-domain-mqtt built.'&& tsc && cd ../ck-observable-domain-signalr && echo 'ck-observable-domain-signalr built.'&& tsc && cd ../ck-observable-domain-demo && tsc --noEmit && esbuild --bundle --outfile=./dist/index.js && echo 'ck-observable-domain-demo built.'",
+    "start": "parcel",
     "clean": "rimraf dist"
   },
   "dependencies": {
@@ -16,14 +17,8 @@
     "axios": "^1.2.3"
   },
   "devDependencies": {
-    "buffer": "^6.0.3",
-    "events": "^3.3.0",
-    "parcel": "^2.7.0",
-    "process": "^0.11.10",
-    "punycode": "^2.1.1",
-    "querystring-es3": "^0.2.1",
+    "parcel": "^2.8.3",
     "rimraf": "^3.0.2",
-    "typescript": "4.8.4",
-    "url": "^0.11.0"
+    "typescript": "4.8.4"
   }
 }
