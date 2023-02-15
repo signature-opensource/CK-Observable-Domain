@@ -13,7 +13,7 @@
     "@signature-code/ck-observable-domain": "workspace:*",
     "@signature-code/ck-observable-domain-mqtt": "workspace:*",
     "@signature-code/ck-observable-domain-signalr": "workspace:*",
-    "axios": "^1.2.1"
+    "axios": "^1.2.3"
   },
   "devDependencies": {
     "buffer": "^6.0.3",

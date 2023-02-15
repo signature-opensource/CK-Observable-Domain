@@ -29,8 +29,6 @@ namespace CK.Observable.MQTTWatcher
             _mqttAgent = mqttAgent;
             _league = league;
             _mqttAgent.OnConnectionChange.Sync += OnConnectionChange;
-            var m = new ActivityMonitor();
-            _mqttAgent.RaiseOnConnectionChangeWithLatestState();
         }
 
         void OnConnectionChange( IActivityMonitor m, DisconnectReason e )

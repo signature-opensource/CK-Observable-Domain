@@ -1,4 +1,4 @@
-import { Axios, AxiosHeaders, AxiosRequestConfig } from "axios";
+import { Axios, AxiosHeaders, RawAxiosRequestConfig } from "axios";
 import { VESACode } from "./VESACode";
 import { CrisResultError } from "./CrisResultError";
 import { CrisResult } from "./CrisResult";
@@ -34,7 +34,7 @@ export interface ICrisEndpoint {
  send<T>(command: Command<T>): Promise<ICommandResult<T>>;
 }
 
-const defaultCrisAxiosConfig: AxiosRequestConfig = {
+const defaultCrisAxiosConfig: RawAxiosRequestConfig = {
   responseType: 'text',
   headers: {
     common: new AxiosHeaders({
@@ -44,7 +44,7 @@ const defaultCrisAxiosConfig: AxiosRequestConfig = {
 };
 
 export class HttpCrisEndpoint implements ICrisEndpoint {
-  public axiosConfig: AxiosRequestConfig; // Allow user replace
+  public axiosConfig: RawAxiosRequestConfig; // Allow user replace
 
   constructor(private readonly axios: Axios, private readonly crisEndpointUrl: string) {
     this.axiosConfig = defaultCrisAxiosConfig;
