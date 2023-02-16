@@ -1,12 +1,12 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net6</TargetFramework>
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.Crs.Dispatcher" Version="11.1.1--0003-develop" />
-    <PackageReference Include="CK.Crs.Abstractions" Version="11.1.1--0003-develop" />
-    <PackageReference Include="CK.Crs.CommandDiscoverer" Version="11.1.1--0003-develop" />
+    <PackageReference Include="CK.Crs.Dispatcher" Version="11.1.1--0004-develop" />
+    <PackageReference Include="CK.Crs.Abstractions" Version="11.1.1--0004-develop" />
+    <PackageReference Include="CK.Crs.CommandDiscoverer" Version="11.1.1--0004-develop" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CK.Observable.Domain\CK.Observable.Domain.csproj" />
