@@ -575,7 +575,7 @@ namespace CK.Observable
                 }
                 else
                 {
-                    while( CloseGroup( new DateTimeStamp( LastLogTime, DateTime.UtcNow ) ) ) ;
+                    while( CloseGroup() ) ;
                     _domain._domainMonitorLock.Release();
                 }
             }
