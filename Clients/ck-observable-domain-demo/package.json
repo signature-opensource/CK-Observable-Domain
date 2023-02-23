@@ -5,7 +5,7 @@
   "browserslist": "> 0.5%, last 2 versions, not dead",
   "scripts": {
     "test": "",
-    "build": "cd ../ck-observable-domain && tsc && echo 'ck-observable-domain built.'  && cd ../ck-observable-domain-mqtt && echo 'ck-observable-domain-mqtt built.'&& tsc && cd ../ck-observable-domain-signalr && echo 'ck-observable-domain-signalr built.'&& tsc && cd ../ck-observable-domain-demo && tsc --noEmit && esbuild --bundle --outfile=./dist/index.js && echo 'ck-observable-domain-demo built.'",
+    "build": "cd ../ck-observable-domain && tsc && echo 'ck-observable-domain built.'  && cd ../ck-observable-domain-mqtt && echo 'ck-observable-domain-mqtt built.'&& tsc && cd ../ck-observable-domain-signalr && echo 'ck-observable-domain-signalr built.'&& tsc && cd ../ck-observable-domain-demo && tsc --noEmit && parcel build && echo 'ck-observable-domain-demo built.'",
     "start": "parcel",
     "clean": "rimraf dist"
   },
