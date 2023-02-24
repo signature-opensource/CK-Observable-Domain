@@ -3,8 +3,10 @@ using CK.Core;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.SymbolStore;
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CK.Observable.League
@@ -136,7 +138,7 @@ namespace CK.Observable.League
         public async Task<ObservableDomain> InitializeAsync( IActivityMonitor monitor,
                                                              bool? startTimer,
                                                              bool createOnLoadError,
-                                                             Func<IActivityMonitor,bool,ObservableDomain> factory,
+                                                             Func<IActivityMonitor, bool, ObservableDomain> factory,
                                                              IObservableDomainInitializer? initializer )
         {
             string action = "Loaded";
@@ -214,15 +216,62 @@ namespace CK.Observable.League
         /// <param name="monitor">The monitor to use.</param>
         public Task ArchiveSnapshotAsync( IActivityMonitor monitor ) => DoSaveSnapshotAsync( monitor, true, true );
 
+        readonly AsyncLock _saveLockAsync = new AsyncLock( LockRecursionPolicy.NoRecursion );
+        readonly object _saveLock = new object();
+        int _inProgressSaveTransactionNumber = -1;
+        int _waitingSaveTransactionNumber = -1;
+        bool _isWaitingSaving = false;
         async Task<bool> DoSaveSnapshotAsync( IActivityMonitor monitor, bool doHouseKeeping, bool sendToArchive )
         {
             try
             {
-                if( _savedTransactionNumber != CurrentSerialNumber )
+                // Debounces saves without blocking a task looping into saving.
+                bool shouldSave;
+                bool isTransactionOlderThanSave;
+                bool isWaitingSave;
+                lock( _saveLock )
                 {
-                    await _streamStore.UpdateAsync( _storeName, WriteSnapshotAsync, true ).ConfigureAwait( false );
-                    if( _snapshotSaveDelay >= 0 ) _nextSave = CurrentTimeUtc.AddMilliseconds( _snapshotSaveDelay );
-                    _savedTransactionNumber = CurrentSerialNumber;
+
+                    isTransactionOlderThanSave = _waitingSaveTransactionNumber >= CurrentSerialNumber;
+                    _waitingSaveTransactionNumber = Math.Max( CurrentSerialNumber, _waitingSaveTransactionNumber );
+
+                    if( isTransactionOlderThanSave )
+                    {
+                        // Waiting Task will save this transaction for us.
+                        shouldSave = false;
+                    }
+                    else
+                    {
+                        isWaitingSave = _isWaitingSaving;
+                        _isWaitingSaving = shouldSave = !_isWaitingSaving;
+                    }
+                }
+
+                if(isTransactionOlderThanSave)
+                {
+                    monitor.Trace( "Transaction is older than last save, or older than what another task will save. Skipping save." );
+                }
+                else
+                {
+                    if(!shouldSave)
+                    {
+                        monitor.Trace( "Skipping save because another task will do it." );
+                    }
+                }
+
+                if( shouldSave )
+                {
+                    using( await _saveLockAsync.LockAsync( monitor ) )
+                    {
+                        lock(_saveLock)
+                        {
+                            _isWaitingSaving = false;
+                        }
+                        await _streamStore.UpdateAsync( _storeName, WriteSnapshotAsync, true ).ConfigureAwait( false );
+                        if( _snapshotSaveDelay >= 0 ) _nextSave = CurrentTimeUtc.AddMilliseconds( _snapshotSaveDelay );
+                        _savedTransactionNumber = CurrentSerialNumber;
+                    }
+
                 }
                 if( sendToArchive )
                 {

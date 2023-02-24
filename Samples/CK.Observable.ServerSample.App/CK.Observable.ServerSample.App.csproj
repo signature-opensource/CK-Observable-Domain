@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="CK.AspNet.Auth" Version="20.0.0" />
+    <PackageReference Include="CK.Cris.TypeScript" Version="0.18.0" />
+    <PackageReference Include="CK.Cris.AspNet" Version="0.18.0" />
+    <PackageReference Include="CK.Monitoring.Hosting" Version="18.0.0" />
+    <PackageReference Include="CK.WeakAssemblyNameResolver" Version="0.6.0" />
+    <PackageReference Include="Fody" Version="6.6.4" PrivateAssets="All" />
+    <PackageReference Include="PropertyChanged.Fody" Version="4.1.0" PrivateAssets="All" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\CK.Observable.DefaultMQTTObservableServer\CK.Observable.DefaultMQTTObservableServer.csproj" />
+    <ProjectReference Include="..\..\CK.Observable.SignalRWatcher\CK.Observable.SignalRWatcher.csproj" />
+  </ItemGroup>
+</Project>

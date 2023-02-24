@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CK.Observable.Device
@@ -16,10 +17,12 @@ namespace CK.Observable.Device
     /// <typeparam name="THost">Type of the device host.</typeparam>
     /// <typeparam name="TDeviceObject">Type of the observable object device.</typeparam>
     /// <typeparam name="TDeviceHostObject">Type of the observable device host.</typeparam>
-    public abstract partial class ObservableDeviceSidekick<THost,TDeviceObject,TDeviceHostObject> : ObservableDomainSidekick, IInternalObservableDeviceSidekick
+    /// <typeparam name="TConfig">Type of the device config.</typeparam>
+    public abstract partial class ObservableDeviceSidekick<THost, TDeviceObject, TDeviceHostObject, TConfig> : ObservableDomainSidekick, IInternalObservableDeviceSidekick
         where THost : IDeviceHost
         where TDeviceObject : ObservableDeviceObject
-        where TDeviceHostObject: ObservableDeviceHostObject
+        where TDeviceHostObject : ObservableDeviceHostObject
+        where TConfig : DeviceConfiguration
     {
         // A Bridge exists if and only if the ObservableDeviceObject exists.
         // Actual devices that have no corresponding ObservableDeviceObject don't appear here.
@@ -28,7 +31,7 @@ namespace CK.Observable.Device
         bool _deviceTracking;
 
         /// <summary>
-        /// Initializes a new <see cref="ObservableDeviceSidekick{THost, TObjectDevice, TObjectDeviceHost}"/>.
+        /// Initializes a new <see cref="ObservableDeviceSidekick{THost, TObjectDevice, TObjectDeviceHost,TConfig}"/>.
         /// </summary>
         /// <param name="manager">The domain's sidekick manager.</param>
         /// <param name="host">The device host.</param>
@@ -108,7 +111,7 @@ namespace CK.Observable.Device
             }
         }
 
-        Task OnAllDevicesLifetimeEventAsync( IActivityMonitor monitor, IDeviceHost sender, DeviceLifetimeEvent e )
+        Task OnAllDevicesLifetimeEventAsync( IActivityMonitor monitor, IDeviceHost sender, DeviceLifetimeEvent e, CancellationToken cancellationToken )
         {
             return Domain.TryModifyAsync( monitor, () =>
             {
@@ -171,6 +174,13 @@ namespace CK.Observable.Device
                 return SendDeviceCommand( monitor, force.SetControllerKeyCommand, false );
             }
 
+            if( command.Command is ObservableDeviceObject.ApplyAndSetControllerKeyDeviceCommand cmd )
+            {
+                command.DomainPostActions.Add( ctx => ApplyAndSetControllerKeyDeviceCommandAsync( ctx.Monitor,cmd ) );
+                return true;
+
+            }
+
             if( command.Command is BaseDeviceCommand c )
             {
                 if( c is BaseConfigureDeviceCommand config )
@@ -180,7 +190,24 @@ namespace CK.Observable.Device
                 }
                 return SendDeviceCommand( monitor, c, true );
             }
+
             return false;
+        }
+
+        private async ValueTask ApplyAndSetControllerKeyDeviceCommandAsync(
+            IActivityMonitor activityMonitor,
+            ObservableDeviceObject.ApplyAndSetControllerKeyDeviceCommand cmd )
+        {
+            var result = await Host.EnsureDeviceAsync( activityMonitor, cmd.DeviceConfiguration );
+            if( result == DeviceApplyConfigurationResult.CreateSucceeded ||
+                result == DeviceApplyConfigurationResult.CreateAndStartSucceeded ||
+                result == DeviceApplyConfigurationResult.CreateSucceededButStartFailed 
+
+                )
+            {
+                Host.SendCommand( activityMonitor, cmd.SetControllerKeyCommand, false );
+            }
+
         }
 
         bool SendDeviceCommand( IActivityMonitor monitor, BaseDeviceCommand c, bool checkControllerKey )

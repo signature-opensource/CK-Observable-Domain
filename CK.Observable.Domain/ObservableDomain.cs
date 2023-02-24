@@ -63,6 +63,7 @@ namespace CK.Observable
         Action<ITransactionDoneEvent>? _inspectorEvent;
         BinarySerializerContext _serializerContext;
         BinaryDeserializerContext _deserializerContext;
+        PocoDirectory? _pocoDirectory;
 
         /// <summary>
         /// Maps property names to PropInfo that contains the property index.
@@ -334,6 +335,8 @@ namespace CK.Observable
             Throw.CheckNotNullArgument( domainName );
             Debug.Assert( instantionKind == CurrentTransactionStatus.Instantiating || instantionKind == CurrentTransactionStatus.Deserializing );
 
+            _pocoDirectory = serviceProvider?.GetService<PocoDirectory>( false );
+
             // This class should be sealed for the external world. But since ObservableDomain<T>...<T1,T2,T3,T4>
             // that are defined in this assembly needs to extend it, it cannot be sealed.
             // This may be refactored once with a public BaseObservableDomain base class (with private protected constructor) and a
@@ -522,6 +525,26 @@ namespace CK.Observable
         public ReadOnlySpan<byte> SecretKey => _domainSecret.AsSpan();
 
         /// <summary>
+        /// Gets the PocoDirectory. <see cref="HasPocoDirectory"/> must be true otherwise
+        /// an <see cref="InvalidOperationException"/> is raised.
+        /// This requires a ServiceProvider to be provided to the ObservableDomain constructor (of course,
+        /// a PocoDirectory must be available).
+        /// </summary>
+        public PocoDirectory PocoDirectory
+        {
+            get
+            {
+                Throw.CheckState( "PocoDirectory requires a ServiceProvider to be provided to the ObservableDomain constructor.", _pocoDirectory != null );
+                return _pocoDirectory;
+            }
+        }
+
+        /// <summary>
+        /// Gets whether the <see cref="PocoDirectory"/> is available.
+        /// </summary>
+        public bool HasPocoDirectory => _pocoDirectory != null;
+
+        /// <summary>
         /// Gets whether this domain has been disposed.
         /// </summary>
         public bool IsDisposed => _transactionStatus == CurrentTransactionStatus.Disposing;
@@ -552,7 +575,7 @@ namespace CK.Observable
                 }
                 else
                 {
-                    while( CloseGroup( new DateTimeStamp( LastLogTime, DateTime.UtcNow ) ) ) ;
+                    while( CloseGroup() ) ;
                     _domain._domainMonitorLock.Release();
                 }
             }

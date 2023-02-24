@@ -7,18 +7,20 @@ using System.Text;
 namespace CK.Observable.Device.Tests
 {
     [SerializationVersion( 0 )]
-    public class OSampleDevice : ObservableDeviceObject<OSampleDeviceSidekick>
+    public class OSampleDevice : ObservableDeviceObject<OSampleDeviceSidekick, SampleDeviceConfiguration>
     {
-
+        internal bool _dirtyRaisedEventValue;
 #pragma warning disable CS8618 // Non-nullable _bridgeAccess uninitialized. Consider declaring as nullable.
 
         public OSampleDevice( string deviceName )
-            : base( deviceName )
+            : base( deviceName, true )
         {
             // This ensures that the sidekicks have been instantiated.
             // This is called here since it must be called once the object has been fully initialized
             // (and there is no way to know when this constructor has terminated from the core code).
             Domain.EnsureSidekicks();
+
+            IsDirtyChanged += ( sender ) => _dirtyRaisedEventValue = (bool)sender;
         }
 
         OSampleDevice( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
@@ -55,11 +57,11 @@ namespace CK.Observable.Device.Tests
         /// </summary>
         public void SendSimpleCommand( string? messagePrefix = null ) => SendDeviceCommand<SampleCommand>( c => c.MessagePrefix = messagePrefix );
 
-        protected override void OnConfigurationChanged( DeviceConfiguration? previousConfiguration )
+        protected override void OnDeviceConfigurationChanged( DeviceConfiguration? previousConfiguration )
         {
-            if( Configuration != null && Configuration is not SampleDeviceConfiguration configuration )
+            if( DeviceConfiguration != null && DeviceConfiguration is not SampleDeviceConfiguration configuration )
             {
-                Throw.ArgumentException( $"{nameof( Configuration )} must be of type {nameof( SampleDeviceConfiguration )}, but was {Configuration?.GetType().Name ?? "<null>"}." );
+                Throw.ArgumentException( $"{nameof( DeviceConfiguration )} must be of type {nameof( SampleDeviceConfiguration )}, but was {DeviceConfiguration?.GetType().Name ?? "<null>"}." );
             }
 
             // Send command during OnConfigurationChanged

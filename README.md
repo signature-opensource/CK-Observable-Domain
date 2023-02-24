@@ -84,7 +84,7 @@ It also provides an automatic roll-back feature: If an error happens while calli
 public void Main()
 {
     // This file contains or will contain the ObservableDomain objects.
-    string path = @"C:\ObservableDomain.bin"; 
+    string path = @"C:\ObservableDomain.bin";
     int fileSaveMs = 5000; // Save file every 5 seconds minimum
 
     // The fileClient will load the domain, if applicable, and will save the
@@ -105,7 +105,7 @@ However we use it only because we support (and recommend) the use of PropertyCha
 
 ```xml
   <ItemGroup>
-    <PackageReference Include="Fody" Version=""6.6.0" PrivateAssets="all" />
+    <PackageReference Include="Fody" Version="6.6.0" PrivateAssets="all" />
     <PackageReference Include="PropertyChanged.Fody" Version="4.0.0" PrivateAssets="all" />
   </ItemGroup>
 ```
@@ -144,8 +144,8 @@ event PropertyChangedEventHandler? INotifyPropertyChanged.PropertyChanged
 }
 ```
 Here, to locate the property that has changed, `PropertyChangedEventArgs.PropertyName` must be used which can be boring.
-If, for some (important) property, you want the developer to easily track any of its change, you can expose a specific named event. Below is the full 
-code of a property and its associated safe event (we are using PropertyChanged.Fody, so the property itself is minimalist):  
+If, for some (important) property, you want the developer to easily track any of its change, you can expose a specific named event. Below is the full
+code of a property and its associated safe event (we are using PropertyChanged.Fody, so the property itself is minimalist):
 
 ```csharp
 [SerializationVersion(0)]
@@ -163,7 +163,7 @@ public class Car : ObservableObject
 ```
 
 Defining the event is enough: it will be automatically fired whenever TestSpeed has changed. However, it is important to notice:
-- The private field MUST be a `ObservableEventHandler`, a `ObservableEventHandler<EventMonitoredArgs>` or a `ObservableEventHandler<ObservableDomainEventArgs>` exacly named **`_[propName]Changed`**.
+- The private field MUST be a `ObservableEventHandler`, a `ObservableEventHandler<EventMonitoredArgs>` or a `ObservableEventHandler<ObservableDomainEventArgs>` exactly named **`_[propName]Changed`**.
 - This event is raised before the generic `ObservableObject.PropertyChanged` event.
 - Don't forget the serialization support of the event!
 

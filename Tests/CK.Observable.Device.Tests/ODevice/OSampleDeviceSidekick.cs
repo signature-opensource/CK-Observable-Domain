@@ -3,11 +3,12 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CK.Observable.Device.Tests
 {
-    public class OSampleDeviceSidekick : ObservableDeviceSidekick<SampleDeviceHost, OSampleDevice, OSampleDeviceHost>
+    public class OSampleDeviceSidekick : ObservableDeviceSidekick<SampleDeviceHost, OSampleDevice, OSampleDeviceHost, SampleDeviceConfiguration>
     {
         public OSampleDeviceSidekick( IObservableDomainSidekickManager manager, SampleDeviceHost host )
             : base( manager, host )
@@ -43,7 +44,7 @@ namespace CK.Observable.Device.Tests
                 Device.MessageChanged.Async += OnMessageChangedAsync;
             }
 
-            Task OnMessageChangedAsync( IActivityMonitor monitor, SampleDevice sender, string e )
+            Task OnMessageChangedAsync( IActivityMonitor monitor, SampleDevice sender, string e, CancellationToken cancellationToken )
             {  
                 return Sidekick.Domain.ModifyThrowAsync( monitor, () =>
                 {

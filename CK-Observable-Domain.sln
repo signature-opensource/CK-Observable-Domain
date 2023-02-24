@@ -1,4 +1,3 @@
-
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31919.166
@@ -17,10 +16,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.gitlab-ci.yml = .gitlab-ci.yml
 		js\.npmrc = js\.npmrc
 		BinarySerializationMigration.md = BinarySerializationMigration.md
+		Directory.Build.props = Directory.Build.props
+		.config\dotnet-tools.json = .config\dotnet-tools.json
 		NuGet.config = NuGet.config
 		README.md = README.md
 		RepositoryInfo.xml = RepositoryInfo.xml
-		Directory.Build.props = Directory.Build.props
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.Domain.Tests", "Tests\CK.Observable.Domain.Tests\CK.Observable.Domain.Tests.csproj", "{2DAC46EE-34A4-432C-A57A-189870912BB7}"
@@ -35,7 +35,21 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.Device", "CK.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.Device.Tests", "Tests\CK.Observable.Device.Tests\CK.Observable.Device.Tests.csproj", "{FAE59D3D-5DB5-48F1-93BB-85B3A05537F7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CK.Observable.Crs", "CK.Observable.Crs\CK.Observable.Crs.csproj", "{42F3818B-8445-431D-8F9E-EE724AF7D2F0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.Crs", "CK.Observable.Crs\CK.Observable.Crs.csproj", "{42F3818B-8445-431D-8F9E-EE724AF7D2F0}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.MQTTWatcher", "CK.Observable.MQTTWatcher\CK.Observable.MQTTWatcher.csproj", "{03E900E7-8D10-4C3C-93E6-216A35F83446}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.DefaultMQTTObservableServer", "CK.Observable.DefaultMQTTObservableServer\CK.Observable.DefaultMQTTObservableServer.csproj", "{677D7882-38F0-4B76-8419-C995A33D0E69}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.ServerSample", "Samples\CK.Observable.ServerSample\CK.Observable.ServerSample.csproj", "{D9CD2C0F-79FB-4DB7-B5E1-2C98BF07565B}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CKSetup", "Samples\CKSetup\CKSetup.csproj", "{0E315C17-1BD2-4A50-BBFE-A91EC871923F}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.ServerSample.App", "Samples\CK.Observable.ServerSample.App\CK.Observable.ServerSample.App.csproj", "{9EAEBFBE-0E86-486D-A774-3482AC88E6F0}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.SignalRWatcher", "CK.Observable.SignalRWatcher\CK.Observable.SignalRWatcher.csproj", "{477E5728-B812-4BEA-AA55-11AC634F1D73}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Samples", "Samples", "{9089E34F-4550-4B76-AFF7-FCE9CD83FC88}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -75,6 +89,30 @@ Global
 		{42F3818B-8445-431D-8F9E-EE724AF7D2F0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{42F3818B-8445-431D-8F9E-EE724AF7D2F0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{42F3818B-8445-431D-8F9E-EE724AF7D2F0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{03E900E7-8D10-4C3C-93E6-216A35F83446}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{03E900E7-8D10-4C3C-93E6-216A35F83446}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{03E900E7-8D10-4C3C-93E6-216A35F83446}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{03E900E7-8D10-4C3C-93E6-216A35F83446}.Release|Any CPU.Build.0 = Release|Any CPU
+		{677D7882-38F0-4B76-8419-C995A33D0E69}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{677D7882-38F0-4B76-8419-C995A33D0E69}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{677D7882-38F0-4B76-8419-C995A33D0E69}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{677D7882-38F0-4B76-8419-C995A33D0E69}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D9CD2C0F-79FB-4DB7-B5E1-2C98BF07565B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D9CD2C0F-79FB-4DB7-B5E1-2C98BF07565B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D9CD2C0F-79FB-4DB7-B5E1-2C98BF07565B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D9CD2C0F-79FB-4DB7-B5E1-2C98BF07565B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0E315C17-1BD2-4A50-BBFE-A91EC871923F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0E315C17-1BD2-4A50-BBFE-A91EC871923F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0E315C17-1BD2-4A50-BBFE-A91EC871923F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0E315C17-1BD2-4A50-BBFE-A91EC871923F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9EAEBFBE-0E86-486D-A774-3482AC88E6F0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9EAEBFBE-0E86-486D-A774-3482AC88E6F0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9EAEBFBE-0E86-486D-A774-3482AC88E6F0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9EAEBFBE-0E86-486D-A774-3482AC88E6F0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{477E5728-B812-4BEA-AA55-11AC634F1D73}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{477E5728-B812-4BEA-AA55-11AC634F1D73}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{477E5728-B812-4BEA-AA55-11AC634F1D73}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{477E5728-B812-4BEA-AA55-11AC634F1D73}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -83,6 +121,9 @@ Global
 		{2DAC46EE-34A4-432C-A57A-189870912BB7} = {0BBC7F98-38CE-4CF9-A0E6-2005847D43F2}
 		{9F3A7A85-CCFC-4189-94C8-86FA0966F4B0} = {0BBC7F98-38CE-4CF9-A0E6-2005847D43F2}
 		{FAE59D3D-5DB5-48F1-93BB-85B3A05537F7} = {0BBC7F98-38CE-4CF9-A0E6-2005847D43F2}
+		{D9CD2C0F-79FB-4DB7-B5E1-2C98BF07565B} = {9089E34F-4550-4B76-AFF7-FCE9CD83FC88}
+		{0E315C17-1BD2-4A50-BBFE-A91EC871923F} = {9089E34F-4550-4B76-AFF7-FCE9CD83FC88}
+		{9EAEBFBE-0E86-486D-A774-3482AC88E6F0} = {9089E34F-4550-4B76-AFF7-FCE9CD83FC88}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B2074A41-0020-4F2C-97EE-709573157ACC}

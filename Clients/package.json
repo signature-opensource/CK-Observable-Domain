@@ -1,0 +1,17 @@
+{
+  "name": "base",
+  "private": true,
+  "workspaces": [
+    "*"
+  ],
+  "packageManager": "yarn@3.2.4",
+  "devDependencies": {
+    "buffer": "^5.5.0",
+    "events": "^3.1.0",
+    "process": "^0.11.10",
+    "punycode": "^1.4.1",
+    "querystring-es3": "^0.2.1",
+    "typescript": "4.8.4",
+    "url": "^0.11.0"
+  }
+}

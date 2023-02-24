@@ -51,7 +51,7 @@ namespace CK.Observable.Device.Tests
                 }
                 device1.IsBoundDevice.Should().BeFalse();
                 device1.DeviceControlStatus.Should().Be( DeviceControlStatus.MissingDevice );
-                device1.Configuration.Should().BeNull();
+                device1.DeviceConfiguration.Should().BeNull();
                 device1.Message.Should().BeNull();
                 device1.IsRunning.Should().BeNull();
             } );
@@ -68,8 +68,8 @@ namespace CK.Observable.Device.Tests
             await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 device1.IsBoundDevice.Should().BeTrue();
-                Debug.Assert( device1.Configuration != null );
-                device1.Configuration.Status.Should().Be( DeviceConfigurationStatus.Disabled );
+                Debug.Assert( device1.DeviceConfiguration != null );
+                device1.DeviceConfiguration.Status.Should().Be( DeviceConfigurationStatus.Disabled );
                 device1.DeviceControlStatus.Should().Be( DeviceControlStatus.HasSharedControl, "Since there is no ControllerKey on the device, anybody can control it." );
                 device1.Message.Should().BeNull();
                 device1.IsRunning.Should().BeFalse();
@@ -87,7 +87,7 @@ namespace CK.Observable.Device.Tests
 
             obs.Read( TestHelper.Monitor, () =>
             {
-                device1.Configuration.Status.Should().Be( DeviceConfigurationStatus.AlwaysRunning );
+                device1.DeviceConfiguration.Status.Should().Be( DeviceConfigurationStatus.AlwaysRunning );
                 device1.IsRunning.Should().BeTrue();
                 oHost.Devices["n°1"].IsRunning.Should().BeTrue();
             } );
@@ -115,7 +115,7 @@ namespace CK.Observable.Device.Tests
 
             obs.Read( TestHelper.Monitor, () =>
             {
-                device1.Configuration.Should().BeNull();
+                device1.DeviceConfiguration.Should().BeNull();
                 device1.IsRunning.Should().BeNull();
                 device1.DeviceControlStatus.Should().Be( DeviceControlStatus.MissingDevice );
 
@@ -170,7 +170,7 @@ namespace CK.Observable.Device.Tests
                 Debug.Assert( device.IsRunning != null );
                 device.IsRunning.Should().BeTrue( "ConfigurationStatus is RunnableStarted." );
                 device.DeviceControlStatus.Should().NotBe( DeviceControlStatus.MissingDevice );
-                device.Configuration.Should().NotBeNull();
+                device.DeviceConfiguration.Should().NotBeNull();
             } );
             bool isRunning = true;
 
@@ -211,7 +211,7 @@ namespace CK.Observable.Device.Tests
                 device.IsBoundDevice.Should().BeFalse();
                 device.IsRunning.Should().BeNull();
                 device.DeviceControlStatus.Should().Be( DeviceControlStatus.MissingDevice );
-                device.Configuration.Should().BeNull();
+                device.DeviceConfiguration.Should().BeNull();
             } );
             DeviceIsRunningChanged.Should().BeTrue();
             DeviceIsRunningChanged = false;

@@ -9,7 +9,7 @@ namespace CK.Observable.Device
 {
     /// <summary>
     /// Non generic abstract base class for device that is not intended to be specialized directly.
-    /// Use the generic <see cref="ObservableDeviceHostObject{TSidekick, TDeviceObject}"/> as the object device base.
+    /// Use the generic <see cref="ObservableDeviceHostObject{TSidekick, TDeviceObject,TConfig}"/> as the object device base.
     /// </summary>
     [SerializationVersion( 0 )]
     public abstract class ObservableDeviceHostObject : ObservableObject, ISidekickLocator

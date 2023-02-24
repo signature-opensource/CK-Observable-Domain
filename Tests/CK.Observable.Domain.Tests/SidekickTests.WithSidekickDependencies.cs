@@ -100,7 +100,7 @@ namespace CK.Observable.Domain.Tests
                                                   startTimer: true,
                                                   serviceProvider: services );
 
-            using( TestHelper.Monitor.CollectEntries( entries => logs = entries, LogLevelFilter.Info ) )
+            using( TestHelper.Monitor.CollectEntries( out logs, LogLevelFilter.Info ) )
             {
                 await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
