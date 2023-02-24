@@ -5,9 +5,9 @@
     <LangVersion>Latest</LangVersion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.StObj.Model" Version="22.1.1--0009-develop" />
-    <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="17.1.1--0023-develop" />
-    <PackageReference Include="CK.PerfectEvent" Version="18.1.1--0005-develop" />
+    <PackageReference Include="CK.StObj.Model" Version="23.0.0" />
+    <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="18.0.0" />
+    <PackageReference Include="CK.PerfectEvent" Version="19.0.0" />
     <PackageReference Include="System.Threading.Channels" Version="6.0.0" />
     <PackageReference Include="CK.BinarySerialization.Sliced" Version="3.0.1--0008-develop" />
   </ItemGroup>
