@@ -5,7 +5,8 @@
   "browserslist": "> 0.5%, last 2 versions, not dead",
   "scripts": {
     "test": "",
-    "build": "cd ../ck-observable-domain && yarn tsc && echo 'ck-observable-domain built.' && cd ../ck-observable-domain-mqtt && yarn && yarn tsc && echo 'ck-observable-domain-mqtt built.'&& cd ../ck-observable-domain-signalr && yarn && yarn tsc && echo 'ck-observable-domain-signalr built.' && cd ../ck-observable-domain-demo && yarn && tsc --noEmit && parcel build --no-autoinstall && echo 'ck-observable-domain-demo built.'",
+    "build-old": "cd ../ck-observable-domain && yarn tsc && echo 'ck-observable-domain built.' && cd ../ck-observable-domain-mqtt && yarn && yarn tsc && echo 'ck-observable-domain-mqtt built.'&& cd ../ck-observable-domain-signalr && yarn && yarn tsc && echo 'ck-observable-domain-signalr built.' && cd ../ck-observable-domain-demo && yarn && tsc --noEmit && parcel build --no-autoinstall && echo 'ck-observable-domain-demo built.'",
+    "build": "echo 'ck-observable-domain-demo built disabled.'",
     "start": "parcel",
     "clean": "rimraf dist"
   },
