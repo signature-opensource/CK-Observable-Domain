@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -38,13 +39,31 @@ namespace CK.Observable.League
         }
 
         /// <inheritdoc />
-        public IObservableDomainLoader? this[string domainName] => _default!.Find( domainName );
+        public IObservableDomainLoader? this[string domainName]
+        {
+            get
+            {
+                CheckLoadedDomain();
+                return _default.Find( domainName );
+            }
+        }
 
         /// <inheritdoc />
-        public IObservableDomainAccess<OCoordinatorRoot> Coordinator => _default!.Coordinator;
+        public IObservableDomainAccess<OCoordinatorRoot> Coordinator
+        {
+            get
+            {
+                CheckLoadedDomain();
+                return _default.Coordinator;
+            }
+        }
 
         /// <inheritdoc />
-        public IObservableDomainLoader? Find( string domainName ) => _default!.Find( domainName );
+        public IObservableDomainLoader? Find( string domainName )
+        {
+            CheckLoadedDomain();
+            return _default.Find( domainName );
+        }
 
         async Task IHostedService.StartAsync( CancellationToken cancellationToken )
         {
@@ -62,6 +81,14 @@ namespace CK.Observable.League
         {
             await _default!.CloseAsync( _monitor );
             _monitor.MonitorEnd();
+        }
+
+        [MemberNotNull(nameof(_default))]
+        void CheckLoadedDomain()
+        {
+            if(_default is null)
+                throw new InvalidOperationException("The DefaultObservableLeague is not loaded. " +
+                                                    "Did the DefaultObservableLeague service start?");
         }
     }
 }
