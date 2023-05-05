@@ -58,7 +58,7 @@ namespace CK.Core
         /// Gets a memory that can be used to share state between actions.
         /// The registered values that support <see cref="IDisposable"/> or <see cref="IAsyncDisposable"/> will be
         /// automatically disposed when this context is <see cref="DisposeAsync"/> (except when using the special
-        /// contructor <see cref="AsyncExecutionContext(IActivityMonitor,IDictionary{object, object},bool)"/>).
+        /// constructor <see cref="AsyncExecutionContext(IActivityMonitor,IDictionary{object, object},bool)"/>).
         /// </summary>
         public IDictionary<object, object> Memory => _memory ?? (_memory = new Dictionary<object, object>());
 

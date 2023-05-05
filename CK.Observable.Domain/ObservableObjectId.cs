@@ -44,6 +44,12 @@ namespace CK.Observable
 
         /// <summary>
         /// The full identifier.
+        /// A long is implicitly convertible in double and here the conversion is lossless
+        /// since the identifier has been designed for this.
+        /// <para>
+        /// The other way around, you must use <see cref="Convert.ToInt64(double)"/>: there is
+        /// no implicit conversion.
+        /// </para>
         /// </summary>
         public readonly long UniqueId;
 
@@ -92,6 +98,16 @@ namespace CK.Observable
         {
             if( throwOnInvalid && (id < 0 || id >= MaxValue) ) Throw.ArgumentOutOfRangeException( nameof( id ) );
             UniqueId = id;
+        }
+
+        /// <summary>
+        /// Initializes a new Id from its long identifier.
+        /// </summary>
+        /// <param name="id">The identifier expressed as a double. Must not be negative nor greater than <see cref="MaxValue"/>.</param>
+        /// <param name="throwOnInvalid">Whether this must throw an <see cref="ArgumentOutOfRangeException"/> if the id is negative or greater or equal to <see cref="MaxValue"/>.</param>
+        public ObservableObjectId( double id, bool throwOnInvalid = true )
+            : this( Convert.ToInt64( id ), throwOnInvalid )
+        {
         }
 
         /// <summary>
