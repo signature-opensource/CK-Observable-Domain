@@ -381,7 +381,7 @@ namespace CK.Observable
             _domainMonitorLock = new SemaphoreSlim( 1, 1 );
             _random = new Random();
             // The serializer context caches the serialization driver.
-            _serializerContext = new BinarySerializerContext( BinarySerializer.DefaultSharedContext );
+            _serializerContext = new BinarySerializerContext( BinarySerializer.DefaultSharedContext, serviceProvider );
             // The deserialization context exposes the services, including this domain, to the deserializer. 
             _deserializerContext = new BinaryDeserializerContext( BinaryDeserializer.DefaultSharedContext, serviceProvider );
             _deserializerContext.Services.Add( this );
