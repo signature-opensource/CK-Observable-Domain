@@ -8,6 +8,7 @@ namespace CK.Observable.Domain.Tests.Sample
     {
         public Employee( Garage garage )
         {
+            Domain.Monitor.Info( "The monitor is available in the ObservableObject constructor." );
             Garage = garage;
             Garage.Employees.Add( this );
         }
@@ -17,6 +18,7 @@ namespace CK.Observable.Domain.Tests.Sample
         Employee( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
             : base( BinarySerialization.Sliced.Instance )
         {
+            Domain.Monitor.Info( "The monitor is available in the ObservableObject deserialization constructor." );
             Garage = r.ReadObject<Garage>();
         }
 

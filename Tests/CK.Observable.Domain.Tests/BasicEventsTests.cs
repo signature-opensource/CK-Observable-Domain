@@ -12,6 +12,7 @@ using static CK.Testing.MonitorTestHelper;
 
 namespace CK.Observable.Domain.Tests
 {
+
     [TestFixture]
     public class BasicEventsTests
     {
