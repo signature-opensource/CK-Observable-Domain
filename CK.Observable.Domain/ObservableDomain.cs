@@ -182,7 +182,6 @@ namespace CK.Observable
             } );
         }
 
-
         /// <summary>
         /// Exposes the non null objects in _objects as a collection.
         /// </summary>
@@ -196,6 +195,8 @@ namespace CK.Observable
             }
 
             public ObservableObject? this[long id] => this[new ObservableObjectId( id, false )];
+
+            public ObservableObject? this[double id] => this[new ObservableObjectId( id, false )];
 
             public ObservableObject? this[ObservableObjectId id]
             {
@@ -225,10 +226,11 @@ namespace CK.Observable
 
             public T? Get<T>( long id, bool throwOnTypeMismacth = true ) where T : ObservableObject => Get<T>( new ObservableObjectId( id, false ) );
 
+            public T? Get<T>( double id, bool throwOnTypeMismacth = true ) where T : ObservableObject => Get<T>( new ObservableObjectId( id, false ) );
+
             public IEnumerator<ObservableObject> GetEnumerator() => _d._objects.Take( _d._objectsListCount )
                                                                                .Where( o => o != null )
-                                                                               .Select( o => o! ) // Waiting for https://github.com/dotnet/roslyn/issues/37468
-                                                                               .GetEnumerator();
+                                                                               .GetEnumerator()!;
 
             IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
         }

@@ -26,6 +26,9 @@ namespace CK.Observable
         /// <returns>The object or null.</returns>
         ObservableObject? this[ObservableObjectId id] { get; }
 
+        /// <inheritdoc cref="this[long]"/>
+        ObservableObject? this[double id] { get; }
+
         /// <summary>
         /// Gets the typed <see cref="ObservableObject"/> if it exists (null otherwise).
         /// If the type is not the expected one, an exception is thrown by default.
@@ -38,6 +41,9 @@ namespace CK.Observable
         /// </param>
         /// <returns>The object or null if not found.</returns>
         T? Get<T>( long id, bool throwOnTypeMismacth = true ) where T : ObservableObject;
+
+        /// <inheritdoc cref="Get{T}(long, bool)"/>
+        T? Get<T>( double id, bool throwOnTypeMismacth = true ) where T : ObservableObject;
 
         /// <summary>
         /// Gets the typed <see cref="ObservableObject"/> if it exists (null otherwise).
