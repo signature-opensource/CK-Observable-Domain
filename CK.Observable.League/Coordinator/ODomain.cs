@@ -28,7 +28,7 @@ namespace CK.Observable.League
             NextActiveTime = Util.UtcMinValue;
         }
 
-        ODomain( IBinaryDeserializer r, ITypeReadInfo info )
+        public ODomain( IBinaryDeserializer r, ITypeReadInfo info )
             : base( Sliced.Instance )
         {
             Coordinator = r.ReadObject<OCoordinatorRoot>();

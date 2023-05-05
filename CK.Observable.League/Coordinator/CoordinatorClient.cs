@@ -73,7 +73,7 @@ namespace CK.Observable.League
             else
             {
                 HashSet<ODomain>? hashTouched = null;
-                if( !_optionsPropertyId.HasValue ) _optionsPropertyId = c.FindPropertyId( nameof( CK.Observable.League.ODomain.Options ) );
+                if( !_optionsPropertyId.HasValue ) _optionsPropertyId = c.FindPropertyId( nameof( ODomain.Options ) );
                 foreach( var e in c.Events )
                 {
                     if( e is NewObjectEvent n && n.Object is ODomain dN )

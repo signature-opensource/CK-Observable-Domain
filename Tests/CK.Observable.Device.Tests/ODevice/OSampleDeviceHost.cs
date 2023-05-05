@@ -19,7 +19,7 @@ namespace CK.Observable.Device.Tests
             Domain.EnsureSidekicks();
         }
 
-        OSampleDeviceHost( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
+        public OSampleDeviceHost( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
             : base( BinarySerialization.Sliced.Instance )
         {
         }

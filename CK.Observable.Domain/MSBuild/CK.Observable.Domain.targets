@@ -1,0 +1,15 @@
+<Project>
+
+  <!-- Setting AllowPropertyChangedFody property to false triggers this check.
+       This is to be used in Core project where, for any reason, the property changes are handled
+       manually.
+       If someone (you included) adds PropertyChanged.Fody this will trigger a build error.
+  -->
+  <Target Condition=" '$(AllowPropertyChangedFody)' == 'false' " Name="CheckAllowPropertyChangedFody" BeforeTargets="BeforeBuild">
+    <PropertyGroup>
+      <NoWay>@(PackageReference-&gt;AnyHaveMetadataValue("Identity", "PropertyChanged.Fody"))</NoWay>
+    </PropertyGroup>
+    <Error Condition=" '$(NoWay)' == 'true' " Text="This is a Core project, package 'PropertyChanged.Fody' must not be used. Please also remove any 'FodyWeaver.xml' file." />
+  </Target>
+  
+</Project>
