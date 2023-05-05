@@ -11,4 +11,12 @@
     <PackageReference Include="System.Threading.Channels" Version="6.0.0" />
     <PackageReference Include="CK.BinarySerialization.Sliced" Version="4.0.0" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="MSBuild/CK.Observable.Domain.targets">
+      <Pack>true</Pack>
+      <PackagePath>buildTransitive\CK.Observable.Domain.targets</PackagePath>
+    </Content>
+  </ItemGroup>
+
 </Project>

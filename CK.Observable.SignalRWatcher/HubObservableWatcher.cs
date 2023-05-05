@@ -6,12 +6,13 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace CK.Observable.SignalRWatcher
 {
-    public class HubObservableWatcher : ObservableWatcher
+    public sealed class HubObservableWatcher : ObservableWatcher
     {
-        private readonly IHubContext<ObservableAppHub, IObservableAppSignalrClient> _hub;
-        private readonly string _connectionId;
+        readonly IHubContext<ObservableAppHub, IObservableAppSignalrClient> _hub;
+        readonly string _connectionId;
 
-        public HubObservableWatcher( IHubContext<ObservableAppHub, IObservableAppSignalrClient> hub, string connectionId, IObservableLeague league ) : base( league )
+        public HubObservableWatcher( IHubContext<ObservableAppHub, IObservableAppSignalrClient> hub, string connectionId, IObservableLeague league )
+            : base( league )
         {
             _hub = hub;
             _connectionId = connectionId;
