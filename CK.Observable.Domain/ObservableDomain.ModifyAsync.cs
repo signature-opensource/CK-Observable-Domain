@@ -52,7 +52,7 @@ namespace CK.Observable
         {
             return ModifyAsync( monitor,
                                 actions,
-                                true,
+                                throwException: true,
                                 millisecondsTimeout,
                                 considerRolledbackAsFailure,
                                 parallelDomainPostActions,
@@ -93,7 +93,7 @@ namespace CK.Observable
             TResult result = default!;
             await ModifyAsync( monitor,
                                () => result = actions(),
-                               false,
+                               throwException: true,
                                millisecondsTimeout,
                                true,
                                parallelDomainPostActions,
