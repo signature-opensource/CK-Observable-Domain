@@ -17,6 +17,10 @@ namespace CK.Observable.Device
         /// Initializes a new observable object device.
         /// </summary>
         /// <param name="deviceName">The device name.</param>
+        /// <param name="ensureSidekicks">
+        /// Should always be false: <c>Domain.EnsureSidekicks()</c> must be called
+        /// by the final, most specialized, class.
+        /// </param>
         protected ObservableDeviceObject( string deviceName, bool ensureSidekicks )
             : base( deviceName )
         {
@@ -29,6 +33,7 @@ namespace CK.Observable.Device
             else
             {
                 _localConfiguration = new TConfig();
+                _localConfiguration.Name = deviceName;
             }
         }
 

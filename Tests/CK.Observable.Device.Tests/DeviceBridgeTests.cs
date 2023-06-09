@@ -22,14 +22,14 @@ namespace CK.Observable.Device.Tests
         [TestCase( "AfterObservableDevice" )]
         [TestCase( "AfterDevice" )]
         [Timeout( 2 * 1000 )]
-        public async Task sample_obervable_Async( string createHostStep )
+        public async Task sample_observable_Async( string createHostStep )
         {
-            using var _ = TestHelper.Monitor.OpenInfo( nameof( sample_obervable_Async ) );
+            using var _ = TestHelper.Monitor.OpenInfo( nameof( sample_observable_Async ) );
             var host = new SampleDeviceHost();
             var sp = new SimpleServiceContainer();
             sp.Add( host );
 
-            using var obs = new ObservableDomain(TestHelper.Monitor, nameof(sample_obervable_Async), false, serviceProvider: sp );
+            using var obs = new ObservableDomain(TestHelper.Monitor, nameof(sample_observable_Async), false, serviceProvider: sp );
 
             OSampleDevice? device1 = null;
             OSampleDeviceHost? oHost = null;
@@ -38,6 +38,7 @@ namespace CK.Observable.Device.Tests
                 if( createHostStep == "BeforeObservableDevice" ) oHost = new OSampleDeviceHost();
 
                 device1 = new OSampleDevice( "n°1" );
+                device1.LocalConfiguration.Value.Name.Should().Be( "n°1" );
 
                 if( createHostStep == "AfterObservableDevice" ) oHost = new OSampleDeviceHost();
 
