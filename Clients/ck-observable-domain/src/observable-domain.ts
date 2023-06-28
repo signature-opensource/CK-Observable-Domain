@@ -83,6 +83,15 @@ export class ObservableDomain {
     }
 
     public applyWatchEvent(e: WatchEvent) {
+        if(e === '') {
+            this._props.length = 0;
+            this._objCount = 0;
+            this._graph.length = 0;
+            this._roots.length = 0;
+            console.warn('Empty OD watch event.');
+            return;
+        }
+
         e = deserialize(e, { prefix: "" }); // Resolve objects
         if(ObservableDomain.isTransactionSetEvent(e)) {
             // e.N is the transactionNumber of the LAST event.
