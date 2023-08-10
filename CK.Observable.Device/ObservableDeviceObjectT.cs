@@ -7,7 +7,7 @@ namespace CK.Observable.Device
     /// Abstract base class for device.
     /// </summary>
     [SerializationVersion( 1 )]
-    public abstract class ObservableDeviceObject<TSidekick, TConfig> : ObservableDeviceObject, ILocalConfiguration<TConfig>, ISidekickClientObject<TSidekick>
+    public abstract partial class ObservableDeviceObject<TSidekick, TConfig> : ObservableDeviceObject, ISidekickClientObject<TSidekick>
         where TSidekick : ObservableDomainSidekick
         where TConfig : DeviceConfiguration, new()
     {
@@ -59,37 +59,7 @@ namespace CK.Observable.Device
             s.WriteObject( o._localConfiguration );
         }
 
-        private protected override DeviceConfiguration GetLocalConfiguration() => _localConfiguration;
-        private protected override void SetLocalConfiguration( DeviceConfiguration value ) => DoSetLocalConfiguraton( (TConfig)value );
-
         [NotExportable]
         public new TConfig? DeviceConfiguration => (TConfig?)_deviceConfiguration;
-
-        [NotExportable]
-        public new ILocalConfiguration<TConfig> LocalConfiguration => this;
-
-        TConfig ILocalConfiguration<TConfig>.Value
-        {
-            get => _localConfiguration;
-            set => DoSetLocalConfiguraton( value );
-        }
-
-        void DoSetLocalConfiguraton( TConfig value )
-        {
-            Throw.CheckNotNullArgument( value );
-            if( value == _deviceConfiguration )
-            {
-                _localConfiguration = (TConfig)_deviceConfiguration.DeepClone();
-            }
-            else
-            {
-                _localConfiguration = value;
-            }
-        }
-
-        bool ILocalConfiguration<TConfig>.IsDirty => base.LocalConfiguration.IsDirty;
-
-        void ILocalConfiguration<TConfig>.SendDeviceConfigureCommand( DeviceControlAction? deviceControlAction ) => base.LocalConfiguration.SendDeviceConfigureCommand( deviceControlAction );
-
     }
 }

@@ -16,7 +16,7 @@ namespace CK.Observable.Device
     /// generic <see cref="ObservableDeviceObject{TSidekick,TConfig}"/> as the object device base.
     /// </summary>
     [SerializationVersion( 4 )]
-    public abstract partial class ObservableDeviceObject : ObservableObject, ISidekickLocator, ILocalConfiguration<DeviceConfiguration>
+    public abstract partial class ObservableDeviceObject : ObservableObject, ISidekickLocator
     {
         ObservableEventHandler _isRunningChanged;
         ObservableEventHandler _deviceConfigurationChanged;
@@ -26,7 +26,7 @@ namespace CK.Observable.Device
         internal DeviceConfiguration? _deviceConfiguration;
         internal DeviceControlStatus _deviceControlStatus;
         internal bool? _isRunning;
-        internal bool _isDirty;
+        internal bool _isLocalConfigurationDirty;
         internal bool _hasConfiguredLocalOnce;
 
 #pragma warning disable CS8618 // Non-nullable _bridge uninitialized. Consider declaring as nullable.
@@ -65,7 +65,7 @@ namespace CK.Observable.Device
 
             if( info.Version > 3 )
             {
-                _isDirty = d.Reader.ReadBoolean();
+                _isLocalConfigurationDirty = d.Reader.ReadBoolean();
                 _isDirtyChanged = new ObservableEventHandler( d );
                 _hasConfiguredLocalOnce = d.Reader.ReadBoolean();
             }
@@ -81,7 +81,7 @@ namespace CK.Observable.Device
             d.Writer.Write( (byte)o._deviceControlStatus );
 
             // version 4
-            d.Writer.Write( o._isDirty );
+            d.Writer.Write( o._isLocalConfigurationDirty );
             o._isDirtyChanged.Write( d );
             d.Writer.Write( o._hasConfiguredLocalOnce );
 
@@ -155,8 +155,10 @@ namespace CK.Observable.Device
         /// This is null when no device named <see cref="DeviceName"/> exist in the device host.
         /// <para>
         /// A DeviceConfiguration is mutable by design and this is a clone of the last applied configuration:
-        /// it can be updated, but this has no effect on the actual device's configuration: to apply
-        /// the configuration, <see cref="SendApplyDeviceConfigurationCommand"/> must be used.
+        /// even if it can, this instance MUST not be modified.
+        /// </para>
+        /// <para>
+        /// Use the the <see cref="LocalConfiguration"/> to manage device configuration.
         /// </para>
         /// </summary>
         [NotExportable]
@@ -171,9 +173,10 @@ namespace CK.Observable.Device
                 LocalConfiguration.Value = _deviceConfiguration;
                 _hasConfiguredLocalOnce = true;
             }
-
-            CheckDirty();
+            // First raise the DeviceConfigurationChanged event.
             OnDeviceConfigurationChanged( previousDeviceConfiguration );
+            // Then check the local IsDirty flag.
+            UpdateConfigurationIsDirty();
         }
 
         /// <summary>
@@ -195,174 +198,6 @@ namespace CK.Observable.Device
         {
             add => _deviceConfigurationChanged.Add( value );
             remove => _deviceConfigurationChanged.Remove( value );
-        }
-
-        /// <summary>
-        /// Gets the local configuration.
-        /// </summary>
-        public ILocalConfiguration<DeviceConfiguration> LocalConfiguration => this;
-
-        DeviceConfiguration ILocalConfiguration<DeviceConfiguration>.Value
-        {
-            get => GetLocalConfiguration();
-            set => SetLocalConfiguration( value );
-        }
-
-        private protected abstract DeviceConfiguration GetLocalConfiguration();
-        private protected abstract void SetLocalConfiguration( DeviceConfiguration value );
-
-        bool ILocalConfiguration<DeviceConfiguration>.IsDirty => _isDirty;
-
-        public bool CheckDirty()
-        {
-            Throw.CheckState( Domain.CurrentTransactionStatus == CurrentTransactionStatus.Regular );
-
-            var local = GetLocalConfiguration();
-            if( _deviceConfiguration == null
-                || !local.CheckValid( Domain.Monitor ) )
-            {
-                _isDirty = true;
-                _isDirtyChanged.Raise( _isDirty );
-                return true;
-            }
-
-            using( var localConfigStream = Util.RecyclableStreamManager.GetStream() )
-            using( var writer = new CKBinaryWriter( localConfigStream, Encoding.UTF8 ) )
-            {
-                local.Write( writer );
-
-                try
-                {
-                    using var checker = BinarySerializer.CreateCheckedWriteStream( localConfigStream.ToArray() );
-                    using var checkedWriter = new CKBinaryWriter( checker, Encoding.UTF8 );
-                    _deviceConfiguration.Write( checkedWriter );
-                }
-                catch( Exception )
-                {
-                    Domain.Monitor.Warn( "Should be updated to use CK.Core.StreamChecker once it is available." );
-                    _isDirty = true;
-                    _isDirtyChanged.Raise( _isDirty );
-                    return true;
-                }
-            }
-            _isDirty = false;
-            _isDirtyChanged.Raise( _isDirty );
-            return false;
-        }
-
-        void ILocalConfiguration<DeviceConfiguration>.SendDeviceConfigureCommand( DeviceControlAction? deviceControlAction )
-        {
-            var status = _deviceControlStatus;
-            var local = GetLocalConfiguration();
-            using( Domain.Monitor.OpenInfo( $"Applying Local configuration: Actual Status : {status}, Action: {deviceControlAction}" ) )
-            {
-                if( !local.CheckValid( Domain.Monitor ) ) Throw.InvalidOperationException( "Local configuration is invalid" );
-
-                var shouldApply = status == DeviceControlStatus.MissingDevice || false;
-                switch( deviceControlAction )
-                {
-                    case DeviceControlAction.TakeControl:
-                    case DeviceControlAction.ReleaseControl:
-                        if( status != DeviceControlStatus.OutOfControlByConfiguration )
-                        {
-                            shouldApply = true;
-                        }
-                        break;
-                    case DeviceControlAction.ForceReleaseControl:
-                        if( status != DeviceControlStatus.MissingDevice )
-                        {
-                            Debug.Assert( _deviceConfiguration != null );
-                            if( _deviceConfiguration.ControllerKey != null )
-                            {
-                                local.ControllerKey = null;
-                                shouldApply = true;
-                            }
-                        }
-                        else
-                        {
-                            local.ControllerKey = null;
-                            shouldApply = true;
-                        }
-
-                        break;
-                    case DeviceControlAction.SafeTakeControl:
-                        if( status == DeviceControlStatus.HasControl || status == DeviceControlStatus.HasSharedControl )
-                        {
-                            shouldApply = true;
-                        }
-                        break;
-                    case DeviceControlAction.SafeReleaseControl:
-                        if( status == DeviceControlStatus.HasControl || status == DeviceControlStatus.HasSharedControl )
-                        {
-                            shouldApply = true;
-                        }
-                        break;
-                    case DeviceControlAction.TakeOwnership:
-                        if( status != DeviceControlStatus.MissingDevice )
-                        {
-                            Debug.Assert( _deviceConfiguration != null );
-                            if( _deviceConfiguration.ControllerKey != Domain.DomainName )
-                            {
-                                local.ControllerKey = Domain.DomainName;
-                                shouldApply = true;
-                            }
-                        }
-                        else
-                        {
-                            local.ControllerKey = Domain.DomainName;
-                            shouldApply = true;
-                        }
-                        break;
-                    case null:
-                        shouldApply = status == DeviceControlStatus.HasControl
-                                   || status == DeviceControlStatus.HasSharedControl
-                                   || status == DeviceControlStatus.MissingDevice
-                                   || status == DeviceControlStatus.HasOwnership;
-                        break;
-                }
-
-                if( shouldApply )
-                {
-                    if( status == DeviceControlStatus.MissingDevice )
-                    {
-                        if( deviceControlAction == DeviceControlAction.TakeControl ||
-                            deviceControlAction == DeviceControlAction.SafeTakeControl
-                           )
-                        {
-                            var setControllerKeyCommand = _bridge.CreateSetControllerKeyCommand();
-                            setControllerKeyCommand.ControllerKey = Domain.DomainName;
-                            setControllerKeyCommand.DeviceName = DeviceName;
-                            setControllerKeyCommand.NewControllerKey = Domain.DomainName;
-
-                            var applyAndSetControllerKeyCommand = new ApplyAndSetControllerKeyDeviceCommand( setControllerKeyCommand, local.DeepClone() );
-
-                            Domain.SendCommand( applyAndSetControllerKeyCommand, _bridge );
-                        }
-                        else if( deviceControlAction == DeviceControlAction.TakeOwnership || deviceControlAction == null )
-                        {
-                            SendApplyDeviceConfigurationCommand( local.DeepClone() );
-                        }
-                    }
-                    else
-                    {
-                        if( deviceControlAction != null )
-                        {
-                            SendDeviceControlCommand( deviceControlAction.Value, local );
-                        }
-
-                        if( deviceControlAction != DeviceControlAction.TakeOwnership ||
-                            deviceControlAction != DeviceControlAction.ForceReleaseControl )
-                        {
-                            SendApplyDeviceConfigurationCommand( local.DeepClone() );
-                        }
-                    }
-
-                }
-                else
-                {
-                    Domain.Monitor.CloseGroup( "Inapplicable Action." );
-                }
-            }
         }
 
         /// <summary>
@@ -393,15 +228,6 @@ namespace CK.Observable.Device
             remove => _deviceControlStatusChanged.Remove( value );
         }
 
-
-        /// <summary>
-        /// Raised whenever <see cref="_isDirty"/> has changed.
-        /// </summary>
-        public event SafeEventHandler IsDirtyChanged
-        {
-            add => _isDirtyChanged.Add( value );
-            remove => _isDirtyChanged.Remove( value );
-        }
 
         /// <summary>
         /// Gets whether this observable object device is bound to a <see cref="IDevice"/>.
@@ -601,6 +427,7 @@ namespace CK.Observable.Device
         {
             _deviceConfigurationChanged.RemoveAll();
             _isRunningChanged.RemoveAll();
+            _isDirtyChanged.RemoveAll();
             // Using nullable just in case EnsureDomainSidekick has not been called.
             ((IInternalObservableDeviceSidekick?)_bridge?.Sidekick)?.OnObjectDestroyed( Domain.Monitor, this );
             base.OnDestroy();

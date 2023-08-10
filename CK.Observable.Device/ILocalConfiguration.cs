@@ -10,7 +10,7 @@ namespace CK.Observable.Device
     {
         /// <summary>
         /// Gets or sets the local configuration, not necessarily the same as <see cref="ObservableDeviceObject.DeviceConfiguration"/>,
-        /// use <see cref="IsDirty"/> to check if this is the one currently applied.
+        /// use <see cref="IsDirty"/> to check if this local configuration is the same as the DeviceConfiguration.
         /// </summary>
         TConfig Value { get; set; }
 
@@ -20,9 +20,10 @@ namespace CK.Observable.Device
         bool IsDirty { get; }
 
         /// <summary>
-        /// Check the dirtness of local configuration.
+        /// Explicitly checks whether the local <see cref="Value"/> is the same as the current <see cref="ObservableDeviceObject.DeviceConfiguration"/>
+        /// and raises <see cref="IsDirtyChanged"/> if <see cref="IsDirty"/> has changed.
         /// </summary>
-        bool CheckDirty();
+        bool UpdateIsDirty();
 
         /// <summary>
         /// Raised whenever <see cref="IsDirty"/> has changed.

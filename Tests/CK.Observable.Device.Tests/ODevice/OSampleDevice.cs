@@ -20,7 +20,7 @@ namespace CK.Observable.Device.Tests
             // (and there is no way to know when this constructor has terminated from the core code).
             Domain.EnsureSidekicks();
 
-            IsDirtyChanged += ( sender ) => _dirtyRaisedEventValue = (bool)sender;
+            LocalConfiguration.IsDirtyChanged += ( sender ) => _dirtyRaisedEventValue = (bool)sender;
         }
 
         OSampleDevice( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
