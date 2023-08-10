@@ -22,12 +22,12 @@ namespace CK.Observable.Domain.Tests
                 {
                     new Car( "V1" );
                     new Car( "V2" );
-                    d.AllObjects.Should().HaveCount( 2 );
+                    d.AllObjects.Items.Should().HaveCount( 2 );
                     throw new Exception( "Failure." );
                 } );
                 result.Errors.Should().NotBeEmpty();
                 d.TransactionSerialNumber.Should().Be( 0 );
-                d.AllObjects.Should().HaveCount( 0 );
+                d.AllObjects.Items.Should().HaveCount( 0 );
                 d.GetFreeList().Should().BeEmpty();
             }
         }
@@ -41,7 +41,7 @@ namespace CK.Observable.Domain.Tests
                 var r = await SampleDomain.TrySetPaulMincLastNameAsync( d, "No-More-Minc" );
                 r.Success.Should().BeTrue();
                 d.TransactionSerialNumber.Should().Be( 2 );
-                d.AllObjects.OfType<Person>().Single( x => x.FirstName == "Paul" ).LastName.Should().Be( "No-More-Minc" );
+                d.AllObjects.Items.OfType<Person>().Single( x => x.FirstName == "Paul" ).LastName.Should().Be( "No-More-Minc" );
 
                 r = await SampleDomain.TrySetPaulMincLastNameAsync( d, "Minc" );
                 r.Success.Should().BeTrue();

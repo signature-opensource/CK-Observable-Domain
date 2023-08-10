@@ -43,7 +43,7 @@ namespace CK.Observable.Domain.Tests
             {
                 if( o is ObservableObject )
                 {
-                    handler.Domain.AllObjects.Should().HaveCount( 1 );
+                    handler.Domain.AllObjects.Items.Should().HaveCount( 1 );
                 }
                 else if( o is ObservableTimer )
                 {
@@ -69,11 +69,11 @@ namespace CK.Observable.Domain.Tests
             {
                 TestHelper.Monitor.Info( "Test 1" );
                 await d.ModifyThrowAsync( TestHelper.Monitor, () => new Sample.Car( "Zoé" ) );
-                d.AllObjects.Should().HaveCount( 1 );
+                d.AllObjects.Items.Should().HaveCount( 1 );
                 ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
 
                 TestHelper.Monitor.Info( "Test 2" );
-                await d.ModifyThrowAsync( TestHelper.Monitor, () => d.AllObjects.Single().Destroy() );
+                await d.ModifyThrowAsync( TestHelper.Monitor, () => d.AllObjects.Items.Single().Destroy() );
                 ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
 
                 TestHelper.Monitor.Info( "Test 3" );
@@ -121,7 +121,7 @@ namespace CK.Observable.Domain.Tests
                 ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
                 await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
-                    var ketru = d.AllObjects.OfType<ObservableWithJaggedArrays>().Single();
+                    var ketru = d.AllObjects.Items.OfType<ObservableWithJaggedArrays>().Single();
                     ketru.Cars[0].Should().HaveCount( 2 );
                     ketru.Cars[1].Should().HaveCount( 3 );
                     ketru.Cars[1][2].Name.Should().Be( "O3" );

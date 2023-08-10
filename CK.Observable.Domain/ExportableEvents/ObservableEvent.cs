@@ -5,8 +5,8 @@ namespace CK.Observable
     /// <summary>
     /// Base class for all observable events. Such events are emitted by ModifyAsync methods
     /// and are enough to fully synchronize a remote associated domain view.
-    /// These events must be handled by <see cref="IObservableDomainClient.OnTransactionCommit(in TransactionDoneEventArgs)"/> (write lock held),
-    /// or by <see cref="ObservableDomainSidekick.OnTransactionResult(in TransactionDoneEventArgs)"/> (read lock held), directly after the
+    /// These events must be handled by <see cref="IObservableDomainClient.OnTransactionCommit(TransactionDoneEventArgs)"/> (write lock held),
+    /// or by <see cref="ObservableDomainSidekick.OnTransactionResult(TransactionDoneEventArgs)"/> (read lock held), directly after the
     /// modifications because direct domain objects are exposed by these events (for example the <see cref="PropertyChangedEvent.Value"/>): these
     /// events CANNOT be correctly handled outside of these 2 extension points.
     /// </summary>
@@ -14,7 +14,7 @@ namespace CK.Observable
     {
         static readonly string[] _exportCodes =
             {
-                null,
+                null!,
                 "N",  // NewObject
                 "D",  // DisposedObject
                 "P",  // NewProperty

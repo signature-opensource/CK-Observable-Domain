@@ -97,7 +97,7 @@ namespace CK.Observable.Domain.Tests
 
                 await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
-                    d.AllObjects.Single().Destroy();
+                    d.AllObjects.Items.Single().Destroy();
                 } );
                 await Task.Delay( 20 );
 
@@ -114,7 +114,7 @@ namespace CK.Observable.Domain.Tests
 
                 await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
-                    var m = d.AllObjects.OfType<MultiPropertyType>().Single();
+                    var m = d.AllObjects.Items.OfType<MultiPropertyType>().Single();
                     m.ChangeAll( "Pouf", 3, new Guid( "{B681AD83-A276-4A5C-A11A-4A22469B6A0D}" ) );
 
                 } );
@@ -124,7 +124,7 @@ namespace CK.Observable.Domain.Tests
 
                 await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
-                    var m = d.AllObjects.OfType<MultiPropertyType>().Single();
+                    var m = d.AllObjects.Items.OfType<MultiPropertyType>().Single();
                     m.SetDefaults();
 
                 } );
@@ -134,7 +134,7 @@ namespace CK.Observable.Domain.Tests
 
                 await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
-                    d.AllObjects.OfType<MultiPropertyType>().Single().Destroy();
+                    d.AllObjects.Items.OfType<MultiPropertyType>().Single().Destroy();
                     var l = new ObservableList<string>();
                     l.Add( "One" );
                     l.Add( "Two" );
@@ -146,7 +146,7 @@ namespace CK.Observable.Domain.Tests
 
                 await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
-                    var l = d.AllObjects.OfType<ObservableList<string>>().Single();
+                    var l = d.AllObjects.Items.OfType<ObservableList<string>>().Single();
                     l[0] = "Three";
                 } );
                 await Task.Delay( 20 );
@@ -254,7 +254,7 @@ namespace CK.Observable.Domain.Tests
                 TestHelper.Monitor.Info( initial );
                 await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
-                    var g2 = d.AllObjects.OfType<Garage>().Single( g => g.CompanyName == null );
+                    var g2 = d.AllObjects.Items.OfType<Garage>().Single( g => g.CompanyName == null );
                     g2.CompanyName = "Signature Code";
                 } );
                 await Task.Delay( 20 );
@@ -266,7 +266,7 @@ namespace CK.Observable.Domain.Tests
 
                 await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
-                    var g2 = d.AllObjects.OfType<Garage>().Single( g => g.CompanyName == "Signature Code" );
+                    var g2 = d.AllObjects.Items.OfType<Garage>().Single( g => g.CompanyName == "Signature Code" );
                     g2.Cars.Clear();
                     var newOne = new Mechanic( g2 ) { FirstName = "X", LastName = "Y" };
                 } );
@@ -276,7 +276,7 @@ namespace CK.Observable.Domain.Tests
 
                 await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
-                    var spi = d.AllObjects.OfType<Mechanic>().Single( m => m.LastName == "Spinelli" );
+                    var spi = d.AllObjects.Items.OfType<Mechanic>().Single( m => m.LastName == "Spinelli" );
                     spi.Destroy();
                 } );
                 await Task.Delay( 20 );
@@ -286,7 +286,7 @@ namespace CK.Observable.Domain.Tests
 
                 await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
-                    var g1 = d.AllObjects.OfType<Garage>().Single( g => g.CompanyName == "Boite" );
+                    var g1 = d.AllObjects.Items.OfType<Garage>().Single( g => g.CompanyName == "Boite" );
                     g1.ReplacementCar.Remove( g1.Cars[0] );
                 } );
                 await Task.Delay( 20 );
@@ -443,7 +443,7 @@ namespace CK.Observable.Domain.Tests
 
             await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
-                d.AllObjects.Single().Destroy();
+                d.AllObjects.Items.Single().Destroy();
                 new TryingToExportNotExportableProperties2();
 
             } );
@@ -454,7 +454,7 @@ namespace CK.Observable.Domain.Tests
 
             await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
-                d.AllObjects.Single().Destroy();
+                d.AllObjects.Items.Single().Destroy();
                 new TryingToExportNotExportableProperties3();
             } );
 

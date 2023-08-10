@@ -56,7 +56,7 @@ namespace CK.Observable
         public static implicit operator bool( TransactionResult r ) => r.Success;
 
         /// <summary>
-        /// Gets whether the <see cref="ClientError"/> is critical: it is the call to <see cref="IObservableDomainClient.OnTransactionCommit(in TransactionDoneEventArgs)"/>
+        /// Gets whether the <see cref="ClientError"/> is critical: it is the call to <see cref="IObservableDomainClient.OnTransactionCommit(TransactionDoneEventArgs)"/>
         /// that failed.
         /// <para>
         /// This lets the system in an instable, dangerous, state since the transaction has terminated without errors and some external

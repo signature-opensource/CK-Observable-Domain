@@ -166,7 +166,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 ReminderHasElapsed.Should().BeFalse();
                 ClockIsActiveChanged.Should().BeFalse();
 
-                counter = handler.Domain.AllObjects.OfType<StupidAutoCounter>().Single();
+                counter = handler.Domain.AllObjects.Items.OfType<StupidAutoCounter>().Single();
                 clock = handler.Domain.AllInternalObjects.OfType<SuspendableClock>().Single();
                 reminder = handler.Domain.TimeManager.Reminders.Single();
             } );
@@ -202,7 +202,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
 
             handler.Domain.Read( TestHelper.Monitor, () =>
             {
-                counter = handler.Domain.AllObjects.OfType<StupidAutoCounter>().Single();
+                counter = handler.Domain.AllObjects.Items.OfType<StupidAutoCounter>().Single();
                 clock = handler.Domain.AllInternalObjects.OfType<SuspendableClock>().Single();
                 reminder = handler.Domain.TimeManager.Reminders.Single();
                 counter.Count.Should().Be( 2 );

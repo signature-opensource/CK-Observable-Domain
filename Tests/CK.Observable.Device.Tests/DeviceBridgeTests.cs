@@ -327,7 +327,7 @@ namespace CK.Observable.Device.Tests
                 await obs.ModifyThrowAsync( TestHelper.Monitor, null );
                 obs.HasWaitingSidekicks.Should().BeFalse();
 
-                device = obs.AllObjects.OfType<OSampleDevice>().Single();
+                device = obs.AllObjects.Items.OfType<OSampleDevice>().Single();
                 await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     device.Message.Should().StartWith( "NEXT" );

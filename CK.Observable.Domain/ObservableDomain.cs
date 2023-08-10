@@ -80,7 +80,7 @@ namespace CK.Observable
         readonly List<int> _freeList;
         byte[]? _domainSecret;
 
-        class InternalObjectCollection : IReadOnlyCollection<InternalObject>
+        sealed class InternalObjectCollection : IReadOnlyCollection<InternalObject>
         {
             readonly ObservableDomain _domain;
 
@@ -185,7 +185,7 @@ namespace CK.Observable
         /// <summary>
         /// Exposes the non null objects in _objects as a collection.
         /// </summary>
-        sealed class AllCollection : IObservableAllObjectsCollection
+        sealed class AllCollection : IObservableAllObjectsCollection, IReadOnlyCollection<ObservableObject>
         {
             readonly ObservableDomain _d;
 
@@ -194,32 +194,43 @@ namespace CK.Observable
                 _d = d;
             }
 
-            public ObservableObject? this[long id] => this[new ObservableObjectId( id, false )];
+            public int Count => _d._actualObjectCount;
 
-            public ObservableObject? this[double id] => this[new ObservableObjectId( id, false )];
+            public IReadOnlyCollection<ObservableObject> Items => this;
 
-            public ObservableObject? this[ObservableObjectId id]
+            public ObservableObject? Get( ObservableObjectId id )
             {
-                get
+                if( id.IsValid )
                 {
-                    if( id.IsValid )
+                    int idx = id.Index;
+                    if( idx < _d._objectsListCount )
                     {
-                        int idx = id.Index;
-                        if( idx < _d._objectsListCount )
-                        {
-                            var o = _d._objects[idx];
-                            if( o != null && o.OId == id ) return o;
-                        }
+                        var o = _d._objects[idx];
+                        if( o != null && o.OId == id ) return o;
                     }
-                    return null;
                 }
+                return null;
             }
 
-            public int Count => _d._actualObjectCount;
+            public ObservableObject? Get( long id ) => Get( new ObservableObjectId( id, false ) );
+
+            public ObservableObject? Get( double id ) => Get( new ObservableObjectId( id, false ) );
+
+            public ObservableObject GetRequired( ObservableObjectId id ) => Get( id ) ?? ThrowKeyNotFound();
+
+            public ObservableObject GetRequired( long id ) => Get( id ) ?? ThrowKeyNotFound();
+
+            public ObservableObject GetRequired( double id ) => Get( id ) ?? ThrowKeyNotFound();
+
+            [MethodImpl( MethodImplOptions.NoInlining )]
+            static ObservableObject ThrowKeyNotFound()
+            {
+                throw new KeyNotFoundException( "ObservableObjectId not found." );
+            }
 
             public T? Get<T>( ObservableObjectId id, bool throwOnTypeMismacth = true ) where T : ObservableObject
             {
-                var o = this[id];
+                var o = Get( id );
                 if( o == null ) return null;
                 return throwOnTypeMismacth ? (T)o : o as T;
             }
@@ -228,11 +239,28 @@ namespace CK.Observable
 
             public T? Get<T>( double id, bool throwOnTypeMismacth = true ) where T : ObservableObject => Get<T>( new ObservableObjectId( id, false ) );
 
-            public IEnumerator<ObservableObject> GetEnumerator() => _d._objects.Take( _d._objectsListCount )
-                                                                               .Where( o => o != null )
-                                                                               .GetEnumerator()!;
+            public T? Get<T>( ObservableObjectId id ) where T : ObservableObject => Get( id ) as T;
+
+            public T? Get<T>( long id ) where T : ObservableObject => Get( id ) as T;
+
+            public T? Get<T>( double id ) where T : ObservableObject => Get( id ) as T;
+
+            public T GetRequired<T>( ObservableObjectId id ) where T : ObservableObject => (T)GetRequired( id );
+
+            public T GetRequired<T>( long id ) where T : ObservableObject => (T)GetRequired( id );
+
+            public T GetRequired<T>( double id ) where T : ObservableObject => (T)GetRequired( id );
+
+            IEnumerator<ObservableObject> IEnumerable<ObservableObject>.GetEnumerator() => GetEnumerator();
 
             IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+            IEnumerator<ObservableObject> GetEnumerator()
+            {
+                return _d._objects.Take( _d._objectsListCount )
+                                  .Where( o => o != null )
+                                  .GetEnumerator()!;
+            }
         }
 
         /// <summary>
@@ -619,7 +647,7 @@ namespace CK.Observable
         /// </summary>
         public event EventHandler<TransactionDoneEventArgs>? TransactionDone;
 
-        List<CKExceptionData>? RaiseTransactionEventResult( in TransactionDoneEventArgs result )
+        List<CKExceptionData>? RaiseTransactionEventResult( TransactionDoneEventArgs result )
         {
             List<CKExceptionData>? errors = null;
             _inspectorEvent?.Invoke( result );

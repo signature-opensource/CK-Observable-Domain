@@ -117,7 +117,7 @@ namespace CK.Observable
         /// if <see cref="TransactionDoneEventArgs.RollbackedInfo"/> is null.
         /// </summary>
         /// <param name="c">The transaction context.</param>
-        public virtual void OnTransactionCommit( in TransactionDoneEventArgs c )
+        public virtual void OnTransactionCommit( TransactionDoneEventArgs c )
         {
             Next?.OnTransactionCommit( c );
             if( c.RollbackedInfo == null )
@@ -375,7 +375,7 @@ namespace CK.Observable
         /// <param name="initialOne">
         /// True if this snapshot is the initial one, created by the first call
         /// to <see cref="OnTransactionStart(IActivityMonitor, ObservableDomain, DateTime)"/>.
-        /// Subsequent calls are coming from <see cref="OnTransactionCommit(in TransactionDoneEventArgs)"/>.
+        /// Subsequent calls are coming from <see cref="OnTransactionCommit(TransactionDoneEventArgs)"/>.
         /// <para>
         /// This "initial" snapshot is the first one for this Client, this has nothing to do with the <see cref="ObservableDomain.TransactionSerialNumber"/>
         /// that can already be greater than 0 if the domain has been loaded.

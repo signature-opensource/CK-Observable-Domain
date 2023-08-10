@@ -38,7 +38,7 @@ namespace CK.Observable.League
         ///  - Right after the load of the league to initializes Client and decide whether the domain must be initially loaded or not.
         ///  - By each Coordinators' domain commit if the corresponding ODomain.Options changed.
         ///  - By domain's commit to update the ODomain.NextActiveTime. 
-        /// Parameters are captured immutables: <see cref="ObservableLeague.DomainClient.OnTransactionCommit(in TransactionDoneEventArgs)"/>
+        /// Parameters are captured immutables: <see cref="ObservableLeague.DomainClient.OnTransactionCommit(TransactionDoneEventArgs)"/>
         /// can safely defer the execution via <see cref="TransactionDoneEventArgs.PostActions"/>.
         /// </summary>
         /// <remarks>

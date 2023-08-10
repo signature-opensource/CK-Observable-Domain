@@ -38,7 +38,7 @@ namespace CK.Observable.Domain.Tests.Sample
         {
             return d.TryModifyAsync( TestHelper.Monitor, () =>
             {
-                d.AllObjects.OfType<Person>().Single( x => x.FirstName == "Paul" ).LastName = newLastName;
+                d.AllObjects.Items.OfType<Person>().Single( x => x.FirstName == "Paul" ).LastName = newLastName;
                 if( throwException ) throw new Exception( $"After Paul minc renamed to {newLastName}." );
             } );
         }
@@ -47,11 +47,11 @@ namespace CK.Observable.Domain.Tests.Sample
         {
             d.Read( TestHelper.Monitor, () =>
             {
-                var g1 = d.AllObjects.OfType<Garage>().Where( x => x.CompanyName == "Boite" ).Single();
+                var g1 = d.AllObjects.Items.OfType<Garage>().Where( x => x.CompanyName == "Boite" ).Single();
                 g1.Cars.Select( c => c.Name ).Should().BeEquivalentTo( Enumerable.Range( 0, 10 ).Select( i => $"Renault n°{i}" ) );
-                var minc = d.AllObjects.OfType<Person>().Single( x => x.FirstName == "Paul" );
+                var minc = d.AllObjects.Items.OfType<Person>().Single( x => x.FirstName == "Paul" );
                 minc.LastName.Should().Be( "Minc" );
-                var scott = d.AllObjects.OfType<Mechanic>().Single( x => x.FirstName == "Scott" );
+                var scott = d.AllObjects.Items.OfType<Mechanic>().Single( x => x.FirstName == "Scott" );
                 scott.CurrentCar.Should().BeSameAs( g1.Cars[2] );
                 scott.Garage.Should().BeSameAs( g1 );
                 g1.Employees.Should().Contain( scott );
