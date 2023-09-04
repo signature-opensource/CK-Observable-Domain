@@ -44,6 +44,7 @@ namespace CK.Observable
             RegisterDriver( BasicTypeDrivers.DUInt16.Default.ExportDriver );
             RegisterDriver( BasicTypeDrivers.DUInt32.Default.ExportDriver );
             RegisterDriver( BasicTypeDrivers.DUInt64.Default.ExportDriver );
+            RegisterDriver( BasicTypeDrivers.DNormalizedPath.Default.ExportDriver );
         }
 
         /// <summary>
