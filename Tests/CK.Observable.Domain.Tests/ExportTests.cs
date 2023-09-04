@@ -509,6 +509,45 @@ namespace CK.Observable.Domain.Tests
             events.Should().NotContainAny( "Timer", "Reminder" ).And.Contain( "ThisIsExported" );
         }
 
+        [SerializationVersion(0)]
+        public class NormalizedPathProperty : ObservableObject
+        {
+            public NormalizedPathProperty()
+            {
+                NormalizedPath = new NormalizedPath( "C:/A/b/c/d/e/f" );
+            }
 
+            NormalizedPathProperty( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+            {
+                NormalizedPath = r.ReadValue<NormalizedPath>();
+            }
+
+            public static void Write( BinarySerialization.IBinarySerializer s, in NormalizedPathProperty o )
+            {
+                s.WriteValue( o.NormalizedPath );
+            }
+
+            public NormalizedPath NormalizedPath { get; }
+        }
+
+        [Test]
+        public async Task NormalizedPaths_are_exportable_Async()
+        {
+            using var d = new ObservableDomain(TestHelper.Monitor, nameof(NormalizedPaths_are_exportable_Async), startTimer: true );
+            var eventCollector = new JsonEventCollector( d );
+
+            // To skip the initial transaction where no events are collectable.
+            await d.ModifyThrowAsync( TestHelper.Monitor, null );
+
+            await d.ModifyThrowAsync( TestHelper.Monitor, () =>
+            {
+                d.TransactionSerialNumber.Should().Be( 1, "Not incremented yet (still inside the transaction n°2)." );
+                new NormalizedPathProperty();
+            } );
+
+            d.ExportToString().Should().Contain( "NormalizedPath" );
+            var events = eventCollector.GetTransactionEvents( 1 ).Events!.Single().ExportedEvents;
+            events.Should().Contain( "NormalizedPath" );
+        }
     }
 }
