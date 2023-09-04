@@ -1,4 +1,6 @@
 using System;
+using CK.Core;
+
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 namespace CK.Observable
@@ -199,5 +201,13 @@ namespace CK.Observable
             public override void Export( DateTimeOffset o, int num, ObjectExporter exporter ) => exporter.Target.EmitDateTimeOffset( o );
         }
 
+        public sealed class DNormalizedPath : UnifiedTypeDriverBase<NormalizedPath>
+        {
+            public DNormalizedPath() { }
+
+            public static readonly DNormalizedPath Default = new DNormalizedPath();
+
+            public override void Export( NormalizedPath o, int num, ObjectExporter exporter ) => exporter.Target.EmitString( o );
+        }
     }
 }
