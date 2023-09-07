@@ -31,7 +31,32 @@ export interface Command<TResult = void> {
 }
 
 export interface ICrisEndpoint {
- send<T>(command: Command<T>): Promise<ICommandResult<T>>;
+  send<T>(command: Command<T>): Promise<ICommandResult<T>>;
+  sendOrThrow<T>( command: Command<T> ): Promise<ICommandResult<T>>;
+}
+
+export class CrisError extends Error {
+  public readonly command: Command<unknown>;
+  public readonly result?: ICommandResult<unknown>;
+
+  constructor( message: string, command: Command<unknown>, result?: ICommandResult<unknown> ) {
+    super( message );
+    this.command = command;
+    this.result = result;
+  }
+}
+
+export function findCrisErrorMessage( innerResult: any ): string {
+  if ( Array.isArray( innerResult ) && innerResult.length > 1 ) {
+    if ( innerResult[0] === 'CrisResultError' ) {
+      const p = innerResult[1];
+      if ( p.message ) return p.message;
+      if ( p.errors && Array.isArray( p.errors ) ) {
+        return p.errors.join( '; ' );
+      }
+    }
+  }
+  return JSON.stringify( innerResult );
 }
 
 const defaultCrisAxiosConfig: RawAxiosRequestConfig = {
@@ -91,5 +116,30 @@ export class HttpCrisEndpoint implements ICrisEndpoint {
         };
       }
     }
+  }
+
+  async sendOrThrow<T>( command: Command<T> ): Promise<ICommandResult<T>> {
+    const result = await this.send( command );
+    if ( result.code === 'CommunicationError' ) {
+      throw new CrisError(
+        `CRIS communication error (${command.commandModel.commandName}): ${result.result.toString()}`,
+        command,
+        result,
+      );
+    } else if ( result.code == VESACode.Error ) {
+      throw new CrisError(
+        `CRIS error: ${findCrisErrorMessage( result.result )} (${command.commandModel.commandName})`,
+        command,
+        result,
+      );
+    } else if ( result.code == VESACode.ValidationError ) {
+      throw new CrisError(
+        `CRIS validation error: ${findCrisErrorMessage( result.result )} (${command.commandModel.commandName})`,
+        command,
+        result,
+      );
+    }
+
+    return result;
   }
 }
