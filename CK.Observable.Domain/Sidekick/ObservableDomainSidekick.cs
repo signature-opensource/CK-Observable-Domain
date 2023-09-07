@@ -115,13 +115,13 @@ namespace CK.Observable
         /// </para>
         /// </summary>
         /// <param name="result">The <see cref="TransactionDoneEventArgs"/> event argument.</param>
-        protected internal virtual void OnTransactionResult( in TransactionDoneEventArgs result )
+        protected internal virtual void OnTransactionResult( TransactionDoneEventArgs result )
         {
         }
 
         /// <summary>
         /// Called when a successful transaction has been successfully handled by the <see cref="ObservableDomain.DomainClient"/>
-        /// and <see cref="ObservableDomain.TransactionDone"/> event and <see cref="OnTransactionResult(in TransactionDoneEventArgs)"/>
+        /// and <see cref="ObservableDomain.TransactionDone"/> event and <see cref="OnTransactionResult(TransactionDoneEventArgs)"/>
         /// did not raise any error.
         /// <para>
         /// When this is called, the <see cref="Domain"/> MUST NOT BE touched in any way: this occurs outside of the domain lock.

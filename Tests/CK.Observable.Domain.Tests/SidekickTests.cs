@@ -330,7 +330,7 @@ namespace CK.Observable.Domain.Tests
                     if( type == "ObservableObject" )
                     {
                         o = mode == "UseSidekickAttribute" ? new ObjWithSKSimpleAttr() : new ObjWithSKSimple();
-                        obs.AllObjects.Should().HaveCount( 1 );
+                        obs.AllObjects.Items.Should().HaveCount( 1 );
                     }
                     else
                     {
@@ -364,8 +364,8 @@ namespace CK.Observable.Domain.Tests
                         ObjWithSKBase another = mode == "UseSidekickAttribute"
                                                             ? new ObjWithSKSimpleAttr()
                                                             : new ObjWithSKSimple();
-                        obs.AllObjects.Should().HaveCount( 2 );
-                        var o = (ObjWithSKBase)obs.AllObjects.First();
+                        obs.AllObjects.Items.Should().HaveCount( 2 );
+                        var o = (ObjWithSKBase)obs.AllObjects.Items.First();
                         o.CommandMessage = "FromO";
                         another.CommandMessage = "FromA";
                     }
@@ -402,8 +402,8 @@ namespace CK.Observable.Domain.Tests
                 {
                     if( type == "ObservableObject" )
                     {
-                        var o = (ObjWithSKBase)obs2.AllObjects.First();
-                        var a = (ObjWithSKBase)obs2.AllObjects.Skip( 1 ).First();
+                        var o = (ObjWithSKBase)obs2.AllObjects.Items.First();
+                        var a = (ObjWithSKBase)obs2.AllObjects.Items.Skip( 1 ).First();
                         o.CommandMessage = "O!";
                         a.CommandMessage = "A!";
                     }

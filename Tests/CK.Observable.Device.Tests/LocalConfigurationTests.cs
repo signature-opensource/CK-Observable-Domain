@@ -433,14 +433,12 @@ namespace CK.Observable.Device.Tests
                 Message = "Not used here."
             };
             var host = new SampleDeviceHost();
-
             sc.Add( host );
 
             (await host.EnsureDeviceAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.CreateAndStartSucceeded );
             var device = host["Default"];
             Debug.Assert( device != null );
             await device.WaitForSynchronizationAsync( considerDeferredCommands: false );
-
 
             var d = new ObservableDomain<Root>( TestHelper.Monitor, "Test", startTimer: false, sc );
 
@@ -449,13 +447,13 @@ namespace CK.Observable.Device.Tests
                 d.Root.Default.DeviceConfiguration.Should().NotBeNull();
                 d.Root.Default.LocalConfiguration.Value.Should().NotBeNull();
 
-                d.Root.Default.LocalConfiguration.CheckDirty().Should().BeFalse();
+                d.Root.Default.LocalConfiguration.UpdateIsDirty().Should().BeFalse();
                 d.Root.Default.LocalConfiguration.IsDirty.Should().BeFalse();
 
                 d.Root.Default.LocalConfiguration.Value.Message = "WillChange2";
                 d.Root.Default.LocalConfiguration.Value.PeriodMilliseconds = 4000;
 
-                d.Root.Default.LocalConfiguration.CheckDirty().Should().BeTrue();
+                d.Root.Default.LocalConfiguration.UpdateIsDirty().Should().BeTrue();
                 d.Root.Default.LocalConfiguration.IsDirty.Should().BeTrue();
 
             } );
@@ -556,7 +554,7 @@ namespace CK.Observable.Device.Tests
 
                 d.Root.Default.LocalConfiguration.IsDirty.Should().Be( d.Root.Default._dirtyRaisedEventValue );
 
-                d.Root.Default.LocalConfiguration.CheckDirty().Should().BeTrue();
+                d.Root.Default.LocalConfiguration.UpdateIsDirty().Should().BeTrue();
 
 
             } );

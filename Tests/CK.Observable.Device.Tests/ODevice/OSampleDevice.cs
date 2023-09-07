@@ -13,14 +13,14 @@ namespace CK.Observable.Device.Tests
 #pragma warning disable CS8618 // Non-nullable _bridgeAccess uninitialized. Consider declaring as nullable.
 
         public OSampleDevice( string deviceName )
-            : base( deviceName, true )
+            : base( deviceName, false )
         {
             // This ensures that the sidekicks have been instantiated.
             // This is called here since it must be called once the object has been fully initialized
             // (and there is no way to know when this constructor has terminated from the core code).
             Domain.EnsureSidekicks();
 
-            IsDirtyChanged += ( sender ) => _dirtyRaisedEventValue = (bool)sender;
+            LocalConfiguration.IsDirtyChanged += ( sender ) => _dirtyRaisedEventValue = (bool)sender;
         }
 
         OSampleDevice( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )

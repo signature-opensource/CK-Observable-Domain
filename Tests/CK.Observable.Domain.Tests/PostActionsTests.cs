@@ -75,7 +75,7 @@ namespace CK.Observable.Domain.Tests
             {
             }
 
-            protected override void OnTransactionResult( in TransactionDoneEventArgs result )
+            protected override void OnTransactionResult( TransactionDoneEventArgs result )
             {
                 if( result.Events.Count > 0 && result.Events.Any( e => e.EventType == ObservableEventType.ListInsert ) )
                 {

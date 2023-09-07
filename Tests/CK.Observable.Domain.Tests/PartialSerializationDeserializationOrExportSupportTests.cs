@@ -45,7 +45,7 @@ namespace CK.Observable.Domain.Tests
             } );
             using( var d2 = TestHelper.CloneDomain( d ) )
             {
-                d2.AllObjects.OfType<SerializableOnly>().Single().Name.Should().Be( "Albert" );
+                d2.AllObjects.Items.OfType<SerializableOnly>().Single().Name.Should().Be( "Albert" );
 
                 d2.Invoking( sut => sut.ExportToString() )
                     .Should().Throw<InvalidOperationException>().WithMessage( "*is not exportable*" );

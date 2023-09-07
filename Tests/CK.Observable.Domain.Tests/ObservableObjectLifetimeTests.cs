@@ -35,7 +35,7 @@ namespace CK.Observable.Domain.Tests
             {
                 await d.ModifyThrowAsync( TestHelper.Monitor, () => new Car( "Yes!" ) );
 
-                FluentActions.Invoking( () => d.AllObjects.OfType<Car>().Single().TestSpeed = 3 )
+                FluentActions.Invoking( () => d.AllObjects.Items.OfType<Car>().Single().TestSpeed = 3 )
                     .Should().Throw<InvalidOperationException>().WithMessage( "A transaction is required." );
             }
         }
@@ -138,12 +138,12 @@ namespace CK.Observable.Domain.Tests
                 await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     var c = new Car( "Titine" );
-                    d.AllObjects.Should().ContainSingle( x => x == c );
-                    d.AllObjects.Should().HaveCount( 1 );
+                    d.AllObjects.Items.Should().ContainSingle( x => x == c );
+                    d.AllObjects.Items.Should().HaveCount( 1 );
                     c.Destroyed += OnDestroy;
                     c.Destroy();
                     OnDestroyCalled.Should().BeTrue();
-                    d.AllObjects.Should().BeEmpty();
+                    d.AllObjects.Items.Should().BeEmpty();
                 } );
             }
         }

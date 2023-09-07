@@ -60,7 +60,7 @@ namespace CK.Observable.Domain.Tests
             IReadOnlyList<ObservableEvent>? events = null;
             d2.TransactionDone += ( d, ev ) => events = ev.Events;
 
-            var c = d2.AllObjects.OfType<Car>().Single();
+            var c = d2.AllObjects.Items.OfType<Car>().Single();
             c.Name.Should().Be( "Hello" );
             c.TestSpeed.Should().Be( 10 );
 
@@ -80,25 +80,25 @@ namespace CK.Observable.Domain.Tests
             {
                 defValue = new MultiPropertyType();
                 var other = new MultiPropertyType();
-                domain.AllObjects.First().Should().BeSameAs( defValue );
-                domain.AllObjects.ElementAt( 1 ).Should().BeSameAs( other );
+                domain.AllObjects.Items.First().Should().BeSameAs( defValue );
+                domain.AllObjects.Items.ElementAt( 1 ).Should().BeSameAs( other );
             } );
 
             using var d2 = TestHelper.CloneDomain( domain );
-            d2.AllObjects.OfType<MultiPropertyType>().All( o => o.Equals( defValue ) );
+            d2.AllObjects.Items.OfType<MultiPropertyType>().All( o => o.Equals( defValue ) );
 
             await d2.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
-                var other = d2.AllObjects.OfType<MultiPropertyType>().ElementAt( 1 );
+                var other = d2.AllObjects.Items.OfType<MultiPropertyType>().ElementAt( 1 );
                 other.ChangeAll( "Changed", 3, Guid.NewGuid() );
             } );
-            d2.AllObjects.First().Should().Match( o => o.Equals( defValue ) );
-            d2.AllObjects.ElementAt( 1 ).Should().Match( o => !o.Equals( defValue ) );
+            d2.AllObjects.Items.First().Should().Match( o => o.Equals( defValue ) );
+            d2.AllObjects.Items.ElementAt( 1 ).Should().Match( o => !o.Equals( defValue ) );
 
             using( var d3 = TestHelper.CloneDomain( d2 ) )
             {
-                d3.AllObjects.First().Should().Match( o => o.Equals( defValue ) );
-                d3.AllObjects.ElementAt( 1 ).Should().Match( o => !o.Equals( defValue ) );
+                d3.AllObjects.Items.First().Should().Match( o => o.Equals( defValue ) );
+                d3.AllObjects.Items.ElementAt( 1 ).Should().Match( o => !o.Equals( defValue ) );
             }
         }
 
@@ -116,10 +116,10 @@ namespace CK.Observable.Domain.Tests
             } );
             // SaveAndLoad disposes domain.
             // Captures the Garage's OId since it is set to invalid.
-            var g1OId = domain.AllObjects.OfType<Garage>().Single().OId;
+            var g1OId = domain.AllObjects.Items.OfType<Garage>().Single().OId;
 
             using var d2 = TestHelper.CloneDomain( domain );
-            var g2 = d2.AllObjects.OfType<Garage>().Single();
+            var g2 = d2.AllObjects.Items.OfType<Garage>().Single();
             g2.CompanyName.Should().Be( "Hello" );
             g2.OId.Should().Be( g1OId );
         }
@@ -135,15 +135,15 @@ namespace CK.Observable.Domain.Tests
                 var p2 = new Person() { FirstName = "B", Friend = p1 };
                 p1.Friend = p2;
             } );
-            var pA1 = domain.AllObjects.OfType<Person>().Single( p => p.FirstName == "A" );
-            var pB1 = domain.AllObjects.OfType<Person>().Single( p => p.FirstName == "B" );
+            var pA1 = domain.AllObjects.Items.OfType<Person>().Single( p => p.FirstName == "A" );
+            var pB1 = domain.AllObjects.Items.OfType<Person>().Single( p => p.FirstName == "B" );
 
             pA1.Friend.Should().BeSameAs( pB1 );
             pB1.Friend.Should().BeSameAs( pA1 );
 
             using var d2 = TestHelper.CloneDomain( domain );
-            var pA2 = d2.AllObjects.OfType<Person>().Single( p => p.FirstName == "A" );
-            var pB2 = d2.AllObjects.OfType<Person>().Single( p => p.FirstName == "B" );
+            var pA2 = d2.AllObjects.Items.OfType<Person>().Single( p => p.FirstName == "A" );
+            var pB2 = d2.AllObjects.Items.OfType<Person>().Single( p => p.FirstName == "B" );
 
             pA2.Friend.Should().BeSameAs( pB2 );
             pB2.Friend.Should().BeSameAs( pA2 );
@@ -158,11 +158,11 @@ namespace CK.Observable.Domain.Tests
                 var p = new Person() { FirstName = "P" };
                 p.Friend = p;
             } );
-            var p1 = domain.AllObjects.OfType<Person>().Single();
+            var p1 = domain.AllObjects.Items.OfType<Person>().Single();
             p1.Friend.Should().BeSameAs( p1 );
 
             using var d2 = TestHelper.CloneDomain( domain );
-            var p2 = d2.AllObjects.OfType<Person>().Single();
+            var p2 = d2.AllObjects.Items.OfType<Person>().Single();
             p2.Friend.Should().BeSameAs( p2 );
         }
 
@@ -239,7 +239,7 @@ namespace CK.Observable.Domain.Tests
 
             await d2.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
-                var list = d2.AllObjects.OfType<ObservableList<object>>().Single();
+                var list = d2.AllObjects.Items.OfType<ObservableList<object>>().Single();
 
                 int i = 0;
                 var timer = (ObservableTimer)list[i++]; timer.Destroy();
@@ -251,7 +251,7 @@ namespace CK.Observable.Domain.Tests
 
             await d2.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
-                var list = d2.AllObjects.OfType<ObservableList<object>>().Single();
+                var list = d2.AllObjects.Items.OfType<ObservableList<object>>().Single();
                 list.Count.Should().Be( 4 );
                 foreach( IDestroyable o in list )
                 {

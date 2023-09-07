@@ -156,7 +156,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 d.Read( TestHelper.Monitor, () =>
                 {
                     TestHelper.Monitor.Trace( $"counter.Count = {counter.Count}." );
-                    d.AllObjects.Single().Should().BeSameAs( counter );
+                    d.AllObjects.Items.Single().Should().BeSameAs( counter );
                     counter.Count.Should().Match( c => c >= 11 );
                     RelayedCounter.Should().Be( counter.Count );
                 } );
@@ -186,7 +186,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 d.Read( TestHelper.Monitor, () =>
                 {
                     TestHelper.Monitor.Trace( $"counter.Count = {counter.Count}." );
-                    d.AllObjects.Single().Should().BeSameAs( counter );
+                    d.AllObjects.Items.Single().Should().BeSameAs( counter );
                     counter.Count.Should().BeGreaterOrEqualTo( 1 );
                 } );
             }
@@ -302,10 +302,10 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                         {
                             d2.TimeManager.Timers.Should().HaveCount( 8 );
                             d2.TimeManager.Reminders.Should().HaveCount( 5 );
-                            d2.AllObjects.OfType<SimpleValue>().Single().Value.Should().BeGreaterOrEqualTo( 9, "5 reminders have fired, 4 timers have fired at least once." );
+                            d2.AllObjects.Items.OfType<SimpleValue>().Single().Value.Should().BeGreaterOrEqualTo( 9, "5 reminders have fired, 4 timers have fired at least once." );
                             d2.TimeManager.Reminders.All( r => !r.IsActive ).Should().BeTrue( "No more Active reminders." );
                             d2.TimeManager.Timers.All( o => o.IsActive == ((int.Parse( o.Name ) & 1) != 0) ).Should().BeTrue();
-                            var v = d2.AllObjects.OfType<SimpleValue>().Single();
+                            var v = d2.AllObjects.Items.OfType<SimpleValue>().Single();
                             v.ValueFromReminders.Should().Be( 5, "[Secondary] 5 from reminders." );
                             v.Value.Should().BeGreaterOrEqualTo( 9, "[Secondary] 5 reminders have fired, the 4 timers have fired at least once." );
                             secondaryValue = v.Value;
@@ -319,7 +319,7 @@ namespace CK.Observable.Domain.Tests.TimedEvents
                 {
                     d.Read( TestHelper.Monitor, () =>
                     {
-                        var v = d.AllObjects.OfType<SimpleValue>().Single();
+                        var v = d.AllObjects.Items.OfType<SimpleValue>().Single();
                         v.ValueFromReminders.Should().Be( 5, "[Primary] 5 from reminders." );
                         v.Value.Should().BeGreaterThan( secondaryValue, "[Primary] Must be greater than the secondary." );
                     } );

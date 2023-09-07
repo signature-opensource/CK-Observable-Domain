@@ -271,7 +271,7 @@ namespace CK.Observable.Domain.Tests.Clients
                 d.Root.Prop2.Should().Be( "World" );
                 d.AllObjects.Count.Should().Be( 1 );
                 d.AllRoots.Count.Should().Be( 1 );
-                d.Root.Should().Be( (TestObservableRootObject)d.AllObjects.First() );
+                d.Root.Should().Be( (TestObservableRootObject)d.AllObjects.Items.First() );
                 d.Root.Should().Be( (TestObservableRootObject)d.AllRoots.First() );
             } );
         }

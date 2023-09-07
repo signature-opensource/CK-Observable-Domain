@@ -91,7 +91,7 @@ namespace CK.Observable.League
         /// Overridden to FIRST create a snapshot and THEN call the next client.
         /// </summary>
         /// <param name="c"></param>
-        public override void OnTransactionCommit( in TransactionDoneEventArgs c )
+        public override void OnTransactionCommit( TransactionDoneEventArgs c )
         {
             if( c.RollbackedInfo == null )
             {

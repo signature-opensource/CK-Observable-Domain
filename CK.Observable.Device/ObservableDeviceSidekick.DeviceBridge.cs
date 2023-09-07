@@ -87,8 +87,8 @@ namespace CK.Observable.Device
                 Object._isRunning = d.Status.IsRunning;
                 Object._deviceConfiguration = d.ExternalConfiguration;
                 Object._deviceControlStatus = ObservableDeviceObject.ComputeStatus( d, _sidekick.Domain.DomainName );
-                OnDeviceAppeared( monitor );
                 RaiseDevicePropertiesChanged( true, true, true, null );
+                OnDeviceAppeared( monitor );
             }
 
             internal void UpdateDevice( IActivityMonitor monitor, IDevice d )

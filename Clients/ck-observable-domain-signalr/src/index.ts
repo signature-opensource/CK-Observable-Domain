@@ -11,7 +11,7 @@ class NoRetryPolicy implements IRetryPolicy {
 export class SignalRObservableLeagueDomainService implements IObservableDomainLeagueDriver {
   private readonly connection: HubConnection;
   private static noRetryPolicy = new NoRetryPolicy();
-  
+
 
   constructor(hubUrl: string, private readonly crisEndpoint: ICrisEndpoint) {
     this.connection = new HubConnectionBuilder()
@@ -37,7 +37,12 @@ export class SignalRObservableLeagueDomainService implements IObservableDomainLe
       const resp = await this.crisEndpoint.send(poco);
       if (resp.code == 'CommunicationError') throw resp.result;
       if (resp.code != VESACode.Synchronous) throw new Error(JSON.stringify(resp.result));
-      res[element.domainName] = JSON.parse(resp.result!);
+      if (resp.result == '') {
+        console.warn(`Domain ${element.domainName} doesn't exists.`);
+        res[element.domainName] = resp.result;
+      } else {
+        res[element.domainName] = JSON.parse(resp.result!);
+      }
     });
     await Promise.all(promises);
     return res;

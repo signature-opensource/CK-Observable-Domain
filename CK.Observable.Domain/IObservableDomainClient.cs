@@ -33,7 +33,7 @@ namespace CK.Observable
         /// </para>
         /// </summary>
         /// <param name="context">The successful context.</param>
-        void OnTransactionCommit( in TransactionDoneEventArgs context );
+        void OnTransactionCommit( TransactionDoneEventArgs context );
 
         /// <summary>
         /// Called from inside a transaction whenever an unhandled exception is thrown.
@@ -50,7 +50,7 @@ namespace CK.Observable
 
         /// <summary>
         /// Called when an error occurred in a transaction.
-        /// This can implement a roll back mechanism: <see cref="OnTransactionCommit(in TransactionDoneEventArgs)"/> will be called.
+        /// This can implement a roll back mechanism: <see cref="OnTransactionCommit(TransactionDoneEventArgs)"/> will be called.
         /// If no roll back is done, this is the last event that the client will see from the transaction.
         /// </summary>
         /// <param name="monitor">The monitor to use.</param>

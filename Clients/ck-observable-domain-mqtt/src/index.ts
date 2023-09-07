@@ -20,7 +20,12 @@ export class MqttObservableLeagueDomainService implements IObservableDomainLeagu
             const resp = await this.crisEndpoint.send(poco);
             if (resp.code == 'CommunicationError') throw resp.result;
             if (resp.code != VESACode.Synchronous) throw new Error(JSON.stringify(resp.result));
-            res[element.domainName] = JSON.parse(resp.result!);
+            if (resp.result == '') {
+                console.warn(`Domain ${element.domainName} doesn't exists.`);
+                res[element.domainName] = resp.result;
+            } else {
+                res[element.domainName] = JSON.parse(resp.result!);
+            }
         });
         await Promise.all(promises);
         return res;

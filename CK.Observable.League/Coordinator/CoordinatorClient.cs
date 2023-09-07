@@ -56,7 +56,7 @@ namespace CK.Observable.League
         /// </summary>
         public ObservableDomain<OCoordinatorRoot> Domain { get; internal set; }
 
-        public override void OnTransactionCommit( in TransactionDoneEventArgs c )
+        public override void OnTransactionCommit( TransactionDoneEventArgs c )
         {
             base.OnTransactionCommit( c );
 
@@ -68,7 +68,7 @@ namespace CK.Observable.League
                 if( c.RollbackedInfo.IsSafeRollback ) return;
                 Debug.Assert( c.RollbackedInfo.IsDangerousRollback );
                 // Resynchronize all.
-                touched = Domain.AllObjects.OfType<ODomain>();
+                touched = Domain.Root.Domains.Values;
             }
             else
             {

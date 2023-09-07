@@ -9,7 +9,7 @@ namespace CK.Observable
 {
     /// <summary>
     /// Encapsulates the result of a successful <see cref="ObservableDomain.Transaction.Commit"/>.
-    /// This is available from <see cref="IObservableDomainClient.OnTransactionCommit(in TransactionDoneEventArgs)"/>
+    /// This is available from <see cref="IObservableDomainClient.OnTransactionCommit(TransactionDoneEventArgs)"/>
     /// and <see cref="ObservableDomain.TransactionDone"/> event.
     /// </summary>
     public sealed class TransactionDoneEventArgs : EventMonitoredArgs, ITransactionDoneEvent

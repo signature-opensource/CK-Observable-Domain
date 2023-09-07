@@ -317,13 +317,13 @@ namespace CK.Observable
             return true;
         }
 
-        internal void OnTransactionDoneEvent( in TransactionDoneEventArgs result, ref List<CKExceptionData>? errors )
+        internal void OnTransactionDoneEvent( TransactionDoneEventArgs result, ref List<CKExceptionData>? errors )
         {
             foreach( var h in _sidekicks )
             {
                 try
                 {
-                    h.OnTransactionResult( in result );
+                    h.OnTransactionResult( result );
                 }
                 catch( Exception ex )
                 {
