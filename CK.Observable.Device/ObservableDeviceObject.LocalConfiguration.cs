@@ -82,7 +82,7 @@ namespace CK.Observable.Device
             {
                 if( !local.CheckValid( Domain.Monitor ) ) Throw.InvalidOperationException( "Local configuration is invalid" );
 
-                var shouldApply = status == DeviceControlStatus.MissingDevice || false;
+                var shouldApply = status == DeviceControlStatus.MissingDevice;
                 switch( deviceControlAction )
                 {
                     case DeviceControlAction.TakeControl:
