@@ -209,6 +209,7 @@ namespace CK.Observable.Device.Tests
                 {
                     var oDevice = obs.Root.OHost.Devices["TheDevice"].Object;
                     Debug.Assert( oDevice != null );
+                    oDevice.DeviceConfiguration.Should().BeNull();
                     oDevice.LocalConfiguration.Should().NotBeNull();
                     oDevice.DeviceControlStatus.Should().Be( expectedControlStatus );
                     //if( clearDeviceHost )

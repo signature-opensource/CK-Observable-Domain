@@ -185,7 +185,7 @@ namespace CK.Observable.Device
             {
                 if( c is BaseConfigureDeviceCommand config )
                 {
-                    command.DomainPostActions.Add( ctx => Host.EnsureDeviceAsync( ctx.Monitor, config.Configuration ) );
+                    command.DomainPostActions.Add( ctx => Host.EnsureDeviceAsync( ctx.Monitor, config.ExternalConfiguration ) );
                     return true;
                 }
                 return SendDeviceCommand( monitor, c, true );
