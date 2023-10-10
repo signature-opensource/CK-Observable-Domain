@@ -66,7 +66,7 @@ namespace CK.Observable.Device
                 using( var w = new CKBinaryWriter( s, Encoding.UTF8 ) )
                 {
                     local.Write( w );
-                    using var checker = Util.CreateCheckedWriteStream( s );
+                    using var checker = CheckedWriteStream.Create( s );
                     using var checkedWriter = new CKBinaryWriter( checker, Encoding.UTF8 );
                     current.Write( checkedWriter );
                     return checker.GetResult() != CheckedWriteStream.Result.None;

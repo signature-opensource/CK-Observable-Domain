@@ -587,14 +587,47 @@ namespace CK.Observable
         /// </summary>
         public bool HasWaitingSidekicks => _sidekickManager.HasWaitingSidekick;
 
-        class DomainActivityMonitor : ActivityMonitor, IDisposableActivityMonitor
+        sealed class DomainActivityMonitor : IDisposableActivityMonitor
         {
+            readonly IActivityMonitor _monitor;
             readonly ObservableDomain? _domain;
 
             public DomainActivityMonitor( string topic, ObservableDomain? domain, int timeout )
-                : base( topic )
             {
+                _monitor = new ActivityMonitor( topic );
                 if( (_domain = domain) == null ) this.Error( $"Failed to obtain the locked domain monitor in less than {timeout} ms." );
+            }
+
+            public string UniqueId => _monitor.UniqueId;
+
+            public CKTrait AutoTags { get => _monitor.AutoTags; set => _monitor.AutoTags = value; }
+            public LogFilter MinimalFilter { get => _monitor.MinimalFilter; set => _monitor.MinimalFilter = value; }
+
+            public LogFilter ActualFilter => _monitor.ActualFilter;
+
+            public string Topic => _monitor.Topic;
+
+            public IActivityMonitorOutput Output => _monitor.Output;
+
+            public IParallelLogger ParallelLogger => _monitor.ParallelLogger;
+
+            CKTrait IActivityLineEmitter.AutoTags => _monitor.AutoTags;
+
+            LogLevelFilter IActivityLineEmitter.ActualFilter => ((IActivityLineEmitter)_monitor).ActualFilter;
+
+            public bool CloseGroup( object? userConclusion = null )
+            {
+                return _monitor.CloseGroup( userConclusion );
+            }
+
+            public ActivityMonitorLogData CreateActivityMonitorLogData( LogLevel level, CKTrait finalTags, string? text, object? exception, string? fileName, int lineNumber, bool isOpenGroup )
+            {
+                return _monitor.CreateActivityMonitorLogData( level, finalTags, text, exception, fileName, lineNumber, isOpenGroup );
+            }
+
+            public ActivityMonitor.Token CreateToken( string? message = null, string? dependentTopic = null, CKTrait? createTags = null, [CallerFilePath] string? fileName = null, [CallerLineNumber] int lineNumber = 0 )
+            {
+                return _monitor.CreateToken( message, dependentTopic, createTags, fileName, lineNumber );
             }
 
             public void Dispose()
@@ -605,9 +638,24 @@ namespace CK.Observable
                 }
                 else
                 {
-                    while( CloseGroup() ) ;
+                    while( _monitor.CloseGroup() ) ;
                     _domain._domainMonitorLock.Release();
                 }
+            }
+
+            public void SetTopic( string? newTopic, [CallerFilePath] string? fileName = null, [CallerLineNumber] int lineNumber = 0 )
+            {
+                _monitor.SetTopic( newTopic, fileName, lineNumber );
+            }
+
+            public void UnfilteredLog( ref ActivityMonitorLogData data )
+            {
+                _monitor.UnfilteredLog( ref data );
+            }
+
+            public IDisposableGroup UnfilteredOpenGroup( ref ActivityMonitorLogData data )
+            {
+                return _monitor.UnfilteredOpenGroup( ref data );
             }
         }
 
