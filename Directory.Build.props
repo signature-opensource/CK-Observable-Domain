@@ -21,8 +21,8 @@
   <!--</BasicDefinitions>-->
   <!--<StandardProperties>-->
   <PropertyGroup>
-    <RepositoryUrl>https://gitlab.com/Signature-Code/CK-Observable-Domain</RepositoryUrl>
-    <ProductName>SC</ProductName>
+    <RepositoryUrl>https://github.com/signature-opensource/CK-Observable-Domain</RepositoryUrl>
+    <ProductName>CK</ProductName>
     <Company>Signature Code</Company>
     <Authors>Signature Code</Authors>
     <Copyright>Copyright Signature-Code 2007-$([System.DateTime]::UtcNow.ToString("yyyy"))</Copyright>

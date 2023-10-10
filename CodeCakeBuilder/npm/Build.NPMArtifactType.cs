@@ -41,7 +41,8 @@ namespace CodeCake
 
 
             protected override IEnumerable<ArtifactFeed> GetRemoteFeeds()
-            {if( GlobalInfo.BuildInfo.Version.PackageQuality <= CSemVer.PackageQuality.Stable ) yield return new AzureNPMFeed( this, "Signature-Code", "Default", null );
+            {if( GlobalInfo.BuildInfo.Version.PackageQuality <= CSemVer.PackageQuality.Stable ) yield return new AzureNPMFeed( this, "Signature-OpenSource", "NetCore3", "Feeds" );
+if( GlobalInfo.BuildInfo.Version.PackageQuality >= CSemVer.PackageQuality.ReleaseCandidate ) yield return new NPMRemoteFeed( this, "NPMJS_ORG_PUSH_PAT", "https://registry.npmjs.org/", false );
 }
 
             protected override IEnumerable<ArtifactFeed> GetLocalFeeds()

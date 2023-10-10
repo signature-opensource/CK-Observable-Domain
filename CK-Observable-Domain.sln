@@ -1,8 +1,9 @@
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31919.166
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.Domain", "CK.Observable.Domain\CK.Observable.Domain.csproj", "{8E045F0F-78E8-4916-8421-CB0B048D6299}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.Domain", "CK.Observable.Domain/CK.Observable.Domain.csproj", "{8E045F0F-78E8-4916-8421-CB0B048D6299}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{0BBC7F98-38CE-4CF9-A0E6-2005847D43F2}"
 	ProjectSection(SolutionItems) = preProject
@@ -21,35 +22,38 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		NuGet.config = NuGet.config
 		README.md = README.md
 		RepositoryInfo.xml = RepositoryInfo.xml
+		appveyor.yml = appveyor.yml
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.Domain.Tests", "Tests\CK.Observable.Domain.Tests\CK.Observable.Domain.Tests.csproj", "{2DAC46EE-34A4-432C-A57A-189870912BB7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.Domain.Tests", "Tests/CK.Observable.Domain.Tests/CK.Observable.Domain.Tests.csproj", "{2DAC46EE-34A4-432C-A57A-189870912BB7}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CodeCakeBuilder", "CodeCakeBuilder\CodeCakeBuilder.csproj", "{87F7028D-FC86-49F3-852B-2F98EADCFAE2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CodeCakeBuilder", "CodeCakeBuilder/CodeCakeBuilder.csproj", "{87F7028D-FC86-49F3-852B-2F98EADCFAE2}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.League", "CK.Observable.League\CK.Observable.League.csproj", "{394226FE-EB0F-476C-BEDB-F959111AB816}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.League", "CK.Observable.League/CK.Observable.League.csproj", "{394226FE-EB0F-476C-BEDB-F959111AB816}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.League.Tests", "Tests\CK.Observable.League.Tests\CK.Observable.League.Tests.csproj", "{9F3A7A85-CCFC-4189-94C8-86FA0966F4B0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.League.Tests", "Tests/CK.Observable.League.Tests/CK.Observable.League.Tests.csproj", "{9F3A7A85-CCFC-4189-94C8-86FA0966F4B0}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.Device", "CK.Observable.Device\CK.Observable.Device.csproj", "{0067CE24-0069-4458-A813-79452569AFC9}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.Device", "CK.Observable.Device/CK.Observable.Device.csproj", "{0067CE24-0069-4458-A813-79452569AFC9}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.Device.Tests", "Tests\CK.Observable.Device.Tests\CK.Observable.Device.Tests.csproj", "{FAE59D3D-5DB5-48F1-93BB-85B3A05537F7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.Device.Tests", "Tests/CK.Observable.Device.Tests/CK.Observable.Device.Tests.csproj", "{FAE59D3D-5DB5-48F1-93BB-85B3A05537F7}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.Crs", "CK.Observable.Crs\CK.Observable.Crs.csproj", "{42F3818B-8445-431D-8F9E-EE724AF7D2F0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.Crs", "CK.Observable.Crs/CK.Observable.Crs.csproj", "{42F3818B-8445-431D-8F9E-EE724AF7D2F0}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.MQTTWatcher", "CK.Observable.MQTTWatcher\CK.Observable.MQTTWatcher.csproj", "{03E900E7-8D10-4C3C-93E6-216A35F83446}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.MQTTWatcher", "CK.Observable.MQTTWatcher/CK.Observable.MQTTWatcher.csproj", "{03E900E7-8D10-4C3C-93E6-216A35F83446}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.DefaultMQTTObservableServer", "CK.Observable.DefaultMQTTObservableServer\CK.Observable.DefaultMQTTObservableServer.csproj", "{677D7882-38F0-4B76-8419-C995A33D0E69}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.DefaultMQTTObservableServer", "CK.Observable.DefaultMQTTObservableServer/CK.Observable.DefaultMQTTObservableServer.csproj", "{677D7882-38F0-4B76-8419-C995A33D0E69}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.ServerSample", "Samples\CK.Observable.ServerSample\CK.Observable.ServerSample.csproj", "{D9CD2C0F-79FB-4DB7-B5E1-2C98BF07565B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.ServerSample", "Samples/CK.Observable.ServerSample/CK.Observable.ServerSample.csproj", "{D9CD2C0F-79FB-4DB7-B5E1-2C98BF07565B}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CKSetup", "Samples\CKSetup\CKSetup.csproj", "{0E315C17-1BD2-4A50-BBFE-A91EC871923F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CKSetup", "Samples/CKSetup/CKSetup.csproj", "{0E315C17-1BD2-4A50-BBFE-A91EC871923F}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.ServerSample.App", "Samples\CK.Observable.ServerSample.App\CK.Observable.ServerSample.App.csproj", "{9EAEBFBE-0E86-486D-A774-3482AC88E6F0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.ServerSample.App", "Samples/CK.Observable.ServerSample.App/CK.Observable.ServerSample.App.csproj", "{9EAEBFBE-0E86-486D-A774-3482AC88E6F0}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.SignalRWatcher", "CK.Observable.SignalRWatcher\CK.Observable.SignalRWatcher.csproj", "{477E5728-B812-4BEA-AA55-11AC634F1D73}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.SignalRWatcher", "CK.Observable.SignalRWatcher/CK.Observable.SignalRWatcher.csproj", "{477E5728-B812-4BEA-AA55-11AC634F1D73}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Samples", "Samples", "{9089E34F-4550-4B76-AFF7-FCE9CD83FC88}"
+	ProjectSection(SolutionItems) = preProject
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
