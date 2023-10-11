@@ -6,14 +6,14 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="CK.AspNet.Auth" Version="21.0.1--0003-develop" />
-    <PackageReference Include="CK.Cris.AspNet" Version="0.19.3--0005-develop" />
+    <PackageReference Include="CK.Cris.AspNet" Version="0.19.3--0006-develop" />
     <PackageReference Include="CK.Monitoring.Hosting" Version="19.0.1--0001-develop" />
     <PackageReference Include="CK.WeakAssemblyNameResolver" Version="0.5.3--0038-develop" />
     <PackageReference Include="Fody" Version="6.8.0" PrivateAssets="All" />
     <PackageReference Include="PropertyChanged.Fody" Version="4.1.0" PrivateAssets="All" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\CK.Observable.DefaultMQTTObservableServer\CK.Observable.DefaultMQTTObservableServer.csproj" />
+    <ProjectReference Include="..\..\CK.Observable.MQTTWatcher\CK.Observable.MQTTWatcher.csproj" />
     <ProjectReference Include="..\..\CK.Observable.SignalRWatcher\CK.Observable.SignalRWatcher.csproj" />
   </ItemGroup>
 </Project>

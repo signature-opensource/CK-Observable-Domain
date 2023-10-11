@@ -14,12 +14,11 @@
     "@local/ck-gen": "workspace:*",
     "@signature-code/ck-observable-domain": "workspace:*",
     "@signature-code/ck-observable-domain-mqtt": "workspace:*",
-    "@signature-code/ck-observable-domain-signalr": "workspace:*",
-    "axios": "^1.2.3"
+    "@signature-code/ck-observable-domain-signalr": "workspace:*"
   },
   "devDependencies": {
     "parcel": "2.9.3",
     "rimraf": "^3.0.2",
-    "typescript": "4.7.4"
+    "typescript": "5.2.2"
   }
 }

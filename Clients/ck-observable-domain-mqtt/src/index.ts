@@ -1,11 +1,11 @@
-import { AsyncMqttClient, IPublishPacket, connectAsync, AsyncClient } from "async-mqtt";
+import { IPublishPacket, connectAsync, MqttClient } from "mqtt";
 import { WatchEvent } from '@signature-code/ck-observable-domain';
 import { IObservableDomainLeagueDriver } from "@signature-code/ck-observable-domain/src/iod-league-driver";
 import { CrisEndpoint, MQTTObservableWatcherStartOrRestartCommand } from "@local/ck-gen";
 
 export class MqttObservableLeagueDomainService implements IObservableDomainLeagueDriver {
 
-    private client!: AsyncMqttClient;
+    private client!:MqttClient;
     private clientId: string;
     private messageHandlers: ((domainName: string, eventsJson: WatchEvent) => void)[] = [];
     private closeHandlers: ((e: Error | undefined) => void)[] = [(e) => console.log("mqtt disconnected: " + e)];
@@ -35,7 +35,7 @@ export class MqttObservableLeagueDomainService implements IObservableDomainLeagu
             this.client = await connectAsync(this.serverUrl, {
                 clean: true,
                 clientId: this.clientId
-            }, true);
+            });
             this.client.on("message", (a, b, c) => this.handleMessages(a, b, c));
             this.client.on("disconnect", (a) => this.handleClose(undefined));
             console.log("connected");

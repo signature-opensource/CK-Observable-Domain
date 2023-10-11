@@ -1,6 +1,6 @@
 import { WatchEvent, IObservableDomainLeagueDriver } from '@signature-code/ck-observable-domain';
 import { HttpTransportType, HubConnection, HubConnectionBuilder, IRetryPolicy, RetryContext } from '@microsoft/signalr';
-import { ICrisEndpoint, SignalRObservableWatcherStartOrRestartCommand, VESACode } from "@local/ck-gen";
+import { CrisEndpoint, SignalRObservableWatcherStartOrRestartCommand } from "@local/ck-gen";
 
 class NoRetryPolicy implements IRetryPolicy {
   nextRetryDelayInMilliseconds(retryContext: RetryContext): number | null {
@@ -13,7 +13,7 @@ export class SignalRObservableLeagueDomainService implements IObservableDomainLe
   private static noRetryPolicy = new NoRetryPolicy();
 
 
-  constructor(hubUrl: string, private readonly crisEndpoint: ICrisEndpoint) {
+  constructor(hubUrl: string, private readonly crisEndpoint: CrisEndpoint) {
     this.connection = new HubConnectionBuilder()
       .withUrl(hubUrl, HttpTransportType.None)
       .withAutomaticReconnect(SignalRObservableLeagueDomainService.noRetryPolicy)
@@ -34,14 +34,12 @@ export class SignalRObservableLeagueDomainService implements IObservableDomainLe
     const res: { [domainName: string]: WatchEvent; } = {};
     const promises = domainsNames.map(async element => {
       const poco = SignalRObservableWatcherStartOrRestartCommand.create(this.connection.connectionId!, element.domainName, element.transactionCount);
-      const resp = await this.crisEndpoint.send(poco);
-      if (resp.code == 'CommunicationError') throw resp.result;
-      if (resp.code != VESACode.Synchronous) throw new Error(JSON.stringify(resp.result));
-      if (resp.result == '') {
-        console.warn(`Domain ${element.domainName} doesn't exists.`);
-        res[element.domainName] = resp.result;
+      const result = await this.crisEndpoint.sendOrThrowAsync(poco);
+      if (result) {
+        res[element.domainName] = JSON.parse(result);
       } else {
-        res[element.domainName] = JSON.parse(resp.result!);
+        console.warn(`Domain ${element.domainName} doesn't exists.`);
+        res[element.domainName] = "";
       }
     });
     await Promise.all(promises);

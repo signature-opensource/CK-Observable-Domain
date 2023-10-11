@@ -8,4 +8,5 @@ export * from './CK/Core/UserMessageLevel';
 export * from './CK/Core/SimpleUserMessage';
 export * from './CK/Core/IPoco';
 export * from './CK/Observable/ServerSample/App/SliderCommand';
+export * from './CK/Observable/SignalRWatcher/SignalRObservableWatcherStartOrRestartCommand';
 export * from './CK/Observable/MQTTWatcher/MQTTObservableWatcherStartOrRestartCommand';
