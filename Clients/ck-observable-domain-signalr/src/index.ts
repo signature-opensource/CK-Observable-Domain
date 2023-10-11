@@ -20,7 +20,7 @@ export class SignalRObservableLeagueDomainService implements IObservableDomainLe
       .build();
   }
 
-  public async start(): Promise<boolean> {
+  public async startAsync(): Promise<boolean> {
     try {
       await this.connection.start();
       return true;
@@ -30,7 +30,7 @@ export class SignalRObservableLeagueDomainService implements IObservableDomainLe
     }
   }
 
-  public async startListening(domainsNames: { domainName: string, transactionCount: number }[]): Promise<{ [domainName: string]: WatchEvent }> {
+  public async startListeningAsync(domainsNames: { domainName: string, transactionCount: number }[]): Promise<{ [domainName: string]: WatchEvent }> {
     const res: { [domainName: string]: WatchEvent; } = {};
     const promises = domainsNames.map(async element => {
       const poco = SignalRObservableWatcherStartOrRestartCommand.create(this.connection.connectionId!, element.domainName, element.transactionCount);
@@ -56,7 +56,7 @@ export class SignalRObservableLeagueDomainService implements IObservableDomainLe
     this.connection.onclose(eventHandler);
   }
 
-  public async stop(): Promise<void> {
+  public async stopAsync(): Promise<void> {
     await this.connection.stop();
   }
 }

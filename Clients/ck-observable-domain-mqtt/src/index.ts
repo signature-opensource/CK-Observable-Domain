@@ -13,7 +13,7 @@ export class MqttObservableLeagueDomainService implements IObservableDomainLeagu
         this.clientId = "od-watcher-" + crypto.randomUUID();
     }
 
-    async startListening(domainsNames: { domainName: string; transactionCount: number; }[]): Promise<{ [domainName: string]: WatchEvent; }> {
+    public async startListeningAsync(domainsNames: { domainName: string; transactionCount: number; }[]): Promise<{ [domainName: string]: WatchEvent; }> {
         const res: { [domainName: string]: WatchEvent; } = {};
         const promises = domainsNames.map(async element => {
             const poco = MQTTObservableWatcherStartOrRestartCommand.create(this.clientId, element.domainName, element.transactionCount);
@@ -29,7 +29,7 @@ export class MqttObservableLeagueDomainService implements IObservableDomainLeagu
         return res;
     }
 
-    public async start(): Promise<boolean> {
+    public async startAsync(): Promise<boolean> {
         try {
             console.log(`connecting to mqtt with client id ${this.clientId}...`)
             this.client = await connectAsync(this.serverUrl, {
@@ -72,8 +72,8 @@ export class MqttObservableLeagueDomainService implements IObservableDomainLeagu
     public onClose(eventHandler: (error: Error | undefined) => void): void {
         this.closeHandlers.push(eventHandler);
     }
-    public async stop(): Promise<void> {
-        await this.client.end(true);
+    public stopAsync(): Promise<void> {
+        return this.client.endAsync(true);
     }
 }
 

@@ -8,7 +8,10 @@
   <BinPaths>
     <BinPath Path="../CK.Observable.ServerSample.App/bin/[Debug|Release]/net6.0">
       <ProjectPath>../CK.Observable.ServerSample</ProjectPath>
-      <TypeScript TargetProjectPath="../../Clients/">
+      <TypeScript TargetProjectPath="../../Clients/"
+                  AutoInstallYarn="true"
+                  AutoInstallVSCodeSupport="true"
+                  EnsureTestSupport="true" >
         <Types>
           <Type>CK.Observable.MQTTWatcher.IMQTTObservableWatcherStartOrRestartCommand</Type>
           <Type>CK.Observable.SignalRWatcher.ISignalRObservableWatcherStartOrRestartCommand</Type>

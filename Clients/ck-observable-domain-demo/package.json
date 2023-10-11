@@ -4,8 +4,8 @@
   "source": "src/index.html",
   "browserslist": "> 0.5%, last 2 versions, not dead",
   "scripts": {
-    "test": "",
-    "build-old": "cd ../ck-observable-domain && yarn tsc && echo 'ck-observable-domain built.' && cd ../ck-observable-domain-mqtt && yarn && yarn tsc && echo 'ck-observable-domain-mqtt built.'&& cd ../ck-observable-domain-signalr && yarn && yarn tsc && echo 'ck-observable-domain-signalr built.' && cd ../ck-observable-domain-demo && yarn && tsc --noEmit && parcel build --no-autoinstall && echo 'ck-observable-domain-demo built.'",
+    "build-old": "cd ../ck-observable-domain && yarn build && cd ../ck-observable-domain-mqtt && yarn build && cd ../ck-observable-domain-signalr && yarn build && cd ../ck-observable-domain-demo && yarn && tsc --noEmit && parcel build --no-autoinstall",
+    "parcel": "parcel build --no-autoinstall",
     "build": "echo 'ck-observable-domain-demo built disabled.'",
     "start": "parcel",
     "clean": "rimraf dist"
@@ -17,7 +17,8 @@
     "@signature-code/ck-observable-domain-signalr": "workspace:*"
   },
   "devDependencies": {
-    "parcel": "2.9.3",
+    "axios": "^1.5.1",
+    "parcel": "2.10.0",
     "rimraf": "^3.0.2",
     "typescript": "5.2.2"
   }

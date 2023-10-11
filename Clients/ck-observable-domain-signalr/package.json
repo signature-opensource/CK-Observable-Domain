@@ -4,20 +4,16 @@
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
   "scripts": {
-    "test": "",
     "build": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json",
     "clean": "rimraf dist"
   },
   "dependencies": {
     "@local/ck-gen": "workspace:*",
-    "@microsoft/signalr": "^6.0.10",
+    "@microsoft/signalr": "6.0.23",
     "@signature-code/ck-observable-domain": "workspace:*"
   },
   "devDependencies": {
-    "@types/mocha": "^5.2.5",
-    "@types/node": "^18.11.2",
-    "mocha": "^8.0.1",
     "rimraf": "^3.0.2",
-    "typescript": "5.2.2"
+    "typescript": "^5.2.2"
   }
 }

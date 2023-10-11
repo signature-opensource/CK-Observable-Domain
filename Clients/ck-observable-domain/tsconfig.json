@@ -11,15 +11,9 @@
         "declaration": true,
         "esModuleInterop": true,
         "resolveJsonModule": true,
-        "removeComments": true,
         "rootDir": "src"
     },
     "include": [
         "src/**/*"
-    ],
-    "exclude": [
-        ".vscode",
-        "node_modules",
-        "spec"
     ]
-}
+ }
