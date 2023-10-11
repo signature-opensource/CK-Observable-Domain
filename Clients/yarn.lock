@@ -2621,6 +2621,7 @@ __metadata:
     "@signature-code/ck-observable-domain": "workspace:*"
     "@types/mocha": ^5.2.5
     "@types/node": ^18.11.2
+    "@types/ws": ^8.5.7
     async-mqtt: ^2.6.3
     axios: ^1.2.1
     mocha: ^8.0.1
@@ -2654,7 +2655,7 @@ __metadata:
     "@babel/preset-env": ^7.20.2
     "@babel/preset-typescript": ^7.18.6
     "@babel/register": ^7.0.0
-    "@signature/json-graph-serializer": "file:/Dev/CK/LocalFeed/CI/signature-json-graph-serializer-0.0.5--0083-develop.tgz"
+    "@signature/json-graph-serializer": 0.0.5--0085-develop
     "@types/chai": ^4.1.4
     "@types/mocha": ^5.2.5
     "@types/node": ^10.9.4
@@ -2669,10 +2670,10 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@signature/json-graph-serializer@file:/Dev/CK/LocalFeed/CI/signature-json-graph-serializer-0.0.5--0083-develop.tgz::locator=%40signature-code%2Fck-observable-domain%40workspace%3Ack-observable-domain":
-  version: 0.0.5--0083-develop
-  resolution: "@signature/json-graph-serializer@file:/Dev/CK/LocalFeed/CI/signature-json-graph-serializer-0.0.5--0083-develop.tgz::locator=%40signature-code%2Fck-observable-domain%40workspace%3Ack-observable-domain"
-  checksum: a63a7fb1ffd91fb00adc6dbbcb67e8c243ff9d9fc59c89397f5b4de8327a9499bc6fca749e51e11863fc369c12cc2e8136a3b299edc465bd20be30969eea3363
+"@signature/json-graph-serializer@npm:0.0.5--0085-develop":
+  version: 0.0.5--0085-develop
+  resolution: "@signature/json-graph-serializer@npm:0.0.5--0085-develop"
+  checksum: eb302b6112ff619d7de261659d1579bdfdcf8ee4c10094a4908439f0995d1c65f40b038eed3a0050ff6fb86e2eb638b0bc7c51d20b8e439181e3a2c14192ffc5
   languageName: node
   linkType: hard
 
@@ -2959,6 +2960,15 @@ __metadata:
   version: 2.0.1
   resolution: "@types/stack-utils@npm:2.0.1"
   checksum: 205fdbe3326b7046d7eaf5e494d8084f2659086a266f3f9cf00bccc549c8e36e407f88168ad4383c8b07099957ad669f75f2532ed4bc70be2b037330f7bae019
+  languageName: node
+  linkType: hard
+
+"@types/ws@npm:^8.5.7":
+  version: 8.5.7
+  resolution: "@types/ws@npm:8.5.7"
+  dependencies:
+    "@types/node": "*"
+  checksum: 4502085c0f7ae6b36d5419c0fc6ce4b9002ee5e997a8708d6ed10b393e97091e1b986e8038ec604945c194f14aac150e74d6596629a2775628d122f552009c35
   languageName: node
   linkType: hard
 

@@ -1,7 +1,7 @@
 import { AsyncMqttClient, IPublishPacket, connectAsync, AsyncClient } from "async-mqtt";
 import { WatchEvent } from '@signature-code/ck-observable-domain';
 import { IObservableDomainLeagueDriver } from "@signature-code/ck-observable-domain/src/iod-league-driver";
-import { ICrisEndpoint, MQTTObservableWatcherStartOrRestartCommand, VESACode } from "@local/ck-gen";
+import { CrisEndpoint, MQTTObservableWatcherStartOrRestartCommand } from "@local/ck-gen";
 
 export class MqttObservableLeagueDomainService implements IObservableDomainLeagueDriver {
 
@@ -9,7 +9,7 @@ export class MqttObservableLeagueDomainService implements IObservableDomainLeagu
     private clientId: string;
     private messageHandlers: ((domainName: string, eventsJson: WatchEvent) => void)[] = [];
     private closeHandlers: ((e: Error | undefined) => void)[] = [(e) => console.log("mqtt disconnected: " + e)];
-    constructor(private readonly serverUrl: string, private readonly crisEndpoint: ICrisEndpoint, private readonly mqttTopic: string) {
+    constructor(private readonly serverUrl: string, private readonly crisEndpoint: CrisEndpoint, private readonly mqttTopic: string) {
         this.clientId = "od-watcher-" + crypto.randomUUID();
     }
 
@@ -17,14 +17,12 @@ export class MqttObservableLeagueDomainService implements IObservableDomainLeagu
         const res: { [domainName: string]: WatchEvent; } = {};
         const promises = domainsNames.map(async element => {
             const poco = MQTTObservableWatcherStartOrRestartCommand.create(this.clientId, element.domainName, element.transactionCount);
-            const resp = await this.crisEndpoint.send(poco);
-            if (resp.code == 'CommunicationError') throw resp.result;
-            if (resp.code != VESACode.Synchronous) throw new Error(JSON.stringify(resp.result));
-            if (resp.result == '') {
-                console.warn(`Domain ${element.domainName} doesn't exists.`);
-                res[element.domainName] = resp.result;
+            const result = await this.crisEndpoint.sendOrThrowAsync(poco);
+            if (result) {
+                res[element.domainName] = JSON.parse(result);
             } else {
-                res[element.domainName] = JSON.parse(resp.result!);
+                console.warn(`Domain ${element.domainName} doesn't exists.`);
+                res[element.domainName] = "";
             }
         });
         await Promise.all(promises);

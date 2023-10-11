@@ -16,13 +16,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.gitignore = .gitignore
 		.gitlab-ci.yml = .gitlab-ci.yml
 		js\.npmrc = js\.npmrc
+		appveyor.yml = appveyor.yml
 		BinarySerializationMigration.md = BinarySerializationMigration.md
 		Directory.Build.props = Directory.Build.props
 		.config\dotnet-tools.json = .config\dotnet-tools.json
 		NuGet.config = NuGet.config
 		README.md = README.md
 		RepositoryInfo.xml = RepositoryInfo.xml
-		appveyor.yml = appveyor.yml
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.Domain.Tests", "Tests/CK.Observable.Domain.Tests/CK.Observable.Domain.Tests.csproj", "{2DAC46EE-34A4-432C-A57A-189870912BB7}"

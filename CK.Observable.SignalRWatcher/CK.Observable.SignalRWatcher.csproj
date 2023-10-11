@@ -7,7 +7,7 @@
   <ItemGroup>
     <PackageReference Include="CK.AspNet.Auth" Version="21.0.1--0003-develop" />
     <PackageReference Include="CK.Auth.Abstractions" Version="5.0.1--0001-develop" />
-    <PackageReference Include="CK.Cris.Typescript" Version="0.19.3--0004-develop" />
+    <PackageReference Include="CK.Cris.Typescript" Version="0.19.3--0005-develop" />
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Update="Microsoft.VisualStudio.Threading.Analyzers" Version="17.7.30" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
   </ItemGroup>
