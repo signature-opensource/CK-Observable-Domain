@@ -1,12 +1,12 @@
-import { CommandModel, ICrisEndpoint } from "../Model";
+import { CommandModel } from "../Model";
 import { AmbientValues } from "./AmbientValues";
 import { SymbolType } from "../../Core/IPoco";
 
 export class AmbientValuesCollectCommand {
-readonly commandModel: CommandModel<AmbientValues|undefined> =  {
+get commandModel() { return AmbientValuesCollectCommand._commandModel; }
+private static readonly _commandModel: CommandModel<AmbientValues|undefined> =  {
 commandName: "CK.Cris.AmbientValues.IAmbientValuesCollectCommand",
-isFireAndForget: false,
-applyAmbientValues: (values: { [index: string]: any }, force?: boolean ) =>  {
+applyAmbientValues( command: any, a: any, o: any ) {
 // This command has no property that appear in the Ambient Values.
 
 }

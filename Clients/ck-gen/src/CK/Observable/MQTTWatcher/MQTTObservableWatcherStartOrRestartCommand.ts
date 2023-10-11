@@ -1,11 +1,11 @@
-import { CommandModel, ICrisEndpoint } from "../../Cris/Model";
+import { CommandModel } from "../../Cris/Model";
 import { SymbolType } from "../../Core/IPoco";
 
 export class MQTTObservableWatcherStartOrRestartCommand {
-readonly commandModel: CommandModel<string|undefined> =  {
+get commandModel() { return MQTTObservableWatcherStartOrRestartCommand._commandModel; }
+private static readonly _commandModel: CommandModel<string|undefined> =  {
 commandName: "CK.Observable.MQTTWatcher.IMQTTObservableWatcherStartOrRestartCommand",
-isFireAndForget: false,
-applyAmbientValues: (values: { [index: string]: any }, force?: boolean ) =>  {
+applyAmbientValues( command: any, a: any, o: any ) {
 // This command has no property that appear in the Ambient Values.
 
 }

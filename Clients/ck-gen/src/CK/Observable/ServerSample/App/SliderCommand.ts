@@ -1,11 +1,11 @@
-import { CommandModel, ICrisEndpoint } from "../../../Cris/Model";
+import { CommandModel } from "../../../Cris/Model";
 import { SymbolType } from "../../../Core/IPoco";
 
 export class SliderCommand {
-readonly commandModel: CommandModel<void> =  {
+get commandModel() { return SliderCommand._commandModel; }
+private static readonly _commandModel: CommandModel<void> =  {
 commandName: "CK.Observable.ServerSample.App.ISliderCommand",
-isFireAndForget: false,
-applyAmbientValues: (values: { [index: string]: any }, force?: boolean ) =>  {
+applyAmbientValues( command: any, a: any, o: any ) {
 // This command has no property that appear in the Ambient Values.
 
 }

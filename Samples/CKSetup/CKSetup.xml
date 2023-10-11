@@ -11,9 +11,8 @@
       <TypeScript TargetProjectPath="../../Clients/">
         <Types>
           <Type>CK.Observable.MQTTWatcher.IMQTTObservableWatcherStartOrRestartCommand</Type>
-          <Type>CK.Observable.MQTTWatcher.IMQTTObservableWatcherStartOrRestartCommand</Type>
           <Type>CK.Observable.ServerSample.App.ISliderCommand</Type>
-          <Type>CK.Observable.SignalRWatcher.ISignalRObservableWatcherStartOrRestartCommand</Type>
+          <Type Type="CK.Observable.SignalRWatcher.ISignalRObservableWatcherStartOrRestartCommand" />
         </Types>
       </TypeScript>
     </BinPath>
