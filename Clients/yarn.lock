@@ -1761,7 +1761,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@signature-code/ck-observable-domain@workspace:ck-observable-domain"
   dependencies:
-    "@signature/json-graph-serializer": 0.0.5--0085-develop
+    "@signature/json-graph-serializer": 0.0.4
     "@types/jest": ^29.5.5
     jest: ^29.7.0
     rxjs: 7.5.6
@@ -1770,10 +1770,10 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@signature/json-graph-serializer@npm:0.0.5--0085-develop":
-  version: 0.0.5--0085-develop
-  resolution: "@signature/json-graph-serializer@npm:0.0.5--0085-develop"
-  checksum: eb302b6112ff619d7de261659d1579bdfdcf8ee4c10094a4908439f0995d1c65f40b038eed3a0050ff6fb86e2eb638b0bc7c51d20b8e439181e3a2c14192ffc5
+"@signature/json-graph-serializer@npm:0.0.4":
+  version: 0.0.4
+  resolution: "@signature/json-graph-serializer@npm:0.0.4"
+  checksum: d446fb753ebc02d49fb71e03062c1849ff1a32be6756cd30412be957affc12618a278689be20b5db1e0ea0bec3cfc5034f5abcfc530c8f89f1abb7bb9f0d1349
   languageName: node
   linkType: hard
 
@@ -2772,7 +2772,6 @@ __metadata:
     "@signature-code/ck-observable-domain": "workspace:*"
     "@signature-code/ck-observable-domain-mqtt": "workspace:*"
     "@signature-code/ck-observable-domain-signalr": "workspace:*"
-    axios: ^1.5.1
     parcel: 2.10.0
     rimraf: ^3.0.2
     typescript: 5.2.2

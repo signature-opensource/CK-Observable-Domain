@@ -1,8 +1,5 @@
 {
-  "packageManager": "yarn@3.2.2",
   "private": true,
-  "source": "src/index.html",
-  "browserslist": "> 0.5%, last 2 versions, not dead",
   "scripts": {
     "build-old": "cd ../ck-observable-domain && yarn build && cd ../ck-observable-domain-mqtt && yarn build && cd ../ck-observable-domain-signalr && yarn build && cd ../ck-observable-domain-demo && yarn && tsc --noEmit && parcel build --no-autoinstall",
     "parcel": "parcel build --no-autoinstall",
@@ -11,13 +8,13 @@
     "clean": "rimraf dist"
   },
   "dependencies": {
+    "axios": "^1.5.1",
     "@local/ck-gen": "workspace:*",
     "@signature-code/ck-observable-domain": "workspace:*",
     "@signature-code/ck-observable-domain-mqtt": "workspace:*",
     "@signature-code/ck-observable-domain-signalr": "workspace:*"
   },
   "devDependencies": {
-    "axios": "^1.5.1",
     "parcel": "2.10.0",
     "rimraf": "^3.0.2",
     "typescript": "5.2.2"

@@ -10,7 +10,6 @@
       <ProjectPath>../CK.Observable.ServerSample</ProjectPath>
       <TypeScript TargetProjectPath="../../Clients/"
                   AutoInstallYarn="true"
-                  AutoInstallVSCodeSupport="true"
                   EnsureTestSupport="true" >
         <Types>
           <Type>CK.Observable.MQTTWatcher.IMQTTObservableWatcherStartOrRestartCommand</Type>

@@ -15,11 +15,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://gitlab.com/signature-code/CK-Observable-Domain.git"
+    "url": "git+https://gitlab.com/signature-opensource/CK-Observable-Domain.git"
   },
   "author": "Signature Code",
   "license": "UNLICENSED",
-  "homepage": "https://gitlab.com/signature-code/CK-Observable-Domain",
+  "homepage": "https://gitlab.com/signature-opensource/CK-Observable-Domain",
   "devDependencies": {
     "@types/jest": "^29.5.5",
     "jest": "^29.7.0",
@@ -27,7 +27,7 @@
     "typescript": "^5.2.2"
   },
   "dependencies": {
-    "@signature/json-graph-serializer": "0.0.5--0085-develop",
+    "@signature/json-graph-serializer": "0.0.4",
     "rxjs": "7.5.6"
   }
 }
