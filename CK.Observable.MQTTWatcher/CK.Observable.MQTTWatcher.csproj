@@ -5,9 +5,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.Cris.Typescript" Version="0.19.3--0007-develop" />
-    <PackageReference Include="CK.MQTT.Server" Version="0.19.1--0003-develop" />
-    <PackageReference Include="CK.MQTT.LocalMQTTDemiServer" Version="0.19.1--0003-develop" />
+    <PackageReference Include="CK.Cris.Typescript" Version="0.19.3--0009-develop" />
+    <PackageReference Include="CK.MQTT.Server" Version="0.19.1--0004-develop" />
+    <PackageReference Include="CK.MQTT.LocalMQTTDemiServer" Version="0.19.1--0004-develop" />
     <PackageReference Update="Microsoft.VisualStudio.Threading.Analyzers" Version="17.7.30" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
   </ItemGroup>
   <ItemGroup>

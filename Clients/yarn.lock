@@ -1819,6 +1819,7 @@ __metadata:
   resolution: "clients@workspace:."
   dependencies:
     "@local/ck-gen": "workspace:*"
+    "@signature-code/ck-observable-domain": "workspace:*"
     "@types/jest": ^29.5.5
     "@yarnpkg/sdks": ^3.0.0-rc.53
     jest: ^29.7.0

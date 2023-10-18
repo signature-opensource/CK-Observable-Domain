@@ -265,5 +265,8 @@ CodeCakeBuilder/[Rr]eleases/
 !.yarn/sdks
 !.yarn/versions
 
+# Because we can have subordinated .yarn folder we must exclude any .yarn/install-state.gz.
+**/.yarn/install-state.gz
 
+# This is solution specific.
 /Clients/*/dist/*

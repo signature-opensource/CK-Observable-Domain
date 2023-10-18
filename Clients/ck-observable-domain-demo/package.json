@@ -1,8 +1,8 @@
 {
   "private": true,
   "scripts": {
-    "build": "tsc && vite build src",
-    "start": "vite serve src",
+    "build": "tsc && vite build",
+    "start": "vite serve",
     "clean": "rimraf dist"
   },
   "dependencies": {
