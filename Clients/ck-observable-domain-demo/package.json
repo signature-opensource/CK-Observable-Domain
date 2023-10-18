@@ -1,7 +1,6 @@
 {
   "private": true,
   "scripts": {
-    "build-old": "cd ../ck-observable-domain && yarn build && cd ../ck-observable-domain-mqtt && yarn build && cd ../ck-observable-domain-signalr && yarn build && cd ../ck-observable-domain-demo && yarn && tsc --noEmit && parcel build --no-autoinstall",
     "build": "tsc && vite build src",
     "start": "vite serve src",
     "clean": "rimraf dist"

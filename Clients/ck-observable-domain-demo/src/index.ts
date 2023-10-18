@@ -33,7 +33,7 @@ const crisEndpoint = new HttpCrisEndpoint(crisAxios, "http://localhost:5000/.cri
 })();
 
 export async function sliderUpdate(sliderValue: unknown): Promise<void> {
-    await crisEndpoint.sendAsync<void>(SliderCommand.create(Number(sliderValue)));
+    await crisEndpoint.sendOrThrowAsync<void>(SliderCommand.create(Number(sliderValue)));
 }
 
 window["sliderUpdate"] = sliderUpdate;

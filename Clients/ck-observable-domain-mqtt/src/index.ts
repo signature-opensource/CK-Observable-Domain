@@ -1,4 +1,4 @@
-import { IPublishPacket, connectAsync, MqttClient } from "mqtt";
+import { IPublishPacket, connectAsync, MqttClient } from "mqtt/dist/mqtt.min";
 import { WatchEvent } from '@signature-code/ck-observable-domain';
 import { IObservableDomainLeagueDriver } from "@signature-code/ck-observable-domain/src/iod-league-driver";
 import { CrisEndpoint, MQTTObservableWatcherStartOrRestartCommand } from "@local/ck-gen";
