@@ -50,19 +50,21 @@ namespace CK.Observable.League.Tests
 
             await league.Coordinator.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) => d.Root.CreateDomain( domainName, rootTypes, options ) );
             var loader = league.Find( domainName );
-            Debug.Assert( loader != null, nameof( loader ) + " != null" );
+            Throw.DebugAssert( loader != null );
 
             // Create 10 backups
+            store.GetBackupNames( resourceName ).Should().HaveCount( 0, "There must not be any backup." );
             for( int i = 0; i < 10; i++ )
             {
                 await using( var shell = await loader.LoadAsync<Model.School>( TestHelper.Monitor ) )
                 {
-                    Debug.Assert( shell != null, nameof( shell ) + " != null" );
+                    Throw.DebugAssert( shell != null );
                     await shell.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) =>
                     {
                         d.Root.Persons.Add( new Model.Person() { FirstName = "X", LastName = "Y", Age = 22 } );
                     } );
                 }
+                store.GetBackupNames( resourceName ).Should().HaveCount( i+1, $"We must have {i} backups." );
             }
             store.GetBackupNames( resourceName ).Should().HaveCount( 10, "The cleanup should not be done because of the 500 milliseconds guaranty." );
 
@@ -74,7 +76,7 @@ namespace CK.Observable.League.Tests
             {
                 await using( var shell = await loader.LoadAsync<Model.School>( TestHelper.Monitor ) )
                 {
-                    Debug.Assert( shell != null );
+                    Throw.DebugAssert( shell != null );
                     await shell.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) =>
                     {
                         d.Root.Persons.Add( new Model.Person() { FirstName = "X", LastName = "Y", Age = 22 } );
