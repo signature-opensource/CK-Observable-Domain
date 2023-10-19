@@ -53,7 +53,7 @@ namespace CK.Observable.League.Tests
             Throw.DebugAssert( loader != null );
 
             // Create 10 backups
-            store.GetBackupNames( resourceName ).Should().HaveCount( 0, "There must not be any backup." );
+            store.GetBackupNames( resourceName ).Should().HaveCount( 0, "There must not be any backup!" );
             for( int i = 0; i < 10; i++ )
             {
                 await using( var shell = await loader.LoadAsync<Model.School>( TestHelper.Monitor ) )
