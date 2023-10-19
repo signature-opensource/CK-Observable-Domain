@@ -1,10 +1,5 @@
 <RepositoryInfo>
   <SimpleGitVersion StartingVersion="2.0.0-alpha">
-    <IgnoreModifiedFiles>
-      <Add>js/.npmrc</Add>
-      <Add>js/package.json</Add>
-      <Add>js/package-lock.json</Add>
-    </IgnoreModifiedFiles>
     <Branches>
       <Branch Name="develop" CIVersionMode="LastReleaseBased" VersionName="develop" />
     </Branches>
