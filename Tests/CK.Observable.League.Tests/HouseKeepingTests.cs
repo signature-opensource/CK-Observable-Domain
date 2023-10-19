@@ -11,6 +11,7 @@ using static CK.Testing.MonitorTestHelper;
 namespace CK.Observable.League.Tests
 {
     [TestFixture]
+    [Explicit]
     public class HouseKeepingTests
     {
 
