@@ -21,7 +21,7 @@ namespace CK.Observable.League.Tests
         {
             string domainName = "domain";
             string resourceName = $"d-{domainName.ToLowerInvariant()}";
-            var store = BasicLeagueTests.CreateStore( nameof( housekeeping_based_on_time_only_Async ) );
+            var store = BasicLeagueTests.CreateStore( $"{nameof( housekeeping_based_on_time_only_Async )}({housekeepingRate})" );
 
             var league = await ObservableLeague.LoadAsync( TestHelper.Monitor, store );
             Debug.Assert( league != null, nameof( league ) + " != null" );
