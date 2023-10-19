@@ -19,12 +19,6 @@ namespace CodeCake
         /// <returns>This info.</returns>
         public static StandardGlobalInfo AddNPM( this StandardGlobalInfo globalInfo, NPMSolution solution )
         {
-            SVersion minmimalNpmVersionRequired = SVersion.Create( 6, 7, 0 );
-            string npmVersion = globalInfo.Cake.NpmGetNpmVersion();
-            if( SVersion.Parse( npmVersion ) < minmimalNpmVersionRequired )
-            {
-                globalInfo.Cake.TerminateWithError( "Outdated npm. Version older than v6.7.0 are known to fail on publish." );
-            }
             globalInfo.RegisterSolution( solution );
             return globalInfo;
         }
