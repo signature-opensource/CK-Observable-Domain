@@ -253,7 +253,7 @@ namespace CK.Observable.Device.Tests
             Debug.Assert( device != null );
             Debug.Assert( device.IsRunning != null );
 
-            System.Threading.Thread.Sleep( 20 );
+            System.Threading.Thread.Sleep( 100 );
             await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 var directState = device.GetSafeState();
@@ -263,7 +263,7 @@ namespace CK.Observable.Device.Tests
                 device.SendSimpleCommand();
             } );
 
-            System.Threading.Thread.Sleep( 20 );
+            System.Threading.Thread.Sleep( 100 );
             await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 var directState = device.GetSafeState();
