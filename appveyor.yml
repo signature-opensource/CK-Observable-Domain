@@ -1,6 +1,6 @@
 build_cloud: DESKTOP-5BQ4M95
 install:
-  - ps: Install-Product node 20
+  - ps: Install-Product node 20 x64
 environment:
   CODECAKEBUILDER_SECRET_KEY:
     secure: 8VAzdXgUQaJyFoU3WLf2iPFV/8zPDm9qV4TfOpx8/rg=
