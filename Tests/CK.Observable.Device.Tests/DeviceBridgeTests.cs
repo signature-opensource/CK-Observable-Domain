@@ -251,14 +251,14 @@ namespace CK.Observable.Device.Tests
                 Debug.Assert( device.IsRunning == true, "ConfigurationStatus is RunnableStarted." );
                 device.SendSimpleCommand();
             } );
-            Debug.Assert( device != null );
-            Debug.Assert( device.IsRunning != null );
+            Throw.DebugAssert( device != null );
+            Throw.DebugAssert( device.IsRunning != null );
 
             System.Threading.Thread.Sleep( 100 );
             await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 var directState = device.GetSafeState();
-                Debug.Assert( directState != null );
+                Throw.DebugAssert( directState != null );
                 // The OnConfigurationChanged sent a SampleCommad.
                 directState.SyncCommandCount.Should().Be( 2 );
                 device.SendSimpleCommand();
@@ -268,7 +268,7 @@ namespace CK.Observable.Device.Tests
             await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 var directState = device.GetSafeState();
-                Debug.Assert( directState != null );
+                Throw.DebugAssert( directState != null );
                 directState.SyncCommandCount.Should().Be( 3 );
             } );
 
