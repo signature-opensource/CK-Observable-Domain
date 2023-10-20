@@ -256,7 +256,7 @@ namespace CK.Observable.Device.Tests
             Throw.DebugAssert( device != null );
             Throw.DebugAssert( device.IsRunning != null );
 
-            System.Threading.Thread.Sleep( 100 );
+            await Task.Delay( 100 );
             await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 var directState = device.GetSafeState();
@@ -266,7 +266,7 @@ namespace CK.Observable.Device.Tests
                 device.SendSimpleCommand();
             }, waitForDomainPostActionsCompletion: true );
 
-            System.Threading.Thread.Sleep( 250 );
+            await Task.Delay( 250 );
             await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 var directState = device.GetSafeState();
