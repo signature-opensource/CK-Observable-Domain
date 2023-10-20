@@ -88,9 +88,9 @@ namespace CK.Observable.Device.Tests
 
             obs.Read( TestHelper.Monitor, () =>
             {
-                device1.DeviceConfiguration.Status.Should().Be( DeviceConfigurationStatus.AlwaysRunning );
+                device1.DeviceConfiguration!.Status.Should().Be( DeviceConfigurationStatus.AlwaysRunning );
                 device1.IsRunning.Should().BeTrue();
-                oHost.Devices["n°1"].IsRunning.Should().BeTrue();
+                oHost!.Devices["n°1"].IsRunning.Should().BeTrue();
             } );
 
             config.ControllerKey = obs.DomainName;
@@ -98,7 +98,7 @@ namespace CK.Observable.Device.Tests
             obs.Read( TestHelper.Monitor, () =>
             {
                 device1.DeviceControlStatus.Should().Be( DeviceControlStatus.HasOwnership );
-                oHost.Devices["n°1"].Status.Should().Be( DeviceControlStatus.HasOwnership );
+                oHost!.Devices["n°1"].Status.Should().Be( DeviceControlStatus.HasOwnership );
             } );
 
             config.ControllerKey = obs.DomainName + "No more!";
@@ -107,7 +107,7 @@ namespace CK.Observable.Device.Tests
             obs.Read( TestHelper.Monitor, () =>
             {
                 device1.DeviceControlStatus.Should().Be( DeviceControlStatus.OutOfControlByConfiguration );
-                oHost.Devices["n°1"].Status.Should().Be( DeviceControlStatus.OutOfControlByConfiguration );
+                oHost!.Devices["n°1"].Status.Should().Be( DeviceControlStatus.OutOfControlByConfiguration );
             } );
 
             await host.Find( "n°1" )!.DestroyAsync( TestHelper.Monitor );
@@ -120,6 +120,7 @@ namespace CK.Observable.Device.Tests
                 device1.IsRunning.Should().BeNull();
                 device1.DeviceControlStatus.Should().Be( DeviceControlStatus.MissingDevice );
 
+                Throw.DebugAssert( oHost != null );
                 oHost.Devices["n°1"].DeviceName.Should().Be( "n°1" );
                 oHost.Devices["n°1"].Object.Should().Be( device1 );
                 oHost.Devices["n°1"].IsRunning.Should().BeFalse();

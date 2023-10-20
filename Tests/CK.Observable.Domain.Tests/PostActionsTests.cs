@@ -209,7 +209,7 @@ namespace CK.Observable.Domain.Tests
 
             void OnElapsed( object sender, ObservableTimerEventArgs e )
             {
-                var tag = (ValueTuple<HandlerTarget,int>)e.Timer.Tag;
+                var tag = (ValueTuple<HandlerTarget,int>)e.Timer.Tag!;
                 if( tag.Item2-- == 0 )
                 {
                     e.Timer.Destroy();
