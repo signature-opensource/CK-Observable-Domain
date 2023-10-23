@@ -1,4 +1,4 @@
-import { WatchEvent, IObservableDomainLeagueDriver } from '@signature-code/ck-observable-domain';
+import { WatchEvent, IObservableDomainLeagueDriver } from '@signature/ck-observable-domain';
 import { HttpTransportType, HubConnection, HubConnectionBuilder, IRetryPolicy, RetryContext } from '@microsoft/signalr';
 import { CrisEndpoint, SignalRObservableWatcherStartOrRestartCommand } from "@local/ck-gen";
 

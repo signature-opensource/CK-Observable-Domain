@@ -1,5 +1,5 @@
 {
-  "name": "@signature-code/ck-observable-domain-signalr",
+  "name": "@signature/ck-observable-domain-signalr",
   "type": "module",
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
@@ -10,7 +10,7 @@
   "dependencies": {
     "@local/ck-gen": "workspace:*",
     "@microsoft/signalr": "6.0.23",
-    "@signature-code/ck-observable-domain": "workspace:*"
+    "@signature/ck-observable-domain": "workspace:*"
   },
   "devDependencies": {
     "rimraf": "^3.0.2",

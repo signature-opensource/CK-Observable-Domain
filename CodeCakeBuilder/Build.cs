@@ -30,7 +30,7 @@ namespace CodeCake
                 .Does( () =>
                 {
                     globalInfo.GetDotnetSolution().Clean();
-                    //globalInfo.GetYarnSolution().Clean();
+                    globalInfo.GetYarnSolution().Clean();
                 } );
 
 
