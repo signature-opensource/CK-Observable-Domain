@@ -1,13 +1,8 @@
 {
-  "packageManager": "yarn@3.2.2",
   "private": true,
-  "source": "src/index.html",
-  "browserslist": "> 0.5%, last 2 versions, not dead",
   "scripts": {
-    "test": "",
-    "build-old": "cd ../ck-observable-domain && yarn tsc && echo 'ck-observable-domain built.' && cd ../ck-observable-domain-mqtt && yarn && yarn tsc && echo 'ck-observable-domain-mqtt built.'&& cd ../ck-observable-domain-signalr && yarn && yarn tsc && echo 'ck-observable-domain-signalr built.' && cd ../ck-observable-domain-demo && yarn && tsc --noEmit && parcel build --no-autoinstall && echo 'ck-observable-domain-demo built.'",
-    "build": "echo 'ck-observable-domain-demo built disabled.'",
-    "start": "parcel",
+    "build": "tsc && vite build",
+    "start": "vite serve",
     "clean": "rimraf dist"
   },
   "dependencies": {
@@ -15,11 +10,11 @@
     "@signature-code/ck-observable-domain": "workspace:*",
     "@signature-code/ck-observable-domain-mqtt": "workspace:*",
     "@signature-code/ck-observable-domain-signalr": "workspace:*",
-    "axios": "^1.2.3"
+    "axios": "^1.5.1"
   },
   "devDependencies": {
-    "parcel": "2.9.3",
     "rimraf": "^3.0.2",
-    "typescript": "4.7.4"
+    "typescript": "5.2.2",
+    "vite": "4.4.11"
   }
 }

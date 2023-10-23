@@ -35,13 +35,13 @@ namespace CK.Observable
         protected ObservableChannel( BinarySerialization.Sliced _ ) : base( _ ) { }
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
   
-        ObservableChannel( IBinaryDeserializer d, ITypeReadInfo info )
-                : base( BinarySerialization.Sliced.Instance )
+        public ObservableChannel( IBinaryDeserializer d, ITypeReadInfo info )
+                : base( Sliced.Instance )
         {
             _itemSent = new ObservableEventHandler<ListInsertEvent>( d );
         }
 
-        public static void Write( BinarySerialization.IBinarySerializer s, in ObservableChannel<T> o )
+        public static void Write( IBinarySerializer s, in ObservableChannel<T> o )
         {
             o._itemSent.Write( s );
         }

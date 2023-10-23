@@ -1,7 +1,6 @@
 import { ObservableDomain, WatchEvent } from './observable-domain';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { IObservableDomainLeagueDriver } from './iod-league-driver';
-import { dirxml } from 'console';
 
 export enum ObservableDomainClientConnectionState {
     Disconnected,
@@ -40,10 +39,10 @@ export class ObservableDomainClient {
     }
 
     public start() {
-        this.loopReconnect();
+        this.loopReconnectAsync();
     }
 
-    public async listenToDomain(domainName: string): Promise<Observable<ReadonlyArray<any>>> {
+    public async listenToDomainAsync(domainName: string): Promise<Observable<ReadonlyArray<any>>> {
         if (this.domains[domainName] === undefined) {
             const od = new ObservableDomain();
             const subject = new BehaviorSubject<ReadonlyArray<any>>(od.roots);
@@ -52,7 +51,7 @@ export class ObservableDomainClient {
                 obs: subject
             };
             if (this.connectionState.value != ObservableDomainClientConnectionState.Disconnected) {
-                const res = (await this.driver.startListening([{ domainName: domainName, transactionCount: 0 }]))[domainName];
+                const res = (await this.driver.startListeningAsync([{ domainName: domainName, transactionCount: 0 }]))[domainName];
                 od.applyWatchEvent(res);
             }
 
@@ -60,14 +59,14 @@ export class ObservableDomainClient {
         return this.domains[domainName].obs;
     }
 
-    private async loopReconnect(): Promise<void> {
+    private async loopReconnectAsync(): Promise<void> {
         while (!this.stopping) {
             try {
                 this.buffering = true;
                 this.bufferedEvents = [];
-                if (!await this.driver.start()) continue;
+                if (!await this.driver.startAsync()) continue;
                 this.connectionState.next(ObservableDomainClientConnectionState.CatchingUp);
-                const domainExports = await this.driver.startListening(Object.keys(this.domains).map((d => {
+                const domainExports = await this.driver.startListeningAsync(Object.keys(this.domains).map((d => {
                     return {
                         domainName: d,
                         transactionCount: this.domains[d]?.domain.transactionNumber ?? 0
@@ -106,15 +105,15 @@ export class ObservableDomainClient {
             }
             finally {
                 this.connectionState.next(ObservableDomainClientConnectionState.Disconnected);
-                this.driver.stop();
+                this.driver.stopAsync();
             }
 
         }
     }
 
-    public async stop(): Promise<void> {
+    public async stopAsync(): Promise<void> {
         this.stopping = true;
-        await this.driver.stop();
+        await this.driver.stopAsync();
         this.connectionState.complete();
     }
 
@@ -145,7 +144,7 @@ export class ObservableDomainClient {
         } catch (e) {
             console.error(e);
             curr.domain = new ObservableDomain(); // reset the domain
-            this.driver.stop(); // kill the whole connection, which will reload this domain from scratch.
+            this.driver.stopAsync(); // kill the whole connection, which will reload this domain from scratch.
             return;
         }
     }

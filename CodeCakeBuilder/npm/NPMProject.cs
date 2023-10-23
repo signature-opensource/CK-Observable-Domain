@@ -217,7 +217,7 @@ namespace CodeCake
             var key = DirectoryPath.AppendPart( "test" );
             if( !GlobalInfo.CheckCommitMemoryKey( key ) )
             {
-                RunScript( "test", false, true );
+                RunScript( "test", false, false );
                 GlobalInfo.WriteCommitMemoryKey( key );
             }
         }

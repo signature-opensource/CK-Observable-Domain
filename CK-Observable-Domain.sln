@@ -13,8 +13,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
 		.gitignore = .gitignore
-		.gitlab-ci.yml = .gitlab-ci.yml
-		js\.npmrc = js\.npmrc
+		appveyor.yml = appveyor.yml
 		BinarySerializationMigration.md = BinarySerializationMigration.md
 		Directory.Build.props = Directory.Build.props
 		.config\dotnet-tools.json = .config\dotnet-tools.json
@@ -38,8 +37,6 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.Crs", "CK.Observable.Crs\CK.Observable.Crs.csproj", "{42F3818B-8445-431D-8F9E-EE724AF7D2F0}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.MQTTWatcher", "CK.Observable.MQTTWatcher\CK.Observable.MQTTWatcher.csproj", "{03E900E7-8D10-4C3C-93E6-216A35F83446}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.DefaultMQTTObservableServer", "CK.Observable.DefaultMQTTObservableServer\CK.Observable.DefaultMQTTObservableServer.csproj", "{677D7882-38F0-4B76-8419-C995A33D0E69}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.ServerSample", "Samples\CK.Observable.ServerSample\CK.Observable.ServerSample.csproj", "{D9CD2C0F-79FB-4DB7-B5E1-2C98BF07565B}"
 EndProject
@@ -93,10 +90,6 @@ Global
 		{03E900E7-8D10-4C3C-93E6-216A35F83446}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{03E900E7-8D10-4C3C-93E6-216A35F83446}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{03E900E7-8D10-4C3C-93E6-216A35F83446}.Release|Any CPU.Build.0 = Release|Any CPU
-		{677D7882-38F0-4B76-8419-C995A33D0E69}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{677D7882-38F0-4B76-8419-C995A33D0E69}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{677D7882-38F0-4B76-8419-C995A33D0E69}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{677D7882-38F0-4B76-8419-C995A33D0E69}.Release|Any CPU.Build.0 = Release|Any CPU
 		{D9CD2C0F-79FB-4DB7-B5E1-2C98BF07565B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{D9CD2C0F-79FB-4DB7-B5E1-2C98BF07565B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D9CD2C0F-79FB-4DB7-B5E1-2C98BF07565B}.Release|Any CPU.ActiveCfg = Release|Any CPU

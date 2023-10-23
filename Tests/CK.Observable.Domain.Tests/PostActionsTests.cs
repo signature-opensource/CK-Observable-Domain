@@ -209,7 +209,7 @@ namespace CK.Observable.Domain.Tests
 
             void OnElapsed( object sender, ObservableTimerEventArgs e )
             {
-                var tag = (ValueTuple<HandlerTarget,int>)e.Timer.Tag;
+                var tag = (ValueTuple<HandlerTarget,int>)e.Timer.Tag!;
                 if( tag.Item2-- == 0 )
                 {
                     e.Timer.Destroy();
@@ -239,7 +239,7 @@ namespace CK.Observable.Domain.Tests
                 d.Root.SendNumber( HandlerTarget.Domain );
                 d.Root.SendNumber( HandlerTarget.Local );
                 d.Root.SendNumber( HandlerTarget.Domain );
-            }, parallelDomainPostActions: false );
+            }, parallelDomainPostActions: false, waitForDomainPostActionsCompletion: true );
 
             LocalNumbers.Should().BeEquivalentTo( new[] { (0, 1000), (1, 1001), (2, 1002) } );
             DomainNumbers.Should().BeEquivalentTo( new[] { (3, 0), (4, 1), (5, 2) } );
@@ -252,7 +252,7 @@ namespace CK.Observable.Domain.Tests
                 d.Root.SendNumber( HandlerTarget.Domain );
                 d.Root.SendNumber( HandlerTarget.Local );
                 d.Root.SendNumber( HandlerTarget.Domain );
-            }, parallelDomainPostActions: false );
+            }, parallelDomainPostActions: false, waitForDomainPostActionsCompletion: true );
 
             LocalNumbers.Should().BeEquivalentTo( new[] { (0, 1000), (1, 1001), (2, 1002), (6, 1003), (7, 1004), (8, 1005) } );
             DomainNumbers.Should().BeEquivalentTo( new[] { (3, 0), (4, 1), (5, 2), (9, 3), (10, 4), (11, 5) } );

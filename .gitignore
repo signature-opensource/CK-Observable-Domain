@@ -255,3 +255,18 @@ CodeCakeBuilder/[Rr]eleases/
 /Clients/.parcel-cache/
 /Samples/CKSetup/WorkingDir/
 /Samples/CK.Observable.ServerSample/Logs/
+
+# Yarn - Not using Zero-Install (.yarn/cache and .pnp.* are not commited).
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+# Because we can have subordinated .yarn folder we must exclude any .yarn/install-state.gz.
+**/.yarn/install-state.gz
+
+# This is solution specific.
+/Clients/*/dist/*

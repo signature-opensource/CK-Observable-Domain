@@ -202,7 +202,7 @@ namespace CK.Observable.Device
 
         /// <summary>
         /// Gets this device control status.
-        /// Uses <see cref="SendDeviceControlCommand(DeviceControlAction)"/> to change how
+        /// Uses <see cref="SendDeviceControlCommand(DeviceControlAction, DeviceConfiguration?)"/> to change how
         /// this device object controls the actual device.
         /// </summary>
         public DeviceControlStatus DeviceControlStatus => _deviceControlStatus;

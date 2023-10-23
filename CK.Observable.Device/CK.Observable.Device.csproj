@@ -4,13 +4,10 @@
     <Nullable>enable</Nullable>
     <AllowPropertyChangedFody>false</AllowPropertyChangedFody>
   </PropertyGroup>
-
   <!-- Imports because of ProjectReference. -->
   <Import Project="..\CK.Observable.Domain\MSBuild\CK.Observable.Domain.targets" />
-
   <ItemGroup>
-    <PackageReference Include="CK.DeviceModel" Version="4.0.1" />
+    <PackageReference Include="CK.DeviceModel" Version="5.0.0" />
     <ProjectReference Include="..\CK.Observable.Domain\CK.Observable.Domain.csproj" />
-    <PackageReference Update="Microsoft.VisualStudio.Threading.Analyzers" Version="17.7.30" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
   </ItemGroup>
 </Project>

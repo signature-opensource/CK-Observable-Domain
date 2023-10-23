@@ -6,7 +6,9 @@ using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Net.NetworkInformation;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
 
@@ -85,6 +87,7 @@ namespace CK.Observable.Device.Tests
             } );
         }
 
+        [SerializationVersion( 0 )]
         sealed class Root : ObservableRootObject
         {
             public readonly OSampleDeviceHost OHost;
@@ -138,6 +141,108 @@ namespace CK.Observable.Device.Tests
             } );
 
         }
+
+        [TestCase( null, true )]
+        [TestCase( DeviceControlAction.SafeReleaseControl, true )]
+        [TestCase( DeviceControlAction.ReleaseControl, true )]
+        [TestCase( DeviceControlAction.ForceReleaseControl, true )]
+
+        [TestCase( DeviceControlAction.TakeControl, true )]
+        [TestCase( DeviceControlAction.SafeTakeControl, true )]
+
+        [TestCase( DeviceControlAction.TakeOwnership, true )]
+        [Explicit( "TBD" )]
+        public async Task config_from_Observable_Async( DeviceControlAction? initialConfiAction, bool clearDeviceHost )
+        {
+            var deviceHost = new SampleDeviceHost();
+            var services = new SimpleServiceContainer();
+            services.Add( deviceHost );
+
+            using var memory = Util.RecyclableStreamManager.GetStream();
+            var expectedControlStatus = ExpectedDeviceControlStatus( initialConfiAction );
+
+            using( TestHelper.Monitor.OpenInfo( $"First run..." ) )
+            {
+                var obs = new ObservableDomain<Root>( TestHelper.Monitor, "Test", false, services );
+                await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
+                {
+                    var oDevice = new OSampleDevice( "TheDevice" );
+                    obs.Root.OHost.Devices["TheDevice"].Object.Should().BeSameAs( oDevice );
+                    oDevice.IsBoundDevice.Should().BeFalse();
+                    oDevice.DeviceControlStatus.Should().Be( DeviceControlStatus.MissingDevice );
+                    var c = oDevice.LocalConfiguration.Value;
+                    c.CheckValid( TestHelper.Monitor ).Should().BeTrue( "An empty configuration is valid." );
+                    c.Status = DeviceConfigurationStatus.Runnable;
+                    c.PeriodMilliseconds = 3712;
+                    c.CheckValid( TestHelper.Monitor ).Should().BeTrue();
+                    oDevice.LocalConfiguration.SendDeviceConfigureCommand( initialConfiAction );
+                } );
+
+                TestHelper.Monitor.Info( "Wait for the Device to appear in the ObservableDomain." );
+                while( obs.Read( TestHelper.Monitor, () => obs.Root.OHost.Devices["TheDevice"].Status == DeviceControlStatus.MissingDevice ) )
+                    Thread.Sleep( 100 );
+
+                TestHelper.Monitor.Info( "Checking status." );
+                await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
+                {
+                    var oDevice = obs.Root.OHost.Devices["TheDevice"].Object;
+                    Debug.Assert( oDevice != null );
+                    oDevice.DeviceControlStatus.Should().Be( expectedControlStatus );
+                    oDevice.LocalConfiguration.IsDirty.Should().BeFalse();
+                } );
+                TestHelper.Monitor.Info( "Saving and disposing domain." );
+                obs.Save( TestHelper.Monitor, memory );
+                obs.Dispose( TestHelper.Monitor );
+                TestHelper.Monitor.CloseGroup( $"Saved in {memory.Position} bytes." );
+                memory.Position = 0;
+            }
+
+            if( clearDeviceHost )
+            {
+                TestHelper.Monitor.Info( "clearDeviceHost is true: destroying the device." );
+                await deviceHost.ClearAsync( TestHelper.Monitor, waitForDeviceDestroyed: true );
+            }
+            using( TestHelper.Monitor.OpenInfo( $"Second run..." ) )
+            {
+                var obs = new ObservableDomain<Root>( TestHelper.Monitor, "Test", null, RewindableStream.FromStream( memory ), services );
+                await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
+                {
+                    var oDevice = obs.Root.OHost.Devices["TheDevice"].Object;
+                    Debug.Assert( oDevice != null );
+                    oDevice.DeviceConfiguration.Should().BeNull();
+                    oDevice.LocalConfiguration.Should().NotBeNull();
+                    oDevice.DeviceControlStatus.Should().Be( expectedControlStatus );
+                    //if( clearDeviceHost )
+                    //{
+                    //    oDevice.DeviceConfiguration.Should().BeNull();
+                    //    oDevice.DeviceControlStatus.Should().Be( DeviceControlStatus.MissingDevice );
+                    //}
+                    //else
+                    {
+                        oDevice.DeviceConfiguration.Should().NotBeNull();
+                        oDevice.DeviceControlStatus.Should().Be( expectedControlStatus );
+                    }
+                    oDevice.IsBoundDevice.Should().BeTrue();
+                } );
+            }
+
+
+            static DeviceControlStatus ExpectedDeviceControlStatus( DeviceControlAction? initialConfiAction ) => initialConfiAction switch
+                {
+                    null or DeviceControlAction.SafeReleaseControl or DeviceControlAction.ReleaseControl or DeviceControlAction.ForceReleaseControl
+                        => DeviceControlStatus.HasSharedControl,
+
+                    DeviceControlAction.SafeTakeControl or DeviceControlAction.TakeControl
+                        => DeviceControlStatus.HasControl,
+
+                    DeviceControlAction.TakeOwnership
+                        => DeviceControlStatus.HasOwnership,
+
+                    _ => Throw.NotSupportedException<DeviceControlStatus>()
+                };
+
+        }
+
 
     }
 }

@@ -1,43 +1,41 @@
-import { AsyncMqttClient, IPublishPacket, connectAsync, AsyncClient } from "async-mqtt";
+import { IPublishPacket, connectAsync, MqttClient } from "mqtt/dist/mqtt.min";
 import { WatchEvent } from '@signature-code/ck-observable-domain';
 import { IObservableDomainLeagueDriver } from "@signature-code/ck-observable-domain/src/iod-league-driver";
-import { ICrisEndpoint, MQTTObservableWatcherStartOrRestartCommand, VESACode } from "@local/ck-gen";
+import { CrisEndpoint, MQTTObservableWatcherStartOrRestartCommand } from "@local/ck-gen";
 
 export class MqttObservableLeagueDomainService implements IObservableDomainLeagueDriver {
 
-    private client!: AsyncMqttClient;
+    private client!:MqttClient;
     private clientId: string;
     private messageHandlers: ((domainName: string, eventsJson: WatchEvent) => void)[] = [];
     private closeHandlers: ((e: Error | undefined) => void)[] = [(e) => console.log("mqtt disconnected: " + e)];
-    constructor(private readonly serverUrl: string, private readonly crisEndpoint: ICrisEndpoint, private readonly mqttTopic: string) {
+    constructor(private readonly serverUrl: string, private readonly crisEndpoint: CrisEndpoint, private readonly mqttTopic: string) {
         this.clientId = "od-watcher-" + crypto.randomUUID();
     }
 
-    async startListening(domainsNames: { domainName: string; transactionCount: number; }[]): Promise<{ [domainName: string]: WatchEvent; }> {
+    public async startListeningAsync(domainsNames: { domainName: string; transactionCount: number; }[]): Promise<{ [domainName: string]: WatchEvent; }> {
         const res: { [domainName: string]: WatchEvent; } = {};
         const promises = domainsNames.map(async element => {
             const poco = MQTTObservableWatcherStartOrRestartCommand.create(this.clientId, element.domainName, element.transactionCount);
-            const resp = await this.crisEndpoint.send(poco);
-            if (resp.code == 'CommunicationError') throw resp.result;
-            if (resp.code != VESACode.Synchronous) throw new Error(JSON.stringify(resp.result));
-            if (resp.result == '') {
-                console.warn(`Domain ${element.domainName} doesn't exists.`);
-                res[element.domainName] = resp.result;
+            const result = await this.crisEndpoint.sendOrThrowAsync(poco);
+            if (result) {
+                res[element.domainName] = JSON.parse(result);
             } else {
-                res[element.domainName] = JSON.parse(resp.result!);
+                console.warn(`Domain ${element.domainName} doesn't exists.`);
+                res[element.domainName] = "";
             }
         });
         await Promise.all(promises);
         return res;
     }
 
-    public async start(): Promise<boolean> {
+    public async startAsync(): Promise<boolean> {
         try {
             console.log(`connecting to mqtt with client id ${this.clientId}...`)
             this.client = await connectAsync(this.serverUrl, {
                 clean: true,
                 clientId: this.clientId
-            }, true);
+            });
             this.client.on("message", (a, b, c) => this.handleMessages(a, b, c));
             this.client.on("disconnect", (a) => this.handleClose(undefined));
             console.log("connected");
@@ -74,8 +72,8 @@ export class MqttObservableLeagueDomainService implements IObservableDomainLeagu
     public onClose(eventHandler: (error: Error | undefined) => void): void {
         this.closeHandlers.push(eventHandler);
     }
-    public async stop(): Promise<void> {
-        await this.client.end(true);
+    public stopAsync(): Promise<void> {
+        return this.client.endAsync(true);
     }
 }
 

@@ -1,6 +1,9 @@
 using Cake.Common.IO;
+using Cake.Core;
+using Cake.Core.Tooling;
 using Cake.Npm;
 using Cake.Npm.Pack;
+using Cake.Yarn;
 using CK.Core;
 using CodeCake.Abstractions;
 using Newtonsoft.Json.Linq;
@@ -78,11 +81,22 @@ namespace CodeCake
             {
                 using( TemporaryPrePack( ArtifactInstance.Version, packageJsonPreProcessor, false ) )
                 {
-                    GlobalInfo.Cake.NpmPack( new NpmPackSettings()
+                    if( NpmSolution.UseYarn )
                     {
-                        LogLevel = NpmLogLevel.Info,
-                        WorkingDirectory = OutputPath.ToString()
-                    } );
+                        GlobalInfo.Cake.Yarn().Pack( s =>
+                        {
+                            s.ArgumentCustomization = args => args.Append( "-o " + TGZName );
+                            s.WorkingDirectory = OutputPath.ToString();
+                        } );
+                    }
+                    else
+                    {
+                        GlobalInfo.Cake.NpmPack( new NpmPackSettings()
+                        {
+                            LogLevel = NpmLogLevel.Info,
+                            WorkingDirectory = OutputPath.ToString()
+                        } );
+                    }
                 }
 
                 if(_ckliLocalFeedMode)
@@ -91,11 +105,22 @@ namespace CodeCake
                     File.Move( tgz, tgz.Path + ".local" );
                     using( TemporaryPrePack( ArtifactInstance.Version, packageJsonPreProcessor, true ) )
                     {
-                        GlobalInfo.Cake.NpmPack( new NpmPackSettings()
+                        if( NpmSolution.UseYarn )
                         {
-                            LogLevel = NpmLogLevel.Info,
-                            WorkingDirectory = OutputPath.ToString()
-                        } );
+                            GlobalInfo.Cake.Yarn().Pack( s =>
+                            {
+                                s.ArgumentCustomization = args => args.Append( "-o " + tgz );
+                                s.WorkingDirectory = OutputPath.ToString();
+                            } );
+                        }
+                        else
+                        {
+                            GlobalInfo.Cake.NpmPack( new NpmPackSettings()
+                            {
+                                LogLevel = NpmLogLevel.Info,
+                                WorkingDirectory = OutputPath.ToString()
+                            } );
+                        }
                     }
                 }
             }

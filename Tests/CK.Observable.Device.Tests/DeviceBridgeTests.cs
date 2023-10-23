@@ -88,9 +88,9 @@ namespace CK.Observable.Device.Tests
 
             obs.Read( TestHelper.Monitor, () =>
             {
-                device1.DeviceConfiguration.Status.Should().Be( DeviceConfigurationStatus.AlwaysRunning );
+                device1.DeviceConfiguration!.Status.Should().Be( DeviceConfigurationStatus.AlwaysRunning );
                 device1.IsRunning.Should().BeTrue();
-                oHost.Devices["n°1"].IsRunning.Should().BeTrue();
+                oHost!.Devices["n°1"].IsRunning.Should().BeTrue();
             } );
 
             config.ControllerKey = obs.DomainName;
@@ -98,7 +98,7 @@ namespace CK.Observable.Device.Tests
             obs.Read( TestHelper.Monitor, () =>
             {
                 device1.DeviceControlStatus.Should().Be( DeviceControlStatus.HasOwnership );
-                oHost.Devices["n°1"].Status.Should().Be( DeviceControlStatus.HasOwnership );
+                oHost!.Devices["n°1"].Status.Should().Be( DeviceControlStatus.HasOwnership );
             } );
 
             config.ControllerKey = obs.DomainName + "No more!";
@@ -107,7 +107,7 @@ namespace CK.Observable.Device.Tests
             obs.Read( TestHelper.Monitor, () =>
             {
                 device1.DeviceControlStatus.Should().Be( DeviceControlStatus.OutOfControlByConfiguration );
-                oHost.Devices["n°1"].Status.Should().Be( DeviceControlStatus.OutOfControlByConfiguration );
+                oHost!.Devices["n°1"].Status.Should().Be( DeviceControlStatus.OutOfControlByConfiguration );
             } );
 
             await host.Find( "n°1" )!.DestroyAsync( TestHelper.Monitor );
@@ -120,6 +120,7 @@ namespace CK.Observable.Device.Tests
                 device1.IsRunning.Should().BeNull();
                 device1.DeviceControlStatus.Should().Be( DeviceControlStatus.MissingDevice );
 
+                Throw.DebugAssert( oHost != null );
                 oHost.Devices["n°1"].DeviceName.Should().Be( "n°1" );
                 oHost.Devices["n°1"].Object.Should().Be( device1 );
                 oHost.Devices["n°1"].IsRunning.Should().BeFalse();
@@ -186,6 +187,7 @@ namespace CK.Observable.Device.Tests
 
             while( isRunning )
             {
+                await Task.Delay( 100 );
                 obs.Read( TestHelper.Monitor, () =>
                 {
                     isRunning = device.IsRunning.Value;
@@ -201,6 +203,7 @@ namespace CK.Observable.Device.Tests
 
             while( !isRunning )
             {
+                await Task.Delay( 100 );
                 isRunning = obs.Read( TestHelper.Monitor, () => device.IsRunning.Value );
             }
             DeviceIsRunningChanged.Should().BeTrue();
@@ -213,7 +216,7 @@ namespace CK.Observable.Device.Tests
                 device.IsRunning.Should().BeNull();
                 device.DeviceControlStatus.Should().Be( DeviceControlStatus.MissingDevice );
                 device.DeviceConfiguration.Should().BeNull();
-            } );
+            }, waitForDomainPostActionsCompletion: true );
             DeviceIsRunningChanged.Should().BeTrue();
             DeviceIsRunningChanged = false;
 
@@ -249,27 +252,27 @@ namespace CK.Observable.Device.Tests
                 device = new OSampleDevice( "n°1" );
                 Debug.Assert( device.IsRunning == true, "ConfigurationStatus is RunnableStarted." );
                 device.SendSimpleCommand();
-            } );
-            Debug.Assert( device != null );
-            Debug.Assert( device.IsRunning != null );
+            }, waitForDomainPostActionsCompletion: true );
+            Throw.DebugAssert( device != null );
+            Throw.DebugAssert( device.IsRunning != null );
 
-            System.Threading.Thread.Sleep( 20 );
+            await Task.Delay( 100 );
             await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 var directState = device.GetSafeState();
-                Debug.Assert( directState != null );
+                Throw.DebugAssert( directState != null );
                 // The OnConfigurationChanged sent a SampleCommad.
                 directState.SyncCommandCount.Should().Be( 2 );
                 device.SendSimpleCommand();
-            } );
+            }, waitForDomainPostActionsCompletion: true );
 
-            System.Threading.Thread.Sleep( 20 );
+            await Task.Delay( 250 );
             await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 var directState = device.GetSafeState();
-                Debug.Assert( directState != null );
+                Throw.DebugAssert( directState != null );
                 directState.SyncCommandCount.Should().Be( 3 );
-            } );
+            }, waitForDomainPostActionsCompletion: true );
 
             TestHelper.Monitor.Info( "Disposing Domain..." );
             obs.Dispose( TestHelper.Monitor );
@@ -306,10 +309,10 @@ namespace CK.Observable.Device.Tests
                     device.DeviceControlStatus.Should().Be( DeviceControlStatus.HasSharedControl );
                     device.IsRunning.Should().BeTrue( "ConfigurationStatus is RunnableStarted." );
                     device.SendSimpleCommand( "NEXT" );
-                } );
+                }, waitForDomainPostActionsCompletion: true );
                 Debug.Assert( device != null );
 
-                System.Threading.Thread.Sleep( 90 );
+                await Task.Delay( 300 );
                 obs.Read( TestHelper.Monitor, () =>
                 {
                     device.Message.Should().StartWith( "NEXT", "The device Message has been updated by the bridge." );
@@ -337,7 +340,7 @@ namespace CK.Observable.Device.Tests
                 while( !obs.Read( TestHelper.Monitor, () => device.Message!.StartsWith( "NEXT again" ) ) )
                 {
                     ++loopRequiredCount;
-                    System.Threading.Thread.Sleep( 20 );
+                     await Task.Delay( 100 );
                 }
                 TestHelper.Monitor.Info( $"loopRequiredCount = {loopRequiredCount}." );
             }
