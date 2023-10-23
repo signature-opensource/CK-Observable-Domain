@@ -942,12 +942,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@signature-code/ck-observable-domain-mqtt@workspace:*, @signature-code/ck-observable-domain-mqtt@workspace:ck-observable-domain-mqtt":
+"@signature/ck-observable-domain-mqtt@workspace:*, @signature/ck-observable-domain-mqtt@workspace:ck-observable-domain-mqtt":
   version: 0.0.0-use.local
-  resolution: "@signature-code/ck-observable-domain-mqtt@workspace:ck-observable-domain-mqtt"
+  resolution: "@signature/ck-observable-domain-mqtt@workspace:ck-observable-domain-mqtt"
   dependencies:
     "@local/ck-gen": "workspace:*"
-    "@signature-code/ck-observable-domain": "workspace:*"
+    "@signature/ck-observable-domain": "workspace:*"
     "@types/node": ^20.8.4
     axios: 1.5.1
     mqtt: 5.1.2
@@ -956,21 +956,21 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@signature-code/ck-observable-domain-signalr@workspace:*, @signature-code/ck-observable-domain-signalr@workspace:ck-observable-domain-signalr":
+"@signature/ck-observable-domain-signalr@workspace:*, @signature/ck-observable-domain-signalr@workspace:ck-observable-domain-signalr":
   version: 0.0.0-use.local
-  resolution: "@signature-code/ck-observable-domain-signalr@workspace:ck-observable-domain-signalr"
+  resolution: "@signature/ck-observable-domain-signalr@workspace:ck-observable-domain-signalr"
   dependencies:
     "@local/ck-gen": "workspace:*"
     "@microsoft/signalr": 6.0.23
-    "@signature-code/ck-observable-domain": "workspace:*"
+    "@signature/ck-observable-domain": "workspace:*"
     rimraf: ^3.0.2
     typescript: ^5.2.2
   languageName: unknown
   linkType: soft
 
-"@signature-code/ck-observable-domain@workspace:*, @signature-code/ck-observable-domain@workspace:ck-observable-domain":
+"@signature/ck-observable-domain@workspace:*, @signature/ck-observable-domain@workspace:ck-observable-domain":
   version: 0.0.0-use.local
-  resolution: "@signature-code/ck-observable-domain@workspace:ck-observable-domain"
+  resolution: "@signature/ck-observable-domain@workspace:ck-observable-domain"
   dependencies:
     "@signature/json-graph-serializer": 0.0.4
     rxjs: 7.5.6
@@ -1794,9 +1794,9 @@ __metadata:
   resolution: "ck-observable-domain-demo-c02451@workspace:ck-observable-domain-demo"
   dependencies:
     "@local/ck-gen": "workspace:*"
-    "@signature-code/ck-observable-domain": "workspace:*"
-    "@signature-code/ck-observable-domain-mqtt": "workspace:*"
-    "@signature-code/ck-observable-domain-signalr": "workspace:*"
+    "@signature/ck-observable-domain": "workspace:*"
+    "@signature/ck-observable-domain-mqtt": "workspace:*"
+    "@signature/ck-observable-domain-signalr": "workspace:*"
     axios: ^1.5.1
     rimraf: ^3.0.2
     typescript: 5.2.2
@@ -1816,7 +1816,7 @@ __metadata:
   resolution: "clients@workspace:."
   dependencies:
     "@local/ck-gen": "workspace:*"
-    "@signature-code/ck-observable-domain": "workspace:*"
+    "@signature/ck-observable-domain": "workspace:*"
     "@types/jest": ^29.5.5
     "@yarnpkg/sdks": ^3.0.0-rc.53
     jest: ^29.7.0

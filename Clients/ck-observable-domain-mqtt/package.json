@@ -1,5 +1,5 @@
 {
-  "name": "@signature-code/ck-observable-domain-mqtt",
+  "name": "@signature/ck-observable-domain-mqtt",
   "version": "0.0.0-0",
   "type": "module",
   "main": "./dist/cjs/index.js",
@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@local/ck-gen": "workspace:*",
-    "@signature-code/ck-observable-domain": "workspace:*",
+    "@signature/ck-observable-domain": "workspace:*",
     "axios": "1.5.1",
     "mqtt": "5.1.2"
   },

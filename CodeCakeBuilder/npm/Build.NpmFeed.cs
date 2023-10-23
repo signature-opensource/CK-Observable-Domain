@@ -1,5 +1,6 @@
 using Cake.Common.Diagnostics;
 using Cake.Common.IO;
+using Cake.Core;
 using Cake.Npm;
 using Cake.Npm.Publish;
 using CK.Core;
@@ -150,6 +151,7 @@ namespace CodeCake
                     Cake.NpmPublish(
                         new NpmPublishSettings()
                         {
+                            ArgumentCustomization = args => args.Append( "--access public" ),
                             Source = absTgzPath,
                             WorkingDirectory = project.DirectoryPath.Path,
                             Tag = tags.First()

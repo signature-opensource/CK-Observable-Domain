@@ -10,7 +10,7 @@
   ],
   "dependencies": {
     "@local/ck-gen": "workspace:*",
-    "@signature-code/ck-observable-domain": "workspace:*"
+    "@signature/ck-observable-domain": "workspace:*"
   },
   "devDependencies": {
     "@types/jest": "^29.5.5",

@@ -7,9 +7,9 @@
   },
   "dependencies": {
     "@local/ck-gen": "workspace:*",
-    "@signature-code/ck-observable-domain": "workspace:*",
-    "@signature-code/ck-observable-domain-mqtt": "workspace:*",
-    "@signature-code/ck-observable-domain-signalr": "workspace:*",
+    "@signature/ck-observable-domain": "workspace:*",
+    "@signature/ck-observable-domain-mqtt": "workspace:*",
+    "@signature/ck-observable-domain-signalr": "workspace:*",
     "axios": "^1.5.1"
   },
   "devDependencies": {

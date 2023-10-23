@@ -1,8 +1,8 @@
 import axios from "axios";
-import {MqttObservableLeagueDomainService} from "@signature-code/ck-observable-domain-mqtt"
-import {ObservableDomainClient} from "@signature-code/ck-observable-domain";
+import {MqttObservableLeagueDomainService} from "@signature/ck-observable-domain-mqtt"
+import {ObservableDomainClient} from "@signature/ck-observable-domain";
 import {HttpCrisEndpoint, SliderCommand} from "@local/ck-gen";
-import {SignalRObservableLeagueDomainService} from "@signature-code/ck-observable-domain-signalr";
+import {SignalRObservableLeagueDomainService} from "@signature/ck-observable-domain-signalr";
 
 const crisAxios = axios.create();
 const crisEndpoint = new HttpCrisEndpoint(crisAxios, "http://localhost:5000/.cris");

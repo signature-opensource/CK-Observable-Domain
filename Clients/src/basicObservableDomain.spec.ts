@@ -1,4 +1,4 @@
-import { ObservableDomain } from '@signature-code/ck-observable-domain';
+import { ObservableDomain } from '@signature/ck-observable-domain';
 
 describe('ObservableDomain eyeball tests - ', () => {
     it('Test 1', () => {
