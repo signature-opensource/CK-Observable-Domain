@@ -161,7 +161,11 @@ namespace CodeCake
                         Cake.Information( $"Setting tag '{tag}' on '{project.Name}' to '{project.ArtifactInstance.Version.ToNormalizedString()}' version." );
                         // The FromPath is actually required - if executed outside the relevant directory,
                         // it will miss the .npmrc with registry configs.
-                        Cake.NpmDistTagAdd( project.Name, project.ArtifactInstance.Version.ToNormalizedString(), tag, s => s.FromPath( project.DirectoryPath.Path ) );
+                        Cake.NpmDistTagAdd( project.Name, project.ArtifactInstance.Version.ToNormalizedString(), tag, s =>
+                        {
+                            s.ArgumentCustomization = args => args.Append( "--access public" );
+                            s.FromPath( project.DirectoryPath.Path );
+                        } );
                     }
                 }
                 return System.Threading.Tasks.Task.CompletedTask;

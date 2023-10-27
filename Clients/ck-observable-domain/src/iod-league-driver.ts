@@ -1,6 +1,4 @@
-import { Observable } from 'rxjs';
-import { DomainExportEvent, WatchEvent } from './observable-domain';
-
+import { WatchEvent } from './observable-domain';
 
 export interface IObservableDomainLeagueDriver {
     startAsync(): Promise<boolean>;

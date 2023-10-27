@@ -135,7 +135,7 @@ export class ObservableDomainClient {
                     console.warn(`Receveid a past even. Current transaction number:${curr.domain.transactionNumber}, event transaction number:${event.N}.`);
                     return;
                 }
-                console.log("Received OD event for domain " + domainName + ", transction count:" + event.N);
+                console.log("Received OD event for domain " + domainName + ", transaction count:" + event.N);
             } else if (ObservableDomain.isDomainExportEvent(event)) {
                 console.log("Received domain export for domain " + domainName + ", transaction count:" + event.N);
             }

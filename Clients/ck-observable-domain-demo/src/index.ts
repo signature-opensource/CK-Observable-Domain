@@ -22,12 +22,13 @@ const crisEndpoint = new HttpCrisEndpoint(crisAxios, "http://localhost:5000/.cri
 
     mqttOdObs.forEach((s) => {
         if (s.length < 1) return;
-        console.log(s[0].Slider);
+        console.log("Mqtt:" + s[0].Slider);
         left.value = s[0].Slider
     });
 
     signalROdObs.forEach((s) => {
         if (s.length < 1) return;
+        console.log("SignaR:" + s[0].Slider);
         right.value = s[0].Slider;
     });
 })();

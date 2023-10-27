@@ -9,12 +9,12 @@
     "clean": "rimraf dist"
   },
   "dependencies": {
-    "@local/ck-gen": "workspace:*",
     "@signature/ck-observable-domain": "workspace:*",
     "axios": "1.5.1",
     "mqtt": "5.1.2"
   },
   "devDependencies": {
+    "@local/ck-gen": "workspace:*",
     "@types/node": "^20.8.4",
     "rimraf": "^3.0.2",
     "typescript": "^5.2.2"

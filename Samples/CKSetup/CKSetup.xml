@@ -4,6 +4,9 @@
   <LogLevel>Debug</LogLevel>
   <UseSignatureFiles>True</UseSignatureFiles>
   <ForceSetup>Full</ForceSetup>
+  
+  <Aspect Type="CK.Setup.TypeScriptAspectConfiguration, CK.StObj.TypeScript">
+  </Aspect>
 
   <BinPaths>
     <BinPath Path="../CK.Observable.ServerSample.App/bin/[Debug|Release]/net6.0">
@@ -12,16 +15,12 @@
                   AutoInstallYarn="true"
                   EnsureTestSupport="true" >
         <Types>
-          <Type>CK.Observable.MQTTWatcher.IMQTTObservableWatcherStartOrRestartCommand</Type>
-          <Type>CK.Observable.SignalRWatcher.ISignalRObservableWatcherStartOrRestartCommand</Type>
-          <Type>CK.Observable.ServerSample.App.ISliderCommand</Type>
+          <Type Type="CK.Observable.ServerSample.App.ISliderCommand" />
         </Types>
       </TypeScript>
     </BinPath>
   </BinPaths>
 
-  <Aspect Type="CK.Setup.TypeScriptAspectConfiguration, CK.StObj.TypeScript">
-  </Aspect>
   <WorkingDirectory>WorkingDir</WorkingDirectory>
 
 </Setup>

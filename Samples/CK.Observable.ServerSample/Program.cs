@@ -1,9 +1,15 @@
 using CK.Core;
+using CK.MQTT.Server;
+using CK.Observable.League;
 using CK.Observable.ServerSample.App;
+using CK.Observable.SignalRWatcher;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -14,70 +20,65 @@ using System.Threading.Tasks;
 
 namespace CK.Observable.ServerSample
 {
-    public class Program
+    public static class Program
     {
         public static async Task Main( string[] args )
         {
-            // Set default ActivityMonitor filter
-            ActivityMonitor.DefaultFilter = LogFilter.Debug;
-            IHost host;
+            var host = WebApplication.CreateBuilder( args );
+            var monitor = host.Host.GetBuilderMonitor();
+            host.Services.RemoveAll<ILoggerProvider>();
+            host.Host.UseCKMonitoring();
+            host.WebHost.UseScopedHttpContext();
 
-            // Note that GrandOutput initialization is NOT EFFECTIVE until host.RunAsync() below.
-            // This monitor will NOT be logged.
-            ActivityMonitor m = new ActivityMonitor();
-            m.Output.RegisterClient( new ActivityMonitorConsoleClient() );
-            m.Info( "Preparing host." );
-            try
+            host.Services.Configure<MQTTDemiServerConfig>( host.Configuration.GetSection( "MQTTDemiServerConfig" ) );
+
+            host.Services.Configure<DefaultObservableLeagueOptions>( c =>
             {
-                // Run as Console from either Debugger is attached or --console is passed
-                var isService = !(Debugger.IsAttached || args.Contains( "--console" ));
-                var builder = CreateHostBuilder( isService, args.Where( arg => arg != "--console" ).ToArray() );
-
-                Assembly callingAssembly = Assembly.GetExecutingAssembly();
-
-                m.Info( $"Running as console. Using default content root: {Environment.CurrentDirectory}" );
-
-                builder.ConfigureAppConfiguration( ( context, configuration ) =>
+                c.StorePath = host.Configuration["CK-ObservableLeague:StorePath"];
+                var domainOpts = new EnsureDomainOptions
                 {
-                    configuration
-                        .AddJsonFile( "appsettings.json",
-                            optional: false, reloadOnChange: true )
-                        .AddJsonFile( $"appsettings.{context.HostingEnvironment.EnvironmentName}.json",
-                            optional: true, reloadOnChange: true )
-                        .AddJsonFile( "appsettings.local.json",
-                            optional: true, reloadOnChange: true )
-                        .AddJsonFile(
-                            Environment.ExpandEnvironmentVariables( "%AppProgramData%/appsettings.local.json" ),
-                            optional: true, reloadOnChange: true );
-                } );
+                    DomainName = "Test-Domain",
+                    CreateSnapshotSaveDelay = TimeSpan.FromSeconds( 10 ),
+                    CreateLifeCycleOption = DomainLifeCycleOption.Always,
+                    RootTypes = { typeof( Root ).AssemblyQualifiedName! }
+                };
+                c.EnsureDomains.Add( domainOpts );
+            } );
+            host.Services.AddAuthentication().AddWebFrontAuth();
+            host.Services.AddCors
+            (
+                o =>
+                {
+                    o.AddDefaultPolicy
+                    (
+                        builder =>
+                        {
+                            builder
+                               .AllowAnyMethod()
+                               .AllowAnyHeader()
+                               .AllowCredentials()
+                               .SetIsOriginAllowed( _ => true );
+                        }
+                    );
+                }
+            );
+            host.Services.AddSignalR();
 
-                m.Info( "Building host..." );
-                host = builder.Build();
-            }
-            catch( Exception ex )
+            host.Services.AddStObjMap( monitor, Assembly.GetEntryAssembly()! );
+
+            var app = host.Build();
+            app.UseCors();
+            app.UseCris();
+            app.UseRouting();
+            app.UseEndpoints( endpoints =>
             {
-                m.Fatal( ex );
-                throw;
-            }
+                endpoints.MapHub<ObservableAppHub>( "/hub/league" );
+            } );
 
-            m.MonitorEnd( "Host preparation complete. Starting up..." );
-            await host.RunAsync().ConfigureAwait( false );
-        }
-        static IHostBuilder CreateHostBuilder( bool isService, string[] args )
-        {
-            var host = Microsoft.Extensions.Hosting.Host.CreateDefaultBuilder( args );
-            host = host
-                .UseCKMonitoring()
-                .ConfigureWebHostDefaults( webBuilder =>
-                {
-                    webBuilder
-                        .UseKestrel()
-                    .UseIISIntegration()
-                        .UseScopedHttpContext()
-                        .UseStartup<Startup>();
-                } );
+            app.UseDefaultFiles();
+            app.UseStaticFiles();
 
-            return host;
+            await app.RunAsync().ConfigureAwait( false );
         }
     }
 }

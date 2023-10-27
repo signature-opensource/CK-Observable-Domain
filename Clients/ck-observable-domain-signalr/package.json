@@ -8,11 +8,11 @@
     "clean": "rimraf dist"
   },
   "dependencies": {
-    "@local/ck-gen": "workspace:*",
     "@microsoft/signalr": "6.0.23",
     "@signature/ck-observable-domain": "workspace:*"
   },
   "devDependencies": {
+    "@local/ck-gen": "workspace:*",
     "rimraf": "^3.0.2",
     "typescript": "^5.2.2"
   }
