@@ -163,7 +163,7 @@ namespace CodeCake
                         // it will miss the .npmrc with registry configs.
                         Cake.NpmDistTagAdd( project.Name, project.ArtifactInstance.Version.ToNormalizedString(), tag, s =>
                         {
-                            s.ArgumentCustomization = args => args.Append( "--access public" ),
+                            s.ArgumentCustomization = args => args.Append( "--access public" );
                             s.FromPath( project.DirectoryPath.Path );
                         } );
                     }
