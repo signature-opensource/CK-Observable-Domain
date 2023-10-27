@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -7,7 +7,7 @@
   <ItemGroup>
     <PackageReference Include="CK.AspNet.Auth" Version="21.1.0" />
     <PackageReference Include="CK.Auth.Abstractions" Version="5.0.0" />
-    <PackageReference Include="CK.Cris.Typescript" Version="0.20.0" />
+    <PackageReference Include="CK.Cris.Typescript" Version="0.20.3" />
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Update="Microsoft.VisualStudio.Threading.Analyzers" Version="17.7.30" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
   </ItemGroup>
