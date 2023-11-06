@@ -500,7 +500,7 @@ namespace CK.Observable.League
                                     var domain = d.Root.Domains[DomainName];
                                     domain.IsLoaded = false;
                                     domain.NextActiveTime = _nextActiveTime;
-                                } );
+                                }, parallelDomainPostActions: false ).ConfigureAwait( false );
                             }
                             disposedDomain = true;
                             Client.JsonEventCollector.Detach();
