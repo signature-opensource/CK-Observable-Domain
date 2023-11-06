@@ -1,3 +1,4 @@
+using CK.AppIdentity;
 using CK.Core;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -20,15 +21,18 @@ namespace CK.Observable.League
         readonly DirectoryStreamStore _store;
         readonly IDefaultObservableDomainInitializer? _initializer;
         readonly IServiceProvider _serviceProvider;
+        readonly ApplicationIdentityService? _identityService;
         readonly IActivityMonitor _monitor;
         readonly DefaultObservableLeagueOptions _options;
 
         public DefaultObservableLeague( IServiceProvider serviceProvider,
                                         IOptions<DefaultObservableLeagueOptions> options,
+                                        ApplicationIdentityService? identityService = null,
                                         IDefaultObservableDomainInitializer? initializer = null )
         {
             _initializer = initializer;
             _serviceProvider = serviceProvider;
+            _identityService = identityService;
             _options = options.Value;
             _monitor = new ActivityMonitor( nameof( DefaultObservableLeague ) );
 
@@ -69,26 +73,72 @@ namespace CK.Observable.League
         {
             using( _monitor.OpenInfo( "Loading DefaultObservableLeague." ) )
             {
-                _default = await ObservableLeague.LoadAsync( _monitor, _store, _initializer, _serviceProvider );
-                if( _default != null )
+                if( _identityService == null || _identityService.InitializationTask.IsCompleted )
                 {
-                    await _default.ApplyEnsureDomainOptionsAsync( _monitor, _options.EnsureDomains );
+                    await CreateDefaultAsync( _monitor ).ConfigureAwait( false );
+                }
+                else if( _identityService != null )
+                {
+                    _monitor.Warn( "Waiting for AppIdentityService initialization to initialize the League." );
                 }
             }
         }
 
+        async Task CreateDefaultAsync( IActivityMonitor monitor )
+        {
+            var d = await ObservableLeague.LoadAsync( monitor, _store, _initializer, _serviceProvider ).ConfigureAwait( false );
+            if( d != null )
+            {
+                await d.ApplyEnsureDomainOptionsAsync( monitor, _options.EnsureDomains ).ConfigureAwait( false );
+            }
+            _default = d;
+        }
+
         async Task IHostedService.StopAsync( CancellationToken cancel )
         {
-            await _default!.CloseAsync( _monitor );
+            if( _default != null )
+            {
+                await _default.CloseAsync( _monitor ).ConfigureAwait( false );
+            }
             _monitor.MonitorEnd();
         }
 
-        [MemberNotNull(nameof(_default))]
+        [MemberNotNull( nameof( _default ) )]
         void CheckLoadedDomain()
         {
-            if(_default is null)
-                throw new InvalidOperationException("The DefaultObservableLeague is not loaded. " +
-                                                    "Did the DefaultObservableLeague service start?");
+            if( _default == null )
+            {
+                if( _identityService == null )
+                {
+                    throw new InvalidOperationException( "The DefaultObservableLeague is not loaded. " +
+                                                         "Did the DefaultObservableLeague service start?" );
+                }
+                // Highly questionnable part (to say the least)...
+                // ...until the league is managed by a AppIdentity feature!.
+                _identityService.Heartbeat.Async += Heartbeat_Async;
+                try
+                {
+                    int totalMS = 0;
+                    while( _default == null )
+                    {
+                        Thread.Sleep( 100 );
+                        totalMS += 100;
+                        if( totalMS > 3000 )
+                        {
+                            throw new InvalidOperationException( "The ApplicationIdentityService is not started." );
+                        }
+                    }
+                }
+                finally
+                {
+                    _identityService.Heartbeat.Async -= Heartbeat_Async;
+                }
+            }
+        }
+
+        Task Heartbeat_Async( IActivityMonitor monitor, int e, CancellationToken cancel )
+        {
+            return CreateDefaultAsync( monitor );
         }
     }
 }

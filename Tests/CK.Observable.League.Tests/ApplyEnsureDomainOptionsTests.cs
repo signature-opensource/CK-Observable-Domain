@@ -18,8 +18,9 @@ namespace CK.Observable.League.Tests
     [TestFixture]
     public class ApplyEnsureDomainOptionsTests
     {
-        [Test]
-        public async Task DefaultObservableLeague_can_be_configured_by_its_options_Async()
+        [TestCase( "WithAppIdentityService" )]
+        [TestCase( "WithoutAppIdentityService" )]
+        public async Task DefaultObservableLeague_can_be_configured_by_its_options_Async( string mode )
         {
             var options = new DefaultObservableLeagueOptions
             {
@@ -50,8 +51,29 @@ namespace CK.Observable.League.Tests
                 }
             };
             var emptyServices = new SimpleServiceContainer();
-            var def = new DefaultObservableLeague( emptyServices, Options.Create( options ) );
+            // This tests that with ApplicationIdentityService available in the DI, the
+            // start of the ApplicationIdentityService can occur after the call to DefaultObservableLeague.StartAsync.
+            AppIdentity.ApplicationIdentityService? identityService = null;
+            if( mode == "WithAppIdentityService" )
+            {
+                // For CK.AppIdentity > v0.1.2
+                // var identityServiceConfig = AppIdentity.ApplicationIdentityServiceConfiguration.CreateEmpty();
+                // identityService = new AppIdentity.ApplicationIdentityService( identityServiceConfig, emptyServices );
+
+                // Currently:
+                var identityServiceConfig = AppIdentity.ApplicationIdentityServiceConfiguration.Create( TestHelper.Monitor,
+                                                                                                        c => c["FullName"] = "Test/$Test" );
+                Debug.Assert( identityServiceConfig != null );
+                emptyServices.Add( typeof( IEnumerable<AppIdentity.IApplicationIdentityFeatureDriver> ), new AppIdentity.IApplicationIdentityFeatureDriver[] { } );
+                identityService = new AppIdentity.ApplicationIdentityService( identityServiceConfig, emptyServices );
+            }
+            var def = new DefaultObservableLeague( emptyServices, Options.Create( options ), identityService );
             await ((IHostedService)def).StartAsync( default );
+            // Starts ApplicationIdentityService after.
+            if( identityService != null )
+            {
+                await ((IHostedService)identityService).StartAsync( default );
+            }
 
             def.Coordinator.Read( TestHelper.Monitor, ( monitor, d ) =>
             {
