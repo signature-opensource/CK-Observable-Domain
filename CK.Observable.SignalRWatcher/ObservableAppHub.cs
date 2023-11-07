@@ -1,11 +1,7 @@
 using System;
-using System.Collections.Concurrent;
-using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using CK.Core;
 using CK.Observable.League;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.AspNetCore.SignalR;
 
 namespace CK.Observable.SignalRWatcher
