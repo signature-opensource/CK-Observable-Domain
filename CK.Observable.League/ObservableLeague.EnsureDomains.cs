@@ -65,7 +65,7 @@ namespace CK.Observable.League
                                                                                    o.CreateHousekeepingRate );
                                     d.Root.CreateDomain( o.DomainName!, o.RootTypes, initialOptions );
                                 }
-                            } );
+                            }, parallelDomainPostActions: false, waitForDomainPostActionsCompletion: true );
                         }
                     }
                 }
