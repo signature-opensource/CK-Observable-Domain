@@ -343,7 +343,7 @@ namespace CK.Observable
             Debug.Assert( _lock.IsWriteLockHeld );
             Debug.Assert( callUnload || _sidekickManager.IsEmpty, "callUnload == false => sidekicks have already been unloaded." );
 
-            using( monitor.OpenTrace( $"Unloading domain '{DomainName}'{(callUnload ? "" : " NOT")} calling OnUnlaod methods." ) )
+            using( monitor.OpenTrace( $"Unloading domain '{DomainName}'{(callUnload ? "" : " NOT")} calling OnUnload methods." ) )
             {
                 if( callUnload )
                 {

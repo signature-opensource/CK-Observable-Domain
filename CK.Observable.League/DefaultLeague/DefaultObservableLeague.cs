@@ -91,7 +91,7 @@ namespace CK.Observable.League
             {
                 await d.ApplyEnsureDomainOptionsAsync( monitor, _options.EnsureDomains ).ConfigureAwait( false );
             }
-            _default = d;
+            Volatile.Write( ref _default, d );
         }
 
         async Task IHostedService.StopAsync( CancellationToken cancel )
@@ -119,11 +119,11 @@ namespace CK.Observable.League
                 try
                 {
                     int totalMS = 0;
-                    while( _default == null )
+                    while( Volatile.Read( ref _default ) == null )
                     {
                         Thread.Sleep( 100 );
                         totalMS += 100;
-                        if( totalMS > 3000 )
+                        if( totalMS > 1000000 )
                         {
                             throw new InvalidOperationException( "The ApplicationIdentityService is not started." );
                         }
@@ -138,7 +138,20 @@ namespace CK.Observable.League
 
         Task Heartbeat_Async( IActivityMonitor monitor, int e, CancellationToken cancel )
         {
-            return CreateDefaultAsync( monitor );
+            if( Volatile.Read( ref _default ) != null )
+            {
+                _identityService!.Heartbeat.Async -= Heartbeat_Async;
+            }
+            else
+            {
+                if( _identityService!.InitializationTask.IsCompleted )
+                {
+                    monitor.Info( $"AppIdentity available at heartbeat n°{e}." );
+                    return CreateDefaultAsync( monitor );
+                }
+                monitor.Info( $"AppIdentity not yet available (heartbeat n°{e})." );
+            }
+            return Task.CompletedTask;
         }
     }
 }

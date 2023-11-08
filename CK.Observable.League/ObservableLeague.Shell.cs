@@ -385,7 +385,7 @@ namespace CK.Observable.League
                 if( nextActiveTime.HasValue ) _nextActiveTime = nextActiveTime.Value;
                 bool shouldBeLoaded = IsLoadable
                                         && (_lifeCycleOption == DomainLifeCycleOption.Always
-                                            || (_lifeCycleOption == DomainLifeCycleOption.Default && _nextActiveTime != Util.UtcMinValue));
+                                            || (_lifeCycleOption == DomainLifeCycleOption.HonorTimedEvent && _nextActiveTime != Util.UtcMinValue));
                 if( _preLoaded != shouldBeLoaded )
                 {
                     _preLoaded = shouldBeLoaded;
@@ -465,7 +465,11 @@ namespace CK.Observable.League
 
             ValueTask<bool> IObservableDomainShellBase.DisposeAsync( IActivityMonitor monitor ) => DoShellDisposeAsync( monitor );
 
-            ValueTask IAsyncDisposable.DisposeAsync() => DoShellDisposeAsync( _initialMonitor ).AsNonGenericValueTask();
+            ValueTask IAsyncDisposable.DisposeAsync()
+            {
+                return DoShellDisposeAsync( new ActivityMonitor( $"Temporary monitor for disposing domain '{DomainName}'." ) )
+                        .AsNonGenericValueTask();
+            }
 
             async ValueTask<bool> DoShellDisposeAsync( IActivityMonitor monitor )
             {
