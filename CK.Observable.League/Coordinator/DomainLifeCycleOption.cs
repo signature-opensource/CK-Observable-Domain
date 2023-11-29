@@ -13,10 +13,9 @@ namespace CK.Observable.League
     public enum DomainLifeCycleOption
     {
         /// <summary>
-        /// The domain is kept in memory as long as at least one active timer or reminder exist.
-        /// This is the default since it guaranties that domains are "alive" regardless of any actual code that use them.
+        /// The domain is always loaded even if no code is currently using it and no active <see cref="ObservableTimedEventBase"/> exist.
         /// </summary>
-        Default,
+        Always,
 
         /// <summary>
         /// The domain is unloaded unless explicitly loaded with one of
@@ -26,9 +25,10 @@ namespace CK.Observable.League
         Never,
 
         /// <summary>
-        /// The domain is always loaded even if no code is currently using it and no active <see cref="ObservableTimedEventBase"/> exist.
+        /// The domain is kept in memory as long as at least one active timer or reminder exist.
+        /// It guaranties that domains are "alive" regardless of any actual code that use them.
         /// </summary>
-        Always
+        HonorTimedEvent
     }
 
 }

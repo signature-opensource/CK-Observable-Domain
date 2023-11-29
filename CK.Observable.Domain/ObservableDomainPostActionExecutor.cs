@@ -36,8 +36,7 @@ namespace CK.Observable
             if( _runSignal != null )
             {
                 // Uses the EmptySuccess as the stop signal.
-                _queue.Writer.TryWrite( TransactionResult.EmptySuccess );
-                return true;
+                return _queue.Writer.TryWrite( TransactionResult.EmptySuccess );
             }
             return false;
         }
@@ -84,17 +83,17 @@ namespace CK.Observable
                         }
                     }
                 }
-                lock( _runSignal )
-                {
-                    _stopped = true;
-                    System.Threading.Monitor.PulseAll( _runSignal );
-                }
             }
             catch( Exception ex )
             {
                 monitor.Fatal( "Unexpected error in DomainPostAction executor.", ex );
             }
             monitor.MonitorEnd( $"Stopping DomainPostAction executor for '{_domain.DomainName}'." );
+            lock( _runSignal )
+            {
+                _stopped = true;
+                System.Threading.Monitor.PulseAll( _runSignal );
+            }
         }
     }
 }

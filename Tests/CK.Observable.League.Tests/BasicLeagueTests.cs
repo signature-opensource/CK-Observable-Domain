@@ -41,7 +41,7 @@ namespace CK.Observable.League.Tests
             var loader = league.Find( "FirstDomain" );
             Debug.Assert( loader != null );
             loader.IsDestroyed.Should().BeFalse();
-            loader.IsLoaded.Should().BeFalse();
+            loader.IsLoaded.Should().BeTrue();
 
             await using( var shell = await loader.LoadAsync<Model.School>( TestHelper.Monitor ) )
             {

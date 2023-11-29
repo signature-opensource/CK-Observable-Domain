@@ -9,7 +9,7 @@ namespace CK.Observable.League
     /// <summary>
     /// Immutable definition of options for domains managed in a <see cref="ObservableLeague"/>.
     /// </summary>
-    [SerializationVersion( 3 )]
+    [SerializationVersion( 4 )]
     public sealed class ManagedDomainOptions : IEquatable<ManagedDomainOptions>, ICKSlicedSerializable
     {
         /// <summary>
@@ -151,7 +151,14 @@ namespace CK.Observable.League
         ManagedDomainOptions( IBinaryDeserializer d, ITypeReadInfo info )
         {
             var r = d.Reader;
-            LifeCycleOption = (DomainLifeCycleOption)r.ReadInt32();
+            int lifeCycle = r.ReadInt32();
+            if( info.Version < 4 )
+            {
+                // Always was 2, it is now the default (0).
+                // The 2 is now "HonorTimedEvent".
+                if( lifeCycle == 2 ) lifeCycle = 0;
+            }
+            LifeCycleOption = (DomainLifeCycleOption)lifeCycle;
             CompressionKind = (CompressionKind)r.ReadInt32();
             SnapshotSaveDelay = r.ReadTimeSpan();
             SnapshotKeepDuration = r.ReadTimeSpan();

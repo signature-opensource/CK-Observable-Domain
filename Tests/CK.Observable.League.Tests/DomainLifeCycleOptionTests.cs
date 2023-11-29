@@ -42,7 +42,7 @@ namespace CK.Observable.League.Tests
             var tr = await league.Coordinator.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) =>
             {
                 ODomain loaded = d.Root.Domains["AlwaysLoaded"];
-                loaded.Options = loaded.Options.SetLifeCycleOption( DomainLifeCycleOption.Default );
+                loaded.Options = loaded.Options.SetLifeCycleOption( DomainLifeCycleOption.HonorTimedEvent );
             } );
             var domainError = await tr.DomainPostActionsError;
             domainError.Should().BeNull();
@@ -96,54 +96,6 @@ namespace CK.Observable.League.Tests
             {
             }
             OnTimerCalled.Should().BeTrue( "Loading the domain triggered the reminder." );
-        }
-
-        [Test]
-        public async Task default_option_is_to_keep_the_domain_in_memory_as_long_as_there_is_active_timed_events_Async()
-        {
-            var store = BasicLeagueTests.CreateStore( nameof( default_option_is_to_keep_the_domain_in_memory_as_long_as_there_is_active_timed_events_Async ) );
-            var league = await ObservableLeague.LoadAsync( TestHelper.Monitor, store );
-            Debug.Assert( league != null );
-
-            OnTimerCalled = false;
-
-            await league.Coordinator.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) =>
-            {
-                var alwaysLoaded = d.Root.CreateDomain( "DefaultLoaded", typeof( Model.School ).AssemblyQualifiedName! );
-            } );
-
-            var loader = league["DefaultLoaded"];
-            Debug.Assert( loader != null );
-
-            loader.IsLoaded.Should().BeFalse( "The domain has been unloaded since there is no active timed events." );
-
-            await using( var shell = await loader.LoadAsync( TestHelper.Monitor, startTimer: true ) )
-            {
-                Debug.Assert( shell != null );
-                await shell.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) =>
-                {
-                    d.TimeManager.IsRunning.Should().BeTrue();
-                    d.TimeManager.AllObservableTimedEvents.Should().BeEmpty();
-
-                    d.TimeManager.Remind( DateTime.UtcNow.AddMilliseconds( 100 ), OnTimer, null, null );
-
-                    d.TimeManager.AllObservableTimedEvents.Should().HaveCount( 1 );
-                    d.TimeManager.Timers.Should().BeEmpty();
-                    d.TimeManager.Reminders.Should().HaveCount( 1 );
-                } );
-            }
-
-            OnTimerCalled.Should().BeFalse( "The reminder has not fired yet. (1)" );
-            loader.IsLoaded.Should().BeTrue( "An active timed event keep the domain in memory. (1)" );
-
-            await Task.Delay( 10 );
-
-            OnTimerCalled.Should().BeFalse( "The reminder has not fired yet. (2)" );
-            loader.IsLoaded.Should().BeTrue( "An active timed event keep the domain in memory. (2)" );
-
-            await Task.Delay( 250 );
-            OnTimerCalled.Should().BeTrue( "The reminder has eventually fired." );
-            loader.IsLoaded.Should().BeFalse( "The reminder fired: there is no more need to keep the domain in memory." );
         }
     }
 }
