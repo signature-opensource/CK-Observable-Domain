@@ -8,6 +8,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Contracts;
 using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
 
@@ -548,6 +550,104 @@ namespace CK.Observable.Domain.Tests
             d.ExportToString().Should().Contain( "NormalizedPath" );
             var events = eventCollector.GetTransactionEvents( 1 ).Events!.Single().ExportedEvents;
             events.Should().Contain( "NormalizedPath" );
+        }
+
+        [SerializationVersion( 0 )]
+        public sealed class ExportableObjectWithNotExportableProperty : ObservableObject
+        {
+            public string ExportableProperty { get; set; }
+
+            [NotExportable]
+            public string NotExportableProperty { get; set; }
+
+            public ExportableObjectWithNotExportableProperty()
+            {
+                ExportableProperty = "Hello";
+                NotExportableProperty = "World";
+            }
+
+            ExportableObjectWithNotExportableProperty(
+                BinarySerialization.IBinaryDeserializer r,
+                BinarySerialization.ITypeReadInfo info
+                )
+                : base( BinarySerialization.Sliced.Instance )
+            {
+                ExportableProperty = r.Reader.ReadString();
+                NotExportableProperty = r.Reader.ReadString();
+            }
+
+            public static void Write( BinarySerialization.IBinarySerializer s, ExportableObjectWithNotExportableProperty o )
+            {
+                s.Writer.Write( o.ExportableProperty );
+                s.Writer.Write( o.NotExportableProperty );
+            }
+        }
+
+        [Test]
+        public async Task Empty_events_do_not_cause_a_new_event_Async()
+        {
+            using var d = new ObservableDomain(TestHelper.Monitor, nameof(Empty_events_do_not_cause_a_new_event_Async), startTimer: true );
+            var eventCollector = new JsonEventCollector( d );
+
+            // To skip the initial transaction where no events are collectable.
+            await d.ModifyThrowAsync( TestHelper.Monitor, null );
+            // N = 1
+
+            ExportableObjectWithNotExportableProperty o = null!;
+            await d.ModifyThrowAsync( TestHelper.Monitor, () =>
+            {
+                d.TransactionSerialNumber.Should().Be( 1, "Not incremented yet (still inside the transaction n°2)." );
+                o = new ExportableObjectWithNotExportableProperty();
+            } );
+            // N = 2
+
+            string jsonExport = d.ExportToString()!;
+            DomainJsonExport ex = JsonSerializer.Deserialize<DomainJsonExport>( jsonExport )!;
+            ex.N.Should().Be( 2, "_transactionSerialNumber = 2" );
+            ex.C.Should().Be( 1, "_actualObjectCount = 1" );
+            ex.P.Should().HaveCount( 4, "4 properties exist" );
+            ex.O.Should().HaveCount( 2, "2 indexed objects exist" );
+            ex.R.Should().HaveCount( 0, "There are no roots in this test domain" );
+
+            eventCollector.LastEvent.Should().NotBeNull( "There was an event sent on N = 2" );
+            var transactionEvent = eventCollector.LastEvent!;
+            transactionEvent.TransactionNumber.Should().Be( 2, "_transactionSerialNumber = 2" );
+            transactionEvent.LastExportedTransactionNumber.Should().Be( 0, "There were no events before" );
+            transactionEvent.TimeUtc.Should().BeWithin( TimeSpan.FromMinutes( 2 ) );
+            transactionEvent.ExportedEvents.Should().NotBeNullOrEmpty();
+
+            await d.ModifyThrowAsync( TestHelper.Monitor, () =>
+            {
+                o.NotExportableProperty = "World2";
+            } );
+            // N = 3
+            // No event here
+
+            eventCollector.LastEvent.Should().Be( transactionEvent, "No event was sent" );
+            transactionEvent.TransactionNumber.Should().Be( 2, "Previous transactionSerialNumber = 2" );
+
+            await d.ModifyThrowAsync( TestHelper.Monitor, () =>
+            {
+                o.ExportableProperty = "Hello2";
+            } );
+            // N = 4
+
+            eventCollector.LastEvent.Should().NotBe( transactionEvent, "A new event was sent" );
+            eventCollector.LastEvent.Should().NotBeNull( "There was an event sent on N = 4" );
+            transactionEvent = eventCollector.LastEvent!;
+            transactionEvent.TransactionNumber.Should().Be( 4, "transactionSerialNumber = 4" );
+            transactionEvent.LastExportedTransactionNumber.Should().Be( 2, "Previous T with events = 2" );
+            transactionEvent.TimeUtc.Should().BeWithin( TimeSpan.FromMinutes( 2 ) );
+            transactionEvent.ExportedEvents.Should().NotBeNullOrEmpty();
+        }
+
+        sealed class DomainJsonExport
+        {
+            [JsonPropertyName( "N" )] public int N { get; set; }
+            [JsonPropertyName( "C" )] public int C { get; set; }
+            [JsonPropertyName( "P" )] public List<string> P { get; set; } = new();
+            [JsonPropertyName( "O" )] public List<JsonElement> O { get; set; } = new();
+            [JsonPropertyName( "R" )] public List<int> R { get; set; } = new();
         }
     }
 }

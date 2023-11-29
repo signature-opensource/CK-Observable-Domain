@@ -25,6 +25,7 @@ namespace CK.Observable
 
         ObservableDomain? _domain;
         int _lastTranNum;
+        int _lastExportTranNum;
         TimeSpan _keepDuration;
         int _keepLimit;
 
@@ -44,6 +45,11 @@ namespace CK.Observable
             public readonly int TransactionNumber;
 
             /// <summary>
+            /// Tge last transaction number that did not result in empty ExportedEvents.
+            /// </summary>
+            public readonly int LastExportedTransactionNumber;
+
+            /// <summary>
             /// The date and time of the transaction.
             /// </summary>
             public readonly DateTime TimeUtc;
@@ -53,11 +59,12 @@ namespace CK.Observable
             /// </summary>
             public readonly string ExportedEvents;
 
-            internal TransactionEvent( int t, DateTime timeUtc, string exported )
+            internal TransactionEvent( int t, DateTime timeUtc, string exported, int lastExportedTransactionNumber )
             {
                 TransactionNumber = t;
                 TimeUtc = timeUtc;
                 ExportedEvents = exported;
+                LastExportedTransactionNumber = lastExportedTransactionNumber;
             }
         }
 
@@ -208,7 +215,7 @@ namespace CK.Observable
                 int num = c.Domain.TransactionSerialNumber;
                 if( num == 1 )
                 {
-                    LastEvent = new TransactionEvent( 1, c.CommitTimeUtc, String.Empty );
+                    LastEvent = new TransactionEvent( 1, c.CommitTimeUtc, String.Empty, 0 );
                 }
                 else
                 {
@@ -218,11 +225,15 @@ namespace CK.Observable
                         _events.Clear();
                     }
                     _lastTranNum = num;
-                    _buffer.GetStringBuilder().Clear();
-                    _exporter.Reset();
-                    foreach( var e in c.Events ) e.Export( _exporter );
-                    _events.Add( LastEvent = new TransactionEvent( num, c.CommitTimeUtc, _buffer.ToString() ) );
-                    ApplyKeepDuration();
+                    if( c.Events.Count > 0 )
+                    {
+                        _buffer.GetStringBuilder().Clear();
+                        _exporter.Reset();
+                        foreach( var e in c.Events ) e.Export( _exporter );
+                        _events.Add( LastEvent = new TransactionEvent( num, c.CommitTimeUtc, _buffer.ToString(), _lastExportTranNum ) );
+                        _lastExportTranNum = _lastTranNum;
+                        ApplyKeepDuration();
+                    }
                 }
             }
             _channel.Writer.TryWrite( LastEvent );
