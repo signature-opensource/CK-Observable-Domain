@@ -209,6 +209,7 @@ namespace CK.Observable
         void OnTransaction( object? sender, TransactionDoneEventArgs c )
         {
             Debug.Assert( sender == _domain );
+            bool hasEvent = false;
             lock( _events )
             {
                 // It's useless to capture the initial transaction: the full export will be more efficient.
@@ -216,6 +217,7 @@ namespace CK.Observable
                 if( num == 1 )
                 {
                     LastEvent = new TransactionEvent( 1, c.CommitTimeUtc, String.Empty, 0 );
+                    hasEvent = true;
                 }
                 else
                 {
@@ -232,11 +234,16 @@ namespace CK.Observable
                         foreach( var e in c.Events ) e.Export( _exporter );
                         _events.Add( LastEvent = new TransactionEvent( num, c.CommitTimeUtc, _buffer.ToString(), _lastExportTranNum ) );
                         _lastExportTranNum = _lastTranNum;
-                        ApplyKeepDuration();
+                        hasEvent = true;
                     }
+                    ApplyKeepDuration();
                 }
             }
-            _channel.Writer.TryWrite( LastEvent );
+
+            if( hasEvent )
+            {
+                _channel.Writer.TryWrite( LastEvent );
+            }
         }
 
         async Task RunLoopAsync()

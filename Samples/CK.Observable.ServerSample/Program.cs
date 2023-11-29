@@ -27,6 +27,7 @@ namespace CK.Observable.ServerSample
             var host = WebApplication.CreateBuilder( args );
             var monitor = host.Host.GetBuilderMonitor();
             host.Services.RemoveAll<ILoggerProvider>();
+            host.Host.UseCKAppIdentity();
             host.Host.UseCKMonitoring();
             host.WebHost.UseScopedHttpContext();
 

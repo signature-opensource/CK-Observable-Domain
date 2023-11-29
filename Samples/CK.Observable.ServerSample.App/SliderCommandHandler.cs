@@ -20,6 +20,12 @@ namespace CK.Observable.ServerSample.App
         public async Task HandleSliderCommandAsync( IActivityMonitor m, ISliderCommand command )
         {
            await using var shell = await _league.GetShellAsync( m );
+
+           // Run an empty transaction to ensure it doesn't send events
+           await shell.ModifyThrowAsync(m, ( monitor, domain ) =>
+           {
+           } );
+
            await shell.ModifyThrowAsync(m, ( monitor, domain ) =>
            {
                domain.Root.Slider = command.SliderValue;
