@@ -77,8 +77,8 @@ export class ObservableDomainClient {
                     this.onMessage(domainName, domainExports[domainName]);
                     const currDomain = this.domains[domainName];
                     console.log(
-                        `Domain ${domainName}: Loaded state. ${currDomain.domain.allObjectsCount} objects in domain. `
-                        + `${currDomain.domain.roots.length} roots. Last transaction number: ${currDomain.domain.transactionNumber}`
+                        `Domain ${domainName}: ${currDomain.domain.allObjectsCount} objects. `
+                        + `${currDomain.domain.roots.length} root(s). Current Transaction Number: ${currDomain.domain.transactionNumber}`
                     );
                 });
                 for (const event of this.bufferedEvents) {
@@ -128,8 +128,6 @@ export class ObservableDomainClient {
             this.bufferedEvents.push({ domainName: domainName, watchEvent: event });
             return;
         }
-
-        console.log(event, this.driver);
 
         try {
             if (ObservableDomain.isTransactionSetEvent(event)) {

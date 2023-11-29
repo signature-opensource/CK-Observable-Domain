@@ -48,7 +48,6 @@ export class MqttObservableLeagueDomainService implements IObservableDomainLeagu
     }
 
     private handleMessages(topic: string, payload: Buffer, packet: IPublishPacket) {
-        console.log(this);
         if (!topic.startsWith(this.mqttTopic)) return;
         const domainNameSize = payload.readInt32LE();
         const domainName = payload.toString("utf-8", 4, domainNameSize + 4);
