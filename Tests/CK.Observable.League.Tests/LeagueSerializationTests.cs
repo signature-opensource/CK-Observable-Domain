@@ -115,14 +115,14 @@ namespace CK.Observable.League.Tests
 
             InstantiationTracker.ContructorCount.Should().Be( 1 );
             InstantiationTracker.DeserializationCount.Should().Be( 0 );
-            InstantiationTracker.WriteCount.Should().Be( 2, "One save after modify, one after dispose." );
+            InstantiationTracker.WriteCount.Should().Be( 3, "One save after load, one after modify, one after dispose." );
 
             // Loads/Unload it again.
             await (await loader.LoadAsync<InstantiationTracker>( TestHelper.Monitor ))!.DisposeAsync( TestHelper.Monitor );
 
             InstantiationTracker.ContructorCount.Should().Be( 1, "This will never change from now on: the domain is always deserialized." );
             InstantiationTracker.DeserializationCount.Should().Be( 1 );
-            InstantiationTracker.WriteCount.Should().Be( 3 );
+            InstantiationTracker.WriteCount.Should().Be( 5 );
 
             // Loads/Unload it again and creates a transaction.
             await using( var shell = await loader.LoadAsync<InstantiationTracker>( TestHelper.Monitor ) )
@@ -133,7 +133,7 @@ namespace CK.Observable.League.Tests
 
             InstantiationTracker.ContructorCount.Should().Be( 1, "This will never change from now on: the domain is always deserialized." );
             InstantiationTracker.DeserializationCount.Should().Be( 2 );
-            InstantiationTracker.WriteCount.Should().Be( 5 );
+            InstantiationTracker.WriteCount.Should().Be( 8 );
 
         }
 
