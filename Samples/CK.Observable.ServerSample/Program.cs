@@ -17,6 +17,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using CK.AppIdentity;
 
 namespace CK.Observable.ServerSample
 {
@@ -27,6 +28,7 @@ namespace CK.Observable.ServerSample
             var host = WebApplication.CreateBuilder( args );
             var monitor = host.Host.GetBuilderMonitor();
             host.Services.RemoveAll<ILoggerProvider>();
+            host.Host.UseCKAppIdentity();
             host.Host.UseCKMonitoring();
             host.WebHost.UseScopedHttpContext();
 

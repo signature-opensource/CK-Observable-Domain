@@ -190,12 +190,9 @@ namespace CK.Observable.League
                     }
                 }
             }
-            if( result.HasWaitingSidekicks )
+            using( monitor.OpenInfo( $"{action} domain '{DomainName}': Creating empty transaction to boot events and sidekicks." ) )
             {
-                using( monitor.OpenInfo( $"{action} domain '{DomainName}' has waiting sidekicks." ) )
-                {
-                    await result.ModifyThrowAsync( monitor, null );
-                }
+                await result.ModifyThrowAsync( monitor, null );
             }
             return result;
         }

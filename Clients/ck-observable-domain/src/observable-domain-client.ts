@@ -77,8 +77,8 @@ export class ObservableDomainClient {
                     this.onMessage(domainName, domainExports[domainName]);
                     const currDomain = this.domains[domainName];
                     console.log(
-                        `Domain ${domainName}: Loaded state. ${currDomain.domain.allObjectsCount} objects in domain. `
-                        + `${currDomain.domain.roots.length} roots. Last transaction number: ${currDomain.domain.transactionNumber}`
+                        `Domain ${domainName}: ${currDomain.domain.allObjectsCount} objects. `
+                        + `${currDomain.domain.roots.length} root(s). Current Transaction Number: ${currDomain.domain.transactionNumber}`
                     );
                 });
                 for (const event of this.bufferedEvents) {
@@ -132,12 +132,12 @@ export class ObservableDomainClient {
         try {
             if (ObservableDomain.isTransactionSetEvent(event)) {
                 if (event.N <= curr.domain.transactionNumber) {
-                    console.warn(`Receveid a past even. Current transaction number:${curr.domain.transactionNumber}, event transaction number:${event.N}.`);
+                    console.warn(`Ignoring received past event. Current TN: ${curr.domain.transactionNumber}. New TN: ${event.N}`);
                     return;
                 }
-                console.log("Received OD event for domain " + domainName + ", transaction count:" + event.N);
+                console.log(`Received OD event for domain ${domainName}. Current TN: ${curr.domain.transactionNumber}. New TN: ${event.N}`);
             } else if (ObservableDomain.isDomainExportEvent(event)) {
-                console.log("Received domain export for domain " + domainName + ", transaction count:" + event.N);
+                console.log(`Received domain export for domain ${domainName}. New TN: ${event.N}`);
             }
             curr.domain.applyWatchEvent(event);
             curr.obs.next(curr.domain.roots);
