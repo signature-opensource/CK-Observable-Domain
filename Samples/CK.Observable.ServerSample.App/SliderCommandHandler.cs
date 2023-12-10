@@ -1,3 +1,4 @@
+using System;
 using CK.Core;
 using CK.Cris;
 using CK.Observable.League;
@@ -9,6 +10,7 @@ namespace CK.Observable.ServerSample.App
 
     public class SliderCommandHandler : IAutoService
     {
+        static readonly Random Random = new Random();
         readonly DefaultObservableLeague _league;
 
         public SliderCommandHandler(DefaultObservableLeague league)
@@ -20,6 +22,15 @@ namespace CK.Observable.ServerSample.App
         public async Task HandleSliderCommandAsync( IActivityMonitor m, ISliderCommand command )
         {
            await using var shell = await _league.GetShellAsync( m );
+
+           // Run a bunch of empty transactions to ensure they don't send events to front-end
+           for( int i = 0; i < Random.Next( 0, 10 ); i++ )
+           {
+               await shell.ModifyThrowAsync(m, ( monitor, domain ) =>
+               {
+               } );
+           }
+
            await shell.ModifyThrowAsync(m, ( monitor, domain ) =>
            {
                domain.Root.Slider = command.SliderValue;

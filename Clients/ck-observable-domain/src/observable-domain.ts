@@ -6,6 +6,7 @@ export type WatchEvent = TransactionSetEvent | DomainExportEvent | ErrorEvent | 
 export interface TransactionSetEvent {
     N: number;
     E: any[][];
+    L: number;
 }
 
 export interface DomainExportEvent {
@@ -94,8 +95,18 @@ export class ObservableDomain {
 
         e = deserialize(e, { prefix: "" }); // Resolve objects
         if(ObservableDomain.isTransactionSetEvent(e)) {
-            // e.N is the transactionNumber of the LAST event.
+            // e.N is the transactionNumber of the LAST event in the array e.E.
             const firstTransactionNumber = e.N - e.E.length + 1;
+            if(e.L) {
+                // e.L is the LAST transaction that emitted events.
+                // If everything is okay, it should be this one.
+                if(e.L !== this._tranNum) {
+                    throw new Error(`Event claims last event was TN ${e.L}, current TN is ${this._tranNum}`);
+                } else {
+                    // Fast-forward just before the first event in e.E.
+                    this._tranNum = firstTransactionNumber - 1;
+                }
+            }
             for(let i = 0; i < e.E.length; i++) {
                 this.applyEvent(firstTransactionNumber + i, e.E[i]);
             }

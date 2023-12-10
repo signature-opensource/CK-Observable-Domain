@@ -98,20 +98,23 @@ namespace CK.Observable.Domain.Tests
 
             // Note that "NotVisible" is the property name: it is exported as the property name. This is
             // because even a non exported property is available on PropertyChanged events, and
-            // our ObservablePropertyChangedEventArgs uses the PropertyId. 
+            // our ObservablePropertyChangedEventArgs uses the PropertyId.
             collector.LastEvent.ExportedEvents.Should().ContainAll( "Visible", "Yes", "NotVisible" );
             collector.LastEvent.ExportedEvents.Should().NotContainAny( "Invisible", "NoWay" );
 
+            var lastEvent = collector.LastEvent;
             // This check that the "NotVisible" property is not 'changed': even if its name and identifier
-            // has been marshalled, the property of the object itself is not seen by the client. 
+            // has been marshalled, the property of the object itself is not seen by the client.
             await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 var i2 = new Invisible( 2 * 666 );
                 v.NotVisible = i2;
 
             } );
-            collector.LastEvent.ExportedEvents.Should().BeEmpty();
 
+            // There were no new export events, so the LastEvent didn't change.
+            collector.LastEvent.Should().Be( lastEvent );
+            collector.LastEvent.ExportedEvents.Should().Be( lastEvent.ExportedEvents );
         }
     }
 }

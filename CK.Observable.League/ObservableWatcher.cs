@@ -39,10 +39,14 @@ namespace CK.Observable
 
             async Task DomainChangedAsync( IActivityMonitor monitor, JsonEventCollector.TransactionEvent e, CancellationToken cancellation )
             {
-                if( e.TransactionNumber == 1 ) await _w.HandleEventAsync( monitor, new WatchEvent( D.DomainName, "{\"N\":1,\"E\":[]}" ) );
+                if( e.TransactionNumber == 1 ) await _w.HandleEventAsync( monitor, new WatchEvent( D.DomainName, "{\"N\":1,\"E\":[],\"L\":0}" ) );
                 else
                 {
-                    await _w.HandleEventAsync( monitor, new WatchEvent( D.DomainName, "{\"N\":" + e.TransactionNumber + ",\"E\":[[" + e.ExportedEvents + "]]}" ) );
+                    await _w.HandleEventAsync( monitor, new WatchEvent(
+                        D.DomainName,
+                        "{\"N\":" + e.TransactionNumber +
+                        ",\"E\":[[" + e.ExportedEvents + "]],\"L\":" + e.LastExportedTransactionNumber + "}"
+                        ) );
                 }
             }
         }
@@ -97,7 +101,7 @@ namespace CK.Observable
             ///     <item>An object with a "Error" string member.</item>
             ///     <item>A full export of the domain: an object with "N", "P", "C", "O", "R" members.</item>
             ///     <item>
-            ///     A set of events to apply: an object with "N", "E" members.
+            ///     A set of events to apply: an object with "N", "E", "L" members.
             ///     Note that when "N":1, "E" is an empty array and a full export should be triggered.
             ///     </item>
             ///     <item>An empty string if the domain doesn't exist (or has been destroyed).</item>

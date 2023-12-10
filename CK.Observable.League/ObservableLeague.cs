@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CK.Observable.League
@@ -21,6 +22,8 @@ namespace CK.Observable.League
         readonly IObservableDomainInitializer? _initializer;
         readonly CoordinatorClient _coordinator;
         readonly IServiceProvider _serviceProvider;
+
+        static readonly SemaphoreSlim _loadAsyncLock = new SemaphoreSlim( 1 );
 
         ObservableLeague( IStreamStore streamStore,
                           IObservableDomainInitializer? initializer,
@@ -53,43 +56,51 @@ namespace CK.Observable.League
                                                                IObservableDomainInitializer? initializer = null,
                                                                IServiceProvider? serviceProvider = null )
         {
-            if( serviceProvider == null ) serviceProvider = EmptyServiceProvider.Default;
+            await _loadAsyncLock.WaitAsync();
             try
             {
-                // The CoordinatorClient creates its ObservableDomain<Coordinator> domain.
-                var client = new CoordinatorClient( monitor, store, serviceProvider );
-                // Async initialization here, just like other managed domains.
-                // Contrary to other domains, it is created with an active timer (that may be stopped later if needed)
-                // and it is not submitted to the domain initializer (if any).
-                client.Domain = (ObservableDomain<OCoordinatorRoot>)await client.InitializeAsync( monitor,
-                                                                                                  startTimer: true,
-                                                                                                  createOnLoadError: false,
-                                                                                                  ( m, startTimer ) => new ObservableDomain<OCoordinatorRoot>( m, String.Empty, startTimer, client, serviceProvider ),
-                                                                                                  initializer: null );
-                // No need to acquire a read lock here.
-                var domains = new ConcurrentDictionary<string, Shell>( StringComparer.OrdinalIgnoreCase );
-                IEnumerable<ODomain> observableDomains = client.Domain.Root.Domains.Values;
-                foreach( var d in observableDomains )
+                if( serviceProvider == null ) serviceProvider = EmptyServiceProvider.Default;
+                try
                 {
-                    var shell = Shell.Create( monitor, client, d.DomainName, store, initializer, serviceProvider, d.RootTypes );
-                    d.Initialize( shell );
-                    domains.TryAdd( d.DomainName, shell );
+                    // The CoordinatorClient creates its ObservableDomain<Coordinator> domain.
+                    var client = new CoordinatorClient( monitor, store, serviceProvider );
+                    // Async initialization here, just like other managed domains.
+                    // Contrary to other domains, it is created with an active timer (that may be stopped later if needed)
+                    // and it is not submitted to the domain initializer (if any).
+                    client.Domain = (ObservableDomain<OCoordinatorRoot>)await client.InitializeAsync( monitor,
+                                                                                                      startTimer: true,
+                                                                                                      createOnLoadError: false,
+                                                                                                      ( m, startTimer ) => new ObservableDomain<OCoordinatorRoot>( m, String.Empty, startTimer, client, serviceProvider ),
+                                                                                                      initializer: null );
+                    // No need to acquire a read lock here.
+                    var domains = new ConcurrentDictionary<string, Shell>( StringComparer.OrdinalIgnoreCase );
+                    IEnumerable<ODomain> observableDomains = client.Domain.Root.Domains.Values;
+                    foreach( var d in observableDomains )
+                    {
+                        var shell = Shell.Create( monitor, client, d.DomainName, store, initializer, serviceProvider, d.RootTypes );
+                        d.Initialize( shell );
+                        domains.TryAdd( d.DomainName, shell );
+                    }
+                    // Shells have been created: we can create the whole structure.
+                    var o = new ObservableLeague( store, initializer, serviceProvider, client, domains );
+                    monitor.Info( $"Created ObservableLeague #{o.GetHashCode()}." );
+                    // And immediately loads the domains that need to be.
+                    foreach( ODomain d in observableDomains )
+                    {
+                        await d.Shell.SynchronizeOptionsAsync( monitor, d.Options, d.NextActiveTime );
+                    }
+                    return o;
                 }
-                // Shells have been created: we can create the whole structure.
-                var o = new ObservableLeague( store, initializer, serviceProvider, client, domains );
-                monitor.Info( $"Created ObservableLeague #{o.GetHashCode()}." );
-                // And immediately loads the domains that need to be.
-                foreach( ODomain d in observableDomains )
+                catch( Exception ex )
                 {
-                    await d.Shell.SynchronizeOptionsAsync( monitor, d.Options, d.NextActiveTime );
+                    monitor.Error( "Unable to initialize an ObservableLeague: loading Coordinator failed.", ex );
                 }
-                return o;
+                return null;
             }
-            catch( Exception ex )
+            finally
             {
-                monitor.Error( "Unable to initialize an ObservableLeague: loading Coordinator failed.", ex );
+                _loadAsyncLock.Release();
             }
-            return null;
         }
 
         /// <inheritdoc />
