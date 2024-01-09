@@ -583,6 +583,58 @@ namespace CK.Observable.Domain.Tests
             }
         }
 
+        [NotExportable]
+        [SerializationVersion( 0 )]
+        public sealed class NotExportableClass : ObservableObject
+        {
+            public string NotExportableClassProperty { get; set; }
+
+            public NotExportableClass()
+            {
+                NotExportableClassProperty = "HelloNotExportable";
+            }
+
+            NotExportableClass(
+                BinarySerialization.IBinaryDeserializer r,
+                BinarySerialization.ITypeReadInfo info
+            )
+                : base( BinarySerialization.Sliced.Instance )
+            {
+                NotExportableClassProperty = r.Reader.ReadString();
+            }
+
+            public static void Write( BinarySerialization.IBinarySerializer s, NotExportableClass o )
+            {
+                s.Writer.Write( o.NotExportableClassProperty );
+            }
+        }
+
+        [SerializationVersion( 0 )]
+        public sealed class ExportableObjectWithNotExportableClass : ObservableObject
+        {
+            [NotExportable]
+            public NotExportableClass NotExportableClass { get; set; }
+
+            public ExportableObjectWithNotExportableClass()
+            {
+                NotExportableClass = new NotExportableClass();
+            }
+
+            ExportableObjectWithNotExportableClass(
+                BinarySerialization.IBinaryDeserializer r,
+                BinarySerialization.ITypeReadInfo info
+            )
+                : base( BinarySerialization.Sliced.Instance )
+            {
+                NotExportableClass = r.ReadObject<NotExportableClass>();
+            }
+
+            public static void Write( BinarySerialization.IBinarySerializer s, ExportableObjectWithNotExportableClass o )
+            {
+                s.WriteObject( o.NotExportableClass );
+            }
+        }
+
         [Test]
         public async Task Empty_events_do_not_cause_a_new_event_Async()
         {
@@ -648,6 +700,42 @@ namespace CK.Observable.Domain.Tests
             [JsonPropertyName( "P" )] public List<string> P { get; set; } = new();
             [JsonPropertyName( "O" )] public List<JsonElement> O { get; set; } = new();
             [JsonPropertyName( "R" )] public List<int> R { get; set; } = new();
+        }
+
+        [Test]
+        public async Task NotExportable_types_and_properties_should_not_leak_in_export_and_events_Async()
+        {
+            using var d = new ObservableDomain(TestHelper.Monitor, nameof(Empty_events_do_not_cause_a_new_event_Async), startTimer: true );
+            var eventCollector = new JsonEventCollector( d );
+
+            // To skip the initial transaction where no events are collectable.
+            await d.ModifyThrowAsync( TestHelper.Monitor, null );
+            // N = 1
+
+            ExportableObjectWithNotExportableClass o = null!;
+            await d.ModifyThrowAsync( TestHelper.Monitor, () =>
+            {
+                d.TransactionSerialNumber.Should().Be( 1, "Not incremented yet (still inside the transaction n°2)." );
+                o = new ExportableObjectWithNotExportableClass();
+            } );
+            // N = 2
+
+            string jsonExport = d.ExportToString()!;
+            DomainJsonExport export = JsonSerializer.Deserialize<DomainJsonExport>( jsonExport )!;
+            export.N.Should().Be( 2, "_transactionSerialNumber = 2" );
+
+            var transactionEvent = eventCollector.LastEvent!;
+            transactionEvent.TransactionNumber.Should().Be( 2, "_transactionSerialNumber = 2" );
+            transactionEvent.LastExportedTransactionNumber.Should().Be( 0, "There were no events before" );
+            transactionEvent.TimeUtc.Should().BeWithin( TimeSpan.FromMinutes( 2 ) );
+            transactionEvent.ExportedEvents.Should().NotBeNullOrEmpty();
+
+            jsonExport.Should().NotContain( "HelloNotExportable", "This string was set in a type marked NotExportable." );
+            jsonExport.Should().NotContain( "NotExportableClassProperty", "This string was set in a type marked NotExportable." );
+
+            eventCollector.LastEvent.Should().NotBeNull( "There was an event sent on N = 2" );
+            eventCollector.LastEvent!.ExportedEvents.Should().NotContain( "HelloNotExportable", "This string was set in a type marked NotExportable." );
+            eventCollector.LastEvent!.ExportedEvents.Should().NotContain( "NotExportableClassProperty", "This string was set in a type marked NotExportable." );
         }
     }
 }
