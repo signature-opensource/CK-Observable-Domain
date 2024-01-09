@@ -720,7 +720,13 @@ namespace CK.Observable.Domain.Tests
             } );
             // N = 2
 
-            string jsonExport = d.ExportToString()!;
+            string jsonExport = null!;
+            Action act = () =>
+            {
+                jsonExport = d.ExportToString()!;
+            };
+            act.Should().NotThrow("Exporting a Type with a Property marked NotExportable, having a type marked NotExportable should be okay");
+
             DomainJsonExport export = JsonSerializer.Deserialize<DomainJsonExport>( jsonExport )!;
             export.N.Should().Be( 2, "_transactionSerialNumber = 2" );
 
@@ -730,12 +736,14 @@ namespace CK.Observable.Domain.Tests
             transactionEvent.TimeUtc.Should().BeWithin( TimeSpan.FromMinutes( 2 ) );
             transactionEvent.ExportedEvents.Should().NotBeNullOrEmpty();
 
-            jsonExport.Should().NotContain( "HelloNotExportable", "This string was set in a type marked NotExportable." );
-            jsonExport.Should().NotContain( "NotExportableClassProperty", "This string was set in a type marked NotExportable." );
+            jsonExport.Should().NotContain( "HelloNotExportable", "This property value is in a type marked NotExportable." );
+            jsonExport.Should().NotContain( "NotExportableClassProperty", "This property name is in a type marked NotExportable." );
+            jsonExport.Should().NotContain( "NotExportableClass", "This property name is on a Property marked NotExportable." );
 
             eventCollector.LastEvent.Should().NotBeNull( "There was an event sent on N = 2" );
-            eventCollector.LastEvent!.ExportedEvents.Should().NotContain( "HelloNotExportable", "This string was set in a type marked NotExportable." );
-            eventCollector.LastEvent!.ExportedEvents.Should().NotContain( "NotExportableClassProperty", "This string was set in a type marked NotExportable." );
+            eventCollector.LastEvent!.ExportedEvents.Should().NotContain( "HelloNotExportable", "This property value is in a type marked NotExportable." );
+            eventCollector.LastEvent!.ExportedEvents.Should().NotContain( "NotExportableClassProperty", "This property name is in a type marked NotExportable." );
+            eventCollector.LastEvent!.ExportedEvents.Should().NotContain( "NotExportableClass", "This property name is on a Property marked NotExportable." );
         }
     }
 }
