@@ -717,8 +717,13 @@ namespace CK.Observable.Domain.Tests
             {
                 d.TransactionSerialNumber.Should().Be( 1, "Not incremented yet (still inside the transaction n°2)." );
                 o = new ExportableObjectWithNotExportableClass();
-            } );
+            }, waitForDomainPostActionsCompletion: true );
             // N = 2
+
+            eventCollector.LastEvent.Should().NotBeNull( "There was an event sent on N = 2" );
+            eventCollector.LastEvent!.ExportedEvents.Should().NotContain( "HelloNotExportable", "This property value is in a type marked NotExportable." );
+            eventCollector.LastEvent!.ExportedEvents.Should().NotContain( "NotExportableClassProperty", "This property name is in a type marked NotExportable." );
+            eventCollector.LastEvent!.ExportedEvents.Should().NotContain( "NotExportableClass", "This property name is on a Property marked NotExportable." );
 
             string jsonExport = null!;
             Action act = () =>
@@ -739,11 +744,6 @@ namespace CK.Observable.Domain.Tests
             jsonExport.Should().NotContain( "HelloNotExportable", "This property value is in a type marked NotExportable." );
             jsonExport.Should().NotContain( "NotExportableClassProperty", "This property name is in a type marked NotExportable." );
             jsonExport.Should().NotContain( "NotExportableClass", "This property name is on a Property marked NotExportable." );
-
-            eventCollector.LastEvent.Should().NotBeNull( "There was an event sent on N = 2" );
-            eventCollector.LastEvent!.ExportedEvents.Should().NotContain( "HelloNotExportable", "This property value is in a type marked NotExportable." );
-            eventCollector.LastEvent!.ExportedEvents.Should().NotContain( "NotExportableClassProperty", "This property name is in a type marked NotExportable." );
-            eventCollector.LastEvent!.ExportedEvents.Should().NotContain( "NotExportableClass", "This property name is on a Property marked NotExportable." );
         }
     }
 }
