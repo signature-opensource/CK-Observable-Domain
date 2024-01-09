@@ -147,6 +147,14 @@ namespace CK.Observable
                                                 .ToArray();
                     }
                 }
+                else
+                {
+                    // The type is [NotExportable]: it MUST NOT be an ObservableObject.
+                    if( typeof(ObservableObject).IsAssignableFrom( Type ) )
+                    {
+                        throw new CKException( $"Type '{Type:N}' is an ObservableObject: it cannot be [NotExportable]." );
+                    }
+                }
                 _exportError = exportError;
             }
 
