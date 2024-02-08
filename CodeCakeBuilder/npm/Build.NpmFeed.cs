@@ -13,6 +13,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using Cake.Core;
 
 namespace CodeCake
 {
@@ -152,7 +153,9 @@ namespace CodeCake
                         {
                             Source = absTgzPath,
                             WorkingDirectory = project.DirectoryPath.Path,
-                            Tag = tags.First()
+                            Tag = tags.First(),
+                            // Force npm to ignore workspaces and use the .npmrc inside project.DirectoryPath.Path
+                            ArgumentCustomization = (builder) => builder.Append( "--no-workspaces" )
                         } );
                     foreach( string tag in tags.Skip( 1 ) )
                     {
