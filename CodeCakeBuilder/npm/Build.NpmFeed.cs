@@ -1,6 +1,5 @@
 using Cake.Common.Diagnostics;
 using Cake.Common.IO;
-using Cake.Core;
 using Cake.Npm;
 using Cake.Npm.Publish;
 using CK.Core;
@@ -14,6 +13,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using Cake.Core;
 
 namespace CodeCake
 {
@@ -151,21 +151,18 @@ namespace CodeCake
                     Cake.NpmPublish(
                         new NpmPublishSettings()
                         {
-                            ArgumentCustomization = args => args.Append( "--access public" ),
                             Source = absTgzPath,
                             WorkingDirectory = project.DirectoryPath.Path,
-                            Tag = tags.First()
+                            Tag = tags.First(),
+                            // Force npm to ignore workspaces and use the .npmrc inside project.DirectoryPath.Path
+                            ArgumentCustomization = (builder) => builder.Append( "--no-workspaces" )
                         } );
                     foreach( string tag in tags.Skip( 1 ) )
                     {
                         Cake.Information( $"Setting tag '{tag}' on '{project.Name}' to '{project.ArtifactInstance.Version.ToNormalizedString()}' version." );
                         // The FromPath is actually required - if executed outside the relevant directory,
                         // it will miss the .npmrc with registry configs.
-                        Cake.NpmDistTagAdd( project.Name, project.ArtifactInstance.Version.ToNormalizedString(), tag, s =>
-                        {
-                            s.ArgumentCustomization = args => args.Append( "--access public" );
-                            s.FromPath( project.DirectoryPath.Path );
-                        } );
+                        Cake.NpmDistTagAdd( project.Name, project.ArtifactInstance.Version.ToNormalizedString(), tag, s => s.FromPath( project.DirectoryPath.Path ) );
                     }
                 }
                 return System.Threading.Tasks.Task.CompletedTask;

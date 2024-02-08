@@ -22,5 +22,6 @@
   },
   "scripts": {
     "test": "jest"
-  }
+  },
+  "packageManager": "yarn@4.1.0"
 }

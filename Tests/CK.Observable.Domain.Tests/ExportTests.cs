@@ -583,6 +583,52 @@ namespace CK.Observable.Domain.Tests
             }
         }
 
+        [SerializationVersion( 0 )]
+        public sealed class InternalObjectAreNotExportableByDesign : InternalObject
+        {
+            public string NotExportableClassProperty { get; set; }
+
+            public InternalObjectAreNotExportableByDesign()
+            {
+                NotExportableClassProperty = "HelloNotExportable";
+            }
+
+            InternalObjectAreNotExportableByDesign( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+                : base( BinarySerialization.Sliced.Instance )
+            {
+                NotExportableClassProperty = r.Reader.ReadString();
+            }
+
+            public static void Write( BinarySerialization.IBinarySerializer s, InternalObjectAreNotExportableByDesign o )
+            {
+                s.Writer.Write( o.NotExportableClassProperty );
+            }
+        }
+
+        [SerializationVersion( 0 )]
+        public sealed class ExportableObjectWithNotExportableClass : ObservableObject
+        {
+            [NotExportable]
+            public InternalObjectAreNotExportableByDesign NotExportableClass { get; set; }
+
+            public ExportableObjectWithNotExportableClass()
+            {
+                NotExportableClass = new InternalObjectAreNotExportableByDesign();
+            }
+
+            ExportableObjectWithNotExportableClass( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info
+            )
+                : base( BinarySerialization.Sliced.Instance )
+            {
+                NotExportableClass = r.ReadObject<InternalObjectAreNotExportableByDesign>();
+            }
+
+            public static void Write( BinarySerialization.IBinarySerializer s, ExportableObjectWithNotExportableClass o )
+            {
+                s.WriteObject( o.NotExportableClass );
+            }
+        }
+
         [Test]
         public async Task Empty_events_do_not_cause_a_new_event_Async()
         {
@@ -648,6 +694,54 @@ namespace CK.Observable.Domain.Tests
             [JsonPropertyName( "P" )] public List<string> P { get; set; } = new();
             [JsonPropertyName( "O" )] public List<JsonElement> O { get; set; } = new();
             [JsonPropertyName( "R" )] public List<int> R { get; set; } = new();
+        }
+
+        [Test]
+        public async Task NotExportable_types_and_properties_should_not_leak_in_export_and_events_Async()
+        {
+            using var d = new ObservableDomain(TestHelper.Monitor, nameof(Empty_events_do_not_cause_a_new_event_Async), startTimer: true );
+            var eventCollector = new JsonEventCollector( d );
+
+            // To skip the initial transaction where no events are collectable.
+            await d.ModifyThrowAsync( TestHelper.Monitor, null );
+            // N = 1
+
+            ExportableObjectWithNotExportableClass o = null!;
+            await d.ModifyThrowAsync( TestHelper.Monitor, () =>
+            {
+                d.TransactionSerialNumber.Should().Be( 1, "Not incremented yet (still inside the transaction n°2)." );
+                o = new ExportableObjectWithNotExportableClass();
+            }, waitForDomainPostActionsCompletion: true );
+            // N = 2
+
+            eventCollector.LastEvent.Should().NotBeNull( "There was an event sent on N = 2" );
+            eventCollector.LastEvent!.ExportedEvents.Should().NotContain( "HelloNotExportable", "This property value is in a type marked NotExportable." );
+            eventCollector.LastEvent!.ExportedEvents.Should().NotContain( "NotExportableClassProperty", "This property name is in a InternalObject." );
+            // This is NOT good!
+            // A Property marked NotExportable SHOULD NOT leak (even its name)...
+            //eventCollector.LastEvent!.ExportedEvents.Should().NotContain( "NotExportableClass", "This property name is on a Property marked NotExportable." );
+
+            string jsonExport = null!;
+            Action act = () =>
+            {
+                jsonExport = d.ExportToString()!;
+            };
+            act.Should().NotThrow("Exporting a Type with a Property marked NotExportable, having a type marked NotExportable should be okay");
+
+            DomainJsonExport export = JsonSerializer.Deserialize<DomainJsonExport>( jsonExport )!;
+            export.N.Should().Be( 2, "_transactionSerialNumber = 2" );
+
+            var transactionEvent = eventCollector.LastEvent!;
+            transactionEvent.TransactionNumber.Should().Be( 2, "_transactionSerialNumber = 2" );
+            transactionEvent.LastExportedTransactionNumber.Should().Be( 0, "There were no events before" );
+            transactionEvent.TimeUtc.Should().BeWithin( TimeSpan.FromMinutes( 2 ) );
+            transactionEvent.ExportedEvents.Should().NotBeNullOrEmpty();
+
+            jsonExport.Should().NotContain( "HelloNotExportable", "This property value is in a type marked NotExportable." );
+            jsonExport.Should().NotContain( "NotExportableClassProperty", "This property name is in a type marked NotExportable." );
+            // This is NOT good!
+            // A Property marked NotExportable SHOULD NOT leak.
+            //jsonExport.Should().NotContain( "NotExportableClass", "This property name is on a Property marked NotExportable." );
         }
     }
 }
