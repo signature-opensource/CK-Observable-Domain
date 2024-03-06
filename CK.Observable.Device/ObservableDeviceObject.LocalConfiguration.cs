@@ -158,13 +158,17 @@ namespace CK.Observable.Device
                             setControllerKeyCommand.DeviceName = DeviceName;
                             setControllerKeyCommand.NewControllerKey = Domain.DomainName;
 
-                            var applyAndSetControllerKeyCommand = new ApplyAndSetControllerKeyDeviceCommand( setControllerKeyCommand, local.DeepClone() );
+                            var configClone = local.DeepClone();
+                            configClone.CheckValid( Domain.Monitor ); // CheckValid() HAS INTERNAL SIDE-EFFECTS AND MUST BE CALLED AFTER DeepClone().
+                            var applyAndSetControllerKeyCommand = new ApplyAndSetControllerKeyDeviceCommand( setControllerKeyCommand, configClone );
 
                             Domain.SendCommand( applyAndSetControllerKeyCommand, _bridge );
                         }
                         else if( deviceControlAction == DeviceControlAction.TakeOwnership || deviceControlAction == null )
                         {
-                            SendApplyDeviceConfigurationCommand( local.DeepClone() );
+                            var configClone = local.DeepClone();
+                            configClone.CheckValid( Domain.Monitor ); // CheckValid() HAS INTERNAL SIDE-EFFECTS AND MUST BE CALLED AFTER DeepClone().
+                            SendApplyDeviceConfigurationCommand( configClone );
                         }
                     }
                     else
@@ -177,7 +181,9 @@ namespace CK.Observable.Device
                         if( deviceControlAction != DeviceControlAction.TakeOwnership ||
                             deviceControlAction != DeviceControlAction.ForceReleaseControl )
                         {
-                            SendApplyDeviceConfigurationCommand( local.DeepClone() );
+                            var configClone = local.DeepClone();
+                            configClone.CheckValid( Domain.Monitor ); // CheckValid() HAS INTERNAL SIDE-EFFECTS AND MUST BE CALLED AFTER DeepClone().
+                            SendApplyDeviceConfigurationCommand( configClone );
                         }
                     }
 

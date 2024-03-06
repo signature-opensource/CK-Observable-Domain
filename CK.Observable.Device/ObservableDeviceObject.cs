@@ -354,6 +354,7 @@ namespace CK.Observable.Device
                         if( DeviceConfiguration.ControllerKey != null )
                         {
                             var c = newConfig != null ? newConfig.DeepClone() : DeviceConfiguration.DeepClone();
+                            c.CheckValid( Domain.Monitor ); // CheckValid() HAS INTERNAL SIDE-EFFECTS AND MUST BE CALLED AFTER DeepClone().
                             c.ControllerKey = null;
                             SendApplyDeviceConfigurationCommand( c );
                         }
@@ -371,6 +372,7 @@ namespace CK.Observable.Device
                         if( DeviceConfiguration.ControllerKey != Domain.DomainName )
                         {
                             var c = newConfig != null ? newConfig.DeepClone() : DeviceConfiguration.DeepClone();
+                            c.CheckValid( Domain.Monitor ); // CheckValid() HAS INTERNAL SIDE-EFFECTS AND MUST BE CALLED AFTER DeepClone().
                             c.ControllerKey = Domain.DomainName;
                             SendApplyDeviceConfigurationCommand( c );
                         }
