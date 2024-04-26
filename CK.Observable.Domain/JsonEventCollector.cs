@@ -45,7 +45,7 @@ namespace CK.Observable
             public readonly int TransactionNumber;
 
             /// <summary>
-            /// Tge last transaction number that did not result in empty ExportedEvents.
+            /// The last transaction number that did not result in empty ExportedEvents.
             /// </summary>
             public readonly int LastExportedTransactionNumber;
 

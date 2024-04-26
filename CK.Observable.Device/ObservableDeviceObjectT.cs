@@ -29,6 +29,7 @@ namespace CK.Observable.Device
             if( _deviceConfiguration != null )
             {
                 _localConfiguration = (TConfig)_deviceConfiguration.DeepClone();
+                _localConfiguration.CheckValid( Domain.Monitor ); // CheckValid() HAS INTERNAL SIDE-EFFECTS AND MUST BE CALLED AFTER DeepClone().
             }
             else
             {
