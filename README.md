@@ -4,6 +4,14 @@ Observable framework for application states.
 Observable now uses the new CK.BinarySerialization library for its serialization. Migrations
 steps are detailed here: [BinarySerializationMigration.md](BinarySerializationMigration.md).
 
+## Build status
+
+| Description | Build Status |
+|-------------|--------------|
+| Last build | [![Build status](https://ci.appveyor.com/api/projects/status/gyaeyym5btkavttn?svg=true)](https://ci.appveyor.com/project/Signature-OpenSource/ck-observable-domain) |
+| `master` | [![Build status](https://ci.appveyor.com/api/projects/status/gyaeyym5btkavttn/branch/master?svg=true)](https://ci.appveyor.com/project/Signature-OpenSource/ck-observable-domain/branch/master) |
+| `develop` | [![Build status](https://ci.appveyor.com/api/projects/status/gyaeyym5btkavttn/branch/develop?svg=true)](https://ci.appveyor.com/project/Signature-OpenSource/ck-observable-domain/branch/develop) |
+
 ## Quick start
 
 ### Install the `CK.Observable.Domain` NuGet package
