@@ -1,47 +1,28 @@
-import { SymbolType } from "../../Core/IPoco";
+import { IPoco } from "../../Core/IPoco";
+import { CTSType } from "../../Core/CTSType";
 
-export class AmbientValues {
-actorId: number;
-actualActorId: number;
-deviceId: string;
-
-[SymbolType] = "CK.Cris.AmbientValues.IAmbientValues";
-/**
- * This SHOULD NOT be called! It's unfortunately public (waiting for the Default Values issue to be solved).
- **/
-constructor() {
-this.actorId = undefined!;
-this.actualActorId = undefined!;
-this.deviceId = undefined!;
-
-}
-/**
- * Factory method that exposes all the properties as parameters.
- **/
-static create( 
-actorId: number,
-actualActorId: number,
-deviceId: string ) : AmbientValues
-
-/**
- * Creates a new command and calls a configurator for it.
- * @param config A function that configures the new command.
- **/
-static create( config: (c: AmbientValues) => void ) : AmbientValues
-// Implementation.
-static create( 
-actorId: number|((c:AmbientValues) => void),
+export class AmbientValues implements IPoco {
+public currentCultureName: string;
+public actorId: number;
+public actualActorId: number;
+public deviceId: string;
+public constructor()
+public constructor(
+currentCultureName?: string,
+actorId?: number,
 actualActorId?: number,
-deviceId?: string ) {
-if( typeof actorId === 'function' ) {
-const c = new AmbientValues();
-actorId(c);
-return c;
+deviceId?: string)
+constructor(
+currentCultureName?: string,
+actorId?: number,
+actualActorId?: number,
+deviceId?: string)
+{
+this.currentCultureName = currentCultureName ?? "";
+this.actorId = actorId ?? 0;
+this.actualActorId = actualActorId ?? 0;
+this.deviceId = deviceId ?? "";
+CTSType["CK.Cris.AmbientValues.IAmbientValues"].set( this );
 }
-const c = new AmbientValues();
-c.actorId = actorId;
-c.actualActorId = actualActorId!;
-c.deviceId = deviceId!;
-return c;
-}
+readonly _brand!: IPoco["_brand"] & {"0":any};
 }

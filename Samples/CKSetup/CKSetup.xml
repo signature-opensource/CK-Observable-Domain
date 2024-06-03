@@ -15,7 +15,7 @@
                   AutoInstallYarn="true"
                   EnsureTestSupport="true" >
         <Types>
-          <Type Type="CK.Observable.ServerSample.App.ISliderCommand" />
+          <Type Type="CK.Observable.ServerSample.App.ISliderCommand, CK.Observable.ServerSample.App" />
         </Types>
       </TypeScript>
     </BinPath>

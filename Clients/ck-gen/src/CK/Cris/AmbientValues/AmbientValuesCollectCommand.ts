@@ -1,40 +1,23 @@
-import { CommandModel } from "../Model";
+import { ICommandModel, ICommand } from "../Model";
 import { AmbientValues } from "./AmbientValues";
-import { SymbolType } from "../../Core/IPoco";
+import { CTSType } from "../../Core/CTSType";
 
-export class AmbientValuesCollectCommand {
-get commandModel() { return AmbientValuesCollectCommand._commandModel; }
-private static readonly _commandModel: CommandModel<AmbientValues|undefined> =  {
-commandName: "CK.Cris.AmbientValues.IAmbientValuesCollectCommand",
+export class AmbientValuesCollectCommand implements ICommand<AmbientValues|undefined> {
+public constructor()
+public constructor()
+constructor()
+{
+CTSType["CK.Cris.AmbientValues.IAmbientValuesCollectCommand"].set( this );
+}
+
+get commandModel(): ICommandModel { return AmbientValuesCollectCommand.#m; }
+
+static #m =  {
 applyAmbientValues( command: any, a: any, o: any ) {
-// This command has no property that appear in the Ambient Values.
+// This command has no AmbientValue property.
 
 }
 
-};
-
-[SymbolType] = "CK.Cris.AmbientValues.IAmbientValuesCollectCommand";
-/**
- * This SHOULD NOT be called! It's unfortunately public (waiting for the Default Values issue to be solved).
- **/
-constructor() {
-
 }
-/**
- * Factory method that exposes all the properties as parameters.
- **/
-static create(  ) : AmbientValuesCollectCommand
-
-/**
- * Creates a new command and calls a configurator for it.
- * @param config A function that configures the new command.
- **/
-static create( config: (c: AmbientValuesCollectCommand) => void ) : AmbientValuesCollectCommand
-// Implementation.
-static create( config?: (c: AmbientValuesCollectCommand) => void ) : AmbientValuesCollectCommand
- {
-const c = new AmbientValuesCollectCommand();
-if( config ) config(c);
-return c;
-}
+readonly _brand!: ICommand<AmbientValues|undefined>["_brand"] & {"4":any};
 }

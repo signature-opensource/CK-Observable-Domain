@@ -1,6 +1,9 @@
 import { AxiosInstance, AxiosHeaders, RawAxiosRequestConfig } from "axios";
-import {CrisEndpoint} from './CrisEndpoint';
-import {ICommand,ExecutedCommand,CrisError} from './Model';
+import { ICommand, ExecutedCommand, CrisError } from "./Model";
+import { CrisEndpoint } from "./CrisEndpoint";
+import { AspNetResult } from "./AspNet/AspNetResult";
+import { CTSType } from "../Core/CTSType";
+import { AspNetCrisResultError } from "./AspNet/AspNetCrisResultError";
 
 const defaultCrisAxiosConfig: RawAxiosRequestConfig = {
     responseType: 'text',
@@ -34,33 +37,32 @@ export class HttpCrisEndpoint extends CrisEndpoint
 
     protected override async doSendAsync<T>(command: ICommand<T>): Promise<ExecutedCommand<T>>
     {
-        try
-        {
-          let string = `["${command.commandModel.commandName}"`;
-          string += `,${JSON.stringify(command, (key, value) => {
-            return key == "commandModel" ? undefined : value;
-          })}]`;
-          const resp = await this.axios.post<string>(this.crisEndpointUrl, string, this.axiosConfig);
-
-          return this.handleJsonResponse( command, JSON.parse(resp.data) );
-        }
-        catch( e )
-        {
-            var error : Error;
-            if( e instanceof Error)
-            {
-                error = e;
-            }
-            else
-            {
-                // Error.cause is a mess. Log it.
-                console.error( e );
-                error = new Error(`Unhandled error ${e}.`);
-            }
-            this.setIsConnected(false);
-            return {command, result: new CrisError(command,"Communication error", false, error )};
-        }
-
+       try
+       {
+           const req = JSON.stringify(CTSType.toTypedJson(command));
+           const resp = await this.axios.post(this.crisEndpointUrl, req, this.axiosConfig);
+           const netResult = <AspNetResult>CTSType["AspNetResult"].nosj( JSON.parse(resp.data) );
+           let r = netResult.result;
+           if( r instanceof AspNetCrisResultError ) 
+           {
+               r = new CrisError(command, r.isValidationError, r.errors, undefined, netResult.validationMessages, r.logKey);
+           }
+           return {command: command, result: <T|CrisError>r, validationMessages: netResult.validationMessages, correlationId: netResult.correlationId };
+       }
+       catch( e )
+       {
+           var error : Error;
+           if( e instanceof Error)
+           {
+               error = e;
+           }
+           else
+           {
+               // Error.cause is a mess. Log it.
+               console.error( e );
+               error = new Error(`Unhandled error ${e}.`);
+           }
+           this.setIsConnected(false);
+           return {command, result: new CrisError(command, false, ["Communication error"], error )};                                              }
     }
-
 }
