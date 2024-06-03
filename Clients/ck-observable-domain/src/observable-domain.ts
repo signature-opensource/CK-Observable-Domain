@@ -3,17 +3,47 @@ import { deserialize } from "@signature/json-graph-serializer";
 
 export type WatchEvent = TransactionSetEvent | DomainExportEvent | ErrorEvent | '';
 
+/**
+ * One or more Transactions, to be applied onto an existing ObservableDomain state.
+ */
 export interface TransactionSetEvent {
+    /**
+     * The TransactionNumber of the last event in {@link E}.
+     */
     N: number;
+    /**
+     * The array of Transactions. Each Transaction is an array of {@link WatchEvent}.
+     */
     E: any[][];
+    /**
+     * The last TransactionNumber that should have emitted events.
+     */
     L: number;
 }
 
+/**
+ * A full ObservableDomain Export.
+ */
 export interface DomainExportEvent {
+    /**
+     * The TransactionNumber this ObservableDomain Export is at.
+     */
     N: number;
+    /**
+     * The count of all Objects in the Object graph in {@link O}.
+     */
     C: number;
+    /**
+     * The indexed property names referenced by the Object graph in {@link O}.
+     */
     P: string[];
+    /**
+     * The Object graph contents. As any, but is usually an any[].
+     */
     O: any;
+    /**
+     * The array index of the ObservableDomain root objects in {@link O}.
+     */
     R: number[];
 }
 
@@ -21,14 +51,56 @@ export interface ErrorEvent {
     Error: string;
 }
 
+/**
+ * The local ObservableDomain state.
+ */
 export class ObservableDomain {
+    /**
+     * The indexed array of known property names.
+     * @see DomainExportEvent.P
+     * @private
+     */
     private readonly _props: string[];
+
+    /**
+     * The current TransactionNumber this state is at.
+     * @see DomainExportEvent.N
+     * @see TransactionSetEvent.N
+     * @private
+     */
     private _tranNum: number;
+
+    /**
+     * The object count in the current graph.
+     * @see DomainExportEvent.C
+     * @private
+     */
     private _objCount: number;
+
+    /**
+     * The current graph.
+     * @see DomainExportEvent.O
+     * @private
+     */
     private readonly _graph: any[];
+
+    /**
+     * The current ObservableDomain root objects.
+     * @see DomainExportEvent.R
+     * @private
+     */
     private readonly _roots: any[];
 
+    /**
+     * True if this ObservableDomain has yet to apply any new events on its initial state,
+     * or if it has been reset from a DomainExport and has not received new events since.
+     * @private
+     * @remarks The DomainExport does not ignore empty transactions like Events do.
+     */
+    private _isInitialExport: boolean;
+
     constructor(initialState?: string | DomainExportEvent | undefined) {
+        this._isInitialExport = true;
         if (initialState === undefined) {
             this._props = [];
             this._tranNum = 0;
@@ -99,9 +171,18 @@ export class ObservableDomain {
             const firstTransactionNumber = e.N - e.E.length + 1;
             if(e.L) {
                 // e.L is the LAST transaction that emitted events.
-                // If everything is okay, it should be this one.
+                // If everything is okay, it should be _tranNum.
                 if(e.L !== this._tranNum) {
-                    throw new Error(`Event claims last event was TN ${e.L}, current TN is ${this._tranNum}`);
+                    if(this._tranNum > e.L && this._tranNum < e.N && this._isInitialExport) {
+                        // Note that the full Export on start causes _tranNum to be greater than e.L,
+                        // since it also includes transactions that did not emit events (which can be safely ignored, since they have no effect on  this state).
+                        console.warn(`Event claims last event was TN ${e.L}, current TN is ${this._tranNum}. Accepting partial event.`);
+
+                        // Fast-forward just before the first event in e.E.
+                        this._tranNum = firstTransactionNumber - 1;
+                    } else {
+                        throw new Error(`Event claims last event was TN ${e.L}, current TN is ${this._tranNum}`);
+                    }
                 } else {
                     // Fast-forward just before the first event in e.E.
                     this._tranNum = firstTransactionNumber - 1;
@@ -134,6 +215,7 @@ export class ObservableDomain {
 
         this._roots.splice(0, this._roots.length); // Clear array
         for(let i = 0; i < e.R.length; i++) this._roots.push(this._graph[e.R[i]]); // Fill array
+        this._isInitialExport = true;
     }
 
     public applyEvent(N: number, E: any[]) {
@@ -226,6 +308,7 @@ export class ObservableDomain {
         }
         deleted.forEach(id => this._graph[id] = null);
         this._tranNum = N;
+        this._isInitialExport = false;
     }
 
     private getValue(o: any) {
