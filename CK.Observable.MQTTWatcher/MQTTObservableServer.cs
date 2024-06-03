@@ -13,7 +13,7 @@ using Microsoft.Extensions.Options;
 
 namespace CK.Observable.MQTTWatcher
 {
-    public class MqttObservableServer : IHostedService
+    public class MqttObservableServer : ISingletonAutoService, IHostedService
     {
         readonly IOptionsMonitor<MQTTObservableWatcherConfig> _config;
         readonly MQTTDemiServer _server;

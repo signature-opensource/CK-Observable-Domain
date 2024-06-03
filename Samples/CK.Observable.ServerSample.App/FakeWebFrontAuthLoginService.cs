@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace CK.Observable.ServerSample.App
 {
-    public class FakeWebFrontAuthLoginService : IWebFrontAuthLoginService
+    public class FakeWebFrontAuthLoginService : IWebFrontAuthLoginService, IUserInfoProvider
     {
         public bool HasBasicLogin => false;
 
@@ -29,5 +29,10 @@ namespace CK.Observable.ServerSample.App
 
         public Task<IAuthenticationInfo> RefreshAuthenticationInfoAsync( HttpContext ctx, IActivityMonitor monitor, IAuthenticationInfo current, DateTime newExpires )
             => throw new NotSupportedException();
+
+        ValueTask<IUserInfo> IUserInfoProvider.GetUserInfoAsync( IActivityMonitor monitor, int userId )
+        {
+            throw new NotImplementedException();
+        }
     }
 }

@@ -10,10 +10,8 @@ namespace CK.Observable.SignalRWatcher
         readonly Dictionary<string, HubObservableWatcher> _watchers = new();
 
         [CommandHandler]
-        public async Task<string> HandleStartOrRestartWatchAsync(
-            IActivityMonitor monitor,
-            ISignalRObservableWatcherStartOrRestartCommand command
-        )
+        public async Task<string> HandleStartOrRestartWatchAsync( IActivityMonitor monitor,
+                                                                  ISignalRObservableWatcherStartOrRestartCommand command )
         {
             HubObservableWatcher? val;
             lock( _watchers )

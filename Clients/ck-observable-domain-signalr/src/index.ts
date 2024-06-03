@@ -33,7 +33,7 @@ export class SignalRObservableLeagueDomainService implements IObservableDomainLe
   public async startListeningAsync(domainsNames: { domainName: string, transactionCount: number }[]): Promise<{ [domainName: string]: WatchEvent }> {
     const res: { [domainName: string]: WatchEvent; } = {};
     const promises = domainsNames.map(async element => {
-      const poco = SignalRObservableWatcherStartOrRestartCommand.create(this.connection.connectionId!, element.domainName, element.transactionCount);
+      const poco = new SignalRObservableWatcherStartOrRestartCommand(this.connection.connectionId!, element.domainName, element.transactionCount);
       const result = await this.crisEndpoint.sendOrThrowAsync(poco);
       if (result) {
         res[element.domainName] = JSON.parse(result);
