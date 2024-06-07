@@ -22,5 +22,5 @@ applyAmbientValues( command: any, a: any, o: any ) {
 }
 
 }
-readonly _brand!: ICommand["_brand"] & {"8":any};
+readonly _brand!: ICommand["_brand"] & {"9":any};
 }

@@ -20,5 +20,5 @@ this.errors = errors ?? [];
 this.logKey = logKey;
 CTSType["AspNetCrisResultError"].set( this );
 }
-readonly _brand!: IPoco["_brand"] & {"6":any};
+readonly _brand!: IPoco["_brand"] & {"7":any};
 }

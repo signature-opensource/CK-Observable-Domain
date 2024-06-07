@@ -30,5 +30,5 @@ applyAmbientValues( command: any, a: any, o: any ) {
 }
 
 }
-readonly _brand!: ICommand<string|undefined>["_brand"] & {"9":any};
+readonly _brand!: ICommand<string|undefined>["_brand"] & {"10":any};
 }

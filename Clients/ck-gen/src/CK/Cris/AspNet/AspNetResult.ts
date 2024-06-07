@@ -21,5 +21,5 @@ this.validationMessages = validationMessages;
 this.correlationId = correlationId;
 CTSType["AspNetResult"].set( this );
 }
-readonly _brand!: IPoco["_brand"] & {"5":any};
+readonly _brand!: IPoco["_brand"] & {"6":any};
 }
