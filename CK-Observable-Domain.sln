@@ -49,6 +49,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.SignalRWatche
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Samples", "Samples", "{9089E34F-4550-4B76-AFF7-FCE9CD83FC88}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CK.Observable.Cris", "CK.Observable.Cris\CK.Observable.Cris.csproj", "{59F758A9-CCB1-4310-9F4E-BB8C43F2A1FC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -107,6 +109,10 @@ Global
 		{477E5728-B812-4BEA-AA55-11AC634F1D73}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{477E5728-B812-4BEA-AA55-11AC634F1D73}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{477E5728-B812-4BEA-AA55-11AC634F1D73}.Release|Any CPU.Build.0 = Release|Any CPU
+		{59F758A9-CCB1-4310-9F4E-BB8C43F2A1FC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{59F758A9-CCB1-4310-9F4E-BB8C43F2A1FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{59F758A9-CCB1-4310-9F4E-BB8C43F2A1FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{59F758A9-CCB1-4310-9F4E-BB8C43F2A1FC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

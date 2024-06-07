@@ -10,7 +10,6 @@
     <PackageReference Include="CK.PerfectEvent" Version="21.0.1--0016-develop" />
     <PackageReference Include="System.Threading.Channels" Version="6.0.0" />
     <PackageReference Include="CK.BinarySerialization.Sliced" Version="5.0.1--0041-develop" />
-    <PackageReference Update="Microsoft.VisualStudio.Threading.Analyzers" Version="17.7.30" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="MSBuild/CK.Observable.Domain.targets">
