@@ -5,13 +5,12 @@
   <UseSignatureFiles>True</UseSignatureFiles>
   <ForceSetup>Full</ForceSetup>
   
-  <Aspect Type="CK.Setup.TypeScriptAspectConfiguration, CK.StObj.TypeScript">
-  </Aspect>
+  <Aspect Type="CK.Setup.TypeScriptAspectConfiguration, CK.StObj.TypeScript" />
 
   <BinPaths>
     <BinPath Path="../CK.Observable.ServerSample.App/bin/[Debug|Release]/net6.0">
       <ProjectPath>../CK.Observable.ServerSample</ProjectPath>
-      <TypeScript TargetProjectPath="../../Clients/"
+      <TypeScript TargetProjectPath="{ProjectPath}Web/"
                   AutoInstallYarn="true"
                   EnsureTestSupport="true" >
         <Types>
@@ -20,7 +19,5 @@
       </TypeScript>
     </BinPath>
   </BinPaths>
-
-  <WorkingDirectory>WorkingDir</WorkingDirectory>
 
 </Setup>
