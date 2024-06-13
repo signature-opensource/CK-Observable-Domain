@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>CK.ObservableDomain</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="**\*.ts" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CK.StObj.TypeScript" Version="0.18.1--0127-develop" />
+  </ItemGroup>
+
+</Project>

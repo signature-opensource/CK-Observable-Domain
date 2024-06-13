@@ -39,17 +39,21 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.Crs", "CK.Obs
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.MQTTWatcher", "CK.Observable.MQTTWatcher\CK.Observable.MQTTWatcher.csproj", "{03E900E7-8D10-4C3C-93E6-216A35F83446}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.ServerSample", "Samples\CK.Observable.ServerSample\CK.Observable.ServerSample.csproj", "{D9CD2C0F-79FB-4DB7-B5E1-2C98BF07565B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.ServerSample.Host", "Sample\CK.Observable.ServerSample.Host\CK.Observable.ServerSample.Host.csproj", "{D9CD2C0F-79FB-4DB7-B5E1-2C98BF07565B}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CKSetup", "Samples\CKSetup\CKSetup.csproj", "{0E315C17-1BD2-4A50-BBFE-A91EC871923F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CKSetup", "Sample\CKSetup\CKSetup.csproj", "{0E315C17-1BD2-4A50-BBFE-A91EC871923F}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.ServerSample.App", "Samples\CK.Observable.ServerSample.App\CK.Observable.ServerSample.App.csproj", "{9EAEBFBE-0E86-486D-A774-3482AC88E6F0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.ServerSample.App", "Sample\CK.Observable.ServerSample.App\CK.Observable.ServerSample.App.csproj", "{9EAEBFBE-0E86-486D-A774-3482AC88E6F0}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.SignalRWatcher", "CK.Observable.SignalRWatcher\CK.Observable.SignalRWatcher.csproj", "{477E5728-B812-4BEA-AA55-11AC634F1D73}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Samples", "Samples", "{9089E34F-4550-4B76-AFF7-FCE9CD83FC88}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Sample", "Sample", "{9089E34F-4550-4B76-AFF7-FCE9CD83FC88}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CK.Observable.Cris", "CK.Observable.Cris\CK.Observable.Cris.csproj", "{59F758A9-CCB1-4310-9F4E-BB8C43F2A1FC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.Cris", "CK.Observable.Cris\CK.Observable.Cris.csproj", "{59F758A9-CCB1-4310-9F4E-BB8C43F2A1FC}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.TS.ObservableDomain", "CK.TS.ObservableDomain\CK.TS.ObservableDomain.csproj", "{11B7406F-8058-4FB1-B6A6-471381A1EDF2}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.TS.ObservableDomain.Tests", "Tests\CK.TS.ObservableDomain.Tests\CK.TS.ObservableDomain.Tests.csproj", "{95D9D3D8-75A6-461D-9703-76756375CB93}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -113,6 +117,14 @@ Global
 		{59F758A9-CCB1-4310-9F4E-BB8C43F2A1FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{59F758A9-CCB1-4310-9F4E-BB8C43F2A1FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{59F758A9-CCB1-4310-9F4E-BB8C43F2A1FC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{11B7406F-8058-4FB1-B6A6-471381A1EDF2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{11B7406F-8058-4FB1-B6A6-471381A1EDF2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{11B7406F-8058-4FB1-B6A6-471381A1EDF2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{11B7406F-8058-4FB1-B6A6-471381A1EDF2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{95D9D3D8-75A6-461D-9703-76756375CB93}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{95D9D3D8-75A6-461D-9703-76756375CB93}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{95D9D3D8-75A6-461D-9703-76756375CB93}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{95D9D3D8-75A6-461D-9703-76756375CB93}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -124,6 +136,7 @@ Global
 		{D9CD2C0F-79FB-4DB7-B5E1-2C98BF07565B} = {9089E34F-4550-4B76-AFF7-FCE9CD83FC88}
 		{0E315C17-1BD2-4A50-BBFE-A91EC871923F} = {9089E34F-4550-4B76-AFF7-FCE9CD83FC88}
 		{9EAEBFBE-0E86-486D-A774-3482AC88E6F0} = {9089E34F-4550-4B76-AFF7-FCE9CD83FC88}
+		{95D9D3D8-75A6-461D-9703-76756375CB93} = {0BBC7F98-38CE-4CF9-A0E6-2005847D43F2}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B2074A41-0020-4F2C-97EE-709573157ACC}

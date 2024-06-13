@@ -206,7 +206,7 @@ namespace CK.Observable
         /// </summary>
         /// <param name="t">The type for which a driver must be found. Can be null: null is returned.</param>
         /// <returns>Null if the type is null, the driver otherwise.</returns>
-        public static IUnifiedTypeDriver FindDriver( Type t )
+        public static IUnifiedTypeDriver? FindDriver( Type t )
         {
             if( t == null ) return null;
             if( _drivers.TryGetValue( t, out var info ) )
@@ -216,8 +216,8 @@ namespace CK.Observable
             var dType = typeof( AutoTypeDriver<> ).MakeGenericType( t );
             var baseTypeInfo = t.BaseType == typeof( object ) || t.BaseType == typeof( ValueType )
                                 ? null
-                                : (AutoTypeDriver)FindDriver( t.BaseType );
-            return _drivers.GetOrAdd( t, newType => (IUnifiedTypeDriver)Activator.CreateInstance( dType, baseTypeInfo ) );
+                                : (AutoTypeDriver?)FindDriver( t.BaseType );
+            return _drivers.GetOrAdd( t, newType => (IUnifiedTypeDriver)Activator.CreateInstance( dType, baseTypeInfo )! );
         }
 
         static void GetAndCheckTypeAutoParts( Type t,

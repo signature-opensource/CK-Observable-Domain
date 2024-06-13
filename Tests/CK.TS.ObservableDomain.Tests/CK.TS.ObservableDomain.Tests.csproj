@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+    <ItemGroup>
+    <PackageReference Include="nunit" Version="4.1.0" />
+    <PackageReference Include="NUnit3TestAdapter" PrivateAssets="all" Version="4.5.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <PackageReference Include="CK.Testing.CrisAspNetEngine" Version="0.31.1--0035-develop" />
+    <ProjectReference Include="..\..\CK.Observable.MQTTWatcher\CK.Observable.MQTTWatcher.csproj" />
+    <ProjectReference Include="..\..\CK.TS.ObservableDomain\CK.TS.ObservableDomain.csproj" />
+  </ItemGroup>
+
+</Project>

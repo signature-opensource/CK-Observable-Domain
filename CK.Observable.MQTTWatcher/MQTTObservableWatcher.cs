@@ -8,10 +8,14 @@ using System.IO.Pipelines;
 using System.Buffers.Binary;
 using CK.MQTT.Server;
 using CommunityToolkit.HighPerformance;
+using System.Threading.Tasks;
+using System;
+using System.Threading;
+using System.IO;
 
 namespace CK.Observable.MQTTWatcher
 {
-    class MqttObservableWatcher : ObservableWatcher
+    sealed class MqttObservableWatcher : ObservableWatcher
     {
         readonly MqttObservableServer _parent;
         readonly IOptionsMonitor<MQTTObservableWatcherConfig> _config;
@@ -31,10 +35,9 @@ namespace CK.Observable.MQTTWatcher
             _mqttAgent.OnConnectionChange.Sync += OnConnectionChange;
         }
 
-        void OnConnectionChange( IActivityMonitor m, DisconnectReason e )
-            => _parent.OnClientConnectionChange( m, this, e );
+        void OnConnectionChange( IActivityMonitor m, DisconnectReason e ) => _parent.OnClientConnectionChange( m, this, e );
 
-        class ObsMqttMessage : OutgoingMessage
+        sealed class ObsMqttMessage : OutgoingMessage
         {
             readonly string _domainName;
             readonly int _domainNameSize;
@@ -53,8 +56,7 @@ namespace CK.Observable.MQTTWatcher
 
             protected override uint PayloadSize => (uint)(4 + 4 + _domainNameSize + _jsonExportSize);
 
-            public override ValueTask DisposeAsync()
-                => new ValueTask();
+            public override ValueTask DisposeAsync() => default;
 
             protected override ValueTask WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken )
             {
@@ -66,7 +68,7 @@ namespace CK.Observable.MQTTWatcher
                 BinaryPrimitives.WriteInt32LittleEndian( span, _jsonExportSize );
                 _utf8.GetBytes( _jsonExport, span[4..] );
                 pw.Advance( size );
-                return new ValueTask();
+                return default;
             }
         }
 

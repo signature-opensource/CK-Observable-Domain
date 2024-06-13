@@ -145,8 +145,7 @@ namespace CK.Observable
 
             internal void OnPropertyChanged( ObservableObject o, ObservablePropertyChangedEventArgs p, object? after )
             {
-                PropChanged c;
-                if( _propChanged.TryGetValue( p.GetObjectPropertyId( o ), out c ) )
+                if( _propChanged.TryGetValue( p.GetObjectPropertyId( o ), out var c ) )
                 {
                     c.FinalValue = after;
                 }
