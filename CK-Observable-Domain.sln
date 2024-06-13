@@ -53,7 +53,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.Cris", "CK.Ob
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.TS.ObservableDomain", "CK.TS.ObservableDomain\CK.TS.ObservableDomain.csproj", "{11B7406F-8058-4FB1-B6A6-471381A1EDF2}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.TS.ObservableDomain.Tests", "Tests\CK.TS.ObservableDomain.Tests\CK.TS.ObservableDomain.Tests.csproj", "{95D9D3D8-75A6-461D-9703-76756375CB93}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TypeScript.Tests", "Tests\TypeScript.Tests\TypeScript.Tests.csproj", "{95D9D3D8-75A6-461D-9703-76756375CB93}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

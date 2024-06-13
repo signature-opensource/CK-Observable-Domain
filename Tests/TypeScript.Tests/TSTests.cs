@@ -33,5 +33,18 @@ namespace CK.TS.ObservableDomain.Tests
             runner.Run();
         }
 
+        [Test]
+        public async Task CK_Observable_SignalRWatcher_Async()
+        {
+            var targetProjectPath = TestHelper.GetTypeScriptBuildModeTargetProjectPath();
+
+            var c = TestHelper.CreateTypeCollector()
+                              .AddModelDependentAssembly( typeof( CK.Observable.SignalRWatcher.TSPackage ).Assembly )
+                              .AddModelDependentAssembly( typeof( CrisAspNetService ).Assembly );    
+            TestHelper.RunSuccessfulEngineWithTypeScript( targetProjectPath, c );
+            await using var runner = TestHelper.CreateTypeScriptRunner( targetProjectPath );
+            runner.Run();
+        }
+
     }
 }
