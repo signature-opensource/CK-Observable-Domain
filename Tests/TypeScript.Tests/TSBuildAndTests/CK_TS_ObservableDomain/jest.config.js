@@ -9,6 +9,6 @@ module.exports = {
             diagnostics: {ignoreCodes: ['TS151001']}
         }],
     },
-    testEnvironment: 'node',
-    setupFiles: ["../jest.StObjTypeScriptEngine.js"]
+    testEnvironment: 'jsdom',
+    setupFiles: ["../jest.CKTypeScriptEngine.ts"]
 };

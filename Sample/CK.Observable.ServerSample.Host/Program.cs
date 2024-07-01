@@ -28,9 +28,9 @@ namespace CK.Observable.ServerSample
             var host = WebApplication.CreateBuilder( args );
             var monitor = host.Host.GetBuilderMonitor();
             host.Services.RemoveAll<ILoggerProvider>();
+            host.AddScopedHttpContext();
             host.Host.UseCKAppIdentity();
             host.Host.UseCKMonitoring();
-            host.WebHost.UseScopedHttpContext();
 
             host.Services.Configure<MQTTDemiServerConfig>( host.Configuration.GetSection( "MQTTDemiServerConfig" ) );
 
@@ -69,6 +69,8 @@ namespace CK.Observable.ServerSample
             host.Services.AddStObjMap( monitor, Assembly.GetEntryAssembly()! );
 
             var app = host.Build();
+            app.UseGuardRequestMonitor();
+            app.UseScopedHttpContext();
             app.UseCors();
             app.UseCris();
             app.UseRouting();

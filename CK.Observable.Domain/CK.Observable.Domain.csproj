@@ -5,11 +5,11 @@
     <LangVersion>Latest</LangVersion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.StObj.Model" Version="25.0.1--0185-develop" />
-    <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="20.0.1--0011-develop" />
-    <PackageReference Include="CK.PerfectEvent" Version="21.0.1--0016-develop" />
+    <PackageReference Include="CK.StObj.Model" Version="25.0.1--0211-develop" />
+    <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="20.0.1--0012-develop" />
+    <PackageReference Include="CK.PerfectEvent" Version="21.0.1--0018-develop" />
     <PackageReference Include="System.Threading.Channels" Version="6.0.0" />
-    <PackageReference Include="CK.BinarySerialization.Sliced" Version="5.0.1--0042-develop" />
+    <PackageReference Include="CK.BinarySerialization.Sliced" Version="5.0.1--0052-develop" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="MSBuild/CK.Observable.Domain.targets">

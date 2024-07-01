@@ -15,7 +15,10 @@ namespace CK.TS.ObservableDomain.Tests
         public async Task CK_TS_ObservableDomain_Async()
         {
             var targetProjectPath = TestHelper.GetTypeScriptBuildModeTargetProjectPath();
-            TestHelper.RunSuccessfulEngineWithTypeScript( targetProjectPath, typeof( CK.ObservableDomain.TSPackage ).Assembly );
+            var configuration = TestHelper.CreateDefaultEngineConfiguration();
+            configuration.FirstBinPath.EnsureTypeScriptConfigurationAspect( targetProjectPath );
+            configuration.FirstBinPath.Assemblies.Add( "CK.TS.ObservableDomain" );
+            configuration.RunSuccessfully();
             await using var runner = TestHelper.CreateTypeScriptRunner( targetProjectPath );
             runner.Run();
         }
@@ -24,11 +27,11 @@ namespace CK.TS.ObservableDomain.Tests
         public async Task CK_Observable_MQTTWatcher_Async()
         {
             var targetProjectPath = TestHelper.GetTypeScriptBuildModeTargetProjectPath();
-
-            var c = TestHelper.CreateTypeCollector()
-                              .AddModelDependentAssembly( typeof( CK.Observable.MQTTWatcher.TSPackage ).Assembly )
-                              .AddModelDependentAssembly( typeof( CrisAspNetService ).Assembly );    
-            TestHelper.RunSuccessfulEngineWithTypeScript( targetProjectPath, c );
+            var configuration = TestHelper.CreateDefaultEngineConfiguration();
+            configuration.FirstBinPath.EnsureTypeScriptConfigurationAspect( targetProjectPath );
+            configuration.FirstBinPath.Assemblies.Add( "CK.Observable.MQTTWatcher" );
+            configuration.FirstBinPath.Assemblies.Add( "CK.Cris.AspNet" );
+            configuration.RunSuccessfully();
             await using var runner = TestHelper.CreateTypeScriptRunner( targetProjectPath );
             runner.Run();
         }
@@ -37,11 +40,11 @@ namespace CK.TS.ObservableDomain.Tests
         public async Task CK_Observable_SignalRWatcher_Async()
         {
             var targetProjectPath = TestHelper.GetTypeScriptBuildModeTargetProjectPath();
-
-            var c = TestHelper.CreateTypeCollector()
-                              .AddModelDependentAssembly( typeof( CK.Observable.SignalRWatcher.TSPackage ).Assembly )
-                              .AddModelDependentAssembly( typeof( CrisAspNetService ).Assembly );    
-            TestHelper.RunSuccessfulEngineWithTypeScript( targetProjectPath, c );
+            var configuration = TestHelper.CreateDefaultEngineConfiguration();
+            configuration.FirstBinPath.EnsureTypeScriptConfigurationAspect( targetProjectPath );
+            configuration.FirstBinPath.Assemblies.Add( "CK.Observable.SignalRWatcher" );
+            configuration.FirstBinPath.Assemblies.Add( "CK.Cris.AspNet" );
+            configuration.RunSuccessfully();
             await using var runner = TestHelper.CreateTypeScriptRunner( targetProjectPath );
             runner.Run();
         }

@@ -5,13 +5,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="**\*.ts" />
+    <EmbeddedResource Include="**\*.ts">
+      <LogicalName>ck@$([System.String]::new('%(RelativeDir)').Replace('\','/'))%(FileName)%(Extension)</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="CK.Cris.Typescript" Version="0.31.1--0035-develop" />
+    <PackageReference Include="CK.Cris.Typescript" Version="0.31.1--0056-develop" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CK.Observable.League\CK.Observable.League.csproj" />

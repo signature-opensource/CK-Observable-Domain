@@ -8,11 +8,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="**\*.ts" />
+    <EmbeddedResource Include="**\*.ts">
+      <LogicalName>ck@$([System.String]::new('%(RelativeDir)').Replace('\','/'))%(FileName)%(Extension)</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="CK.StObj.TypeScript" Version="0.18.1--0127-develop" />
+    <PackageReference Include="CK.StObj.TypeScript" Version="0.18.1--0157-develop" />
   </ItemGroup>
 
 </Project>
