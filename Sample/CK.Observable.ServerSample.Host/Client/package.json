@@ -5,16 +5,17 @@
     "start": "vite serve",
     "clean": "rimraf dist"
   },
-  "dependencies": {
-    "@signature/ck-observable-domain": "workspace:*",
-    "@signature/ck-observable-domain-mqtt": "workspace:*",
-    "@signature/ck-observable-domain-signalr": "workspace:*",
-    "axios": "^1.5.1"
-  },
+  "workspaces": [
+    "ck-gen"
+  ],
   "devDependencies": {
     "@local/ck-gen": "workspace:*",
     "rimraf": "^3.0.2",
-    "typescript": "5.2.2",
-    "vite": "4.4.11"
-  }
+    "typescript": "=5.4.5",
+    "vite": "=5.3.2"
+  },
+  "dependencies": {
+    "axios": "^1.5.1"
+  },
+  "peerDependencies": {}
 }

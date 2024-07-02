@@ -3,31 +3,28 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net6.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
-    <_GetChildProjectCopyToPublishDirectoryItems>false</_GetChildProjectCopyToPublishDirectoryItems>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="CK.Cris.Executor.Engine" Version="0.31.1--0056-develop" />
-    <PackageReference Include="CK.Cris.TypeScript" Version="0.31.1--0056-develop" />
+    <PackageReference Include="CK.Cris.AspNet.Engine" Version="0.31.1--0056-develop" />
     <PackageReference Include="CK.Engine" Version="25.0.1--0211-develop" />
   </ItemGroup>
-
-  <!--<Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="dotnet tool restore" />
-    <Delete Files="LastRun.log" />
-    <Exec Command="dotnet cksetup run CKSetup.xml -v Release - -logFile LastRun.log" />
-  </Target>-->
 
   <ItemGroup>
     <ProjectReference Include="..\CK.Observable.ServerSample.App\CK.Observable.ServerSample.App.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Logs\Text\" />
+  </ItemGroup>
   
   <Target Name="RunMe" AfterTargets="PostBuildEvent">
     <Delete Files="LastRun.log" />
-    <Exec Command="$(MSBuildProjectDirectory)\$(OutputPath)\$(AssemblyName).exe &quot;$(OutputPath)&quot;" />
+    <Exec Command="$(MSBuildProjectDirectory)\$(OutputPath)\$(AssemblyName).exe" />
   </Target>
   
 </Project>

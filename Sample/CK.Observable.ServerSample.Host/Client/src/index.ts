@@ -1,14 +1,14 @@
 import axios from "axios";
-import {MqttObservableLeagueDomainService} from "@signature/ck-observable-domain-mqtt"
-import {ObservableDomainClient} from "@signature/ck-observable-domain";
+import {MQTTObservableLeagueDomainService} from "@local/ck-gen"
+import {ObservableDomainClient} from "@local/ck-gen";
 import {HttpCrisEndpoint, SliderCommand} from "@local/ck-gen";
-import {SignalRObservableLeagueDomainService} from "@signature/ck-observable-domain-signalr";
+import {SignalRObservableLeagueDomainService} from "@local/ck-gen";
 
 const crisAxios = axios.create();
 const crisEndpoint = new HttpCrisEndpoint(crisAxios, "http://localhost:5000/.cris");
 
 (async function (): Promise<void> {
-    const mqttOdDriver = new MqttObservableLeagueDomainService("ws://localhost:8080/mqtt/", crisEndpoint, "CK-OD");
+    const mqttOdDriver = new MQTTObservableLeagueDomainService("ws://localhost:8080/mqtt/", crisEndpoint, "CK-OD");
     const signalROdDriver = new SignalRObservableLeagueDomainService("http://localhost:5000/hub/league", crisEndpoint);
 
     const mqttOdClient = new ObservableDomainClient(mqttOdDriver);
@@ -33,8 +33,9 @@ const crisEndpoint = new HttpCrisEndpoint(crisAxios, "http://localhost:5000/.cri
     });
 })();
 
-export async function sliderUpdate(sliderValue: unknown): Promise<void> {
-    await crisEndpoint.sendOrThrowAsync<void>( new SliderCommand(Number(sliderValue)) );
+export async function sliderUpdate(sliderValue: number): Promise<void> {
+    await crisEndpoint.sendOrThrowAsync<void>( new SliderCommand(sliderValue) );
 }
+
 
 window["sliderUpdate"] = sliderUpdate;
