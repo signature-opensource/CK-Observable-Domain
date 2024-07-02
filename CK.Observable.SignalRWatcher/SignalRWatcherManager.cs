@@ -22,8 +22,7 @@ namespace CK.Observable.SignalRWatcher
                 }
             }
 
-            var watchEvent =
-                await val.GetStartOrRestartEventAsync( monitor, command.DomainName, command.TransactionNumber );
+            var watchEvent = await val.GetStartOrRestartEventAsync( monitor, command.DomainName, command.TransactionNumber ).ConfigureAwait( false );
             return watchEvent.JsonExport;
         }
 

@@ -1,23 +1,17 @@
-using CK.Core;
 using CK.MQTT.Server;
 using CK.Observable.League;
 using CK.Observable.ServerSample.App;
 using CK.Observable.SignalRWatcher;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
-using CK.AppIdentity;
 
 namespace CK.Observable.ServerSample
 {
