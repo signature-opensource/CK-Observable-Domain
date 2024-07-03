@@ -16,8 +16,8 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="CK.AppIdentity.Hosting" Version="0.4.1--0025-develop" />
-    <PackageReference Include="CK.Monitoring.Hosting" Version="20.0.1--0020-develop" />
+    <PackageReference Include="CK.AppIdentity.Hosting" Version="0.5.0" />
+    <PackageReference Include="CK.Monitoring.Hosting" Version="21.0.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CK.Observable.ServerSample.App\CK.Observable.ServerSample.App.csproj" />
