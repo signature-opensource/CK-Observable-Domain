@@ -83,14 +83,14 @@ namespace CK.Observable
                 var underlyingType = Enum.GetUnderlyingType( type );
                 var enumType = typeof( EnumTypeExporter<,> ).MakeGenericType( type, underlyingType );
                 var underlyingDriver = FindDriver( underlyingType );
-                return (IObjectExportTypeDriver)Activator.CreateInstance( enumType, underlyingDriver );
+                return (IObjectExportTypeDriver)Activator.CreateInstance( enumType, underlyingDriver )!;
             }
             if( type.IsArray )
             {
-                var eType = type.GetElementType();
+                var eType = type.GetElementType()!;
                 var eDriver = FindDriver( eType );
                 var arrayType = typeof( EnumerableTypeExporter<> ).MakeGenericType( eType );
-                return (IObjectExportTypeDriver)Activator.CreateInstance( arrayType, eDriver );
+                return (IObjectExportTypeDriver)Activator.CreateInstance( arrayType, eDriver )!;
             }
             var d = AutoTypeRegistry.FindDriver( type ).ExportDriver;
             if( d == null || d.IsDefaultBehavior )

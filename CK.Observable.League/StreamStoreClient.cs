@@ -215,7 +215,6 @@ namespace CK.Observable.League
 
         readonly AsyncLock _saveLockAsync = new AsyncLock( LockRecursionPolicy.NoRecursion );
         readonly object _saveLock = new object();
-        int _inProgressSaveTransactionNumber = -1;
         int _waitingSaveTransactionNumber = -1;
         bool _isWaitingSaving = false;
         async Task<bool> DoSaveSnapshotAsync( IActivityMonitor monitor, bool doHouseKeeping, bool sendToArchive )

@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,13 +14,14 @@ using Microsoft.Extensions.Options;
 
 namespace CK.Observable.MQTTWatcher
 {
-    public class MqttObservableServer : IHostedService
+    public class MqttObservableServer : ISingletonAutoService, IHostedService
     {
         readonly IOptionsMonitor<MQTTObservableWatcherConfig> _config;
         readonly MQTTDemiServer _server;
         readonly IObservableLeague _league;
 
         readonly ConcurrentDictionary<string, MqttObservableWatcher> _watchers = new();
+
         public MqttObservableServer( IOptionsMonitor<MQTTObservableWatcherConfig> config, MQTTDemiServer server, DefaultObservableLeague league )
         {
             _config = config;
@@ -78,7 +80,7 @@ namespace CK.Observable.MQTTWatcher
             }
         }
 
-        public async Task StopAsync( CancellationToken cancellationToken )
+        public Task StopAsync( CancellationToken cancellationToken )
         {
             lock( _processNewClientLock )
             {
@@ -98,6 +100,7 @@ namespace CK.Observable.MQTTWatcher
                 }
             }
             _watchers.Clear();
+            return Task.CompletedTask;
         }
     }
 }

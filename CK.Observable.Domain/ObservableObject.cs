@@ -247,7 +247,7 @@ namespace CK.Observable
                 {
                     // Forbids previously (in initial ObservableDomain versions) handled EventHandler: this is too dangerous.
                     // See https://stackoverflow.com/questions/14885325/eventinfo-getraisemethod-always-null
-                    FieldInfo fNamedEv = GetType().GetField( propertyName + "Changed", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance );
+                    FieldInfo? fNamedEv = GetType().GetField( propertyName + "Changed", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance );
                     if( fNamedEv != null )
                     {
                         throw new Exception( $"{propertyName}Changed event must be a SafeEventHandler (not a {fNamedEv.FieldType.Name})." );

@@ -14,9 +14,9 @@ namespace CK.Core
     /// However, once done, the easiest (and most modular) way to extend this is simply to use extension methods backed by the <see cref="Memory"/>.
     /// </para>
     /// </summary>
-    public abstract class AsyncExecutionContext<TThis> : IAsyncDisposable where TThis : AsyncExecutionContext<TThis>
+    public abstract class AsyncExecutionContext<TSelf> : IAsyncDisposable where TSelf : AsyncExecutionContext<TSelf>
     {
-        readonly ActionRegistrar<TThis> _reg;
+        readonly ActionRegistrar<TSelf> _reg;
         readonly IActivityMonitor _monitor;
         IDictionary<object, object>? _memory;
         readonly bool _callMemoryDisposable;
@@ -28,10 +28,10 @@ namespace CK.Core
         /// </summary>
         /// <param name="monitor">The monitor that must be used.</param>
         /// <param name="registrar">Optional existing registrar.</param>
-        public AsyncExecutionContext( IActivityMonitor monitor, ActionRegistrar<TThis>? registrar = null )
+        public AsyncExecutionContext( IActivityMonitor monitor, ActionRegistrar<TSelf>? registrar = null )
         {
             if( monitor == null ) throw new ArgumentNullException( nameof( monitor ) );
-            _reg = (registrar ?? new ActionRegistrar<TThis>()).AcquireOnce( this );
+            _reg = (registrar ?? new ActionRegistrar<TSelf>()).AcquireOnce( this );
             _callMemoryDisposable = true;
             _monitor = monitor;
         }
@@ -46,7 +46,7 @@ namespace CK.Core
         /// True to call <see cref="IAsyncDisposable.DisposeAsync"/> or <see cref="IDisposable.Dispose"/> on
         /// all disposable <see cref="Memory"/>'s values.
         /// </param>
-        public AsyncExecutionContext( IActivityMonitor monitor, ActionRegistrar<TThis>? registrar, IDictionary<object, object> externalMemory, bool callMemoryDisposable )
+        public AsyncExecutionContext( IActivityMonitor monitor, ActionRegistrar<TSelf>? registrar, IDictionary<object, object> externalMemory, bool callMemoryDisposable )
             : this( monitor, registrar )
         {
             if( externalMemory == null ) throw new ArgumentNullException( nameof( externalMemory ) );
@@ -71,7 +71,7 @@ namespace CK.Core
         /// Gets the registrar. Actions, error, success and/or finally handlers can be registered
         /// even when <see cref="ExecuteAsync(bool, bool)"/> has been called.
         /// </summary>
-        public ActionRegistrar<TThis> Registrar => _reg;
+        public ActionRegistrar<TSelf> Registrar => _reg;
 
         /// <summary>
         /// Executes the currently enlisted actions, optionally in reverse order.
@@ -103,7 +103,7 @@ namespace CK.Core
                         {
                             while( idxCulprit < roundCount )
                             {
-                                await actions[idxCulprit].Invoke( (TThis)this ).ConfigureAwait( false );
+                                await actions[idxCulprit].Invoke( (TSelf)this ).ConfigureAwait( false );
                                 ++idxCulprit;
                             }
                         }
@@ -116,7 +116,7 @@ namespace CK.Core
                     {
                         using( _monitor.OpenTrace( $"Calling {onSuccess.Count} success handlers." ) )
                         {
-                            await RaiseSuccessAsync( onSuccess, name );
+                            await RaiseSuccessAsync( onSuccess, name ).ConfigureAwait( false );
                         }
                     }
                     return null;
@@ -163,7 +163,7 @@ namespace CK.Core
         /// <param name="success">The success handlers.</param>
         /// <param name="name">Execution name (for logs).</param>
         /// <returns>The awaitable.</returns>
-        async Task RaiseSuccessAsync( List<Func<TThis, Task>> success, string name )
+        async Task RaiseSuccessAsync( List<Func<TSelf, Task>> success, string name )
         {
             _reg.SetHandlingSuccess();
             int roundNumber = 0;
@@ -176,7 +176,7 @@ namespace CK.Core
                     {
                         try
                         {
-                            await success[i].Invoke( (TThis)this ).ConfigureAwait( false );
+                            await success[i].Invoke( (TSelf)this ).ConfigureAwait( false );
                         }
                         catch( Exception ex )
                         {
@@ -196,7 +196,7 @@ namespace CK.Core
         /// <param name="ex">The exception that has been raised by the action.</param>
         /// <param name="name">Execution name (for logs).</param>
         /// <returns>The awaitable.</returns>
-        async ValueTask RaiseErrorAsync( List<Func<TThis, Exception, Task>> errors, Exception ex, string name )
+        async ValueTask RaiseErrorAsync( List<Func<TSelf, Exception, Task>> errors, Exception ex, string name )
         {
             _reg.SetHandlingError();
             int roundNumber = 0;
@@ -209,7 +209,7 @@ namespace CK.Core
                     {
                         try
                         {
-                            await errors[i].Invoke( (TThis)this, ex ).ConfigureAwait( false );
+                            await errors[i].Invoke( (TSelf)this, ex ).ConfigureAwait( false );
                         }
                         catch( Exception exError )
                         {
@@ -228,7 +228,7 @@ namespace CK.Core
         /// <param name="final">The final actions to execute.</param>
         /// <param name="name">Execution name (for logs).</param>
         /// <returns>The awaitable.</returns>
-        async Task RaiseFinallyAsync( List<Func<TThis, Task>> final, string name )
+        async Task RaiseFinallyAsync( List<Func<TSelf, Task>> final, string name )
         {
             _reg.SetHandlingFinally();
             int roundNumber = 0;
@@ -241,7 +241,7 @@ namespace CK.Core
                     {
                         try
                         {
-                            await final[i].Invoke( (TThis)this ).ConfigureAwait( false );
+                            await final[i].Invoke( (TSelf)this ).ConfigureAwait( false );
                         }
                         catch( Exception ex )
                         {

@@ -1,4 +1,3 @@
-export const SymbolType = Symbol();
 export interface IPoco {
-[SymbolType]: string;
+readonly _brand:  & {"35":any};
 }

@@ -1,0 +1,17 @@
+<Setup Engine="CK.Setup.StObjEngine, CK.StObj.Engine">
+  
+  <Aspect Type="CK.Setup.TypeScriptAspectConfiguration, CK.StObj.TypeScript" />
+
+  <BinPaths>
+    <BinPath>
+      <TypeScript AutoInstallYarn="true"
+                  AutoInstallVSCodeSupport="true"
+                  GitIgnoreCKGenFolder = "true" >
+        <Types>
+          <Type Type="CK.Observable.ServerSample.App.ISliderCommand, CK.Observable.ServerSample.App" />
+        </Types>
+      </TypeScript>
+    </BinPath>
+  </BinPaths>
+
+</Setup>

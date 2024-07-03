@@ -16,7 +16,7 @@ export class MqttObservableLeagueDomainService implements IObservableDomainLeagu
     public async startListeningAsync(domainsNames: { domainName: string; transactionCount: number; }[]): Promise<{ [domainName: string]: WatchEvent; }> {
         const res: { [domainName: string]: WatchEvent; } = {};
         const promises = domainsNames.map(async element => {
-            const poco = MQTTObservableWatcherStartOrRestartCommand.create(this.clientId, element.domainName, element.transactionCount);
+            const poco = new MQTTObservableWatcherStartOrRestartCommand(this.clientId, element.domainName, element.transactionCount);
             const result = await this.crisEndpoint.sendOrThrowAsync(poco);
             if (result) {
                 res[element.domainName] = JSON.parse(result);
@@ -48,6 +48,7 @@ export class MqttObservableLeagueDomainService implements IObservableDomainLeagu
     }
 
     private handleMessages(topic: string, payload: Buffer, packet: IPublishPacket) {
+        console.log("Received MQTT message.");
         if (!topic.startsWith(this.mqttTopic)) return;
         const domainNameSize = payload.readInt32LE();
         const domainName = payload.toString("utf-8", 4, domainNameSize + 4);

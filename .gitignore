@@ -253,8 +253,8 @@ CodeCakeBuilder/[Rr]elease/
 CodeCakeBuilder/[Rr]eleases/
 /CKSetup/WorkingDir/
 /Clients/.parcel-cache/
-/Samples/CKSetup/WorkingDir/
-/Samples/CK.Observable.ServerSample/Logs/
+/Sample/CKSetup/WorkingDir/
+/Sample/CK.Observable.ServerSample/Logs/
 
 # Yarn - Not using Zero-Install (.yarn/cache and .pnp.* are not commited).
 .pnp.*

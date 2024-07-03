@@ -193,7 +193,7 @@ namespace CK.Observable.Domain.Tests
         {
             using( var d = new ObservableDomain( TestHelper.Monitor, nameof( IdempotenceSerializationCheck_works_on_disposing_Observables_Async ), startTimer: true ) )
             {
-                TestDisposableObservableObject oldObject = null;
+                TestDisposableObservableObject? oldObject = null;
                 await d.ModifyThrowAsync( TestHelper.Monitor, () =>
                 {
                     oldObject = new TestDisposableObservableObject( alwaysDisposeChild );

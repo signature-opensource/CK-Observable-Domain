@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="CK.AspNet.Auth" Version="23.0.0" />
+    <PackageReference Include="CK.Cris.Auth" Version="0.32.0" />
+    <PackageReference Include="CK.Cris.AspNet" Version="0.32.0" />
+    <PackageReference Include="CK.Monitoring.Hosting" Version="21.0.0" />
+    <PackageReference Include="CK.WeakAssemblyNameResolver" Version="0.5.3--0043-develop" />
+    <PackageReference Include="Fody" Version="6.8.1" PrivateAssets="All" />
+    <PackageReference Include="PropertyChanged.Fody" Version="4.1.0" PrivateAssets="All" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\CK.Observable.MQTTWatcher\CK.Observable.MQTTWatcher.csproj" />
+    <ProjectReference Include="..\..\CK.Observable.SignalRWatcher\CK.Observable.SignalRWatcher.csproj" />
+  </ItemGroup>
+</Project>

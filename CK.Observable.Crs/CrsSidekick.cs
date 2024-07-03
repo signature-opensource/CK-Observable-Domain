@@ -17,7 +17,7 @@ namespace CK.Observable
         readonly ICommandDispatcher _commandDispatcher;
 
         /// <summary>
-        /// 
+        /// Initializes a new CrsSideKick.
         /// </summary>
         /// <param name="manager">The domain's sidekick manager.</param>
         /// <param name="commandDispatcher"></param>

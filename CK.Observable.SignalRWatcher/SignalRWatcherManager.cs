@@ -10,10 +10,8 @@ namespace CK.Observable.SignalRWatcher
         readonly Dictionary<string, HubObservableWatcher> _watchers = new();
 
         [CommandHandler]
-        public async Task<string> HandleStartOrRestartWatchAsync(
-            IActivityMonitor monitor,
-            ISignalRObservableWatcherStartOrRestartCommand command
-        )
+        public async Task<string> HandleStartOrRestartWatchAsync( IActivityMonitor monitor,
+                                                                  ISignalRObservableWatcherStartOrRestartCommand command )
         {
             HubObservableWatcher? val;
             lock( _watchers )
@@ -24,8 +22,7 @@ namespace CK.Observable.SignalRWatcher
                 }
             }
 
-            var watchEvent =
-                await val.GetStartOrRestartEventAsync( monitor, command.DomainName, command.TransactionNumber );
+            var watchEvent = await val.GetStartOrRestartEventAsync( monitor, command.DomainName, command.TransactionNumber ).ConfigureAwait( false );
             return watchEvent.JsonExport;
         }
 
