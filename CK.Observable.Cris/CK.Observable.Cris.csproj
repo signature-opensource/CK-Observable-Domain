@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CK.Cris.BackgroundExecutor" Version="0.31.1--0056-develop" />
+    <PackageReference Include="CK.Cris.BackgroundExecutor" Version="0.31.1--0068-develop" />
   </ItemGroup>
 
   <ItemGroup>

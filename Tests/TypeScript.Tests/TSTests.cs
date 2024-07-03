@@ -5,6 +5,7 @@ using static CK.Testing.StObjEngineTestHelper;
 using CK.Cris.AmbientValues;
 using CK.Cris;
 using CK.Cris.AspNet;
+using CK.Setup;
 
 namespace CK.TS.ObservableDomain.Tests
 {
@@ -15,7 +16,7 @@ namespace CK.TS.ObservableDomain.Tests
         public async Task CK_TS_ObservableDomain_Async()
         {
             var targetProjectPath = TestHelper.GetTypeScriptBuildModeTargetProjectPath();
-            var configuration = TestHelper.CreateDefaultEngineConfiguration();
+            EngineConfiguration configuration = TestHelper.CreateDefaultEngineConfiguration();
             configuration.FirstBinPath.EnsureTypeScriptConfigurationAspect( targetProjectPath );
             configuration.FirstBinPath.Assemblies.Add( "CK.TS.ObservableDomain" );
             configuration.RunSuccessfully();

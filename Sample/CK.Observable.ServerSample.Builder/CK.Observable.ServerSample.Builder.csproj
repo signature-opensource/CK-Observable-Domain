@@ -1,17 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
     <TargetFramework>net6.0</TargetFramework>
     <Nullable>enable</Nullable>
-    <IsPackable>false</IsPackable>
-    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CK.Cris.Executor.Engine" Version="0.31.1--0056-develop" />
-    <PackageReference Include="CK.Cris.AspNet.Engine" Version="0.31.1--0056-develop" />
-    <PackageReference Include="CK.Engine" Version="25.0.1--0211-develop" />
+    <PackageReference Include="CK.Cris.Executor.Engine" Version="0.31.1--0068-develop" />
+    <PackageReference Include="CK.Cris.AspNet.Engine" Version="0.31.1--0068-develop" />
+    <PackageReference Include="CK.AppBuilder" Version="25.0.1--0223-develop" />
   </ItemGroup>
 
   <ItemGroup>
@@ -19,12 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Logs\Text\" />
+    <Folder Include="Logs\" />
   </ItemGroup>
-  
-  <Target Name="RunMe" AfterTargets="PostBuildEvent">
-    <Delete Files="LastRun.log" />
-    <Exec Command="$(MSBuildProjectDirectory)\$(OutputPath)\$(AssemblyName).exe" />
-  </Target>
   
 </Project>

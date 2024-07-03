@@ -16,6 +16,10 @@
   "scripts": {
     "test": "jest"
   },
-  "dependencies": {},
-  "peerDependencies": {}
+  "dependencies": {
+    "mqtt": "=5.7.0"
+  },
+  "peerDependencies": {
+    "mqtt": "=5.7.0"
+  }
 }

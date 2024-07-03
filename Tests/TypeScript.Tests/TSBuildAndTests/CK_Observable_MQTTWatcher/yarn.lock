@@ -731,10 +731,13 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@local/ck-gen@workspace:ck-gen"
   dependencies:
+    "@types/node": "npm:^20.14.2"
     axios: "npm:^1.5.1"
     mqtt: "npm:=5.7.0"
     rxjs: "npm:>=7.5.6"
     typescript: "npm:=5.4.5"
+  peerDependencies:
+    mqtt: =5.7.0
   languageName: unknown
   linkType: soft
 
@@ -1408,9 +1411,12 @@ __metadata:
     "@types/jest": "npm:^29.5.12"
     "@types/node": "npm:^20.14.2"
     jest: "npm:^29.7"
-    jest-environment-jsdom: "npm:^29.7.0"
+    jest-environment-jsdom: "npm:^29.7"
+    mqtt: "npm:=5.7.0"
     ts-jest: "npm:^29.1.4"
     typescript: "npm:=5.4.5"
+  peerDependencies:
+    mqtt: =5.7.0
   languageName: unknown
   linkType: soft
 
@@ -2500,7 +2506,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"jest-environment-jsdom@npm:^29.7.0":
+"jest-environment-jsdom@npm:^29.7":
   version: 29.7.0
   resolution: "jest-environment-jsdom@npm:29.7.0"
   dependencies:

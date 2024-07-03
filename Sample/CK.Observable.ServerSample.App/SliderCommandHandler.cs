@@ -31,6 +31,11 @@ namespace CK.Observable.ServerSample.App
                } );
            }
 
+            var x1 = typeof( CK.Cris.AspNet.CrisAspNetService );
+            var x2 = typeof( CK.Auth.CrisAuthenticationService );
+            var x3 = typeof( CK.Observable.MQTTWatcher.DefaultMQTTObservableServer );
+            var x4 = typeof( CK.Observable.SignalRWatcher.HubObservableWatcher );
+
            await shell.ModifyThrowAsync(m, ( monitor, domain ) =>
            {
                domain.Root.Slider = command.SliderValue;

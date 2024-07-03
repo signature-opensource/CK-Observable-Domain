@@ -11,8 +11,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="CK.Cris.Typescript" Version="0.31.1--0056-develop" />
-    <PackageReference Include="CK.MQTT.LocalMQTTDemiServer" Version="0.23.1--0051-develop" />
+    <PackageReference Include="CK.Cris.Typescript" Version="0.31.1--0068-develop" />
+    <PackageReference Include="CK.MQTT.LocalMQTTDemiServer" Version="0.23.1--0060-develop" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CK.Observable.League\CK.Observable.League.csproj" />
