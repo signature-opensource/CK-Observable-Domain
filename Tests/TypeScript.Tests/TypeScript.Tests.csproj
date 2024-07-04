@@ -13,7 +13,7 @@
   </ItemGroup>
   
   <ItemGroup>
-    <PackageReference Include="CK.Testing.CrisAspNetEngine" Version="0.32.0" />
+    <PackageReference Include="CK.Testing.CrisAspNetEngine" Version="0.32.1" />
     <ProjectReference Include="..\..\CK.Observable.MQTTWatcher\CK.Observable.MQTTWatcher.csproj" />
     <ProjectReference Include="..\..\CK.Observable.SignalRWatcher\CK.Observable.SignalRWatcher.csproj" />
     <ProjectReference Include="..\..\CK.TS.ObservableDomain\CK.TS.ObservableDomain.csproj" />

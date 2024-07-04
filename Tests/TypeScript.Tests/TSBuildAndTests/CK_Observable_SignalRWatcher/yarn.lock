@@ -722,23 +722,23 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@local/ck-gen@workspace:ck-gen"
   dependencies:
-    "@microsoft/signalr": "npm:=6.0.23"
+    "@microsoft/signalr": "npm:>=6.0.23"
     axios: "npm:^1.5.1"
     rxjs: "npm:>=7.5.6"
     typescript: "npm:=5.4.5"
   languageName: unknown
   linkType: soft
 
-"@microsoft/signalr@npm:=6.0.23":
-  version: 6.0.23
-  resolution: "@microsoft/signalr@npm:6.0.23"
+"@microsoft/signalr@npm:>=6.0.23":
+  version: 8.0.0
+  resolution: "@microsoft/signalr@npm:8.0.0"
   dependencies:
     abort-controller: "npm:^3.0.0"
-    eventsource: "npm:^1.0.7"
-    fetch-cookie: "npm:^0.11.0"
+    eventsource: "npm:^2.0.2"
+    fetch-cookie: "npm:^2.0.3"
     node-fetch: "npm:^2.6.7"
     ws: "npm:^7.4.5"
-  checksum: 10/ede9ce4267ab506364b61fec694b9f94f7636acd32dba3c87fccacfd27acf7b3372b153c2f0e5cdaf11417005a3a4a770658c3b7ac21a8a5475b1c2ef2b5c914
+  checksum: 10/c160afed5b791aa10e36f5d17df56d8226ce7df350ab812bb43ee40930118dfcc1aadb72df9f6c4cf2ccccc69d773c8bf3cdc7a3b72209da2c84f375755ea6f5
   languageName: node
   linkType: hard
 
@@ -1364,7 +1364,7 @@ __metadata:
     "@types/jest": "npm:^29.5.12"
     "@types/node": "npm:^20.14.2"
     jest: "npm:^29.7"
-    jest-environment-jsdom: "npm:^29.7.0"
+    jest-environment-jsdom: "npm:^29.7"
     ts-jest: "npm:^29.1.4"
     typescript: "npm:=5.4.5"
   languageName: unknown
@@ -1731,10 +1731,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"eventsource@npm:^1.0.7":
-  version: 1.1.2
-  resolution: "eventsource@npm:1.1.2"
-  checksum: 10/ac232ab06fa2f9cec0e564630f1cb2d3251c82329944f9cf697fac5c07e3f503720f31b75db438d431a9b49aeaebc775a339b1e31c70f67d747bf40729a73361
+"eventsource@npm:^2.0.2":
+  version: 2.0.2
+  resolution: "eventsource@npm:2.0.2"
+  checksum: 10/e1c4c3664cebf9efdd55c90818ef847099f298bf521768d479cf22d8a681e666b3042de85327711ba6a8414ac6a04c70d2aeb4f405bba8239a8c36e06a019374
   languageName: node
   linkType: hard
 
@@ -1798,12 +1798,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"fetch-cookie@npm:^0.11.0":
-  version: 0.11.0
-  resolution: "fetch-cookie@npm:0.11.0"
+"fetch-cookie@npm:^2.0.3":
+  version: 2.2.0
+  resolution: "fetch-cookie@npm:2.2.0"
   dependencies:
-    tough-cookie: "npm:^2.3.3 || ^3.0.1 || ^4.0.0"
-  checksum: 10/0d2082cb7de34c1e566a7c22ab844c6e9e6a8f8c9c1bc7a62382931b4bb99f0ff6c00324ec00874728c57cfd0c655c6fde62badcae019f2e5bb220c5726fdd17
+    set-cookie-parser: "npm:^2.4.8"
+    tough-cookie: "npm:^4.0.0"
+  checksum: 10/7f992bf4e15a48d6523f7e2b19d4574fc60bc767036a9662bd915716e2f0d8decdfb7c2e860842280d6fa80e73aba2a90431f08496d0ed2a5e3ae011b410a13b
   languageName: node
   linkType: hard
 
@@ -2422,7 +2423,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"jest-environment-jsdom@npm:^29.7.0":
+"jest-environment-jsdom@npm:^29.7":
   version: 29.7.0
   resolution: "jest-environment-jsdom@npm:29.7.0"
   dependencies:
@@ -3537,6 +3538,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"set-cookie-parser@npm:^2.4.8":
+  version: 2.6.0
+  resolution: "set-cookie-parser@npm:2.6.0"
+  checksum: 10/8d451ebadb760989f93b634942c79de3c925ca7a986d133d08a80c40b5ae713ce12e354f0d5245c49f288c52daa7bd6554d5dc52f8a4eecaaf5e192881cf2b1f
+  languageName: node
+  linkType: hard
+
 "shebang-command@npm:^2.0.0":
   version: 2.0.0
   resolution: "shebang-command@npm:2.0.0"
@@ -3818,7 +3826,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tough-cookie@npm:^2.3.3 || ^3.0.1 || ^4.0.0, tough-cookie@npm:^4.1.2":
+"tough-cookie@npm:^4.0.0, tough-cookie@npm:^4.1.2":
   version: 4.1.4
   resolution: "tough-cookie@npm:4.1.4"
   dependencies:
