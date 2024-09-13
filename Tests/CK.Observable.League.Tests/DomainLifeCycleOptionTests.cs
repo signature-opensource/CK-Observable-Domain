@@ -29,7 +29,7 @@ namespace CK.Observable.League.Tests
             {
                 var alwaysLoaded = d.Root.CreateDomain( "AlwaysLoaded", typeof( Model.School ).AssemblyQualifiedName! );
                 alwaysLoaded.Options = alwaysLoaded.Options.SetLifeCycleOption( DomainLifeCycleOption.Always );
-            } );
+            }, waitForDomainPostActionsCompletion: true );
 
             var loader = league["AlwaysLoaded"];
             Debug.Assert( loader != null );
@@ -43,7 +43,7 @@ namespace CK.Observable.League.Tests
             {
                 ODomain loaded = d.Root.Domains["AlwaysLoaded"];
                 loaded.Options = loaded.Options.SetLifeCycleOption( DomainLifeCycleOption.HonorTimedEvent );
-            } );
+            }, waitForDomainPostActionsCompletion: true );
             var domainError = await tr.DomainPostActionsError;
             domainError.Should().BeNull();
             loader.IsLoaded.Should().BeFalse( "The domain is no more alive since its LoadOption is Default and there is no active timed events." );
@@ -71,7 +71,7 @@ namespace CK.Observable.League.Tests
             {
                 var alwaysLoaded = d.Root.CreateDomain( "NeverLoaded", typeof( Model.School ).AssemblyQualifiedName! );
                 alwaysLoaded.Options = alwaysLoaded.Options.SetLifeCycleOption( DomainLifeCycleOption.Never );
-            } );
+            }, waitForDomainPostActionsCompletion: true );
 
             var loader = league["NeverLoaded"];
             Debug.Assert( loader != null );

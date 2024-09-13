@@ -37,7 +37,9 @@ namespace CK.Observable.League.Tests
         {
             var store = BasicLeagueTests.CreateStore( nameof( empty_league_serialization_Async ) );
             var league = await ObservableLeague.LoadAsync( TestHelper.Monitor, store )!;
-            await league.Coordinator.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) => d.Root.CreateDomain( "First", typeof( Model.School ).AssemblyQualifiedName! ) );
+            await league.Coordinator.ModifyThrowAsync( TestHelper.Monitor, ( m, d )
+                => d.Root.CreateDomain( "First", typeof( Model.School ).AssemblyQualifiedName! ),
+                waitForDomainPostActionsCompletion: true );
             // Using the non generic IObservableDomain.
             await using( var f = await league.Find( "First" )!.LoadAsync( TestHelper.Monitor ) )
             {
@@ -100,7 +102,7 @@ namespace CK.Observable.League.Tests
             {
                 var a = d.Root.CreateDomain( "Witness", typeof( InstantiationTracker ).AssemblyQualifiedName! );
                 a.Options = a.Options.SetLifeCycleOption( DomainLifeCycleOption.Never );
-            } );
+            }, waitForDomainPostActionsCompletion: true );
 
             var loader = league["Witness"];
             Debug.Assert( loader != null );

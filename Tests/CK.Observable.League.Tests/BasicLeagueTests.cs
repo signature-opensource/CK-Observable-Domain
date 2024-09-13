@@ -36,7 +36,11 @@ namespace CK.Observable.League.Tests
 
             league.Find( "FirstDomain" ).Should().BeNull( "Empty store. Not created yet." );
 
-            await league.Coordinator.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) => d.Root.CreateDomain( "FirstDomain", typeof(Model.School).AssemblyQualifiedName! ) );
+            await league.Coordinator.ModifyThrowAsync(
+                TestHelper.Monitor,
+                ( m, d ) => d.Root.CreateDomain( "FirstDomain", typeof(Model.School).AssemblyQualifiedName! ),
+                waitForDomainPostActionsCompletion: true
+                );
 
             var loader = league.Find( "FirstDomain" );
             Debug.Assert( loader != null );
@@ -88,7 +92,7 @@ namespace CK.Observable.League.Tests
                 await league2.Coordinator.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) =>
                 {
                     d.Root.Domains["FirstDomain"].Destroy();
-                } );
+                }, waitForDomainPostActionsCompletion: true );
                 shell2.IsDestroyed.Should().BeTrue( "The loader and shells expose the IsDestroyed marker." );
                 loader2.IsDestroyed.Should().BeTrue();
 
@@ -184,7 +188,7 @@ namespace CK.Observable.League.Tests
                 ODomain newOne = d.Root.CreateDomain( "4Roots", roots.Select( t => t.AssemblyQualifiedName ) );
                 newOne.DomainName.Should().Be( "4Roots" );
                 newOne.RootTypes.Should().BeEquivalentTo( roots.Select( t => t.AssemblyQualifiedName ) );
-            } );
+            }, waitForDomainPostActionsCompletion: true );
 
             await Check4RootsDomainAsync( league );
             await league.CloseAsync( TestHelper.Monitor );

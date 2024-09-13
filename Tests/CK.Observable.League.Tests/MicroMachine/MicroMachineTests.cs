@@ -67,7 +67,7 @@ namespace CK.Observable.League.Tests.MicroMachine
                 var d = coodinator.Root.CreateDomain( "M", typeof( Root ).AssemblyQualifiedName! );
                 d.Options = d.Options.SetLifeCycleOption( DomainLifeCycleOption.Never )
                                      .SetCompressionKind( CompressionKind.GZiped );
-            } );
+            }, waitForDomainPostActionsCompletion: true );
 
             using( TestHelper.Monitor.OpenInfo( "Initializing Machine Domain." ) )
             {
