@@ -4,9 +4,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.Crs.Dispatcher" Version="15.0.0" />
-    <PackageReference Include="CK.Crs.Abstractions" Version="15.0.0" />
-    <PackageReference Include="CK.Crs.CommandDiscoverer" Version="15.0.0" />
+    <PackageReference Include="CK.Crs.Dispatcher" Version="15.0.1" />
+    <PackageReference Include="CK.Crs.Abstractions" Version="15.0.1" />
+    <PackageReference Include="CK.Crs.CommandDiscoverer" Version="15.0.1" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CK.Observable.Domain\CK.Observable.Domain.csproj" />
