@@ -3,6 +3,7 @@ using Cake.Npm.RunScript;
 using Cake.Core;
 using Cake.Core.Diagnostics;
 using System.Linq;
+using Cake.Yarn;
 
 namespace CodeCake
 {
@@ -31,6 +32,13 @@ namespace CodeCake
                 {
                     globalInfo.GetDotnetSolution().Clean();
                     //globalInfo.GetYarnSolution().Clean();
+
+                    // yarrn install ./Clients ourselves
+                    // (CCB/NPMSolution.xml doesn't have a concept of "node workspace root that has no build or artifacts by itself")
+                    Cake.Yarn().Install( s =>
+                    {
+                        s.WorkingDirectory = "Clients";
+                    } );
                 } );
 
 
@@ -40,6 +48,15 @@ namespace CodeCake
                 .Does( () =>
                 {
                     globalInfo.GetDotnetSolution().Build();
+
+                    // yarn build ./Clients/ck-gen ourselves
+                    // In this solution, unit tests are usually the ones that populate ck-gen and call "yarn build", but they are not run before "Unit-Testing" below
+                    // MSBuild should call "yarn build" via a CKSetup project (like CK.Observable.ServerSample.Builder), but it doesn't do that here for some reason
+                    Cake.Yarn().RunScript( "build", s =>
+                    {
+                        s.WorkingDirectory = "Clients/ck-gen";
+                    } );
+
                     globalInfo.GetYarnSolution().Build();
                 } );
 
