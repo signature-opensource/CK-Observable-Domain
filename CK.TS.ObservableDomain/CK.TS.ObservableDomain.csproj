@@ -13,7 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="CK.StObj.TypeScript" Version="0.19.1" />
+    <PackageReference Include="CK.StObj.TypeScript" Version="0.19.3" />
   </ItemGroup>
 
 </Project>
