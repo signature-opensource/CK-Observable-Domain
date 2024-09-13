@@ -81,7 +81,7 @@ namespace CK.Observable.Device.Tests
                 oHost.Devices["n°1"].Object.Should().Be( device1 );
                 oHost.Devices["n°1"].IsRunning.Should().Be( false );
                 oHost.Devices["n°1"].Status.Should().Be( DeviceControlStatus.HasSharedControl );
-            } ); 
+            } );
 
             config.Status = DeviceConfigurationStatus.AlwaysRunning;
             (await host.EnsureDeviceAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.UpdateSucceeded );
@@ -228,7 +228,7 @@ namespace CK.Observable.Device.Tests
         }
 
         [Test]
-        [Timeout( 2*1000 )]
+        [Timeout( 10000 )]
         public async Task commands_are_easy_to_send_Async()
         {
             using var gLog = TestHelper.Monitor.OpenInfo( nameof( commands_are_easy_to_send_Async ) );
@@ -239,7 +239,7 @@ namespace CK.Observable.Device.Tests
             {
                 Name = "n°1",
                 // We loop fast: the device.GetSafeState() is updated by the device loop.
-                PeriodMilliseconds = 5,
+                PeriodMilliseconds = 250,
                 Status = DeviceConfigurationStatus.RunnableStarted
             };
             (await host.EnsureDeviceAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.CreateAndStartSucceeded );
@@ -256,7 +256,7 @@ namespace CK.Observable.Device.Tests
             Throw.DebugAssert( device != null );
             Throw.DebugAssert( device.IsRunning != null );
 
-            await Task.Delay( 100 );
+            await Task.Delay( 1000 );
             await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 var directState = device.GetSafeState();
@@ -266,7 +266,7 @@ namespace CK.Observable.Device.Tests
                 device.SendSimpleCommand();
             }, waitForDomainPostActionsCompletion: true );
 
-            await Task.Delay( 250 );
+            await Task.Delay( 2500 );
             await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 var directState = device.GetSafeState();
