@@ -38,7 +38,7 @@ namespace CK.Observable.League.Tests
                     skipTransactionCount: 0,
                     // Snapshots are always saved.
                     snapshotSaveDelay: TimeSpan.Zero,
-                    // Guaranty 500 milliseconds of backups. 
+                    // Guaranty 500 milliseconds of backups.
                     snapshotKeepDuration: TimeSpan.FromMilliseconds( 500 ),
                     // No size limit: only time matters here.
                     snapshotMaximalTotalKiB: 0,
@@ -49,7 +49,9 @@ namespace CK.Observable.League.Tests
                     // Cleanup at each N saves.
                     housekeepingRate: housekeepingRate );
 
-            await league.Coordinator.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) => d.Root.CreateDomain( domainName, rootTypes, options ) );
+            await league.Coordinator.ModifyThrowAsync( TestHelper.Monitor, ( m, d )
+                => d.Root.CreateDomain( domainName, rootTypes, options ),
+                waitForDomainPostActionsCompletion: true );
             var loader = league.Find( domainName );
             Throw.DebugAssert( loader != null );
 
@@ -125,7 +127,7 @@ namespace CK.Observable.League.Tests
                                                       skipTransactionCount: 0,
                                                       // Snapshots are always saved.
                                                       snapshotSaveDelay: TimeSpan.Zero,
-                                                      // Guaranty 300 milliseconds of backups. 
+                                                      // Guaranty 300 milliseconds of backups.
                                                       snapshotKeepDuration: TimeSpan.FromMilliseconds( 300 ),
                                                       // Keep only 10 KiB cumulated max.
                                                       snapshotMaximalTotalKiB: 10,
@@ -136,11 +138,11 @@ namespace CK.Observable.League.Tests
                                                       // Cleanup on every save.
                                                       housekeepingRate: 1
                 );
-            } );
-            
+            }, waitForDomainPostActionsCompletion: true );
+
             // Keeps a handle on the shell (this doesn't change anything).
             await using var shell = (await league.Find( "M" )!.LoadAsync( TestHelper.Monitor ))!;
-            
+
             using( TestHelper.Monitor.OpenInfo( "Initializing domain. This doesn't create a backup." ) )
             {
                 await shell.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) =>
