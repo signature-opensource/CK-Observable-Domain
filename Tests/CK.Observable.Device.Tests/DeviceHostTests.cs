@@ -101,10 +101,12 @@ namespace CK.Observable.Device.Tests
             // Now we destroy the ObservableObject.
             await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
+                var oDeviceInfo = obs.Root.Host.Devices["TheOne"];
                 var d = obs.Root.Host.Devices["TheOne"].Object;
                 Debug.Assert( d != null );
                 d.Destroy();
                 obs.Root.Host.Devices.Should().BeEmpty( "The ObservableHostDevice has no more info to keep (no device, no observable)." );
+                oDeviceInfo.IsDestroyed.Should().BeTrue( "The ODeviceInfo should have been destroyed with the ObservableDeviceObject." );
             } );
 
         }

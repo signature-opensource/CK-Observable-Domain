@@ -131,13 +131,21 @@ namespace CK.Observable.Device
 
         internal override void Remove( ObservableDeviceObject o )
         {
-            if( _devices.TryGetValue( o.DeviceName, out var exists ) && exists.Status != DeviceControlStatus.MissingDevice )
+            if( _devices.TryGetValue( o.DeviceName, out var exists ) )
             {
-                exists.Object = null;
-            }
-            else
-            {
-                _devices.Remove( o.DeviceName );
+                if( exists.Status == DeviceControlStatus.MissingDevice )
+                {
+                    // The Device no longer exists on the DeviceHost.
+                    // We can remove the ODeviceInfo from the ODeviceHost entirely.
+                    exists.Destroy();
+                    _devices.Remove( o.DeviceName );
+                }
+                else
+                {
+                    // The Device still exists on the DeviceHost.
+                    // Keep the ODeviceInfo, but remove the reference to the removed ObservableDeviceObject.
+                    exists.Object = null;
+                }
             }
         }
 
