@@ -1,20 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
-
-    <ItemGroup>
-    <PackageReference Include="CK.Testing.StObjTypeScriptEngine" Version="0.19.3" />
+  <ItemGroup>
+    <PackageReference Include="CK.Testing.StObjTypeScriptEngine" Version="0.0.0--052zx78-develop" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
     <PackageReference Include="NUnit3TestAdapter" PrivateAssets="all" Version="4.6.0" />
   </ItemGroup>
-  
   <ItemGroup>
     <ProjectReference Include="..\..\CK.Observable.MQTTWatcher\CK.Observable.MQTTWatcher.csproj" />
     <ProjectReference Include="..\..\CK.Observable.SignalRWatcher\CK.Observable.SignalRWatcher.csproj" />
     <ProjectReference Include="..\..\CK.TS.ObservableDomain\CK.TS.ObservableDomain.csproj" />
   </ItemGroup>
-  
 </Project>
