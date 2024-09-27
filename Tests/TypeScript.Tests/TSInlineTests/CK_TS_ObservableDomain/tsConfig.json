@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "es2022",
+    "strict": true,
+    "skipLibCheck": true,
+    "paths": {
+      "@local/ck-gen": [
+        "./ck-gen"
+      ],
+      "@local/ck-gen/*": [
+        "./ck-gen/*"
+      ]
+    }
+  }
+}

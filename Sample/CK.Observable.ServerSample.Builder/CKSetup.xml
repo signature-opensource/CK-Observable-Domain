@@ -5,8 +5,7 @@
   <BinPaths>
     <BinPath>
       <TypeScript AutoInstallYarn="true"
-                  AutoInstallVSCodeSupport="true"
-                  GitIgnoreCKGenFolder = "true" >
+                  AutoInstallVSCodeSupport="true" >
         <Types>
           <Type Type="CK.Observable.ServerSample.App.ISliderCommand, CK.Observable.ServerSample.App" />
         </Types>

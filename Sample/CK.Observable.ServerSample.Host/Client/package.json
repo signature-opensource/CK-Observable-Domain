@@ -6,21 +6,21 @@
     "clean": "rimraf dist",
     "test": "jest"
   },
-  "workspaces": [
-    "ck-gen"
-  ],
   "devDependencies": {
-    "@local/ck-gen": "workspace:*",
-    "@types/node": "^20.14.9",
+    "@types/node": "^20.14.2",
     "rimraf": "^3.0.2",
     "typescript": "=5.4.5",
-    "vite": "=5.3.2"
+    "vite": "=5.3.2",
+    "vite-tsconfig-paths": "^5.0.1"
   },
   "dependencies": {
+    "@microsoft/signalr": ">=6.0.23",
     "axios": "^1.5.1",
-    "mqtt": "=5.7.0"
+    "mqtt": "=5.7.0",
+    "rxjs": ">=7.5.6"
   },
   "peerDependencies": {
     "mqtt": "=5.7.0"
-  }
+  },
+  "ckVersion": 1
 }

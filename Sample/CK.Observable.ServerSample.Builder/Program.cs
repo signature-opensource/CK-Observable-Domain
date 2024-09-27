@@ -1,3 +1,2 @@
-using CK.Setup;
 
-return CKomposableAppBuilder.Run();
+return CK.Setup.CKomposableAppBuilder.Run();

@@ -1,5 +1,5 @@
 install:
-  - ps: Install-Product node 20 x64
+- ps: Install-Product node 20 x64
 environment:
   CODECAKEBUILDER_SECRET_KEY:
     secure: 8VAzdXgUQaJyFoU3WLf2iPFV/8zPDm9qV4TfOpx8/rg=
@@ -8,6 +8,6 @@ image: Visual Studio 2022
 clone_folder: C:\CKli-World\Observable-Domain\CK-Observable-Domain
 on_finish:
 - ps: Get-ChildItem -Recurse *.log -exclude LastRun.log | % { Push-AppveyorArtifact $_.FullName }
+test: false
 build_script:
 - dotnet run --project CodeCakeBuilder -nointeraction
-test: false
