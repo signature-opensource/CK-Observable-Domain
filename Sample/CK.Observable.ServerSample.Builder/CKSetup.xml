@@ -5,7 +5,8 @@
   <BinPaths>
     <BinPath>
       <TypeScript AutoInstallYarn="true"
-                  AutoInstallVSCodeSupport="true" >
+                  AutoInstallVSCodeSupport="true"
+                  IntegrationMode = "NpmPackage">
         <Types>
           <Type Type="CK.Observable.ServerSample.App.ISliderCommand, CK.Observable.ServerSample.App" />
         </Types>

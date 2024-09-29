@@ -16,21 +16,21 @@ describe('ObservableDomain eyeball tests - ', () => {
 
         var o = new ObservableDomain();
         o.applyWatchEvent(JSON.parse(initial));
-        console.log("intial Simple graph:", Array.from(o.allObjects));
+        //console.log("intial Simple graph:", Array.from(o.allObjects));
         o.applyWatchEvent(JSON.parse(t2));
-        console.log("Simple graph after t2:", Array.from(o.allObjects));
+        //console.log("Simple graph after t2:", Array.from(o.allObjects));
         o.applyWatchEvent(JSON.parse(t3));
-        console.log("Simple graph after t3:", Array.from(o.allObjects));
+        //console.log("Simple graph after t3:", Array.from(o.allObjects));
         o.applyWatchEvent(JSON.parse(t4));
-        console.log("Simple graph after t4:", Array.from(o.allObjects));
+        //console.log("Simple graph after t4:", Array.from(o.allObjects));
         o.applyWatchEvent(JSON.parse(t5));
-        console.log("Simple graph after t5:", Array.from(o.allObjects));
+        //console.log("Simple graph after t5:", Array.from(o.allObjects));
         o.applyWatchEvent(JSON.parse(t6));
-        console.log("Simple graph after t6:", Array.from(o.allObjects));
+        //console.log("Simple graph after t6:", Array.from(o.allObjects));
         o.applyWatchEvent(JSON.parse(t7));
-        console.log("Simple graph after t7:", Array.from(o.allObjects));
+        //console.log("Simple graph after t7:", Array.from(o.allObjects));
         o.applyWatchEvent(JSON.parse(t8));
-        console.log("Simple graph after t8:", Array.from(o.allObjects));
+        //console.log("Simple graph after t8:", Array.from(o.allObjects));
 
     });
 
@@ -44,14 +44,14 @@ describe('ObservableDomain eyeball tests - ', () => {
 
         var o = new ObservableDomain();
         o.applyWatchEvent(JSON.parse(initial));
-        console.log("intial Sample graph:", Array.from(o.allObjects));
+        //console.log("intial Sample graph:", Array.from(o.allObjects));
         o.applyWatchEvent(JSON.parse(t1));
         o.applyWatchEvent(JSON.parse(t2));
-        console.log("Sample graph after t1 and t2:", Array.from(o.allObjects));
+        //console.log("Sample graph after t1 and t2:", Array.from(o.allObjects));
         o.applyWatchEvent(JSON.parse(t3));
-        console.log("Sample graph after t3:", Array.from(o.allObjects));
+        //console.log("Sample graph after t3:", Array.from(o.allObjects));
         o.applyWatchEvent(JSON.parse(t4));
-        console.log("Sample graph after t4:", Array.from(o.allObjects));
+        //console.log("Sample graph after t4:", Array.from(o.allObjects));
 
     });
 });
