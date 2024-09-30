@@ -1,4 +1,4 @@
-import { IPublishPacket, connectAsync, MqttClient } from "mqtt/dist/mqtt.min";
+import { IPublishPacket, connectAsync, MqttClient } from "mqtt";
 import { WatchEvent } from '../../ObservableDomain/ObservableDomain';
 import { IObservableDomainLeagueDriver } from "../../ObservableDomain/IObservableDomainLeagueDriver";
 import { MQTTObservableWatcherStartOrRestartCommand } from "./MQTTObservableWatcherStartOrRestartCommand";
@@ -37,8 +37,8 @@ export class MQTTObservableLeagueDomainService implements IObservableDomainLeagu
                 clean: true,
                 clientId: this.clientId
             });
-            this.client.on("message", (a, b, c) => this.handleMessages(a, b, c));
-            this.client.on("disconnect", (a) => this.handleClose(undefined));
+            this.client.on("message", (a: any, b: any, c: any) => this.handleMessages(a, b, c));
+            this.client.on("disconnect", (a: any) => this.handleClose(undefined));
             console.log("connected");
             return true;
         } catch (e) {

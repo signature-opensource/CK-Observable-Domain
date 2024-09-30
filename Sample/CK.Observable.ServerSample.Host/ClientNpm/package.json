@@ -1,0 +1,29 @@
+{
+  "private": true,
+  "scripts": {
+    "build": "tsc && vite build",
+    "start": "vite serve",
+    "clean": "rimraf dist",
+    "test": "jest"
+  },
+  "devDependencies": {
+    "@local/ck-gen": "workspace:*",
+    "@types/node": "^20.14.2",
+    "rimraf": "^3.0.2",
+    "typescript": "=5.4.5",
+    "vite": "=5.3.2"
+  },
+  "dependencies": {
+    "@microsoft/signalr": ">=6.0.23",
+    "axios": "^1.5.1",
+    "mqtt": "=5.10.1",
+    "rxjs": ">=7.5.6"
+  },
+  "peerDependencies": {
+    "mqtt": "=5.10.1"
+  },
+  "ckVersion": 1,
+  "workspaces": [
+    "ck-gen"
+  ]
+}

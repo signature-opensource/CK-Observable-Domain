@@ -727,20 +727,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@local/ck-gen@workspace:*, @local/ck-gen@workspace:ck-gen":
-  version: 0.0.0-use.local
-  resolution: "@local/ck-gen@workspace:ck-gen"
-  dependencies:
-    "@types/node": "npm:^20.14.2"
-    axios: "npm:^1.5.1"
-    mqtt: "npm:=5.7.0"
-    rxjs: "npm:>=7.5.6"
-    typescript: "npm:=5.4.5"
-  peerDependencies:
-    mqtt: =5.7.0
-  languageName: unknown
-  linkType: soft
-
 "@npmcli/agent@npm:^2.0.0":
   version: 2.2.2
   resolution: "@npmcli/agent@npm:2.2.2"
@@ -1407,16 +1393,17 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "ck_observable_mqttwatcher@workspace:."
   dependencies:
-    "@local/ck-gen": "workspace:*"
     "@types/jest": "npm:^29.5.12"
     "@types/node": "npm:^20.14.2"
+    axios: "npm:^1.5.1"
     jest: "npm:^29.7"
     jest-environment-jsdom: "npm:^29.7"
-    mqtt: "npm:=5.7.0"
+    mqtt: "npm:=5.10.1"
+    rxjs: "npm:>=7.5.6"
     ts-jest: "npm:^29.1.4"
     typescript: "npm:=5.4.5"
   peerDependencies:
-    mqtt: =5.7.0
+    mqtt: =5.10.1
   languageName: unknown
   linkType: soft
 
@@ -3193,9 +3180,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mqtt@npm:=5.7.0":
-  version: 5.7.0
-  resolution: "mqtt@npm:5.7.0"
+"mqtt@npm:=5.10.1":
+  version: 5.10.1
+  resolution: "mqtt@npm:5.10.1"
   dependencies:
     "@types/readable-stream": "npm:^4.0.5"
     "@types/ws": "npm:^8.5.9"
@@ -3205,36 +3192,6 @@ __metadata:
     help-me: "npm:^5.0.0"
     lru-cache: "npm:^10.0.1"
     minimist: "npm:^1.2.8"
-    mqtt: "npm:^5.2.0"
-    mqtt-packet: "npm:^9.0.0"
-    number-allocator: "npm:^1.0.14"
-    readable-stream: "npm:^4.4.2"
-    reinterval: "npm:^1.1.0"
-    rfdc: "npm:^1.3.0"
-    split2: "npm:^4.2.0"
-    worker-timers: "npm:^7.1.4"
-    ws: "npm:^8.14.2"
-  bin:
-    mqtt: build/bin/mqtt.js
-    mqtt_pub: build/bin/pub.js
-    mqtt_sub: build/bin/sub.js
-  checksum: 10/2ae0de53dbc4de552be3ca29c54879b8156403f55c1dc07a3d26ce798d5a5afc4d154ead35c116e13d4ce45ad97fe1edb349957918bcd84cf0e775bc187dbff4
-  languageName: node
-  linkType: hard
-
-"mqtt@npm:^5.2.0":
-  version: 5.7.3
-  resolution: "mqtt@npm:5.7.3"
-  dependencies:
-    "@types/readable-stream": "npm:^4.0.5"
-    "@types/ws": "npm:^8.5.9"
-    commist: "npm:^3.2.0"
-    concat-stream: "npm:^2.0.0"
-    debug: "npm:^4.3.4"
-    help-me: "npm:^5.0.0"
-    lru-cache: "npm:^10.0.1"
-    minimist: "npm:^1.2.8"
-    mqtt: "npm:^5.2.0"
     mqtt-packet: "npm:^9.0.0"
     number-allocator: "npm:^1.0.14"
     readable-stream: "npm:^4.4.2"
@@ -3247,7 +3204,7 @@ __metadata:
     mqtt: build/bin/mqtt.js
     mqtt_pub: build/bin/pub.js
     mqtt_sub: build/bin/sub.js
-  checksum: 10/0d93f2c0fd4ac0610039e6eb65a2818d813db4d4e11e0bfaa3a4ce76f69e4330945b9598dd0730891838b9dde8d371c123bf2b8be5696b1fb74c80b0547db3bf
+  checksum: 10/1dfcc9461e79e7d7452456d1b06a7bce7e22637e116cbfa25b7f8c0ecdeb967b4f659d3cff853e979b2427e27f9963c78d87b9272cd4ce033fd06b005adf49f6
   languageName: node
   linkType: hard
 
@@ -4395,7 +4352,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ws@npm:^8.11.0, ws@npm:^8.14.2, ws@npm:^8.17.1":
+"ws@npm:^8.11.0, ws@npm:^8.17.1":
   version: 8.17.1
   resolution: "ws@npm:8.17.1"
   peerDependencies:

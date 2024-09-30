@@ -3,7 +3,7 @@ import { testWithIdempotence } from './util';
 import { inspect } from "util";
 import assert from 'assert';
 
-if( process.env.VSCODE_INSPECTOR_OPTIONS ) jest.setTimeout(30 * 60 * 1000 ); // 30 minutes
+if( process.env['VSCODE_INSPECTOR_OPTIONS'] ) jest.setTimeout(30 * 60 * 1000 ); // 30 minutes
 
 describe('serialize() and deserialize()', function () {
     it('should work with embedded graphs', function () {
@@ -102,16 +102,16 @@ describe('serialize() and deserialize()', function () {
         testWithIdempotence(a, { prefix: "" });
     });
 
-    it('should work with external objects (1)', function () {
-        const ext = this;
+    it('should work with external objects (1)',  () => {
+        const ext = window;
         const a = [ext];
 
         const options = {
-            substitor: r => {
+            substitor: (r: any) => {
                 if (r === ext) return { EXT: 1 };
                 return r;
             },
-            activator: v => {
+            activator: (v: any) => {
                 if (v.EXT === 1) return ext;
                 assert.fail("Activator is called only on substituted values.");
             }
@@ -125,8 +125,8 @@ describe('serialize() and deserialize()', function () {
     it('should work with external objects (2)', function () {
         // a is graph with awful cycles in it.
         // and with references to srv1 and srv2.
-        const srv1 = { host: this, addr: "an ip address" };
-        const srv2 = { host: this, addr: "another ip address", master: srv1 };
+        const srv1 = { host: window, addr: "an ip address" };
+        const srv2 = { host: window, addr: "another ip address", master: srv1 };
         const a = <any>{ v: 1, server: srv1 }
         const b = { v: 2, rA: a, srv: [srv1, srv2] };
         const c = { v: 3, rB: b };
@@ -137,12 +137,12 @@ describe('serialize() and deserialize()', function () {
 
         const options = {
             prefix: "",
-            substitor: r => {
+            substitor: (r: any) => {
                 if (r === srv1) return { SERVER: 1 };
                 if (r === srv2) return { SERVER: 2 };
                 return r;
             },
-            activator: v => {
+            activator: (v: any) => {
                 if (v.SERVER === 1) return srv1;
                 if (v.SERVER === 2) return srv2;
                 assert.fail("Activator is called only on substituted values.");
@@ -189,11 +189,11 @@ describe('serialize() and deserialize()', function () {
 
         const a = new Map();
         a.set('key', 'value')
-            .set('otherKey', 987)
-            .set(a, 'the map itself.')
-            .set('theMap', a)
-            .set('nullValue', null)
-            .set(null, 'nullKey');
+         .set('otherKey', 987)
+         .set(a, 'the map itself.')
+         .set('theMap', a)
+         .set('nullValue', null)
+         .set(null, 'nullKey');
 
         testWithIdempotence(a, undefined, d => {
             expect( d.get('key') ).toBe( 'value' );
@@ -227,7 +227,7 @@ describe('serialize() and deserialize()', function () {
 
         const e2 = deserialize(e, { prefix: '' });
 
-        console.log(inspect(e2, true, null, true));
+        //console.log(inspect(e2, true, null, true));
 
         expect(e2.N ).toBe( 2 );
         expect(e2.E.length ).toBe( 3 );

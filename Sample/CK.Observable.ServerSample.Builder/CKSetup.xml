@@ -4,12 +4,27 @@
 
   <BinPaths>
     <BinPath>
-      <TypeScript AutoInstallYarn="true"
-                  AutoInstallVSCodeSupport="true"
-                  IntegrationMode = "NpmPackage">
-        <Types>
-          <Type Type="CK.Observable.ServerSample.App.ISliderCommand, CK.Observable.ServerSample.App" />
-        </Types>
+      <TypeScript>
+        <Multiple>
+
+          <TypeScript TargetProjectPath="Clients/NpmPackage"
+                      AutoInstallYarn ="true"
+                      IntegrationMode = "NpmPackage"
+                      TypeFilterName="TypeScriptN">
+            <Types>
+              <Type Type="CK.Observable.ServerSample.App.ISliderCommand, CK.Observable.ServerSample.App" />
+            </Types>
+          </TypeScript>
+
+          <TypeScript TargetProjectPath="Clients/Inline"
+                AutoInstallYarn ="true"
+                IntegrationMode = "Inline"
+                TypeFilterName="TypeScriptI">
+            <Types>
+              <Type Type="CK.Observable.ServerSample.App.ISliderCommand, CK.Observable.ServerSample.App" />
+            </Types>
+          </TypeScript>
+        </Multiple>
       </TypeScript>
     </BinPath>
   </BinPaths>

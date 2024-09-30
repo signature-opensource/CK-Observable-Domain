@@ -718,17 +718,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@local/ck-gen@workspace:*, @local/ck-gen@workspace:ck-gen":
-  version: 0.0.0-use.local
-  resolution: "@local/ck-gen@workspace:ck-gen"
-  dependencies:
-    "@microsoft/signalr": "npm:>=6.0.23"
-    axios: "npm:^1.5.1"
-    rxjs: "npm:>=7.5.6"
-    typescript: "npm:=5.4.5"
-  languageName: unknown
-  linkType: soft
-
 "@microsoft/signalr@npm:>=6.0.23":
   version: 8.0.0
   resolution: "@microsoft/signalr@npm:8.0.0"
@@ -1360,11 +1349,13 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "ck_observable_signalrwatcher@workspace:."
   dependencies:
-    "@local/ck-gen": "workspace:*"
+    "@microsoft/signalr": "npm:>=6.0.23"
     "@types/jest": "npm:^29.5.12"
     "@types/node": "npm:^20.14.2"
+    axios: "npm:^1.5.1"
     jest: "npm:^29.7"
     jest-environment-jsdom: "npm:^29.7"
+    rxjs: "npm:>=7.5.6"
     ts-jest: "npm:^29.1.4"
     typescript: "npm:=5.4.5"
   languageName: unknown

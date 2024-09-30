@@ -1,11 +1,7 @@
 {
   "name": "ck_observable_signalrwatcher",
   "private": true,
-  "workspaces": [
-    "ck-gen"
-  ],
   "devDependencies": {
-    "@local/ck-gen": "workspace:*",
     "@types/jest": "^29.5.12",
     "@types/node": "^20.14.2",
     "jest": "^29.7",
@@ -16,6 +12,10 @@
   "scripts": {
     "test": "jest"
   },
-  "dependencies": {},
-  "peerDependencies": {}
+  "dependencies": {
+    "@microsoft/signalr": ">=6.0.23",
+    "axios": "^1.5.1",
+    "rxjs": ">=7.5.6"
+  },
+  "ckVersion": 1
 }

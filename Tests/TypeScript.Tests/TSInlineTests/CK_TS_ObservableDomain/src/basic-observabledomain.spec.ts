@@ -1,6 +1,6 @@
 import { ObservableDomain } from '@local/ck-gen';
 
-if( process.env.VSCODE_INSPECTOR_OPTIONS ) jest.setTimeout(30 * 60 * 1000 ); // 30 minutes
+if( process.env['VSCODE_INSPECTOR_OPTIONS'] ) jest.setTimeout(30 * 60 * 1000 ); // 30 minutes
 
 describe('ObservableDomain eyeball tests - ', () => {
     it('Test 1', () => {

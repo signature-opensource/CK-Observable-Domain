@@ -20,6 +20,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CK.Observable.ServerSample.App\CK.Observable.ServerSample.App.csproj" />
-    <ProjectReference Include="..\CKSetup\CK.Observable.ServerSample.Builder.csproj" ReferenceOutputAssembly="false" Private="false" />
+    <ProjectReference Include="..\CK.Observable.ServerSample.Builder\CK.Observable.ServerSample.Builder.csproj" ReferenceOutputAssembly="false" Private="false" />
   </ItemGroup>
 </Project>

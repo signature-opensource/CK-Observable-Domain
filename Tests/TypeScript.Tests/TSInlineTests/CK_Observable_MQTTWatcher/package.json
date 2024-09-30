@@ -1,11 +1,7 @@
 {
   "name": "ck_observable_mqttwatcher",
   "private": true,
-  "workspaces": [
-    "ck-gen"
-  ],
   "devDependencies": {
-    "@local/ck-gen": "workspace:*",
     "@types/jest": "^29.5.12",
     "@types/node": "^20.14.2",
     "jest": "^29.7",
@@ -17,9 +13,12 @@
     "test": "jest"
   },
   "dependencies": {
-    "mqtt": "=5.7.0"
+    "axios": "^1.5.1",
+    "mqtt": "=5.10.1",
+    "rxjs": ">=7.5.6"
   },
   "peerDependencies": {
-    "mqtt": "=5.7.0"
-  }
+    "mqtt": "=5.10.1"
+  },
+  "ckVersion": 1
 }
