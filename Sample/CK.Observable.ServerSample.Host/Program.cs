@@ -12,7 +12,7 @@ var builder = WebApplication.CreateSlimBuilder();
 var monitor = builder.GetBuilderMonitor();
 builder.UseCKMonitoring();
 
-//builder.AddUnsafeAllowAllCors();
+builder.AddUnsafeAllowAllCors();
 builder.Services.AddSignalR();
 builder.AddApplicationIdentityServiceConfiguration();
 

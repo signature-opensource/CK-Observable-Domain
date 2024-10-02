@@ -1,4 +1,4 @@
-import { IPublishPacket, connectAsync, MqttClient } from "mqtt";
+import mqtt from "mqtt";
 import { WatchEvent } from '../../ObservableDomain/ObservableDomain';
 import { IObservableDomainLeagueDriver } from "../../ObservableDomain/IObservableDomainLeagueDriver";
 import { MQTTObservableWatcherStartOrRestartCommand } from "./MQTTObservableWatcherStartOrRestartCommand";
@@ -6,7 +6,7 @@ import { CrisEndpoint } from "../../Cris/CrisEndpoint";
 
 export class MQTTObservableLeagueDomainService implements IObservableDomainLeagueDriver {
 
-    private client!:MqttClient;
+    private client!: mqtt.MqttClient;
     private clientId: string;
     private messageHandlers: ((domainName: string, eventsJson: WatchEvent) => void)[] = [];
     private closeHandlers: ((e: Error | undefined) => void)[] = [(e) => console.log("mqtt disconnected: " + e)];
@@ -33,7 +33,7 @@ export class MQTTObservableLeagueDomainService implements IObservableDomainLeagu
     public async startAsync(): Promise<boolean> {
         try {
             console.log(`connecting to mqtt with client id ${this.clientId}...`)
-            this.client = await connectAsync(this.serverUrl, {
+            this.client = await mqtt.connectAsync(this.serverUrl, {
                 clean: true,
                 clientId: this.clientId
             });
@@ -48,7 +48,7 @@ export class MQTTObservableLeagueDomainService implements IObservableDomainLeagu
         }
     }
 
-    private handleMessages(topic: string, payload: Buffer, packet: IPublishPacket) {
+    private handleMessages(topic: string, payload: Buffer, packet: mqtt.IPublishPacket) {
         console.log("Received MQTT message.");
         if (!topic.startsWith(this.mqttTopic)) return;
         const domainNameSize = payload.readInt32LE();
@@ -77,4 +77,3 @@ export class MQTTObservableLeagueDomainService implements IObservableDomainLeagu
         return this.client.endAsync(true);
     }
 }
-
