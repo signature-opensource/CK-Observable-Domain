@@ -21,7 +21,7 @@ csharp_space_between_method_call_parameter_list_parentheses = true
 csharp_space_between_method_declaration_parameter_list_parentheses = true
 csharp_space_after_keywords_in_control_flow_statements = false
 csharp_space_between_parentheses = control_flow_statements
-# Motive: May be weird at first, but it improve readability.
+# Motive: May be weird at first, but it improves readability.
 
 csharp_style_prefer_primary_constructors = false:suggestion
 # Primary constructors should be used only for very simple classes. May be record is a good choice.
@@ -37,6 +37,9 @@ dotnet_naming_symbols.private_internal_fields.applicable_accessibilities = priva
 dotnet_naming_style.camel_case_underscore_style.required_prefix = _
 dotnet_naming_style.camel_case_underscore_style.capitalization = camel_case
 # Motive: It follow the C# style guideline.
+
+csharp_style_namespace_declarations=file_scoped:suggestion
+#Motive: Less useless space.
 
 # CA1063: Implement IDisposable Correctly
 dotnet_diagnostic.CA1063.severity = none

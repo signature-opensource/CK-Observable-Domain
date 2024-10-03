@@ -2,7 +2,6 @@
   <SimpleGitVersion StartingVersion="v7.0.1">
     <Branches>
       <Branch Name="develop" CIVersionMode="LastReleaseBased" VersionName="develop" />
-      <Branch Name="build" CIVersionMode="ZeroTimed" VersionName="build" UseReleaseBuildConfigurationFrom="None" />
     </Branches>
   </SimpleGitVersion>
 </RepositoryInfo>
