@@ -1,5 +1,5 @@
 
-import { ISerializeOptions, serialize, IDeserializeOptions, deserialize  } from '@local/ck-gen';
+import { ISerializeOptions, serialize, IDeserializeOptions, deserialize  } from '@local/ck-gen/CK/ObservableDomain/GraphSerializer';
 
 export function testWithIdempotence(o : any, options?: ISerializeOptions & IDeserializeOptions, test?: (o: any) => void ) {
     options ??= {};

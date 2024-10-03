@@ -230,5 +230,5 @@ public partial class DotnetSolution : ICIWorkflow
 
     void ICIWorkflow.Build() => Build();
 
-    void ICIWorkflow.Test() => Test();
+    void ICIWorkflow.Test() => SolutionTest();
 }

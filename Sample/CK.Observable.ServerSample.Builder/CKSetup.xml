@@ -9,6 +9,7 @@
 
           <TypeScript TargetProjectPath="{ProjectPath}Clients/NpmPackage"
                       AutoInstallYarn ="true"
+                      AutoInstallJest ="true"
                       IntegrationMode = "NpmPackage"
                       TypeFilterName="TypeScriptN">
             <Types>

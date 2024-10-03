@@ -6,14 +6,12 @@
     <TypeScriptCompileBlocked>true</TypeScriptCompileBlocked>
     <TypeScriptCompileOnSaveEnabled>false</TypeScriptCompileOnSaveEnabled>
   </PropertyGroup>
-  <ItemGroup>
-    <None Remove="appsettings.json" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="appsettings.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
+  
+  <PropertyGroup>
+    <!-- It's a mess. See https://github.com/dotnet/project-system/issues/3619 -->
+    <RunWorkingDirectory>$(MSBuildProjectDirectory)</RunWorkingDirectory>
+  </PropertyGroup>
+  
   <ItemGroup>
     <PackageReference Include="CK.AppIdentity.Hosting" Version="0.0.0--052zkuk-develop" />
     <PackageReference Include="CK.Monitoring.Hosting" Version="0.0.0--052zkuh-develop" />
@@ -22,4 +20,14 @@
     <ProjectReference Include="..\CK.Observable.ServerSample.App\CK.Observable.ServerSample.App.csproj" />
     <ProjectReference Include="..\CK.Observable.ServerSample.Builder\CK.Observable.ServerSample.Builder.csproj" ReferenceOutputAssembly="false" Private="false" />
   </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="appsettings.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>
