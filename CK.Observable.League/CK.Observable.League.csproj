@@ -5,7 +5,7 @@
   <ItemGroup>
     <PackageReference Include="CK.AppIdentity" Version="0.0.0--053bujc-develop" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
-    <PackageReference Include="Fody" PrivateAssets="all" Version="6.8.1" />
+    <PackageReference Include="Fody" PrivateAssets="all" Version="6.8.2" />
     <PackageReference Include="PropertyChanged.Fody" PrivateAssets="all" Version="4.1.0" />
     <ProjectReference Include="..\CK.Observable.Domain\CK.Observable.Domain.csproj" />
   </ItemGroup>
