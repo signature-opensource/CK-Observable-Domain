@@ -3,7 +3,7 @@ using CK.StObj.TypeScript;
 namespace CK.Observable.SignalRWatcher
 {
     [TypeScriptPackage]
-    [ImportTypeScriptLibrary( "@microsoft/signalr", ">=6.0.23", DependencyKind.PeerDependency, ForceUse = true )]
+    [TypeScriptImportLibrary( "@microsoft/signalr", ">=6.0.23", DependencyKind.PeerDependency, ForceUse = true )]
     [TypeScriptFile( "SignalRObservableLeagueDomainService.ts", "SignalRObservableLeagueDomainService" )]
     public class TSPackage : TypeScriptPackage
     {
