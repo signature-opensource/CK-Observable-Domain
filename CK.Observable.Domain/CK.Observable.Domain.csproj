@@ -3,11 +3,11 @@
     <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.StObj.Model" Version="0.0.0--053d558-develop" />
-    <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="0.0.0--053czwm-develop" />
-    <PackageReference Include="CK.PerfectEvent" Version="0.0.0--053czwp-develop" />
+    <PackageReference Include="CK.StObj.Model" Version="0.0.0--053i1ze-develop" />
+    <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="0.0.0--053i1z6-develop" />
+    <PackageReference Include="CK.PerfectEvent" Version="0.0.0--053i1za-develop" />
     <PackageReference Include="System.Threading.Channels" Version="8.0.0" />
-    <PackageReference Include="CK.BinarySerialization.Sliced" Version="0.0.0--053d559-develop" />
+    <PackageReference Include="CK.BinarySerialization.Sliced" Version="0.0.0--053i1zf-develop" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="MSBuild/CK.Observable.Domain.targets">
