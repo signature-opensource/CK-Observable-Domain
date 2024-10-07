@@ -3,7 +3,7 @@
     <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.Cris.BackgroundExecutor" Version="0.0.0--053is6j-develop" />
+    <PackageReference Include="CK.Cris.BackgroundExecutor" Version="0.0.0--053isph-develop" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CK.Observable.Domain\CK.Observable.Domain.csproj" />
