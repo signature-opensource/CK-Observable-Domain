@@ -1,33 +1,29 @@
 <Project Sdk="Microsoft.NET.Sdk">
-    <PropertyGroup>
-        <OutputType>Exe</OutputType>
-        <TargetFramework>net8.0</TargetFramework>
-        <IsPackable>false</IsPackable>
-        <TypeScriptCompileBlocked>true</TypeScriptCompileBlocked>
-        <TypeScriptCompileOnSaveEnabled>false</TypeScriptCompileOnSaveEnabled>
-    </PropertyGroup>
-
-    <PropertyGroup>
-        <!-- It's a mess. See https://github.com/dotnet/project-system/issues/3619 -->
-        <RunWorkingDirectory>$(MSBuildProjectDirectory)</RunWorkingDirectory>
-    </PropertyGroup>
-
-    <ItemGroup>
-        <PackageReference Include="CK.AppIdentity.Hosting" Version="0.0.0--053imdg-develop" />
-        <PackageReference Include="CK.Monitoring.Hosting" Version="0.0.0--053ij1l-develop" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <ProjectReference Include="..\CK.Observable.ServerSample.App\CK.Observable.ServerSample.App.csproj" />
-        <ProjectReference Include="..\CK.Observable.ServerSample.Builder\CK.Observable.ServerSample.Builder.csproj" ReferenceOutputAssembly="false" Private="false" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <None Remove="appsettings.json" />
-    </ItemGroup>
-    <ItemGroup>
-        <Content Include="appsettings.json">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </Content>
-    </ItemGroup>
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <TypeScriptCompileBlocked>true</TypeScriptCompileBlocked>
+    <TypeScriptCompileOnSaveEnabled>false</TypeScriptCompileOnSaveEnabled>
+  </PropertyGroup>
+  <PropertyGroup>
+    <!-- It's a mess. See https://github.com/dotnet/project-system/issues/3619 -->
+    <RunWorkingDirectory>$(MSBuildProjectDirectory)</RunWorkingDirectory>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="CK.AppIdentity.Hosting" Version="0.6.0-a" />
+    <PackageReference Include="CK.Monitoring.Hosting" Version="22.0.0-a" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\CK.Observable.ServerSample.App\CK.Observable.ServerSample.App.csproj" />
+    <ProjectReference Include="..\CK.Observable.ServerSample.Builder\CK.Observable.ServerSample.Builder.csproj" ReferenceOutputAssembly="false" Private="false" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Remove="appsettings.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 </Project>
