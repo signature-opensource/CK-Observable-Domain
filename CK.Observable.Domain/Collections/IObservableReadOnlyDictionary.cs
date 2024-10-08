@@ -2,34 +2,33 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace CK.Observable
+namespace CK.Observable;
+
+/// <summary>
+/// Extends <see cref="IReadOnlyDictionary{TKey, TValue}"/> to expose events.
+/// </summary>
+/// <typeparam name="TKey">Type of the key.</typeparam>
+/// <typeparam name="TValue">Type of the value.</typeparam>
+public interface IObservableReadOnlyDictionary<TKey, TValue> : IReadOnlyDictionary<TKey, TValue> where TKey : notnull
 {
     /// <summary>
-    /// Extends <see cref="IReadOnlyDictionary{TKey, TValue}"/> to expose events.
+    /// Raised when an existing item has been updated by <see cref="IDictionary{TKey, TValue}.this[TKey]"/> to a different value.
     /// </summary>
-    /// <typeparam name="TKey">Type of the key.</typeparam>
-    /// <typeparam name="TValue">Type of the value.</typeparam>
-    public interface IObservableReadOnlyDictionary<TKey, TValue> : IReadOnlyDictionary<TKey, TValue> where TKey : notnull
-    {
-        /// <summary>
-        /// Raised when an existing item has been updated by <see cref="IDictionary{TKey, TValue}.this[TKey]"/> to a different value.
-        /// </summary>
-        event SafeEventHandler<CollectionMapSetEvent> ItemSet;
+    event SafeEventHandler<CollectionMapSetEvent> ItemSet;
 
-        /// <summary>
-        /// Raised when a new item has been added by <see cref="IDictionary{TKey, TValue}.this[TKey]"/> or <see cref="IDictionary{TKey, TValue}.Add(TKey, TValue)"/>.
-        /// </summary>
-        event SafeEventHandler<CollectionMapSetEvent> ItemAdded;
+    /// <summary>
+    /// Raised when a new item has been added by <see cref="IDictionary{TKey, TValue}.this[TKey]"/> or <see cref="IDictionary{TKey, TValue}.Add(TKey, TValue)"/>.
+    /// </summary>
+    event SafeEventHandler<CollectionMapSetEvent> ItemAdded;
 
-        /// <summary>
-        /// Raised by <see cref="ICollection{T}.Clear()"/>.
-        /// </summary>
-        event SafeEventHandler<CollectionClearEvent> CollectionCleared;
+    /// <summary>
+    /// Raised by <see cref="ICollection{T}.Clear()"/>.
+    /// </summary>
+    event SafeEventHandler<CollectionClearEvent> CollectionCleared;
 
-        /// <summary>
-        /// Raised by <see cref="IDictionary{TKey, TValue}.Remove(TKey)"/>.
-        /// </summary>
-        event SafeEventHandler<CollectionRemoveKeyEvent> ItemRemoved;
+    /// <summary>
+    /// Raised by <see cref="IDictionary{TKey, TValue}.Remove(TKey)"/>.
+    /// </summary>
+    event SafeEventHandler<CollectionRemoveKeyEvent> ItemRemoved;
 
-    }
 }

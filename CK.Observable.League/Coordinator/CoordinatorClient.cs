@@ -8,218 +8,217 @@ using CK.BinarySerialization;
 using System.Diagnostics.CodeAnalysis;
 using System.Collections.Generic;
 
-namespace CK.Observable.League
+namespace CK.Observable.League;
+
+/// <summary>
+/// The coordinator client is nearly the same as its base <see cref="StreamStoreClient"/> except
+/// that it is definitely bound to the always loaded Coordinator domain, that it must rebind the <see cref="ODomain.Shell"/>
+/// to the managed domains on reload and that it handles some changes like the disposal of a Domain.
+/// <para>
+/// The other StreamStoreClient implementation is the <see cref="ObservableLeague.DomainClient"/> that drives the behavior
+/// of the managed domains.
+/// </para>
+/// </summary>
+internal class CoordinatorClient : StreamStoreClient, IObservableDomainAccess<OCoordinatorRoot>
 {
-    /// <summary>
-    /// The coordinator client is nearly the same as its base <see cref="StreamStoreClient"/> except
-    /// that it is definitely bound to the always loaded Coordinator domain, that it must rebind the <see cref="ODomain.Shell"/>
-    /// to the managed domains on reload and that it handles some changes like the disposal of a Domain.
-    /// <para>
-    /// The other StreamStoreClient implementation is the <see cref="ObservableLeague.DomainClient"/> that drives the behavior
-    /// of the managed domains.
-    /// </para>
-    /// </summary>
-    internal class CoordinatorClient : StreamStoreClient, IObservableDomainAccess<OCoordinatorRoot>
+    IManagedLeague? _league;
+    IServiceProvider _serviceProvider;
+    int? _optionsPropertyId;
+
+    static CoordinatorClient()
     {
-        IManagedLeague? _league;
-        IServiceProvider _serviceProvider;
-        int? _optionsPropertyId;
-
-        static CoordinatorClient()
+        BinaryDeserializer.DefaultSharedContext.AddDeserializationHook( t =>
         {
-            BinaryDeserializer.DefaultSharedContext.AddDeserializationHook( t =>
+            if( t.WrittenInfo.TypeNamespace == "CK.Observable.League" )
             {
-                if( t.WrittenInfo.TypeNamespace == "CK.Observable.League" )
+                if( t.WrittenInfo.TypeName == "Domain" )
                 {
-                    if( t.WrittenInfo.TypeName == "Domain" )
-                    {
-                        t.SetTargetType( typeof( ODomain ) );
-                    }
-                    else if( t.WrittenInfo.TypeName == "Coordinator" )
-                    {
-                        t.SetTargetType( typeof( OCoordinatorRoot ) );
-                    }
+                    t.SetTargetType( typeof( ODomain ) );
                 }
-            } );
-        }
-
-        public CoordinatorClient( IActivityMonitor monitor, IStreamStore store, IServiceProvider serviceProvider )
-            : base( String.Empty, store, next: null )
-        {
-            _serviceProvider = serviceProvider;
-        }
-
-        /// <summary>
-        /// Gets the coordinator domain: this set by the <see cref="ObservableLeague.LoadAsync"/> right after
-        /// having newed this client: this can't be done from the constructor since the domain restoration is
-        /// an asynchronous operation.
-        /// </summary>
-        public ObservableDomain<OCoordinatorRoot> Domain { get; internal set; }
-
-        public override void OnTransactionCommit( TransactionDoneEventArgs c )
-        {
-            base.OnTransactionCommit( c );
-
-            IEnumerable<ODomain>? touched = null;
-            if( c.RollbackedInfo != null )
-            {
-                // We don't have any sidekick that may have interfered with our domains.
-                // We have nothing to do.
-                if( c.RollbackedInfo.IsSafeRollback ) return;
-                Debug.Assert( c.RollbackedInfo.IsDangerousRollback );
-                // Resynchronize all.
-                touched = Domain.Root.Domains.Values;
-            }
-            else
-            {
-                HashSet<ODomain>? hashTouched = null;
-                if( !_optionsPropertyId.HasValue ) _optionsPropertyId = c.FindPropertyId( nameof( ODomain.Options ) );
-                foreach( var e in c.Events )
+                else if( t.WrittenInfo.TypeName == "Coordinator" )
                 {
-                    if( e is NewObjectEvent n && n.Object is ODomain dN )
-                    {
-                        if( hashTouched == null ) hashTouched = new HashSet<ODomain>();
-                        hashTouched.Add( dN );
-                        break;
-                    }
-                    if( _optionsPropertyId.HasValue && e is PropertyChangedEvent p && p.PropertyId == _optionsPropertyId.Value && p.Object is ODomain dP )
-                    {
-                        if( hashTouched == null ) hashTouched = new HashSet<ODomain>();
-                        hashTouched.Add( dP );
-                        break;
-                    }
-                }
-                touched = hashTouched;
-            }
-            if( touched != null )
-            {
-                foreach( var d in touched )
-                {
-                    c.DomainPostActions.Add( ctx => d.Shell.SynchronizeOptionsAsync( ctx.Monitor, d.Options, nextActiveTime: null ) );
+                    t.SetTargetType( typeof( OCoordinatorRoot ) );
                 }
             }
-        }
+        } );
+    }
 
-        /// <summary>
-        /// Gets the league. This is available (not null) once the initialization step
-        /// is done: a first (asynchronous) load from the store has been done, the <see cref="OCoordinatorRoot.Domains"/>
-        /// have been associated to their shells and, eventually, the ObservableLeague itself is created.
-        /// </summary>
-        internal IManagedLeague League => _league!;
+    public CoordinatorClient( IActivityMonitor monitor, IStreamStore store, IServiceProvider serviceProvider )
+        : base( String.Empty, store, next: null )
+    {
+        _serviceProvider = serviceProvider;
+    }
 
-        internal void FinalizeConstruct( IManagedLeague league )
+    /// <summary>
+    /// Gets the coordinator domain: this set by the <see cref="ObservableLeague.LoadAsync"/> right after
+    /// having newed this client: this can't be done from the constructor since the domain restoration is
+    /// an asynchronous operation.
+    /// </summary>
+    public ObservableDomain<OCoordinatorRoot> Domain { get; internal set; }
+
+    public override void OnTransactionCommit( TransactionDoneEventArgs c )
+    {
+        base.OnTransactionCommit( c );
+
+        IEnumerable<ODomain>? touched = null;
+        if( c.RollbackedInfo != null )
         {
-            _league = league;
-            Domain.Root.FinalizeConstruct( league );
+            // We don't have any sidekick that may have interfered with our domains.
+            // We have nothing to do.
+            if( c.RollbackedInfo.IsSafeRollback ) return;
+            Debug.Assert( c.RollbackedInfo.IsDangerousRollback );
+            // Resynchronize all.
+            touched = Domain.Root.Domains.Values;
         }
-
-        protected override void DoLoadOrCreateFromSnapshot( IActivityMonitor monitor, [AllowNull]ref ObservableDomain d, bool restoring, bool? startTimer )
+        else
         {
-            Debug.Assert( Domain == d );
-            base.DoLoadOrCreateFromSnapshot( monitor, ref d, restoring, startTimer );
-            if( _league != null ) Domain.Root.Initialize( monitor, _league );
+            HashSet<ODomain>? hashTouched = null;
+            if( !_optionsPropertyId.HasValue ) _optionsPropertyId = c.FindPropertyId( nameof( ODomain.Options ) );
+            foreach( var e in c.Events )
+            {
+                if( e is NewObjectEvent n && n.Object is ODomain dN )
+                {
+                    if( hashTouched == null ) hashTouched = new HashSet<ODomain>();
+                    hashTouched.Add( dN );
+                    break;
+                }
+                if( _optionsPropertyId.HasValue && e is PropertyChangedEvent p && p.PropertyId == _optionsPropertyId.Value && p.Object is ODomain dP )
+                {
+                    if( hashTouched == null ) hashTouched = new HashSet<ODomain>();
+                    hashTouched.Add( dP );
+                    break;
+                }
+            }
+            touched = hashTouched;
         }
-
-        protected override ObservableDomain DoDeserializeDomain( IActivityMonitor monitor, RewindableStream stream, bool? startTimer )
+        if( touched != null )
         {
-            return new ObservableDomain<OCoordinatorRoot>( monitor, String.Empty, this, stream, _serviceProvider, startTimer );
+            foreach( var d in touched )
+            {
+                c.DomainPostActions.Add( ctx => d.Shell.SynchronizeOptionsAsync( ctx.Monitor, d.Options, nextActiveTime: null ) );
+            }
         }
+    }
 
-        #region Coordinator: IObservableDomainAccess<Coordinator>.
-        bool IObservableDomainAccess<OCoordinatorRoot>.TryRead( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<OCoordinatorRoot>> reader, int millisecondsTimeout )
-        {
-            var d = Domain;
-            return d.TryRead( monitor, () => reader( monitor, d ), millisecondsTimeout );
-        }
+    /// <summary>
+    /// Gets the league. This is available (not null) once the initialization step
+    /// is done: a first (asynchronous) load from the store has been done, the <see cref="OCoordinatorRoot.Domains"/>
+    /// have been associated to their shells and, eventually, the ObservableLeague itself is created.
+    /// </summary>
+    internal IManagedLeague League => _league!;
 
-        bool IObservableDomainAccess<OCoordinatorRoot>.TryRead<T>( IActivityMonitor monitor,
-                                                                   Func<IActivityMonitor, IObservableDomain<OCoordinatorRoot>, T> reader,
-                                                                   [MaybeNullWhen(false)]out T result,
-                                                                   int millisecondsTimeout )
-        {
-            var d = Domain;
-            return d.TryRead( monitor, () => reader( monitor, d ), out result, millisecondsTimeout );
-        }
+    internal void FinalizeConstruct( IManagedLeague league )
+    {
+        _league = league;
+        Domain.Root.FinalizeConstruct( league );
+    }
 
-        T IObservableDomainAccess<OCoordinatorRoot>.Read<T>( IActivityMonitor monitor,
-                                                             Func<IActivityMonitor, IObservableDomain<OCoordinatorRoot>, T> reader )
-        {
-            var d = Domain;
-            return d.Read( monitor, () => reader( monitor, d ) );
-        }
+    protected override void DoLoadOrCreateFromSnapshot( IActivityMonitor monitor, [AllowNull]ref ObservableDomain d, bool restoring, bool? startTimer )
+    {
+        Debug.Assert( Domain == d );
+        base.DoLoadOrCreateFromSnapshot( monitor, ref d, restoring, startTimer );
+        if( _league != null ) Domain.Root.Initialize( monitor, _league );
+    }
 
-        void IObservableDomainAccess<OCoordinatorRoot>.Read( IActivityMonitor monitor,
-                                                             Action<IActivityMonitor, IObservableDomain<OCoordinatorRoot>> reader )
-        {
-            var d = Domain;
-            d.Read( monitor, () => reader( monitor, d ) );
-        }
+    protected override ObservableDomain DoDeserializeDomain( IActivityMonitor monitor, RewindableStream stream, bool? startTimer )
+    {
+        return new ObservableDomain<OCoordinatorRoot>( monitor, String.Empty, this, stream, _serviceProvider, startTimer );
+    }
 
-        Task<TransactionResult> IObservableDomainAccess<OCoordinatorRoot>.ModifyAsync( IActivityMonitor monitor,
-                                                                                       Action<IActivityMonitor,
-                                                                                       IObservableDomain<OCoordinatorRoot>> actions,
-                                                                                       bool throwException,
+    #region Coordinator: IObservableDomainAccess<Coordinator>.
+    bool IObservableDomainAccess<OCoordinatorRoot>.TryRead( IActivityMonitor monitor, Action<IActivityMonitor, IObservableDomain<OCoordinatorRoot>> reader, int millisecondsTimeout )
+    {
+        var d = Domain;
+        return d.TryRead( monitor, () => reader( monitor, d ), millisecondsTimeout );
+    }
+
+    bool IObservableDomainAccess<OCoordinatorRoot>.TryRead<T>( IActivityMonitor monitor,
+                                                               Func<IActivityMonitor, IObservableDomain<OCoordinatorRoot>, T> reader,
+                                                               [MaybeNullWhen(false)]out T result,
+                                                               int millisecondsTimeout )
+    {
+        var d = Domain;
+        return d.TryRead( monitor, () => reader( monitor, d ), out result, millisecondsTimeout );
+    }
+
+    T IObservableDomainAccess<OCoordinatorRoot>.Read<T>( IActivityMonitor monitor,
+                                                         Func<IActivityMonitor, IObservableDomain<OCoordinatorRoot>, T> reader )
+    {
+        var d = Domain;
+        return d.Read( monitor, () => reader( monitor, d ) );
+    }
+
+    void IObservableDomainAccess<OCoordinatorRoot>.Read( IActivityMonitor monitor,
+                                                         Action<IActivityMonitor, IObservableDomain<OCoordinatorRoot>> reader )
+    {
+        var d = Domain;
+        d.Read( monitor, () => reader( monitor, d ) );
+    }
+
+    Task<TransactionResult> IObservableDomainAccess<OCoordinatorRoot>.ModifyAsync( IActivityMonitor monitor,
+                                                                                   Action<IActivityMonitor,
+                                                                                   IObservableDomain<OCoordinatorRoot>> actions,
+                                                                                   bool throwException,
+                                                                                   int millisecondsTimeout,
+                                                                                   bool considerRolledbackAsFailure,
+                                                                                   bool parallelDomainPostActions,
+                                                                                   bool waitForDomainPostActionsCompletion )
+    {
+        var d = Domain;
+        return d.ModifyAsync( monitor,
+                              () => actions.Invoke( monitor, d ),
+                              throwException,
+                              millisecondsTimeout,
+                              considerRolledbackAsFailure,
+                              parallelDomainPostActions,
+                              waitForDomainPostActionsCompletion );
+    }
+    
+    Task<TransactionResult> IObservableDomainAccess<OCoordinatorRoot>.ModifyThrowAsync( IActivityMonitor monitor,
+                                                                                        Action<IActivityMonitor, IObservableDomain<OCoordinatorRoot>> actions,
+                                                                                        int millisecondsTimeout,
+                                                                                        bool considerRolledbackAsFailure,
+                                                                                        bool parallelDomainPostActions,
+                                                                                        bool waitForDomainPostActionsCompletion )
+    {
+        var d = Domain;
+        return d.ModifyThrowAsync( monitor,
+                                   () => actions.Invoke( monitor, d ),
+                                   millisecondsTimeout,
+                                   considerRolledbackAsFailure,
+                                   parallelDomainPostActions,
+                                   waitForDomainPostActionsCompletion );
+    }
+
+    Task<TResult> IObservableDomainAccess<OCoordinatorRoot>.ModifyThrowAsync<TResult>( IActivityMonitor monitor,
+                                                                                       Func<IActivityMonitor, IObservableDomain<OCoordinatorRoot>, TResult> actions,
                                                                                        int millisecondsTimeout,
-                                                                                       bool considerRolledbackAsFailure,
                                                                                        bool parallelDomainPostActions,
                                                                                        bool waitForDomainPostActionsCompletion )
-        {
-            var d = Domain;
-            return d.ModifyAsync( monitor,
-                                  () => actions.Invoke( monitor, d ),
-                                  throwException,
-                                  millisecondsTimeout,
-                                  considerRolledbackAsFailure,
-                                  parallelDomainPostActions,
-                                  waitForDomainPostActionsCompletion );
-        }
-        
-        Task<TransactionResult> IObservableDomainAccess<OCoordinatorRoot>.ModifyThrowAsync( IActivityMonitor monitor,
-                                                                                            Action<IActivityMonitor, IObservableDomain<OCoordinatorRoot>> actions,
-                                                                                            int millisecondsTimeout,
-                                                                                            bool considerRolledbackAsFailure,
-                                                                                            bool parallelDomainPostActions,
-                                                                                            bool waitForDomainPostActionsCompletion )
-        {
-            var d = Domain;
-            return d.ModifyThrowAsync( monitor,
-                                       () => actions.Invoke( monitor, d ),
-                                       millisecondsTimeout,
-                                       considerRolledbackAsFailure,
-                                       parallelDomainPostActions,
-                                       waitForDomainPostActionsCompletion );
-        }
-
-        Task<TResult> IObservableDomainAccess<OCoordinatorRoot>.ModifyThrowAsync<TResult>( IActivityMonitor monitor,
-                                                                                           Func<IActivityMonitor, IObservableDomain<OCoordinatorRoot>, TResult> actions,
-                                                                                           int millisecondsTimeout,
-                                                                                           bool parallelDomainPostActions,
-                                                                                           bool waitForDomainPostActionsCompletion )
-        {
-            var d = Domain;
-            return d.ModifyThrowAsync( monitor,
-                                       () => actions.Invoke( monitor, d ),
-                                       millisecondsTimeout,
-                                       parallelDomainPostActions,
-                                       waitForDomainPostActionsCompletion );
-        }
-
-        Task<TransactionResult> IObservableDomainAccess<OCoordinatorRoot>.TryModifyAsync( IActivityMonitor monitor,
-                                                                                          Action<IActivityMonitor, IObservableDomain<OCoordinatorRoot>> actions,
-                                                                                          int millisecondsTimeout,
-                                                                                          bool considerRolledbackAsFailure,
-                                                                                          bool parallelDomainPostActions,
-                                                                                          bool waitForDomainPostActionsCompletion )
-        {
-            var d = Domain;
-            return d.TryModifyAsync( monitor,
-                                     () => actions.Invoke( monitor, d ),
-                                     millisecondsTimeout,
-                                     considerRolledbackAsFailure,
-                                     parallelDomainPostActions,
-                                     waitForDomainPostActionsCompletion );
-        }
-        #endregion
-
+    {
+        var d = Domain;
+        return d.ModifyThrowAsync( monitor,
+                                   () => actions.Invoke( monitor, d ),
+                                   millisecondsTimeout,
+                                   parallelDomainPostActions,
+                                   waitForDomainPostActionsCompletion );
     }
+
+    Task<TransactionResult> IObservableDomainAccess<OCoordinatorRoot>.TryModifyAsync( IActivityMonitor monitor,
+                                                                                      Action<IActivityMonitor, IObservableDomain<OCoordinatorRoot>> actions,
+                                                                                      int millisecondsTimeout,
+                                                                                      bool considerRolledbackAsFailure,
+                                                                                      bool parallelDomainPostActions,
+                                                                                      bool waitForDomainPostActionsCompletion )
+    {
+        var d = Domain;
+        return d.TryModifyAsync( monitor,
+                                 () => actions.Invoke( monitor, d ),
+                                 millisecondsTimeout,
+                                 considerRolledbackAsFailure,
+                                 parallelDomainPostActions,
+                                 waitForDomainPostActionsCompletion );
+    }
+    #endregion
+
 }

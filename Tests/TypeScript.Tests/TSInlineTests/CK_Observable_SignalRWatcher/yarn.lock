@@ -1358,6 +1358,9 @@ __metadata:
     rxjs: "npm:>=7.5.6"
     ts-jest: "npm:^29.1.4"
     typescript: "npm:=5.4.5"
+  peerDependencies:
+    "@microsoft/signalr": ">=6.0.23"
+    axios: ^1.5.1
   languageName: unknown
   linkType: soft
 

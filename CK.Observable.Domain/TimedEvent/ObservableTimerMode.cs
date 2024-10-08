@@ -4,46 +4,43 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace CK.Observable
+namespace CK.Observable;
+
+/// <summary>
+/// Defines the behavior of the <see cref="ObservableTimer"/> regarding the adjustment of its <see cref="ObservableTimer.DueTimeUtc"/>.
+/// This is an attempt to handle as simply as possible the clock drift complicated problem. Look for "computer clock drift" on internet.
+/// </summary>
+public enum ObservableTimerMode
 {
     /// <summary>
-    /// Defines the behavior of the <see cref="ObservableTimer"/> regarding the adjustment of its <see cref="ObservableTimer.DueTimeUtc"/>.
-    /// This is an attempt to handle as simply as possible the clock drift complicated problem. Look for "computer clock drift" on internet.
+    /// Adjustment of actual due time is allowed by skipping any number of events.
+    /// (A <see cref="Core.LogLevel.Warn"/> is nevertheless logged if this happens.)
     /// </summary>
-    public enum ObservableTimerMode
-    {
-        /// <summary>
-        /// Adjustment of actual due time is allowed by skipping any number of events.
-        /// (A <see cref="Core.LogLevel.Warn"/> is nevertheless logged if this happens.)
-        /// </summary>
-        Relaxed = 0,
+    Relaxed = 0,
 
-        /// <summary>
-        /// Adjustment of actual due time is allowed as long as no event is lost.
-        /// A <see cref="Core.LogLevel.Warn"/> is always logged if this happens.
-        /// If an event is lost, an error is logged or an exception is thrown depending on <see cref="ThrowException"/> flag.
-        /// </summary>
-        AllowSlidingAdjustment = 1,
+    /// <summary>
+    /// Adjustment of actual due time is allowed as long as no event is lost.
+    /// A <see cref="Core.LogLevel.Warn"/> is always logged if this happens.
+    /// If an event is lost, an error is logged or an exception is thrown depending on <see cref="ThrowException"/> flag.
+    /// </summary>
+    AllowSlidingAdjustment = 1,
 
-        /// <summary>
-        /// Adjustment of actual due time is allowed by skipping at most one event.
-        /// A <see cref="Core.LogLevel.Warn"/> is always logged if this happens.
-        /// If more than one event is lost, an error is logged or an exception is thrown depending on <see cref="ThrowException"/> flag.
-        /// </summary>
-        AllowOneStepAdjustment = 2,
+    /// <summary>
+    /// Adjustment of actual due time is allowed by skipping at most one event.
+    /// A <see cref="Core.LogLevel.Warn"/> is always logged if this happens.
+    /// If more than one event is lost, an error is logged or an exception is thrown depending on <see cref="ThrowException"/> flag.
+    /// </summary>
+    AllowOneStepAdjustment = 2,
 
-        /// <summary>
-        /// Any due time adjustment is forbidden. No event must be lost.
-        /// Any time adjustment logs an error or throws an exception depending on <see cref="ThrowException"/> flag.
-        /// </summary>
-        Critical = 3,
+    /// <summary>
+    /// Any due time adjustment is forbidden. No event must be lost.
+    /// Any time adjustment logs an error or throws an exception depending on <see cref="ThrowException"/> flag.
+    /// </summary>
+    Critical = 3,
 
-        /// <summary>
-        /// When this bit is set, any violation of <see cref="AllowSlidingAdjustment"/>, <see cref="AllowOneStepAdjustment"/> or <see cref="Critical"/>
-        /// mode raises an exception instead of logging an error.
-        /// </summary>
-        ThrowException = 4
-    }
-
-
+    /// <summary>
+    /// When this bit is set, any violation of <see cref="AllowSlidingAdjustment"/>, <see cref="AllowOneStepAdjustment"/> or <see cref="Critical"/>
+    /// mode raises an exception instead of logging an error.
+    /// </summary>
+    ThrowException = 4
 }

@@ -1,9 +1,8 @@
 using System.Threading.Tasks;
 
-namespace CK.Observable.SignalRWatcher
+namespace CK.Observable.SignalRWatcher;
+
+public interface IObservableAppSignalrClient
 {
-    public interface IObservableAppSignalrClient
-    {
-        Task OnStateEventsAsync( string domainName, string eventsJson );
-    }
+    Task OnStateEventsAsync( string domainName, string eventsJson );
 }

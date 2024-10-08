@@ -2,26 +2,25 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace CK.Observable
+namespace CK.Observable;
+
+/// <summary>
+/// Specific exception useful to detect race condition for domains.
+/// </summary>
+public class ObservableDomainDisposedException : ObjectDisposedException
 {
     /// <summary>
-    /// Specific exception useful to detect race condition for domains.
+    /// Initializes a new <see cref="ObservableDomainDisposedException"/>.
     /// </summary>
-    public class ObservableDomainDisposedException : ObjectDisposedException
+    /// <param name="domainName">The domain name.</param>
+    public ObservableDomainDisposedException( string domainName )
+        : base( $"Observable domain '{domainName}'" )
     {
-        /// <summary>
-        /// Initializes a new <see cref="ObservableDomainDisposedException"/>.
-        /// </summary>
-        /// <param name="domainName">The domain name.</param>
-        public ObservableDomainDisposedException( string domainName )
-            : base( $"Observable domain '{domainName}'" )
-        {
-            DomainName = domainName;
-        }
-
-        /// <summary>
-        /// Gets the domain name.
-        /// </summary>
-        public string DomainName { get; }
+        DomainName = domainName;
     }
+
+    /// <summary>
+    /// Gets the domain name.
+    /// </summary>
+    public string DomainName { get; }
 }
