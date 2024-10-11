@@ -5,8 +5,8 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="CK.Testing.Nunit" Version="11.0.0-a00-00-0002-develop" />
-    <PackageReference Include="CK.Testing.StObjTypeScriptEngine" Version="0.20.0-a01-00-0002-develop" />
-    <PackageReference Include="CK.Cris.AspNet.Engine" Version="0.33.0-a00-00-0003-develop" />
+    <PackageReference Include="CK.Testing.StObjTypeScriptEngine" Version="0.20.0-a01-00-0004-develop" />
+    <PackageReference Include="CK.Cris.AspNet.Engine" Version="0.33.0-a00-00-0004-develop" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
     <PackageReference Include="NUnit3TestAdapter" PrivateAssets="all" Version="4.6.0" />
   </ItemGroup>
