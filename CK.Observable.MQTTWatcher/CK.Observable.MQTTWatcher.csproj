@@ -8,8 +8,8 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="CK.Cris.Typescript" Version="0.33.0-a00-00-0025-develop" />
-    <PackageReference Include="CK.Cris.AspNet" Version="0.33.0-a00-00-0025-develop" />
+    <PackageReference Include="CK.Cris.Typescript" Version="0.33.0-a00-00-0026-develop" />
+    <PackageReference Include="CK.Cris.AspNet" Version="0.33.0-a00-00-0026-develop" />
     <PackageReference Include="CK.MQTT.LocalMQTTDemiServer" Version="0.25.0-a00-00-0016-develop" />
   </ItemGroup>
   <ItemGroup>
