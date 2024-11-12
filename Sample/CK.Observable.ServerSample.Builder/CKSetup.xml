@@ -8,8 +8,6 @@
         <Multiple>
 
           <TypeScript TargetProjectPath="{ProjectPath}Clients/NpmPackage"
-                      AutoInstallYarn ="true"
-                      AutoInstallJest ="true"
                       IntegrationMode = "NpmPackage"
                       TypeFilterName="TypeScriptN">
             <Types>
@@ -18,7 +16,6 @@
           </TypeScript>
 
           <TypeScript TargetProjectPath="{ProjectPath}Clients/Inline"
-                AutoInstallYarn ="true"
                 IntegrationMode = "Inline"
                 TypeFilterName="TypeScriptI">
             <Types>
