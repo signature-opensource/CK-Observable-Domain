@@ -4,8 +4,7 @@
   "scripts": {
     "build": "tsc && vite build",
     "start": "vite serve",
-    "clean": "rimraf dist",
-    "test": "jest"
+    "clean": "rimraf dist"
   },
   "devDependencies": {
     "@microsoft/signalr": ">=6.0.23",

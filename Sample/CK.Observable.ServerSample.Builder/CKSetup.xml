@@ -16,8 +16,9 @@
           </TypeScript>
 
           <TypeScript TargetProjectPath="{ProjectPath}Clients/Inline"
-                IntegrationMode = "Inline"
-                TypeFilterName="TypeScriptI">
+                      IntegrationMode = "Inline"
+                      AutoInstallJest="false"
+                      TypeFilterName="TypeScriptI">
             <Types>
               <Type Type="CK.Observable.ServerSample.App.ISliderCommand, CK.Observable.ServerSample.App" />
             </Types>
