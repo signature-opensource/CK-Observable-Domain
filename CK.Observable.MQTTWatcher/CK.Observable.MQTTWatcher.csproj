@@ -8,9 +8,9 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="CK.Cris.Typescript" Version="0.33.0-a00-00-0041-develop" />
-    <PackageReference Include="CK.Cris.AspNet" Version="0.33.0-a00-00-0041-develop" />
-    <PackageReference Include="CK.MQTT.LocalMQTTDemiServer" Version="0.25.0-a00-00-0023-develop" />
+    <PackageReference Include="CK.Cris.Typescript" Version="0.33.0-a00-00-0042-develop" />
+    <PackageReference Include="CK.Cris.AspNet" Version="0.33.0-a00-00-0042-develop" />
+    <PackageReference Include="CK.MQTT.LocalMQTTDemiServer" Version="0.25.0-a00-00-0024-develop" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CK.Observable.League\CK.Observable.League.csproj" />
