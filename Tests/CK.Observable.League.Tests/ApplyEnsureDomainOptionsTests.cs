@@ -198,7 +198,7 @@ public class ApplyEnsureDomainOptionsTests
     [Test]
     public void DefaultObservableLeagueOptions_can_be_read_from_Configuration()
     {
-        IConfigurationBuilder builder = new ConfigurationBuilder().AddInMemoryCollection( new Dictionary<string,string>
+        IConfigurationBuilder builder = new ConfigurationBuilder().AddInMemoryCollection( new Dictionary<string,string?>
         {
             { "CK-ObservableLeague:StorePath", "Some/Path" },
             { "CK-ObservableLeague:EnsureDomains:0:DomainName", "FirstDomain" },
