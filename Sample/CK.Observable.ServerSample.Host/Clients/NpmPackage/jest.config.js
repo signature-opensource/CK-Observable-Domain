@@ -19,7 +19,7 @@ module.exports = {
     moduleNameMapper: pathsToModuleNameMapper(compilerOptions.paths ?? {}, { prefix: '<rootDir>/' } ),
     testEnvironment: 'jsdom',
     globals: {
-        // CK.Testing.StObjTypeScriptEngine uses this:
+        // CK.Testing.TypeScriptEngine uses this:
         // TestHelper.CreateTypeScriptTestRunner inject test environment variables here
         // in a "persistent" way: these environment variables will be available until
         // the Runner returned by TestHelper.CreateTypeScriptTestRunner is disposed.
