@@ -1,5 +1,5 @@
 using CK.Cris;
-using CK.StObj.TypeScript;
+using CK.TypeScript;
 
 namespace CK.Observable.MQTTWatcher;
 

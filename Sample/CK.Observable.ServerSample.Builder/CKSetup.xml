@@ -1,6 +1,6 @@
 <Setup Engine="CK.Setup.StObjEngine, CK.StObj.Engine">
   
-  <Aspect Type="CK.Setup.TypeScriptAspectConfiguration, CK.StObj.TypeScript" />
+  <Aspect Type="CK.Setup.TypeScriptAspectConfiguration, CK.TypeScript" />
 
   <BinPaths>
     <BinPath>

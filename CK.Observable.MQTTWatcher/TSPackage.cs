@@ -1,4 +1,4 @@
-using CK.StObj.TypeScript;
+using CK.TypeScript;
 using System.Xml.Linq;
 
 namespace CK.Observable.MQTTWatcher;
