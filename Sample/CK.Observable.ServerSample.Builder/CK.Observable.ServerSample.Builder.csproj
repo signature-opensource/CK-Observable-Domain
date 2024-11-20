@@ -4,9 +4,9 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.Cris.Executor.Engine" Version="0.33.0-a00-00-0060-develop" />
-    <PackageReference Include="CK.Cris.AspNet.Engine" Version="0.33.0-a00-00-0060-develop" />
-    <PackageReference Include="CK.AppBuilder" Version="27.0.0-a00-00-0045-develop" />
+    <PackageReference Include="CK.Cris.Executor.Engine" Version="0.33.0-a00-00-0062-develop" />
+    <PackageReference Include="CK.Cris.AspNet.Engine" Version="0.33.0-a00-00-0062-develop" />
+    <PackageReference Include="CK.AppBuilder" Version="27.0.0-a00-00-0046-develop" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CK.Observable.ServerSample.App\CK.Observable.ServerSample.App.csproj" />
