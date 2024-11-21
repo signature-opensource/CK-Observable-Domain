@@ -1,12 +1,11 @@
-namespace CK.Observable.Domain.Tests.Sample
+namespace CK.Observable.Domain.Tests.Sample;
+
+public enum MechanicLevel
 {
-    public enum MechanicLevel
-    {
-        None,
-        Noob,
-        Intern,
-        Confirmed,
-        Specialist,
-        Master,
-    }
+    None,
+    Noob,
+    Intern,
+    Confirmed,
+    Specialist,
+    Master,
 }

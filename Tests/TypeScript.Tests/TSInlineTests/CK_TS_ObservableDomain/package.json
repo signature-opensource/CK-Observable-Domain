@@ -1,0 +1,19 @@
+{
+  "name": "ck_ts_observabledomain",
+  "private": true,
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.14.2",
+    "jest": "^29.7",
+    "jest-environment-jsdom": "^29.7",
+    "ts-jest": "^29.1.4",
+    "typescript": "=5.4.5"
+  },
+  "scripts": {
+    "test": "jest"
+  },
+  "dependencies": {
+    "rxjs": ">=7.5.6"
+  },
+  "ckVersion": 1
+}

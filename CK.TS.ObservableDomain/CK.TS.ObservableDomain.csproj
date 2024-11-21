@@ -1,19 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
-    <Nullable>enable</Nullable>
+    <TargetFramework>net8.0</TargetFramework>
     <RootNamespace>CK.ObservableDomain</RootNamespace>
   </PropertyGroup>
-
   <ItemGroup>
     <EmbeddedResource Include="**\*.ts">
       <LogicalName>ck@$([System.String]::new('%(RelativeDir)').Replace('\','/'))%(FileName)%(Extension)</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
-
   <ItemGroup>
-    <PackageReference Include="CK.StObj.TypeScript" Version="0.19.0" />
+    <PackageReference Include="CK.TypeScript" Version="0.20.0" />
   </ItemGroup>
-
 </Project>

@@ -1,32 +1,30 @@
 using CK.DeviceModel;
 
-namespace CK.Observable.Device
+namespace CK.Observable.Device;
+
+/// <summary>
+/// Untyped abstraction for <see cref="ObservableDeviceSidekick{THost, TDeviceObject, TDeviceHostObject}"/>.
+/// </summary>
+public interface IObservableDeviceSidekick
 {
     /// <summary>
-    /// Untyped abstraction for <see cref="ObservableDeviceSidekick{THost, TDeviceObject, TDeviceHostObject}"/>.
+    /// Gets the device host from the DeviceModel.
     /// </summary>
-    public interface IObservableDeviceSidekick
-    {
-        /// <summary>
-        /// Gets the device host from the DeviceModel.
-        /// </summary>
-        IDeviceHost Host { get; }
+    IDeviceHost Host { get; }
 
-        /// <summary>
-        /// Gets the object device host if the observable host object has been instantiated, null otherwise.
-        /// </summary>
-        ObservableDeviceHostObject? ObjectHost { get; }
+    /// <summary>
+    /// Gets the object device host if the observable host object has been instantiated, null otherwise.
+    /// </summary>
+    ObservableDeviceHostObject? ObjectHost { get; }
 
-        /// <summary>
-        /// Tries to find an instantiated <see cref="ObservableDeviceObject"/> (of type managed by this sidekick)
-        /// by its name or return null.
-        /// <para>
-        /// The observable may not be bound to an actual device.
-        /// </para>
-        /// </summary>
-        /// <param name="deviceName">The device name to find.</param>
-        /// <returns>The observable device or null if not found.</returns>
-        ObservableDeviceObject? FindObservableDeviceObject( string deviceName );
-    }
-
+    /// <summary>
+    /// Tries to find an instantiated <see cref="ObservableDeviceObject"/> (of type managed by this sidekick)
+    /// by its name or return null.
+    /// <para>
+    /// The observable may not be bound to an actual device.
+    /// </para>
+    /// </summary>
+    /// <param name="deviceName">The device name to find.</param>
+    /// <returns>The observable device or null if not found.</returns>
+    ObservableDeviceObject? FindObservableDeviceObject( string deviceName );
 }

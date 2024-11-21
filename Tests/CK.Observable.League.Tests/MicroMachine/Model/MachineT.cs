@@ -7,92 +7,90 @@ using System.Linq;
 using System.Reflection.PortableExecutable;
 using System.Text;
 
-namespace CK.Observable.League.Tests.MicroMachine
+namespace CK.Observable.League.Tests.MicroMachine;
+
+[SerializationVersion( 0 )]
+public abstract class Machine<T> : Machine where T : MachineThing
 {
-    [SerializationVersion( 0 )]
-    public abstract class Machine<T> : Machine where T : MachineThing
+    readonly ObservableList<T> _all;
+
+    public Machine( string name, MachineConfiguration configuration )
+        : base( name, configuration )
     {
-        readonly ObservableList<T> _all;
+        _all = new ObservableList<T>();
+    }
 
-        public Machine( string name, MachineConfiguration configuration )
-            : base( name, configuration )
+    protected Machine( Sliced _ ) : base( _ ) { }
+
+    Machine( IBinaryDeserializer d, ITypeReadInfo info )
+            : base( Sliced.Instance )
+    {
+        _all = d.ReadObject<ObservableList<T>>();
+    }
+
+    public static void Write( IBinarySerializer s, in Machine<T> o )
+    {
+        s.WriteObject( o._all );
+    }
+
+    public IObservableReadOnlyList<T> Things => _all;
+
+    protected abstract T ThingFactory( int tempId );
+
+    protected T? FindThing( int tempId ) => _all.FirstOrDefault( t => t.TemporaryId == tempId );
+
+    internal protected override void OnNewThing( int tempId )
+    {
+        var info = FindThing( tempId );
+        if( info != null )
         {
-            _all = new ObservableList<T>();
+            info.SetErrorStatus( "ReadProductDuplicateIdentifier" );
         }
-
-        protected Machine( Sliced _ ) : base( _ ) { }
-
-        Machine( IBinaryDeserializer d, ITypeReadInfo info )
-                : base( Sliced.Instance )
+        else
         {
-            _all = d.ReadObject<ObservableList<T>>();
+            info = ThingFactory( tempId );
+            _all.Add( info );
+            info.Destroyed += OnProductDisposed;
+            info.CreateTimeout( Configuration.IdentifyThingTimeout, OnIdentifyThingTimeout );
         }
+    }
 
-        public static void Write( IBinarySerializer s, in Machine<T> o )
+    void OnProductDisposed( object sender, ObservableDomainEventArgs e )
+    {
+        _all.Remove( (T)sender );
+    }
+
+    void OnIdentifyThingTimeout( object sender, ObservableReminderEventArgs e )
+    {
+        var info = (MachineThing)e.Reminder.Tag!;
+        if( info.IdentifiedId == null )
         {
-            s.WriteObject( o._all );
+            info.SetErrorStatus( "IdentificationTimeout" );
+            // Consider that the timeout is a rebout destination confirmation.
+            info.OnDestinationConfirmed();
         }
+    }
 
-        public IObservableReadOnlyList<T> Things => _all;
-
-        protected abstract T ThingFactory( int tempId );
-
-        protected T? FindThing( int tempId ) => _all.FirstOrDefault( t => t.TemporaryId == tempId );
-
-        internal protected override void OnNewThing( int tempId )
+    internal protected override void OnIdentification( int tempId, string identifiedId )
+    {
+        var info = FindThing( tempId );
+        if( info == null )
         {
-            var info = FindThing( tempId );
-            if( info != null )
-            {
-                info.SetErrorStatus( "ReadProductDuplicateIdentifier" );
-            }
-            else
-            {
-                info = ThingFactory( tempId );
-                _all.Add( info );
-                info.Destroyed += OnProductDisposed;
-                info.CreateTimeout( Configuration.IdentifyThingTimeout, OnIdentifyThingTimeout );
-            }
+            Domain.Monitor.Warn( "UnknownTempId" );
         }
-
-        void OnProductDisposed( object sender, ObservableDomainEventArgs e )
+        else
         {
-            _all.Remove( (T)sender );
-        }
-
-        void OnIdentifyThingTimeout( object sender, ObservableReminderEventArgs e )
-        {
-            var info = (MachineThing)e.Reminder.Tag!;
             if( info.IdentifiedId == null )
             {
-                info.SetErrorStatus( "IdentificationTimeout" );
-                // Consider that the timeout is a rebout destination confirmation.
+                info.SetIdentification( identifiedId );
                 info.OnDestinationConfirmed();
-            }
-        }
-
-        internal protected override void OnIdentification( int tempId, string identifiedId )
-        {
-            var info = FindThing( tempId );
-            if( info == null )
-            {
-                Domain.Monitor.Warn( "UnknownTempId" );
             }
             else
             {
-                if( info.IdentifiedId == null )
-                {
-                    info.SetIdentification( identifiedId );
-                    info.OnDestinationConfirmed();
-                }
-                else
-                {
-                    Domain.Monitor.Error( $"Duplicate tempId received for ProductId n°{tempId}. This has been ignored." );
-                }
+                Domain.Monitor.Error( $"Duplicate tempId received for ProductId n°{tempId}. This has been ignored." );
             }
         }
-
-
     }
+
 
 }

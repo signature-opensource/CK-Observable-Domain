@@ -1,70 +1,69 @@
 using CK.Core;
 using System;
 
-namespace CK.Observable.Domain.Tests
+namespace CK.Observable.Domain.Tests;
+
+[SerializationVersion( 0 )]
+class ObservableProductSample : ObservableObject
 {
-    [SerializationVersion( 0 )]
-    class ObservableProductSample : ObservableObject
+    ObservableReminder? _autoDestroyReminder;
+
+    public ObservableProductSample( Machine m )
     {
-        ObservableReminder? _autoDestroyReminder;
+        Machine = m;
+    }
 
-        public ObservableProductSample( Machine m )
-        {
-            Machine = m;
-        }
+    public string? Name { get; set; }
 
-        public string? Name { get; set; }
+    public Machine Machine { get; }
 
-        public Machine Machine { get; }
+    ObservableProductSample( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+        : base( BinarySerialization.Sliced.Instance )
+    {
+        Name = r.Reader.ReadNullableString();
+        Machine = r.ReadObject<Machine>();
+        _autoDestroyReminder = r.ReadNullableObject<ObservableReminder>();
+    }
 
-        ObservableProductSample( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
-            : base( BinarySerialization.Sliced.Instance )
-        {
-            Name = r.Reader.ReadNullableString();
-            Machine = r.ReadObject<Machine>();
-            _autoDestroyReminder = r.ReadNullableObject<ObservableReminder>();
-        }
+    public static void Write( BinarySerialization.IBinarySerializer w, in ObservableProductSample o )
+    {
+        w.Writer.WriteNullableString( o.Name );
+        w.WriteObject( o.Machine );
+        w.WriteObject( o._autoDestroyReminder );
+    }
 
-        public static void Write( BinarySerialization.IBinarySerializer w, in ObservableProductSample o )
-        {
-            w.Writer.WriteNullableString( o.Name );
-            w.WriteObject( o.Machine );
-            w.WriteObject( o._autoDestroyReminder );
-        }
+    protected override void OnDestroy()
+    {
+        _autoDestroyReminder?.Destroy();
+        base.OnDestroy();
+    }
 
-        protected override void OnDestroy()
+    public void SetAutoDestroyTimeout( TimeSpan? delay )
+    {
+        if( !delay.HasValue )
         {
             _autoDestroyReminder?.Destroy();
-            base.OnDestroy();
+            _autoDestroyReminder = null;
         }
-
-        public void SetAutoDestroyTimeout( TimeSpan? delay )
+        else
         {
-            if( !delay.HasValue )
+            if( _autoDestroyReminder != null )
             {
-                _autoDestroyReminder?.Destroy();
-                _autoDestroyReminder = null;
+                _autoDestroyReminder.DueTimeUtc = DateTime.UtcNow.Add( delay.Value );
             }
             else
             {
-                if( _autoDestroyReminder != null )
-                {
-                    _autoDestroyReminder.DueTimeUtc = DateTime.UtcNow.Add( delay.Value );
-                }
-                else
-                {
-                    _autoDestroyReminder = new ObservableReminder( DateTime.UtcNow.Add( delay.Value ) );
-                    _autoDestroyReminder.Elapsed += OnAutoDestroyedTimeout;
-                    _autoDestroyReminder.SuspendableClock = Machine.Clock;
-                }
+                _autoDestroyReminder = new ObservableReminder( DateTime.UtcNow.Add( delay.Value ) );
+                _autoDestroyReminder.Elapsed += OnAutoDestroyedTimeout;
+                _autoDestroyReminder.SuspendableClock = Machine.Clock;
             }
         }
+    }
 
-        // This method should not be renamed because of deserialization.
-        void OnAutoDestroyedTimeout( object sender, ObservableReminderEventArgs e )
-        {
-            e.Monitor.Trace( $"AutoDestroying {ToString()}." );
-            Destroy();
-        }
+    // This method should not be renamed because of deserialization.
+    void OnAutoDestroyedTimeout( object sender, ObservableReminderEventArgs e )
+    {
+        e.Monitor.Trace( $"AutoDestroying {ToString()}." );
+        Destroy();
     }
 }

@@ -270,3 +270,4 @@ CodeCakeBuilder/[Rr]eleases/
 
 # This is solution specific.
 /Clients/*/dist/*
+*/*CKSetup/WorkingDir

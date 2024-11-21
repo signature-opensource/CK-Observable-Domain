@@ -12,144 +12,143 @@ using System.Threading;
 using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
 
-namespace CK.Observable.Domain.Tests
+namespace CK.Observable.Domain.Tests;
+
+
+[TestFixture]
+public class ObservableObjectLifetimeTests
 {
-
-    [TestFixture]
-    public class ObservableObjectLifetimeTests
+    [Test]
+    public void an_observable_must_be_created_in_the_context_of_a_transaction()
     {
-        [Test]
-        public void an_observable_must_be_created_in_the_context_of_a_transaction()
+        using( var d = new ObservableDomain(TestHelper.Monitor, "TEST", startTimer: true ) )
         {
-            using( var d = new ObservableDomain(TestHelper.Monitor, "TEST", startTimer: true ) )
-            {
-                Action outOfTran = () => new Car( "" );
-                outOfTran.Should().Throw<InvalidOperationException>().WithMessage( "A transaction is required (Observable objects can be created only inside a transaction)." );
-            }
+            Action outOfTran = () => new Car( "" );
+            outOfTran.Should().Throw<InvalidOperationException>().WithMessage( "A transaction is required (Observable objects can be created only inside a transaction)." );
         }
+    }
 
-        [Test]
-        public async Task an_observable_must_be_modified_in_the_context_of_a_transaction_Async()
+    [Test]
+    public async Task an_observable_must_be_modified_in_the_context_of_a_transaction_Async()
+    {
+        using( var d = new ObservableDomain(TestHelper.Monitor, "TEST", startTimer: true ) )
         {
-            using( var d = new ObservableDomain(TestHelper.Monitor, "TEST", startTimer: true ) )
-            {
-                await d.ModifyThrowAsync( TestHelper.Monitor, () => new Car( "Yes!" ) );
+            await d.ModifyThrowAsync( TestHelper.Monitor, () => new Car( "Yes!" ) );
 
-                FluentActions.Invoking( () => d.AllObjects.Items.OfType<Car>().Single().TestSpeed = 3 )
-                    .Should().Throw<InvalidOperationException>().WithMessage( "A transaction is required." );
-            }
+            FluentActions.Invoking( () => d.AllObjects.Items.OfType<Car>().Single().TestSpeed = 3 )
+                .Should().Throw<InvalidOperationException>().WithMessage( "A transaction is required." );
         }
+    }
 
-        class JustAnObservableObject : ObservableObject
+    class JustAnObservableObject : ObservableObject
+    {
+        public int Speed { get; set; }
+
+        void Export( ObjectExporter e )
         {
-            public int Speed { get; set; }
-
-            void Export( ObjectExporter e )
-            {
-            }
         }
+    }
 
-        [Test]
-        public async Task Export_can_NOT_be_called_within_a_transaction_because_of_LockRecursionPolicy_NoRecursion_Async()
+    [Test]
+    public async Task Export_can_NOT_be_called_within_a_transaction_because_of_LockRecursionPolicy_NoRecursion_Async()
+    {
+        using( var d = new ObservableDomain(TestHelper.Monitor, "TEST", startTimer: true ) )
         {
-            using( var d = new ObservableDomain(TestHelper.Monitor, "TEST", startTimer: true ) )
+            await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
-                await d.ModifyThrowAsync( TestHelper.Monitor, () =>
-                {
-                    d.Invoking( sut => sut.ExportToString() )
-                     .Should().Throw<LockRecursionException>();
-                } );
-            }
+                d.Invoking( sut => sut.ExportToString() )
+                 .Should().Throw<LockRecursionException>();
+            } );
         }
+    }
 
-        [Test]
-        public async Task Save_can_be_called_from_inside_a_transaction_Async()
+    [Test]
+    public async Task Save_can_be_called_from_inside_a_transaction_Async()
+    {
+        using( var d = new ObservableDomain(TestHelper.Monitor, "TEST", startTimer: true ) )
         {
-            using( var d = new ObservableDomain(TestHelper.Monitor, "TEST", startTimer: true ) )
+            await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
-                await d.ModifyThrowAsync( TestHelper.Monitor, () =>
-                {
-                    d.Invoking( sut => sut.Save( TestHelper.Monitor, new MemoryStream() ) )
-                     .Should().NotThrow();
-                } );
-            }
+                d.Invoking( sut => sut.Save( TestHelper.Monitor, new MemoryStream() ) )
+                 .Should().NotThrow();
+            } );
         }
+    }
 
-        [Test]
-        public async Task Load_and_Save_can_be_called_from_inside_a_transaction_or_outside_any_transaction_Async()
+    [Test]
+    public async Task Load_and_Save_can_be_called_from_inside_a_transaction_or_outside_any_transaction_Async()
+    {
+        using( var s = new MemoryStream() )
+        using( var d = new ObservableDomain(TestHelper.Monitor, "TEST", startTimer: true ) )
         {
-            using( var s = new MemoryStream() )
-            using( var d = new ObservableDomain(TestHelper.Monitor, "TEST", startTimer: true ) )
+            await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
-                await d.ModifyThrowAsync( TestHelper.Monitor, () =>
-                {
-                    d.Invoking( sut => sut.Save( TestHelper.Monitor, s ) ).Should().NotThrow();
-                    s.Position = 0;
-                    d.Invoking( sut => sut.Load( TestHelper.Monitor, RewindableStream.FromStream( s ) ) ).Should().NotThrow();
-                } );
+                d.Invoking( sut => sut.Save( TestHelper.Monitor, s ) ).Should().NotThrow();
                 s.Position = 0;
                 d.Invoking( sut => sut.Load( TestHelper.Monitor, RewindableStream.FromStream( s ) ) ).Should().NotThrow();
-                s.Position = 0;
-                d.Invoking( sut => sut.Save( TestHelper.Monitor, s ) ).Should().NotThrow();
-            }
+            } );
+            s.Position = 0;
+            d.Invoking( sut => sut.Load( TestHelper.Monitor, RewindableStream.FromStream( s ) ) ).Should().NotThrow();
+            s.Position = 0;
+            d.Invoking( sut => sut.Save( TestHelper.Monitor, s ) ).Should().NotThrow();
         }
-
-        [Test]
-        public async Task Modify_and_Read_reentrant_calls_are_detected_by_the_LockRecursionPolicy_NoRecursion_Async()
-        {
-            using( var d = new ObservableDomain(TestHelper.Monitor, "TEST", startTimer: true ) )
-            {
-                // ModifyAsync( Read ) throws.
-                await d.ModifyThrowAsync( TestHelper.Monitor, () =>
-                {
-                    d.Invoking( sut => sut.Read( TestHelper.Monitor, () => { } ) )
-                     .Should().Throw<LockRecursionException>();
-                } );
-
-                // This is nonsense but this test that Read( ModifyAsync ) throws.
-                await d.Read( TestHelper.Monitor, async () =>
-                {
-                    await d.Awaiting( sut => sut.ModifyThrowAsync( TestHelper.Monitor, null ) )
-                            .Should().ThrowAsync<LockRecursionException>();
-                } );
-
-                // ModifyAsync( ModifyAsync ) throws.
-                await d.ModifyThrowAsync( TestHelper.Monitor, async () =>
-                {
-                    await d.Awaiting( sut => sut.ModifyThrowAsync( TestHelper.Monitor, null ) )
-                            .Should().ThrowAsync<LockRecursionException>();
-                } );
-
-                // Read( Read ) throws.
-                d.Read( TestHelper.Monitor, () =>
-                {
-                    d.Invoking( sut => sut.Read( TestHelper.Monitor, () => { } ) )
-                     .Should().Throw<LockRecursionException>();
-                } );
-            }
-        }
-
-        [Test]
-        public async Task ObservableObject_exposes_Disposed_event_Async()
-        {
-            OnDestroyCalled = false;
-            using( var d = new ObservableDomain(TestHelper.Monitor, "TEST", startTimer: true ) )
-            {
-                await d.ModifyThrowAsync( TestHelper.Monitor, () =>
-                {
-                    var c = new Car( "Titine" );
-                    d.AllObjects.Items.Should().ContainSingle( x => x == c );
-                    d.AllObjects.Items.Should().HaveCount( 1 );
-                    c.Destroyed += OnDestroy;
-                    c.Destroy();
-                    OnDestroyCalled.Should().BeTrue();
-                    d.AllObjects.Items.Should().BeEmpty();
-                } );
-            }
-        }
-
-        static bool OnDestroyCalled;
-
-        static void OnDestroy( object sender, ObservableDomainEventArgs e ) => OnDestroyCalled = true;
     }
+
+    [Test]
+    public async Task Modify_and_Read_reentrant_calls_are_detected_by_the_LockRecursionPolicy_NoRecursion_Async()
+    {
+        using( var d = new ObservableDomain(TestHelper.Monitor, "TEST", startTimer: true ) )
+        {
+            // ModifyAsync( Read ) throws.
+            await d.ModifyThrowAsync( TestHelper.Monitor, () =>
+            {
+                d.Invoking( sut => sut.Read( TestHelper.Monitor, () => { } ) )
+                 .Should().Throw<LockRecursionException>();
+            } );
+
+            // This is nonsense but this test that Read( ModifyAsync ) throws.
+            await d.Read( TestHelper.Monitor, async () =>
+            {
+                await d.Awaiting( sut => sut.ModifyThrowAsync( TestHelper.Monitor, null ) )
+                        .Should().ThrowAsync<LockRecursionException>();
+            } );
+
+            // ModifyAsync( ModifyAsync ) throws.
+            await d.ModifyThrowAsync( TestHelper.Monitor, async () =>
+            {
+                await d.Awaiting( sut => sut.ModifyThrowAsync( TestHelper.Monitor, null ) )
+                        .Should().ThrowAsync<LockRecursionException>();
+            } );
+
+            // Read( Read ) throws.
+            d.Read( TestHelper.Monitor, () =>
+            {
+                d.Invoking( sut => sut.Read( TestHelper.Monitor, () => { } ) )
+                 .Should().Throw<LockRecursionException>();
+            } );
+        }
+    }
+
+    [Test]
+    public async Task ObservableObject_exposes_Disposed_event_Async()
+    {
+        OnDestroyCalled = false;
+        using( var d = new ObservableDomain(TestHelper.Monitor, "TEST", startTimer: true ) )
+        {
+            await d.ModifyThrowAsync( TestHelper.Monitor, () =>
+            {
+                var c = new Car( "Titine" );
+                d.AllObjects.Items.Should().ContainSingle( x => x == c );
+                d.AllObjects.Items.Should().HaveCount( 1 );
+                c.Destroyed += OnDestroy;
+                c.Destroy();
+                OnDestroyCalled.Should().BeTrue();
+                d.AllObjects.Items.Should().BeEmpty();
+            } );
+        }
+    }
+
+    static bool OnDestroyCalled;
+
+    static void OnDestroy( object sender, ObservableDomainEventArgs e ) => OnDestroyCalled = true;
 }

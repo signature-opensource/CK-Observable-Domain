@@ -1,12 +1,11 @@
-using CK.StObj.TypeScript;
+using CK.TypeScript;
 
-namespace CK.Observable.SignalRWatcher
+namespace CK.Observable.SignalRWatcher;
+
+[TypeScriptPackage]
+[TypeScriptImportLibrary( "@microsoft/signalr", ">=6.0.23", DependencyKind.PeerDependency, ForceUse = true )]
+[TypeScriptFile( "SignalRObservableLeagueDomainService.ts", "SignalRObservableLeagueDomainService" )]
+public class TSPackage : TypeScriptPackage
 {
-    [TypeScriptPackage]
-    [ImportTypeScriptLibrary( "@microsoft/signalr", ">=6.0.23", DependencyKind.Dependency, ForceUse = true )]
-    [TypeScriptFile( "Res/SignalRObservableLeagueDomainService.ts" )]
-    public class TSPackage : TypeScriptPackage
-    {
-        void StObjConstruct( CK.ObservableDomain.TSPackage obs ) { }
-    }
+    void StObjConstruct( CK.ObservableDomain.TSPackage obs ) { }
 }

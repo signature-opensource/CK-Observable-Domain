@@ -1,23 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
-    <Nullable>enable</Nullable>
+    <TargetFramework>net8.0</TargetFramework>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
-
   <ItemGroup>
-    <PackageReference Include="CK.Cris.Executor.Engine" Version="0.32.0" />
-    <PackageReference Include="CK.Cris.AspNet.Engine" Version="0.32.0" />
-    <PackageReference Include="CK.AppBuilder" Version="26.0.0" />
+    <PackageReference Include="CK.Cris.Executor.Engine" Version="0.33.0" />
+    <PackageReference Include="CK.Cris.AspNet.Engine" Version="0.33.0" />
+    <PackageReference Include="CK.AppBuilder" Version="27.0.0" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\CK.Observable.ServerSample.App\CK.Observable.ServerSample.App.csproj" />
   </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Logs\" />
-  </ItemGroup>
-  
 </Project>

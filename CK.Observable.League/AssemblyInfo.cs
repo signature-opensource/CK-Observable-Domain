@@ -1,3 +1,0 @@
-
-[assembly: CK.Setup.IsModel()]
-

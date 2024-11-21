@@ -1,14 +1,13 @@
-namespace CK.Observable
+namespace CK.Observable;
+
+/// <summary>
+/// Unifies driver information.
+/// </summary>
+public interface IUnifiedTypeDriver
 {
     /// <summary>
-    /// Unifies driver information.
+    /// Gets the export driver.
+    /// Null if no export driver is available.
     /// </summary>
-    public interface IUnifiedTypeDriver
-    {
-        /// <summary>
-        /// Gets the export driver.
-        /// Null if no export driver is available.
-        /// </summary>
-        IObjectExportTypeDriver? ExportDriver { get; }
-    }
+    IObjectExportTypeDriver? ExportDriver { get; }
 }

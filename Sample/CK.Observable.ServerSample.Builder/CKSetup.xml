@@ -1,15 +1,29 @@
 <Setup Engine="CK.Setup.StObjEngine, CK.StObj.Engine">
   
-  <Aspect Type="CK.Setup.TypeScriptAspectConfiguration, CK.StObj.TypeScript" />
+  <Aspect Type="CK.Setup.TypeScriptAspectConfiguration, CK.TypeScript" />
 
   <BinPaths>
     <BinPath>
-      <TypeScript AutoInstallYarn="true"
-                  AutoInstallVSCodeSupport="true"
-                  GitIgnoreCKGenFolder = "true" >
-        <Types>
-          <Type Type="CK.Observable.ServerSample.App.ISliderCommand, CK.Observable.ServerSample.App" />
-        </Types>
+      <TypeScript>
+        <Multiple>
+
+          <TypeScript TargetProjectPath="{ProjectPath}Clients/NpmPackage"
+                      IntegrationMode = "NpmPackage"
+                      TypeFilterName="TypeScriptN">
+            <Types>
+              <Type Type="CK.Observable.ServerSample.App.ISliderCommand, CK.Observable.ServerSample.App" />
+            </Types>
+          </TypeScript>
+
+          <TypeScript TargetProjectPath="{ProjectPath}Clients/Inline"
+                      IntegrationMode = "Inline"
+                      AutoInstallJest="false"
+                      TypeFilterName="TypeScriptI">
+            <Types>
+              <Type Type="CK.Observable.ServerSample.App.ISliderCommand, CK.Observable.ServerSample.App" />
+            </Types>
+          </TypeScript>
+        </Multiple>
       </TypeScript>
     </BinPath>
   </BinPaths>
