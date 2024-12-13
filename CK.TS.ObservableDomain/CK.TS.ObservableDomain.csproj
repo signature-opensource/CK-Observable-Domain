@@ -9,6 +9,6 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="CK.TypeScript" Version="0.21.1--0015-develop" />
+    <PackageReference Include="CK.TypeScript" Version="0.22.0" />
   </ItemGroup>
 </Project>
