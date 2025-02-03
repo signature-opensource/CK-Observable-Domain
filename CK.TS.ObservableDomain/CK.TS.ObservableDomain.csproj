@@ -4,11 +4,6 @@
     <RootNamespace>CK.ObservableDomain</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <EmbeddedResource Include="**\*.ts">
-      <LogicalName>ck@$([System.String]::new('%(RelativeDir)').Replace('\','/'))%(FileName)%(Extension)</LogicalName>
-    </EmbeddedResource>
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="CK.TypeScript" Version="0.22.0" />
+    <PackageReference Include="CK.TypeScript" Version="0.23.0" />
   </ItemGroup>
 </Project>
