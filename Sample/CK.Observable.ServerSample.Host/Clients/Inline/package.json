@@ -24,5 +24,6 @@
     "axios": "^1.5.1",
     "mqtt": "=5.10.1"
   },
-  "ckVersion": 1
+  "ckVersion": 1,
+  "packageManager": "yarn@4.6.0"
 }
