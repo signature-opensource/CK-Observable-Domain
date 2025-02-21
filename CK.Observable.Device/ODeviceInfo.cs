@@ -80,8 +80,18 @@ public sealed class ODeviceInfo<TDeviceObject> : ObservableObject where TDeviceO
         {
             if( _object != value )
             {
+                var prevObject = _object;
                 _object = value;
                 OnPropertyChanged( nameof( Object ), value );
+
+                if( _object is null )
+                {
+                    OnPropertyChanged( nameof( Status ), null );
+                }
+                else if( prevObject is null )
+                {
+                    OnPropertyChanged( nameof( Status ), _status );
+                }
             }
         }
     }
@@ -89,14 +99,15 @@ public sealed class ODeviceInfo<TDeviceObject> : ObservableObject where TDeviceO
     /// <summary>
     /// Gets whether the device control status for this domain.
     /// </summary>
-    public DeviceControlStatus Status
+    public DeviceControlStatus? Status
     {
-        get => _status;
+        get => _object != null ? _status : null;
         internal set
         {
             if( _status != value )
             {
-                _status = value;
+                Throw.DebugAssert( value.HasValue );
+                _status = value.Value;
                 OnPropertyChanged( nameof( Status ), value );
             }
         }

@@ -62,7 +62,7 @@ public class DeviceHostTests
         {
             obs.Root.Host.Devices.Should().ContainKey( "TheOne" );
             obs.Root.Host.Devices["TheOne"].Object.Should().BeNull( "No ObservableObject yet." );
-            obs.Root.Host.Devices["TheOne"].Status.Should().Be( DeviceControlStatus.HasSharedControl );
+            obs.Root.Host.Devices["TheOne"].Status.Should().BeNull( "Since Object is null, DeviceControlStatus property also returns null." );
         } );
 
         // Now we create the TheOne ObservableObject.
@@ -138,19 +138,19 @@ public class DeviceHostTests
         {
             obs.Root.Host.Devices.Should().ContainKey( "TheOne", "The host is synchronized." );
             obs.Root.Host.Devices["TheOne"].Object.Should().BeNull( "No ObservableObject yet." );
-            obs.Root.Host.Devices["TheOne"].Status.Should().Be( DeviceControlStatus.HasSharedControl );
+            obs.Root.Host.Devices["TheOne"].Status.Should().BeNull( "Since Object is null, DeviceControlStatus property also returns null." );
             obs.Root.Host.Devices["TheOne"].IsRunning.Should().BeFalse();
         } );
         Debug.Assert( lastEvents != null );
         lastEvents.Select( e => e.ToString() ).Should().BeEquivalentTo( new[] {
             "NewObject 3 (ODeviceInfo<OSampleDevice>).",
-            "CollectionMapSet 2[TheOne] = Device: TheOne [Stopped, HasSharedControl]",
+            "CollectionMapSet 2[TheOne] = Device: TheOne [Stopped, ]",
             "NewProperty DeviceName -> 0.",
             "PropertyChanged 3.DeviceName = TheOne.",
             "NewProperty Object -> 1.",
             "PropertyChanged 3.Object = null.",
             "NewProperty Status -> 2.",
-            "PropertyChanged 3.Status = HasSharedControl.",
+            "PropertyChanged 3.Status = null.",
             "NewProperty IsRunning -> 3.",
             "PropertyChanged 3.IsRunning = False.",
             "NewProperty ControllerKey -> 4.",
