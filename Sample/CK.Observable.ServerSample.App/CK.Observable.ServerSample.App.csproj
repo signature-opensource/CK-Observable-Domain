@@ -5,9 +5,9 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.AspNet.Auth" Version="25.1.1--0008-develop" />
-    <PackageReference Include="CK.Cris.Auth" Version="0.36.1--0006-develop" />
-    <PackageReference Include="CK.Cris.AspNet" Version="0.36.1--0006-develop" />
+    <PackageReference Include="CK.AspNet.Auth" Version="25.1.1--0009-develop" />
+    <PackageReference Include="CK.Cris.Auth" Version="0.36.1--0007-develop" />
+    <PackageReference Include="CK.Cris.AspNet" Version="0.36.1--0007-develop" />
     <PackageReference Include="CK.Monitoring.Hosting" Version="22.1.1--0004-develop" />
     <PackageReference Include="CK.WeakAssemblyNameResolver" Version="0.5.2" />
     <PackageReference Include="Fody" Version="6.8.2" PrivateAssets="All" />
