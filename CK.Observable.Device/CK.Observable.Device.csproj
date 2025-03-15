@@ -6,7 +6,7 @@
   <!-- Imports because of ProjectReference. -->
   <Import Project="..\CK.Observable.Domain\MSBuild\CK.Observable.Domain.targets" />
   <ItemGroup>
-    <PackageReference Include="CK.DeviceModel" Version="9.0.1--0032-develop" />
+    <PackageReference Include="CK.DeviceModel" Version="9.0.1--0033-develop" />
     <ProjectReference Include="..\CK.Observable.Domain\CK.Observable.Domain.csproj" />
   </ItemGroup>
 </Project>
