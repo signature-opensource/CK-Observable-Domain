@@ -4,9 +4,9 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.Testing.NUnit" Version="11.1.1--0021-develop" />
-    <PackageReference Include="CK.Testing.TypeScriptEngine" Version="0.23.1--0029-develop" />
-    <PackageReference Include="CK.Cris.AspNet.Engine" Version="0.36.1--0030-develop" />
+    <PackageReference Include="CK.Testing.NUnit" Version="11.1.1--0022-develop" />
+    <PackageReference Include="CK.Testing.TypeScriptEngine" Version="0.23.1--0030-develop" />
+    <PackageReference Include="CK.Cris.AspNet.Engine" Version="0.36.1--0031-develop" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
     <PackageReference Include="NUnit3TestAdapter" PrivateAssets="all" Version="4.6.0" />
   </ItemGroup>
