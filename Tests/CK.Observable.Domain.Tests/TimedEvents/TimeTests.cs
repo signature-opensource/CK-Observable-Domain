@@ -41,7 +41,7 @@ public class TimeTests
             TestHelper.Monitor.Info( "After!" );
             d.TimeManager.AllObservableTimedEvents.Single().IsActive.ShouldBeFalse();
         }
-        entries.Select( e => e.Text ).Concatenate().ShouldBe( "*Before!*Elapsed:*After!*" );
+        entries.Select( e => e.Text ).Concatenate().ShouldMatch( @".*Before!.*Elapsed:.*After!.*" );
     }
 
     static ConcurrentQueue<string> RawTraces = new ConcurrentQueue<string>();
@@ -68,7 +68,7 @@ public class TimeTests
             d.TimeManager.AllObservableTimedEvents.Single().IsActive.ShouldBeFalse();
         }
 
-        RawTraces.Concatenate().ShouldBe( "*Before!*Not Yet!*Elapsed:*After!*" );
+        RawTraces.Concatenate().ShouldMatch( @".*Before!.*Not Yet!.*Elapsed:.*After!.*" );
     }
 
     [Test]
@@ -110,7 +110,7 @@ public class TimeTests
             } );
             d.TimeManager.AllObservableTimedEvents.Single().IsActive.ShouldBeFalse();
         }
-        entries.Select( e => e.Text ).Concatenate().ShouldBe( "*Before!*Elapsed:*After!*" );
+        entries.Select( e => e.Text ).Concatenate().ShouldMatch( @".*Before!.*Elapsed:.*After!.*" );
     }
 
     static void StaticElapsed( object source, ObservableTimedEventArgs args )

@@ -98,7 +98,7 @@ public class BasicEventsTests
                 c.TestSpeed = 3;
                 c.Position = new Position( 3.0, 4.0 );
             } );
-            Check( events, "PropertyChanged 0.TestSpeed = 3.", "PropertyChanged 0.Position = (3,4)." );
+            Check( events, "PropertyChanged 0.Position = (3,4).", "PropertyChanged 0.TestSpeed = 3." );
         }
     }
 

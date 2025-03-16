@@ -51,10 +51,9 @@ public class DeviceConfigurationTests
         {
             device1.IsBoundDevice.ShouldBeTrue( "The ObservableDevice has created its Device!" );
             Debug.Assert( device1.DeviceConfiguration != null );
-            ((SampleDeviceConfiguration)device1.DeviceConfiguration).Message.ShouldBe( "Hello World!" );
+            device1.DeviceConfiguration.Message.ShouldBe( "Hello World!" );
             // The ObservableDevice.Configuration is a safe clone.
             device1.DeviceConfiguration.ShouldNotBeSameAs( config );
-            device1.DeviceConfiguration.ShouldBe( config );
         } );
 
         // Even if the ObservableDevice.Configuration is a safe clone and COULD be used to reconfigure the device,

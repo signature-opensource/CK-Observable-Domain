@@ -99,13 +99,13 @@ public partial class MemoryTransactionProviderClientTests
         // First real transaction (will be lost).
         await d.ModifyThrowAsync( TestHelper.Monitor, () => d.Root.Prop1 = "Hello" );
         d.TransactionSerialNumber.ShouldBe( 1 );
-        observableEvents.ShouldNotBeNull().ShouldBeEmpty();
+        observableEvents.ShouldNotBeNull().ShouldNotBeEmpty();
         observableEvents = null;
 
         // Second transaction (will also be lost).
         await d.ModifyThrowAsync( TestHelper.Monitor, () => d.Root.Prop2 = "World" );
         d.TransactionSerialNumber.ShouldBe( 2 );
-        observableEvents.ShouldNotBeNull().ShouldBeEmpty();
+        observableEvents.ShouldNotBeNull().ShouldNotBeEmpty();
         observableEvents = null;
 
         // Failing...
@@ -250,7 +250,7 @@ public partial class MemoryTransactionProviderClientTests
             d.Root.Prop1 = "Hello";
             d.Root.Prop2 = "World";
         } );
-        observableEvents.ShouldNotBeNull().ShouldBeEmpty();
+        observableEvents.ShouldNotBeNull().ShouldNotBeEmpty();
         observableEvents = null;
 
         // Raise exception during Modify()

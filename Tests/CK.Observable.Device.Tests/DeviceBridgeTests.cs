@@ -315,7 +315,7 @@ public class DeviceBridgeTests
             await Task.Delay( 300 );
             obs.Read( TestHelper.Monitor, () =>
             {
-                device.Message.ShouldStartWith( "NEXT", "The device Message has been updated by the bridge." );
+                device.Message.ShouldStartWith( "NEXT", Case.Sensitive, "The device Message has been updated by the bridge." );
             } );
 
             // Unloading/Reloading the domain.

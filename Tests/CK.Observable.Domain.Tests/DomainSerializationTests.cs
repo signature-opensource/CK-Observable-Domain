@@ -92,13 +92,13 @@ public class DomainSerializationTests
             var other = d2.AllObjects.Items.OfType<MultiPropertyType>().ElementAt( 1 );
             other.ChangeAll( "Changed", 3, Guid.NewGuid() );
         } );
-        d2.AllObjects.Items.First().ShouldBe( o => o.Equals( defValue ) );
-        d2.AllObjects.Items.ElementAt( 1 ).ShouldBe( o => !o.Equals( defValue ) );
+        d2.AllObjects.Items.First().ShouldBe( defValue );
+        d2.AllObjects.Items.ElementAt( 1 ).ShouldNotBe( defValue );
 
         using( var d3 = TestHelper.CloneDomain( d2 ) )
         {
-            d3.AllObjects.Items.First().ShouldBe( o => o.Equals( defValue ) );
-            d3.AllObjects.Items.ElementAt( 1 ).ShouldBe( o => !o.Equals( defValue ) );
+            d3.AllObjects.Items.First().ShouldBe( defValue );
+            d3.AllObjects.Items.ElementAt( 1 ).ShouldNotBe( defValue );
         }
     }
 
@@ -279,7 +279,7 @@ public class DomainSerializationTests
         } );
 
         using var d2 = TestHelper.CloneDomain( d, startTimer: false, pauseMilliseconds: 150 );
-        d.IsDisposed.ShouldBeTrue( "Initial domain has been disposed.");
+        d.IsDisposed.ShouldBeTrue( "Initial domain has been disposed." );
 
         d2.Read( TestHelper.Monitor, () =>
         {

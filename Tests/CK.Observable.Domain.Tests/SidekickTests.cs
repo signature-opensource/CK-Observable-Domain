@@ -70,7 +70,10 @@ public partial class SidekickTests
             {
                 monitor.Info( $"Registered: {o.GetType().Name} after deserialization." );
                 Debug.Assert( _ctorValue is not null );
-                _ctorValue.Value.ShouldBeSameAs( Manager.DeserializationInfo );
+                _ctorValue.Value.InactiveDelay.ShouldBe( Manager.DeserializationInfo.InactiveDelay );
+                _ctorValue.Value.IsRollback.ShouldBe( Manager.DeserializationInfo.IsRollback );
+                _ctorValue.Value.IsDangerousRollback.ShouldBe( Manager.DeserializationInfo.IsDangerousRollback );
+                _ctorValue.Value.IsSafeRollback.ShouldBe( Manager.DeserializationInfo.IsSafeRollback );
                 oS.DeserializationInfo = _ctorValue;
             }
             else

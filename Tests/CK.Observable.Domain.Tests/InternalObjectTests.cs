@@ -99,11 +99,12 @@ public class InternalObjectTests
         // Note that "NotVisible" is the property name: it is exported as the property name. This is
         // because even a non exported property is available on PropertyChanged events, and
         // our ObservablePropertyChangedEventArgs uses the PropertyId.
-        collector.LastEvent.ExportedEvents.ShouldContain( "Visible" )
-                                          .ShouldContain( "Yes" )
-                                          .ShouldContain( "NotVisible" )
-                                          .ShouldNotContain( "Invisible" )
-                                          .ShouldNotContain( "NoWay" );
+        var exported = collector.LastEvent.ExportedEvents;
+        exported.ShouldContain( "Visible" );
+        exported.ShouldContain( "Yes" );
+        exported.ShouldContain( "NotVisible" );
+        exported.ShouldNotContain( "Invisible" );
+        exported.ShouldNotContain( "NoWay" );
 
         var lastEvent = collector.LastEvent;
         // This check that the "NotVisible" property is not 'changed': even if its name and identifier

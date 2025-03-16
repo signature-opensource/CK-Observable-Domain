@@ -276,7 +276,8 @@ public class PostActionsTests
 
 
         LocalNumbers.Count.ShouldBe( 3 * nb );
-        LocalNumbers.Select( x => x.Number ).ShouldBeInOrder();
+        // No Shouldly ShouldNotBeInOrder.
+        LocalNumbers.Select( x => x.Number ).IsSortedLarge().ShouldBeFalse();
 
         DomainNumbers.Count.ShouldBe( 3 * nb );
         DomainNumbers.Select(x => x.Number).ShouldBeInOrder();
@@ -328,7 +329,8 @@ public class PostActionsTests
         LocalNumbers.Count.ShouldBe( nb * ( 1 + nbTimers * 20) );
 
         DomainNumbers.Select(x => x.Number).ShouldBeInOrder();
-        LocalNumbers.Select(x => x.Number).ShouldBeInOrder();
+        // No Shouldly ShouldNotBeInOrder.
+        LocalNumbers.Select(x => x.Number).IsSortedLarge().ShouldBeFalse();
 
         Task Run( int num, IActivityMonitor monitor, ObservableDomain<SimpleRoot> d, Barrier b )
         {

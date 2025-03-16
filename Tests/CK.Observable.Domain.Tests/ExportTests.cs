@@ -326,10 +326,10 @@ public class ExportTests
             d.Root.ProductStateList[0].OId.Index.ShouldBe( 7, "Product n°1 OId.Index is 7." );
             d.TransactionSerialNumber.ShouldBe( 1 );
 
-            var initial = d.ExportToString();
-            initial.ShouldContain( "Name n°1" )
-                   .ShouldContain( "Product n°1" )
-                   .ShouldContain( @"""CurrentProductState"":{"">"":7}" );
+            var initial = d.ExportToString().ShouldNotBeNull();
+            initial.ShouldContain( "Name n°1" );
+            initial.ShouldContain( "Product n°1" );
+            initial.ShouldContain( @"""CurrentProductState"":{"">"":7}" );
             initial.ShouldContain( @"[""Toto"",""TVal""]" );
             initial.ShouldContain( @"[""Tata"",""TVal""]" );
             await d.ModifyThrowAsync( TestHelper.Monitor, () =>
@@ -508,14 +508,14 @@ public class ExportTests
             d.TransactionSerialNumber.ShouldBe( 1, "Not incremented yet (still inside the transaction n°2)." );
             new TimerAndRemiderProperties();
         } );
-        d.ExportToString()
-            .ShouldNotContain( "Timer" )
-            .ShouldNotContain( "Reminder" )
-            .ShouldContain( "ThisIsExported" );
+        var export = d.ExportToString().ShouldNotBeNull();
+        export.ShouldNotContain( "Timer" );
+        export.ShouldNotContain( "Reminder" );
+        export.ShouldContain( "ThisIsExported" );
         var events = eventCollector.GetTransactionEvents( 1 ).Events!.Single().ExportedEvents;
-        events.ShouldNotContain( "Timer" )
-              .ShouldNotContain( "Reminder" )
-              .ShouldContain( "ThisIsExported" );
+        events.ShouldNotContain( "Timer" );
+        events.ShouldNotContain( "Reminder" );
+        events.ShouldContain( "ThisIsExported" );
     }
 
     [SerializationVersion(0)]
