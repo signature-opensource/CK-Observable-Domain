@@ -1,6 +1,6 @@
 using CK.Core;
 using CK.Observable.League.Tests.Model;
-using FluentAssertions;
+using Shouldly;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -77,21 +77,21 @@ public class ApplyEnsureDomainOptionsTests
         def.Coordinator.Read( TestHelper.Monitor, ( monitor, d ) =>
         {
             var d1 = d.Root.Domains["WithNoRootTypesAndNoDefaultOptions"];
-            d1.RootTypes.Should().BeEmpty();
-            d1.Options.LifeCycleOption.Should().Be( DomainLifeCycleOption.Always );
-            d1.Options.CompressionKind.Should().Be( CompressionKind.GZiped );
-            d1.Options.SkipTransactionCount.Should().Be( 3712 );
-            d1.Options.SnapshotSaveDelay.Should().Be( TimeSpan.FromSeconds( 3713 ) );
-            d1.Options.SnapshotKeepDuration.Should().Be( TimeSpan.FromDays( 3714 ) );
-            d1.Options.SnapshotMaximalTotalKiB.Should().Be( 3715 );
-            d1.Options.HousekeepingRate.Should().Be( 3716 );
-            d1.Options.ExportedEventKeepDuration.Should().Be( TimeSpan.FromMinutes( 3717 ) );
-            d1.Options.ExportedEventKeepLimit.Should().Be( 3718 );
+            d1.RootTypes.ShouldBeEmpty();
+            d1.Options.LifeCycleOption.ShouldBe( DomainLifeCycleOption.Always );
+            d1.Options.CompressionKind.ShouldBe( CompressionKind.GZiped );
+            d1.Options.SkipTransactionCount.ShouldBe( 3712 );
+            d1.Options.SnapshotSaveDelay.ShouldBe( TimeSpan.FromSeconds( 3713 ) );
+            d1.Options.SnapshotKeepDuration.ShouldBe( TimeSpan.FromDays( 3714 ) );
+            d1.Options.SnapshotMaximalTotalKiB.ShouldBe( 3715 );
+            d1.Options.HousekeepingRate.ShouldBe( 3716 );
+            d1.Options.ExportedEventKeepDuration.ShouldBe( TimeSpan.FromMinutes( 3717 ) );
+            d1.Options.ExportedEventKeepLimit.ShouldBe( 3718 );
 
             var d2 = d.Root.Domains["WithOneRootType"];
-            d2.RootTypes.Should().HaveCount( 1 );
-            d2.Options.LifeCycleOption.Should().Be( DomainLifeCycleOption.Always );
-            d2.RootTypes[0].Should().StartWith( "CK.Observable.League.Tests.Model.School, " );
+            d2.RootTypes.Count.ShouldBe( 1 );
+            d2.Options.LifeCycleOption.ShouldBe( DomainLifeCycleOption.Always );
+            d2.RootTypes[0].ShouldStartWith( "CK.Observable.League.Tests.Model.School, " );
         } );
 
         var loader1 = def.Find( "WithNoRootTypesAndNoDefaultOptions" )!;
@@ -106,29 +106,29 @@ public class ApplyEnsureDomainOptionsTests
 
         //{
         //    Debug.Assert( loader2 != null );
-        //    loader2.IsLoaded.Should().BeTrue();
+        //    loader2.IsLoaded.ShouldBeTrue();
 
-        //    loader2.RootTypes.Should().BeEquivalentTo( new[] { typeof( School ) } );
+        //    loader2.RootTypes.ShouldBe( new[] { typeof( School ) } );
         //    await using var d2 = await loader2.LoadAsync<School>( TestHelper.Monitor );
         //    Debug.Assert( d2 != null );
         //    d2.Read( TestHelper.Monitor, ( monitor, d ) =>
         //    {
-        //        d.AllRoots.Should().HaveCount( 1 );
-        //        d.Root.Persons.Should().BeEmpty();
+        //        d.AllRoots.Count.ShouldBe( 1 );
+        //        d.Root.Persons.ShouldBeEmpty();
         //    } );
         //}
 
         {
             Debug.Assert( loader1 != null );
-            loader1.RootTypes.Should().BeEmpty();
-            loader1.IsLoaded.Should().BeTrue();
+            loader1.RootTypes.ShouldBeEmpty();
+            loader1.IsLoaded.ShouldBeTrue();
 
             await using var d1 = await loader1.LoadAsync( TestHelper.Monitor );
             Debug.Assert( d1 != null );
 
             d1.Read( TestHelper.Monitor, ( monitor, d ) =>
             {
-                d.AllRoots.Should().HaveCount( 0 );
+                d.AllRoots.Count.ShouldBe( 0 );
             } );
         }
 
@@ -180,18 +180,18 @@ public class ApplyEnsureDomainOptionsTests
 
         var league = await ObservableLeague.LoadAsync( TestHelper.Monitor, new DirectoryStreamStore( options.StorePath ) );
         Debug.Assert( league != null );
-        league.Coordinator.Read( TestHelper.Monitor, ( monitor, d ) => d.Root.Domains.Count ).Should().Be( 0 );
+        league.Coordinator.Read( TestHelper.Monitor, ( monitor, d ) => d.Root.Domains.Count ).ShouldBe( 0 );
 
         await league.ApplyEnsureDomainOptionsAsync( TestHelper.Monitor, options.EnsureDomains );
-        league.Coordinator.Read( TestHelper.Monitor, ( monitor, d ) => d.Root.Domains.Count ).Should().Be( 3 );
+        league.Coordinator.Read( TestHelper.Monitor, ( monitor, d ) => d.Root.Domains.Count ).ShouldBe( 3 );
 
         using( TestHelper.Monitor.CollectEntries( out var entries, LogLevelFilter.Trace ) )
         {
             await league.ApplyEnsureDomainOptionsAsync( TestHelper.Monitor, options.EnsureDomains );
-            entries.Select( e => e.Text ).Should()
-                .Contain( "Domain 'NoRoot' found. Root types '' match. Everything is fine." )
-                .And.Contain( "Domain 'OneRootType' found. Root types 'CK.Observable.League.Tests.Model.School' match. Everything is fine." )
-                .And.Contain( "Domain 'TwoRootType' found. Root types 'CK.Observable.League.Tests.Model.School', 'CK.Observable.League.Tests.MicroMachine.Root' match. Everything is fine." );
+            entries.Select( e => e.Text )
+                .ShouldContain( "Domain 'NoRoot' found. Root types '' match. Everything is fine." )
+                .ShouldContain( "Domain 'OneRootType' found. Root types 'CK.Observable.League.Tests.Model.School' match. Everything is fine." )
+                .ShouldContain( "Domain 'TwoRootType' found. Root types 'CK.Observable.League.Tests.Model.School', 'CK.Observable.League.Tests.MicroMachine.Root' match. Everything is fine." );
         }
     }
 
@@ -210,11 +210,11 @@ public class ApplyEnsureDomainOptionsTests
         IConfigurationRoot root = builder.Build();
         var o = root.GetRequiredSection( "CK-ObservableLeague" ).Get<DefaultObservableLeagueOptions>();
         Debug.Assert( o != null );
-        o.StorePath.Should().Be( "Some/Path" );
-        o.EnsureDomains.Should().HaveCount( 1 );
-        o.EnsureDomains[0].DomainName.Should().Be( "FirstDomain" );
-        o.EnsureDomains[0].RootTypes.Should().NotBeEmpty().And.Contain( "a root type" ).And.Contain( "another root type" );
-        o.EnsureDomains[0].CreateLifeCycleOption.Should().Be( DomainLifeCycleOption.Never );
-        o.EnsureDomains[0].CreateSnapshotKeepDuration.Should().Be( TimeSpan.FromHours( 12 ) + TimeSpan.FromMinutes( 34 ) + TimeSpan.FromSeconds( 56 ) );
+        o.StorePath.ShouldBe( "Some/Path" );
+        o.EnsureDomains.Count.ShouldBe( 1 );
+        o.EnsureDomains[0].DomainName.ShouldBe( "FirstDomain" );
+        o.EnsureDomains[0].RootTypes.ShouldContain( "a root type" ).ShouldContain( "another root type" );
+        o.EnsureDomains[0].CreateLifeCycleOption.ShouldBe( DomainLifeCycleOption.Never );
+        o.EnsureDomains[0].CreateSnapshotKeepDuration.ShouldBe( TimeSpan.FromHours( 12 ) + TimeSpan.FromMinutes( 34 ) + TimeSpan.FromSeconds( 56 ) );
     }
 }

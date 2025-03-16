@@ -1,6 +1,6 @@
 using CK.Core;
 using CK.Observable.Domain.Tests.Sample;
-using FluentAssertions;
+using Shouldly;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
@@ -83,7 +83,7 @@ public class InternalObjectTests
 
         // The first event is always empty.
         await domain.ModifyThrowAsync( TestHelper.Monitor, null );
-        collector.LastEvent.ExportedEvents.Should().BeEmpty();
+        collector.LastEvent.ExportedEvents.ShouldBeEmpty();
 
         // Let's do it now.
         Visible? v = null;
@@ -99,8 +99,11 @@ public class InternalObjectTests
         // Note that "NotVisible" is the property name: it is exported as the property name. This is
         // because even a non exported property is available on PropertyChanged events, and
         // our ObservablePropertyChangedEventArgs uses the PropertyId.
-        collector.LastEvent.ExportedEvents.Should().ContainAll( "Visible", "Yes", "NotVisible" );
-        collector.LastEvent.ExportedEvents.Should().NotContainAny( "Invisible", "NoWay" );
+        collector.LastEvent.ExportedEvents.ShouldContain( "Visible" )
+                                          .ShouldContain( "Yes" )
+                                          .ShouldContain( "NotVisible" )
+                                          .ShouldNotContain( "Invisible" )
+                                          .ShouldNotContain( "NoWay" );
 
         var lastEvent = collector.LastEvent;
         // This check that the "NotVisible" property is not 'changed': even if its name and identifier
@@ -113,7 +116,7 @@ public class InternalObjectTests
         } );
 
         // There were no new export events, so the LastEvent didn't change.
-        collector.LastEvent.Should().Be( lastEvent );
-        collector.LastEvent.ExportedEvents.Should().Be( lastEvent.ExportedEvents );
+        collector.LastEvent.ShouldBe( lastEvent );
+        collector.LastEvent.ExportedEvents.ShouldBe( lastEvent.ExportedEvents );
     }
 }

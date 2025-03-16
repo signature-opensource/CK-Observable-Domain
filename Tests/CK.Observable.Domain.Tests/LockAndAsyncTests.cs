@@ -1,5 +1,5 @@
 using CK.Core;
-using FluentAssertions;
+using Shouldly;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
@@ -24,7 +24,7 @@ class LockAndAsyncTests
 
         public void Dispose()
         {
-            IsLockHeld.Should().BeFalse();
+            IsLockHeld.ShouldBeFalse();
             _mrsw?.Dispose();
         }
 
@@ -61,9 +61,9 @@ class LockAndAsyncTests
         {
             using( locker.AcquireLock() )
             {
-                locker.IsLockHeld.Should().BeTrue();
+                locker.IsLockHeld.ShouldBeTrue();
             }
-            locker.IsLockHeld.Should().BeFalse();
+            locker.IsLockHeld.ShouldBeFalse();
         }
     }
 
@@ -83,14 +83,14 @@ class LockAndAsyncTests
             var ex = TestAsync( locker ).GetAwaiter().GetResult();
             if( useMRSW )
             {
-                ex.Message.Should().Be( "The read lock is being released without being held." );
+                ex.Message.ShouldBe( "The read lock is being released without being held." );
             }
             else
             {
-                ex.Message.Should().Be( "Object synchronization method was called from an unsynchronized block of code." );
+                ex.Message.ShouldBe( "Object synchronization method was called from an unsynchronized block of code." );
             }
 
-            locker.IsLockHeld.Should().BeTrue( "The lock IS NOT actually released... This thread still holds it." );
+            locker.IsLockHeld.ShouldBeTrue( "The lock IS NOT actually released... This thread still holds it." );
 
             // So we release it (otherwise, disposing the ReadWriterLockSlim while it is held throws).
             locker.ExplicitRelease();
@@ -104,7 +104,7 @@ class LockAndAsyncTests
         {
             using( locker.AcquireLock() )
             {
-                locker.IsLockHeld.Should().BeTrue();
+                locker.IsLockHeld.ShouldBeTrue();
                 // Yield() is the clean way to force a real "async jump".
                 int initialThreadId = Thread.CurrentThread.ManagedThreadId;
                 await Task.Yield();
@@ -112,7 +112,7 @@ class LockAndAsyncTests
                 // We are NOT on the same thread!
                 // (And if we are, the whole test becomes useless: we use the NUnit Assume here.)
                 Assume.That( initialThreadId != Thread.CurrentThread.ManagedThreadId );
-                locker.IsLockHeld.Should().BeFalse( "The lock IS not held... but for THIS tread (from the thread pool)." );
+                locker.IsLockHeld.ShouldBeFalse( "The lock IS not held... but for THIS tread (from the thread pool)." );
             }
         }
         catch( Exception ex )
@@ -163,8 +163,8 @@ class LockAndAsyncTests
 
         t.Join();
 
-        firstReadCounter.Should().BeLessThan( 100 );
-        lastReadCounter.Should().Be( 100 );
+        firstReadCounter.ShouldBeLessThan( 100 );
+        lastReadCounter.ShouldBe( 100 );
 
         k.ExitUpgradeableReadLock();
 

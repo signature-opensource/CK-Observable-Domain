@@ -1,6 +1,6 @@
 using CK.Core;
 using CK.Observable.Domain.Tests.Sample;
-using FluentAssertions;
+using Shouldly;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
@@ -128,15 +128,15 @@ public class BasicEventsTests
             c.TestSpeedChanged += counter.Increment;
             c.PowerChanged += counter.IncrementNoLog;
 
-            counter.Count.Should().Be( 0 );
+            counter.Count.ShouldBe( 0 );
             c.TestSpeed = 1;
-            counter.Count.Should().Be( 1 );
+            counter.Count.ShouldBe( 1 );
 
             c.Position = new Position( 1.0, 1.0 );
-            counter.Count.Should().Be( 2 );
+            counter.Count.ShouldBe( 2 );
 
             c.Power = 1;
-            counter.Count.Should().Be( 3 );
+            counter.Count.ShouldBe( 3 );
 
         } );
     }
@@ -166,25 +166,25 @@ public class BasicEventsTests
                 c2.TestSpeed = 12;
                 c3.Position = new Position( 1.0, 1.0 );
 
-                counter.Count.Should().Be( 3 );
+                counter.Count.ShouldBe( 3 );
 
                 c2.Destroy();
-                c2.Invoking( c => c.TestSpeed = 78 ).Should().Throw<ObjectDestroyedException>();
-                c2.Invoking( c => c.Position = new Position( 10.0, 10.0 ) ).Should().Throw<ObjectDestroyedException>();
+                Util.Invokable( () => c2.TestSpeed = 78 ).ShouldThrow<ObjectDestroyedException>();
+                Util.Invokable( () => c2.Position = new Position( 10.0, 10.0 ) ).ShouldThrow<ObjectDestroyedException>();
 
                 c1.TestSpeed = 42;
                 c3.Position = new Position( 187.0, 1.0 );
 
-                counter.Count.Should().Be( 5 );
+                counter.Count.ShouldBe( 5 );
 
                 c1.Destroy();
                 c3.TestSpeed = 64678;
 
-                counter.Count.Should().Be( 6 );
+                counter.Count.ShouldBe( 6 );
 
                 c3.Destroy();
 
-                counter.Count.Should().Be( 6 );
+                counter.Count.ShouldBe( 6 );
 
             } );
         }
@@ -207,24 +207,24 @@ public class BasicEventsTests
                 // The safe event is also subscribed.
                 c.TestSpeedChanged += counter.Increment;
 
-                counter.Count.Should().Be( 0 );
+                counter.Count.ShouldBe( 0 );
                 c.TestSpeed = 56;
-                counter.Count.Should().Be( 1 );
+                counter.Count.ShouldBe( 1 );
                 c.TestSpeed = 57;
-                counter.Count.Should().Be( 2 );
+                counter.Count.ShouldBe( 2 );
                 c.TestSpeed = 57;
-                counter.Count.Should().Be( 2, "No change." );
+                counter.Count.ShouldBe( 2, "No change." );
 
                 Bang = 0;
                 c.PositionChanged += IncBang;
-                Bang.Should().Be( 0 );
+                Bang.ShouldBe( 0 );
                 c.Position = new Position( 1.0, 1.0 );
-                Bang.Should().Be( 1 );
+                Bang.ShouldBe( 1 );
                 c.Position = new Position( 1.0, 2.0 );
-                Bang.Should().Be( 2 );
+                Bang.ShouldBe( 2 );
                 c.PositionChanged -= IncBang;
                 c.Position = new Position( 1.0, 3.0 );
-                Bang.Should().Be( 2, "No change" );
+                Bang.ShouldBe( 2, "No change" );
             } );
         }
     }
@@ -340,10 +340,10 @@ public class BasicEventsTests
             Check( events, "ListInsert 3[0] = 'Car First Car'." );
             CheckLastAndClear<ListInsertEvent>( e =>
             {
-                e.EventType.Should().Be( ObservableEventType.ListInsert );
-                e.Index.Should().Be( 0 );
-                e.Object.Should().BeSameAs( g.Cars );
-                e.Item.Should().BeSameAs( c );
+                e.EventType.ShouldBe( ObservableEventType.ListInsert );
+                e.Index.ShouldBe( 0 );
+                e.Object.ShouldBeSameAs( g.Cars );
+                e.Item.ShouldBeSameAs( c );
             } );
 
             await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
@@ -354,10 +354,10 @@ public class BasicEventsTests
             Check( events, "ListInsert 3[1] = 'Car First Car'.", "ListInsert 3[2] = 'Car First Car'." );
             CheckLastAndClear<ListInsertEvent>( e =>
             {
-                e.EventType.Should().Be( ObservableEventType.ListInsert );
-                e.Index.Should().Be( 2 );
-                e.Object.Should().BeSameAs( g.Cars );
-                e.Item.Should().BeSameAs( c );
+                e.EventType.ShouldBe( ObservableEventType.ListInsert );
+                e.Index.ShouldBe( 2 );
+                e.Object.ShouldBeSameAs( g.Cars );
+                e.Item.ShouldBeSameAs( c );
             } );
 
             // Equality check: set is skipped, we detect the no-change.
@@ -368,38 +368,38 @@ public class BasicEventsTests
                 g.Cars[2] = c;
             } );
             Check( events );
-            _safeEvents.Should().BeEmpty();
+            _safeEvents.ShouldBeEmpty();
 
             await domain.ModifyThrowAsync( TestHelper.Monitor, () => g.Cars[0] = null! );
             Check( events, "ListSetAt 3[0] = null." );
             CheckLastAndClear<ListSetAtEvent>( e =>
             {
-                e.EventType.Should().Be( ObservableEventType.ListSetAt );
-                e.Index.Should().Be( 0 );
-                e.Object.Should().BeSameAs( g.Cars );
-                e.Value.Should().BeNull();
+                e.EventType.ShouldBe( ObservableEventType.ListSetAt );
+                e.Index.ShouldBe( 0 );
+                e.Object.ShouldBeSameAs( g.Cars );
+                e.Value.ShouldBeNull();
             } );
 
             await domain.ModifyThrowAsync( TestHelper.Monitor, () => g.Cars.Remove( null! ) );
             Check( events, "ListRemoveAt 3[0]." );
             CheckLastAndClear<ListRemoveAtEvent>( e =>
             {
-                e.EventType.Should().Be( ObservableEventType.ListRemoveAt );
-                e.Index.Should().Be( 0 );
-                e.Object.Should().BeSameAs( g.Cars );
+                e.EventType.ShouldBe( ObservableEventType.ListRemoveAt );
+                e.Index.ShouldBe( 0 );
+                e.Object.ShouldBeSameAs( g.Cars );
             } );
 
             await domain.ModifyThrowAsync( TestHelper.Monitor, () => g.Cars.Clear() );
             Check( events, "CollectionClear 3." );
             CheckLastAndClear<CollectionClearEvent>( e =>
             {
-                e.EventType.Should().Be( ObservableEventType.CollectionClear );
-                e.Object.Should().BeSameAs( g.Cars );
+                e.EventType.ShouldBe( ObservableEventType.CollectionClear );
+                e.Object.ShouldBeSameAs( g.Cars );
             } );
 
             await domain.ModifyThrowAsync( TestHelper.Monitor, () => g.Cars.Clear() );
             Check( events );
-            _safeEvents.Should().BeEmpty();
+            _safeEvents.ShouldBeEmpty();
         }
     }
 
@@ -426,26 +426,26 @@ public class BasicEventsTests
             Check( events, "CollectionMapSet 0[One] = 1" );
             CheckLastAndClear<CollectionMapSetEvent>( e =>
             {
-                e.EventType.Should().Be( ObservableEventType.CollectionMapSet );
-                e.Key.Should().Be( "One" );
-                e.Object.Should().BeSameAs( dick );
-                e.Value.Should().Be( 1 );
+                e.EventType.ShouldBe( ObservableEventType.CollectionMapSet );
+                e.Key.ShouldBe( "One" );
+                e.Object.ShouldBeSameAs( dick );
+                e.Value.ShouldBe( 1 );
             } );
 
             await domain.ModifyThrowAsync( TestHelper.Monitor, () => dick["This is added"] = 3712 );
             Check( events, "CollectionMapSet 0[This is added] = 3712" );
             CheckLastAndClear<CollectionMapSetEvent>( e =>
             {
-                e.EventType.Should().Be( ObservableEventType.CollectionMapSet );
-                e.Key.Should().Be( "This is added" );
-                e.Object.Should().BeSameAs( dick );
-                e.Value.Should().Be( 3712 );
+                e.EventType.ShouldBe( ObservableEventType.CollectionMapSet );
+                e.Key.ShouldBe( "This is added" );
+                e.Object.ShouldBeSameAs( dick );
+                e.Value.ShouldBe( 3712 );
             } );
 
             // Equality check: set is skipped.
             await domain.ModifyThrowAsync( TestHelper.Monitor, () => dick["One"] = 1 );
             Check( events );
-            _safeEvents.Should().BeEmpty();
+            _safeEvents.ShouldBeEmpty();
 
             await domain.ModifyThrowAsync( TestHelper.Monitor, () => dick["One"] = 0 );
             Check( events, "CollectionMapSet 0[One] = 0" );
@@ -454,14 +454,14 @@ public class BasicEventsTests
             Check( events, "CollectionRemoveKey 0[One]" );
             CheckLastAndClear<CollectionRemoveKeyEvent>( e =>
             {
-                e.EventType.Should().Be( ObservableEventType.CollectionRemoveKey );
-                e.Key.Should().Be( "One" );
-                e.Object.Should().BeSameAs( dick );
+                e.EventType.ShouldBe( ObservableEventType.CollectionRemoveKey );
+                e.Key.ShouldBe( "One" );
+                e.Object.ShouldBeSameAs( dick );
             } );
 
-            await domain.ModifyThrowAsync( TestHelper.Monitor, () => dick.Remove( "One" ).Should().BeFalse( "No more 'One' item." ) );
+            await domain.ModifyThrowAsync( TestHelper.Monitor, () => dick.Remove( "One" ).ShouldBeFalse( "No more 'One' item." ) );
             Check( events );
-            _safeEvents.Should().BeEmpty();
+            _safeEvents.ShouldBeEmpty();
 
             await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
@@ -471,24 +471,24 @@ public class BasicEventsTests
             await domain.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 dick.Clear();
-                dick.Should().BeEmpty();
+                dick.ShouldBeEmpty();
             } );
             Check( events, "CollectionClear 0." );
             CheckLastAndClear<CollectionClearEvent>( e =>
             {
-                e.EventType.Should().Be( ObservableEventType.CollectionClear );
-                e.Object.Should().BeSameAs( dick );
+                e.EventType.ShouldBe( ObservableEventType.CollectionClear );
+                e.Object.ShouldBeSameAs( dick );
             } );
 
             await domain.ModifyThrowAsync( TestHelper.Monitor, () => dick.Clear() );
             Check( events );
-            _safeEvents.Should().BeEmpty();
+            _safeEvents.ShouldBeEmpty();
         }
     }
 
     static void Check( IReadOnlyList<ObservableEvent> events, params string[] e )
     {
-        events.Select( ev => ev.ToString() ).Should().BeEquivalentTo( e );
+        events.Select( ev => ev.ToString() ).ShouldBe( e );
     }
 
 }

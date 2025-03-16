@@ -1,5 +1,5 @@
 using CK.Core;
-using FluentAssertions;
+using Shouldly;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -31,7 +31,7 @@ public sealed class TestCounter : InternalObject
     {
         Count = d.Reader.ReadInt32();
         _privateTestSerialization = new ObservableEventHandler( d );
-        _privateTestSerialization.HasHandlers.Should().BeTrue();
+        _privateTestSerialization.HasHandlers.ShouldBeTrue();
     }
 
     public static void Write( BinarySerialization.IBinarySerializer s, in TestCounter o )
@@ -44,7 +44,7 @@ public sealed class TestCounter : InternalObject
 
     public void Increment( object sender, EventMonitoredArgs e )
     {
-        Domain.Monitor.Should().BeSameAs( e.Monitor, "InternalObject provides the transaction monitor." );
+        Domain.Monitor.ShouldBeSameAs( e.Monitor, "InternalObject provides the transaction monitor." );
         Count++;
         e.Monitor.Info( $"Incremented Count = {Count}." );
     }

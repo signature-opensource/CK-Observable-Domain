@@ -1,5 +1,5 @@
 using CK.Core;
-using FluentAssertions;
+using Shouldly;
 using NUnit.Framework;
 using System;
 using System.Collections.Concurrent;
@@ -39,9 +39,9 @@ public class TimeTests
                 TestHelper.Monitor.Info( "Before!" );
             } );
             TestHelper.Monitor.Info( "After!" );
-            d.TimeManager.AllObservableTimedEvents.Single().IsActive.Should().BeFalse();
+            d.TimeManager.AllObservableTimedEvents.Single().IsActive.ShouldBeFalse();
         }
-        entries.Select( e => e.Text ).Concatenate().Should().Match( "*Before!*Elapsed:*After!*" );
+        entries.Select( e => e.Text ).Concatenate().ShouldBe( "*Before!*Elapsed:*After!*" );
     }
 
     static ConcurrentQueue<string> RawTraces = new ConcurrentQueue<string>();
@@ -59,16 +59,16 @@ public class TimeTests
                 RawTraces.Enqueue( "Before!" );
             } );
             RawTraces.Enqueue( "Not Yet!" );
-            d.TimeManager.AllObservableTimedEvents.Single().IsActive.Should().BeTrue();
+            d.TimeManager.AllObservableTimedEvents.Single().IsActive.ShouldBeTrue();
             Thread.Sleep( 50 );
             await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 RawTraces.Enqueue( "After!" );
             } );
-            d.TimeManager.AllObservableTimedEvents.Single().IsActive.Should().BeFalse();
+            d.TimeManager.AllObservableTimedEvents.Single().IsActive.ShouldBeFalse();
         }
 
-        RawTraces.Concatenate().Should().Match( "*Before!*Not Yet!*Elapsed:*After!*" );
+        RawTraces.Concatenate().ShouldBe( "*Before!*Not Yet!*Elapsed:*After!*" );
     }
 
     [Test]
@@ -80,7 +80,7 @@ public class TimeTests
         // We start the AutoTimer here otherwise the timed events are not processed.
         // To be able to test at_the_start_of_the_Modify we need to do an awful thing: dispose the actual timer.
         //
-        using( TestHelper.Monitor.CollectEntries( out entries , LogLevelFilter.Info ) )
+        using( TestHelper.Monitor.CollectEntries( out entries, LogLevelFilter.Info ) )
         using( var d = new ObservableDomain( TestHelper.Monitor, nameof( timed_event_trigger_at_the_start_of_the_Modify_Async ), startTimer: true ) )
         {
             // Here is the infamy.
@@ -94,13 +94,13 @@ public class TimeTests
                 TestHelper.Monitor.Info( "Before!" );
             } );
 
-            d.Read( TestHelper.Monitor, () => d.TimeManager.AllObservableTimedEvents.Single().IsActive ).Should().BeTrue( "Not yet." );
+            d.Read( TestHelper.Monitor, () => d.TimeManager.AllObservableTimedEvents.Single().IsActive ).ShouldBeTrue( "Not yet." );
 
             Thread.Sleep( 30 );
 
             d.Read( TestHelper.Monitor, () =>
             {
-                d.TimeManager.AllObservableTimedEvents.Single().IsActive.Should().BeTrue( "No actual timer: +30 ms (whatever the delta is) will never trigger the event." );
+                d.TimeManager.AllObservableTimedEvents.Single().IsActive.ShouldBeTrue( "No actual timer: +30 ms (whatever the delta is) will never trigger the event." );
             } );
 
             await d.ModifyThrowAsync( TestHelper.Monitor, () =>
@@ -108,14 +108,14 @@ public class TimeTests
                 // "Elapsed: " is already here.
                 TestHelper.Monitor.Info( "After!" );
             } );
-            d.TimeManager.AllObservableTimedEvents.Single().IsActive.Should().BeFalse();
+            d.TimeManager.AllObservableTimedEvents.Single().IsActive.ShouldBeFalse();
         }
-        entries.Select( e => e.Text ).Concatenate().Should().Match( "*Before!*Elapsed:*After!*" );
+        entries.Select( e => e.Text ).Concatenate().ShouldBe( "*Before!*Elapsed:*After!*" );
     }
 
     static void StaticElapsed( object source, ObservableTimedEventArgs args )
     {
-        source.Should().BeAssignableTo<ObservableTimedEventBase>();
+        source.ShouldBeAssignableTo<ObservableTimedEventBase>();
         var msg = "Elapsed: " + args.ToString();
         args.Monitor.Info( msg );
         RawTraces.Enqueue( msg );
@@ -151,14 +151,14 @@ public class TimeTests
                 TestHelper.Monitor.Trace( $"End of Waiting. counter.Count = {counter.Count}. NextDueTime: '{d.TimeManager.Timer.NextDueTime}'." );
             } );
 
-            d.TimeManager.Timer.WaitForNext( 200 ).Should().BeTrue( "AutoTimer must NOT be dead." );
+            d.TimeManager.Timer.WaitForNext( 200 ).ShouldBeTrue( "AutoTimer must NOT be dead." );
 
             d.Read( TestHelper.Monitor, () =>
             {
                 TestHelper.Monitor.Trace( $"counter.Count = {counter.Count}." );
-                d.AllObjects.Items.Single().Should().BeSameAs( counter );
-                counter.Count.Should().Match( c => c >= 11 );
-                RelayedCounter.Should().Be( counter.Count );
+                d.AllObjects.Items.Single().ShouldBeSameAs( counter );
+                counter.Count.ShouldBeGreaterThanOrEqualTo( 11 );
+                RelayedCounter.ShouldBe( counter.Count );
             } );
         }
     }
@@ -166,9 +166,9 @@ public class TimeTests
     [Test]
     public async Task auto_counter_works_uses_Critical_mode_Async()
     {
-        IReadOnlyList<ActivityMonitorSimpleCollector.Entry> entries = null;
+        IReadOnlyList<ActivityMonitorSimpleCollector.Entry>? entries = null;
 
-        using( TestHelper.Monitor.CollectEntries(out  entries) )
+        using( TestHelper.Monitor.CollectEntries( out entries ) )
         using( var d = new ObservableDomain( TestHelper.Monitor, nameof( auto_counter_works_uses_Critical_mode_Async ), startTimer: true ) )
         {
             StupidAutoCounter counter = null!;
@@ -186,11 +186,11 @@ public class TimeTests
             d.Read( TestHelper.Monitor, () =>
             {
                 TestHelper.Monitor.Trace( $"counter.Count = {counter.Count}." );
-                d.AllObjects.Items.Single().Should().BeSameAs( counter );
-                counter.Count.Should().BeGreaterOrEqualTo( 1 );
+                d.AllObjects.Items.Single().ShouldBeSameAs( counter );
+                counter.Count.ShouldBeGreaterThanOrEqualTo( 1 );
             } );
         }
-        entries.Should().Match( e => e.Any( m => m.Text.Contains( " event(s) lost!" ) ), "We have lost events (around 40)." );
+        entries.ShouldMatch( e => e.Any( m => m.Text.Contains( " event(s) lost!" ) ), "We have lost events (around 40)." );
     }
 
     [Test]
@@ -208,7 +208,7 @@ public class TimeTests
         }
     }
 
-    [SerializationVersion(0)]
+    [SerializationVersion( 0 )]
     sealed class SimpleValue : ObservableObject
     {
         public SimpleValue()
@@ -260,15 +260,15 @@ public class TimeTests
             {
                 // Interval: from 1 to 36 ms.
                 // Only half of them (odd ones) are Active.
-                Enumerable.Range( 0, 8 ).Select( i => new ObservableTimer(i.ToString(), now, 1 + i * 5, (i & 1) != 0)).ToArray();
-                d.TimeManager.AllObservableTimedEvents.Where( o => !o.IsActive ).Should().HaveCount( 8 );
+                Enumerable.Range( 0, 8 ).Select( i => new ObservableTimer( i.ToString(), now, 1 + i * 5, (i & 1) != 0 ) ).ToArray();
+                d.TimeManager.AllObservableTimedEvents.Where( o => !o.IsActive ).Count().ShouldBe( 8 );
 
             } );
 
             using( var d2 = TestHelper.CloneDomain( d, initialDomainDispose: false ) )
             {
-                d2.TimeManager.Timers.Should().HaveCount( 8 );
-                d2.TimeManager.AllObservableTimedEvents.Where( o => !o.IsActive ).Should().HaveCount( 8 );
+                d2.TimeManager.Timers.Count.ShouldBe( 8 );
+                d2.TimeManager.AllObservableTimedEvents.Where( o => !o.IsActive ).Count().ShouldBe( 8 );
             }
 
             TestHelper.Monitor.Info( "Setting callback to timers and creating 5 reminders on Primary Domain." );
@@ -285,7 +285,7 @@ public class TimeTests
                 {
                     r.Elapsed += val.SilentIncrementValue;
                 }
-                d.TimeManager.AllObservableTimedEvents.Where( o => o.IsActive ).Should().HaveCount( 4 + 5, "4 timers and 5 reminders are Active." );
+                d.TimeManager.AllObservableTimedEvents.Where( o => o.IsActive ).Count().ShouldBe( 4 + 5, "4 timers and 5 reminders are Active." );
                 TestHelper.Monitor.Info( "Leaving Primary Domain configuration." );
 
             } );
@@ -300,14 +300,14 @@ public class TimeTests
                 {
                     d2.Read( TestHelper.Monitor, () =>
                     {
-                        d2.TimeManager.Timers.Should().HaveCount( 8 );
-                        d2.TimeManager.Reminders.Should().HaveCount( 5 );
-                        d2.AllObjects.Items.OfType<SimpleValue>().Single().Value.Should().BeGreaterOrEqualTo( 9, "5 reminders have fired, 4 timers have fired at least once." );
-                        d2.TimeManager.Reminders.All( r => !r.IsActive ).Should().BeTrue( "No more Active reminders." );
-                        d2.TimeManager.Timers.All( o => o.IsActive == ((int.Parse( o.Name ) & 1) != 0) ).Should().BeTrue();
+                        d2.TimeManager.Timers.Count.ShouldBe( 8 );
+                        d2.TimeManager.Reminders.Count.ShouldBe( 5 );
+                        d2.AllObjects.Items.OfType<SimpleValue>().Single().Value.ShouldBeGreaterThanOrEqualTo( 9, "5 reminders have fired, 4 timers have fired at least once." );
+                        d2.TimeManager.Reminders.All( r => !r.IsActive ).ShouldBeTrue( "No more Active reminders." );
+                        d2.TimeManager.Timers.All( o => o.IsActive == ((int.Parse( o.Name ) & 1) != 0) ).ShouldBeTrue();
                         var v = d2.AllObjects.Items.OfType<SimpleValue>().Single();
-                        v.ValueFromReminders.Should().Be( 5, "[Secondary] 5 from reminders." );
-                        v.Value.Should().BeGreaterOrEqualTo( 9, "[Secondary] 5 reminders have fired, the 4 timers have fired at least once." );
+                        v.ValueFromReminders.ShouldBe( 5, "[Secondary] 5 from reminders." );
+                        v.Value.ShouldBeGreaterThanOrEqualTo( 9, "[Secondary] 5 reminders have fired, the 4 timers have fired at least once." );
                         secondaryValue = v.Value;
                     } );
                 }
@@ -320,8 +320,8 @@ public class TimeTests
                 d.Read( TestHelper.Monitor, () =>
                 {
                     var v = d.AllObjects.Items.OfType<SimpleValue>().Single();
-                    v.ValueFromReminders.Should().Be( 5, "[Primary] 5 from reminders." );
-                    v.Value.Should().BeGreaterThan( secondaryValue, "[Primary] Must be greater than the secondary." );
+                    v.ValueFromReminders.ShouldBe( 5, "[Primary] 5 from reminders." );
+                    v.Value.ShouldBeGreaterThan( secondaryValue, "[Primary] Must be greater than the secondary." );
                 } );
             }
         }
@@ -339,7 +339,7 @@ public class TimeTests
             TestHelper.Monitor.Info( $"Creating 50 active counters with interval from 20 to 1000 ms." );
             await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
-                counters = Enumerable.Range( 0, 50 ).Select( i => new StupidAutoCounter( 1000 - i*20 ) ).ToArray();
+                counters = Enumerable.Range( 0, 50 ).Select( i => new StupidAutoCounter( 1000 - i * 20 ) ).ToArray();
             } );
 
             TestHelper.Monitor.Info( $"Waiting for {testTime} ms." );
@@ -372,7 +372,7 @@ public class TimeTests
                     }
                 }
                 foreach( var c in counters ) c.Restart();
-                counters.Should().Match( c => c.All( x => x.Count == 0 ) );
+                counters.ShouldMatch( c => c.All( x => x.Count == 0 ) );
             } );
 
             TestHelper.Monitor.Info( $"Waiting for {testTime} ms again." );
@@ -440,11 +440,11 @@ public class TimeTests
 
             d.TimeManager.Timer.WaitForNext();
             UpdateCount();
-            delta.Should().BeGreaterThan( 0, "Since we called WaitForNext()." );
+            delta.ShouldBeGreaterThan( 0, "Since we called WaitForNext()." );
 
             d.TimeManager.Timer.WaitForNext();
             UpdateCount();
-            delta.Should().BeGreaterThan( 0, "Since we called WaitForNext() again!" );
+            delta.ShouldBeGreaterThan( 0, "Since we called WaitForNext() again!" );
 
             d.Read( TestHelper.Monitor, () =>
             {
@@ -454,11 +454,11 @@ public class TimeTests
 
             d.TimeManager.Timer.WaitForNext();
             UpdateCount();
-            delta.Should().BeGreaterThan( 0, "We blocked for 200 ms and called WaitForNext(): at least one Tick should have been raised." );
+            delta.ShouldBeGreaterThan( 0, "We blocked for 200 ms and called WaitForNext(): at least one Tick should have been raised." );
         }
     }
 
-    [SerializationVersion(0)]
+    [SerializationVersion( 0 )]
     class TestReminder : InternalObject
     {
         readonly TestCounter? _counter;
@@ -491,10 +491,10 @@ public class TimeTests
 
         void DisplayMessageAndStartCounting( object sender, ObservableReminderEventArgs e )
         {
-            e.Reminder.IsPooled.Should().BeTrue();
-            e.Reminder.Invoking( x => x.Destroy() ).Should().Throw<InvalidOperationException>( "Pooled reminders cannot be disposed." );
+            e.Reminder.IsPooled.ShouldBeTrue();
+            Util.Invokable( () => e.Reminder.Destroy() ).ShouldThrow<InvalidOperationException>( "Pooled reminders cannot be disposed." );
 
-            var (msg, count) = ((string,int))e.Reminder.Tag;
+            var (msg, count) = ((string, int))e.Reminder.Tag;
 
             if( msg == "Will never happen." ) throw new Exception( "TestReminder: " + msg );
             Domain.Monitor.Info( $"TestReminder: Working: {msg} (count:{count})" );
@@ -513,7 +513,7 @@ public class TimeTests
     public async Task reminder_helper_uses_pooled_ObservableReminders_Async( string mode )
     {
         IReadOnlyList<ActivityMonitorSimpleCollector.Entry> logs = null!;
-        using( var d = TestHelper.CreateDomainHandler( nameof( reminder_helper_uses_pooled_ObservableReminders_Async)+mode, startTimer: true, serviceProvider: null ) )
+        using( var d = TestHelper.CreateDomainHandler( nameof( reminder_helper_uses_pooled_ObservableReminders_Async ) + mode, startTimer: true, serviceProvider: null ) )
         {
             TimeSpan ReloadIfNeeded()
             {
@@ -535,12 +535,12 @@ public class TimeTests
                 Thread.Sleep( 3 * 100 + (int)reloadDelta.TotalMilliseconds + 100/*Security*/ );
                 ReloadIfNeeded();
             }
-            logs.Select( l => l.Text ).Should().Contain( "TestReminder: Working: Hello! (count:3)", "The 2 other logs are on the domain monitor!" );
+            logs.Select( l => l.Text ).ShouldContain( "TestReminder: Working: Hello! (count:3)", "The 2 other logs are on the domain monitor!" );
             d.Domain.Read( TestHelper.Monitor, () =>
             {
-                d.Domain.TimeManager.Reminders.Should().HaveCount( 2, "2 pooled reminders have been created." );
-                d.Domain.AllInternalObjects.OfType<TestCounter>().Single().Count.Should().BeGreaterOrEqualTo( 4, "Counter has been incremented at least four times." );
-                d.Domain.TimeManager.Reminders.All( r => r.IsPooled && !r.IsActive && !r.IsDestroyed ).Should().BeTrue( "Reminders are free to be reused." );
+                d.Domain.TimeManager.Reminders.Count.ShouldBe( 2, "2 pooled reminders have been created." );
+                d.Domain.AllInternalObjects.OfType<TestCounter>().Single().Count.ShouldBeGreaterThanOrEqualTo( 4, "Counter has been incremented at least four times." );
+                d.Domain.TimeManager.Reminders.All( r => r.IsPooled && !r.IsActive && !r.IsDestroyed ).ShouldBeTrue( "Reminders are free to be reused." );
             } );
             ReloadIfNeeded();
             using( TestHelper.Monitor.CollectEntries( out logs, LogLevelFilter.Info ) )
@@ -553,11 +553,11 @@ public class TimeTests
                 } );
                 ReloadIfNeeded();
             }
-            logs.Select( l => l.Text ).Should().Contain( "TestReminder: Working: Another Job! (count:0)" );
+            logs.Select( l => l.Text ).ShouldContain( "TestReminder: Working: Another Job! (count:0)" );
             d.Domain.Read( TestHelper.Monitor, () =>
             {
-                d.Domain.TimeManager.Reminders.Should().HaveCount( 2, "Still 2 pooled reminders." );
-                d.Domain.TimeManager.Reminders.All( r => r.IsPooled && !r.IsActive && !r.IsDestroyed ).Should().BeTrue( "Reminders are free to be reused." );
+                d.Domain.TimeManager.Reminders.Count.ShouldBe( 2, "Still 2 pooled reminders." );
+                d.Domain.TimeManager.Reminders.All( r => r.IsPooled && !r.IsActive && !r.IsDestroyed ).ShouldBeTrue( "Reminders are free to be reused." );
             } );
             ReloadIfNeeded();
             await d.Domain.ModifyThrowAsync( TestHelper.Monitor, () =>
@@ -569,8 +569,8 @@ public class TimeTests
             ReloadIfNeeded();
             d.Domain.Read( TestHelper.Monitor, () =>
             {
-                d.Domain.TimeManager.Reminders.Should().HaveCount( 2, "Still 2 pooled reminders." );
-                d.Domain.TimeManager.Reminders.Where( r => !r.IsActive ).Should().HaveCount( 1, "One is in used." );
+                d.Domain.TimeManager.Reminders.Count.ShouldBe( 2, "Still 2 pooled reminders." );
+                d.Domain.TimeManager.Reminders.Where( r => !r.IsActive ).Count().ShouldBe( 1, "One is in used." );
             } );
             ReloadIfNeeded();
             await d.Domain.ModifyThrowAsync( TestHelper.Monitor, () =>
@@ -582,8 +582,8 @@ public class TimeTests
             ReloadIfNeeded();
             d.Domain.Read( TestHelper.Monitor, () =>
             {
-                d.Domain.TimeManager.Reminders.Should().HaveCount( 2, "Still 2 pooled reminders." );
-                d.Domain.TimeManager.Reminders.Where( r => !r.IsActive ).Should().BeEmpty( "No more free reminders!" );
+                d.Domain.TimeManager.Reminders.Count.ShouldBe( 2, "Still 2 pooled reminders." );
+                d.Domain.TimeManager.Reminders.Where( r => !r.IsActive ).ShouldBeEmpty( "No more free reminders!" );
             } );
             ReloadIfNeeded();
             await d.Domain.ModifyThrowAsync( TestHelper.Monitor, () =>
@@ -595,8 +595,8 @@ public class TimeTests
             ReloadIfNeeded();
             d.Domain.Read( TestHelper.Monitor, () =>
             {
-                d.Domain.TimeManager.Reminders.Should().HaveCount( 3, "A third one has been required!" );
-                d.Domain.TimeManager.Reminders.Where( r => !r.IsActive ).Should().BeEmpty( "All 3 are in use." );
+                d.Domain.TimeManager.Reminders.Count.ShouldBe( 3, "A third one has been required!" );
+                d.Domain.TimeManager.Reminders.Where( r => !r.IsActive ).ShouldBeEmpty( "All 3 are in use." );
             } );
             ReloadIfNeeded();
             await d.Domain.ModifyThrowAsync( TestHelper.Monitor, () =>
@@ -610,8 +610,8 @@ public class TimeTests
             ReloadIfNeeded();
             d.Domain.Read( TestHelper.Monitor, () =>
             {
-                d.Domain.TimeManager.Reminders.Should().HaveCount( 3, "3 created..." );
-                d.Domain.TimeManager.Reminders.Where( r => !r.IsActive ).Should().HaveCount( 3, "... and free to be reused." );
+                d.Domain.TimeManager.Reminders.Count.ShouldBe( 3, "3 created..." );
+                d.Domain.TimeManager.Reminders.Where( r => !r.IsActive ).Count().ShouldBe( 3, "... and free to be reused." );
             } );
         }
     }
@@ -722,11 +722,11 @@ public class TimeTests
             int i = 1;
             while( i < 501 )
             {
-                od.Root.Objects[i++].IsDestroyed.Should().BeTrue();
+                od.Root.Objects[i++].IsDestroyed.ShouldBeTrue();
             }
             while( i < 601 )
             {
-                od.Root.Objects[i++].IsDestroyed.Should().BeFalse();
+                od.Root.Objects[i++].IsDestroyed.ShouldBeFalse();
             }
         } );
 

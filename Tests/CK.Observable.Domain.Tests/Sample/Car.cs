@@ -1,6 +1,6 @@
 using CK.BinarySerialization;
 using CK.Core;
-using FluentAssertions;
+using Shouldly;
 using System;
 
 namespace CK.Observable.Domain.Tests.Sample;
@@ -100,7 +100,7 @@ public sealed class Car : ObservableObject
                 Domain.Monitor.Info( "Before Power setting." );
                 _power = value;
                 Domain.Monitor.Info( "After Power setting." );
-                _onPowerChanged.Should().BeTrue();
+                _onPowerChanged.ShouldBeTrue();
             }
         }
     }

@@ -25,7 +25,7 @@ public interface IObservableDomainInspector
     /// The maximum number of milliseconds to wait for a read access before giving up.
     /// Wait indefinitely by default.
     /// </param>
-    /// <returns>True on success, false if timeout occurred.</returns>
+    /// <returns>The tracker on success, null if timeout occurred.</returns>
     ObservableDomain.LostObjectTracker? EnsureLostObjectTracker( IActivityMonitor monitor, int millisecondsTimeout = -1 );
 
     /// <summary>

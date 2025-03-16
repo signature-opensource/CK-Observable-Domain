@@ -6,7 +6,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using CK.Core;
-using FluentAssertions;
+using Shouldly;
 using NUnit.Framework;
 using static CK.Testing.MonitorTestHelper;
 
@@ -44,7 +44,7 @@ public class DirectoryStreamStoreTests
 
         var backupNames = streamStore.GetBackupNames( resourceName );
 
-        backupNames.Should().HaveCount( backupCount - 1,
+        backupNames.Count.ShouldBe( backupCount - 1,
             $"{backupCount} - 1 snapshot backups should have been written and no cleanup should have been performed." );
     }
 
@@ -78,7 +78,7 @@ public class DirectoryStreamStoreTests
 
         var backupNames = streamStore.GetBackupNames( resourceName );
 
-        backupNames.Should().HaveCount( backupCount,
+        backupNames.Count.ShouldBe( backupCount,
             $"{backupCount} snapshot backups should remain after cleanup." );
     }
 
@@ -105,7 +105,7 @@ public class DirectoryStreamStoreTests
 
         var backupNames = streamStore.GetBackupNames( resourceName );
 
-        backupNames.Should().HaveCount( backupCount / 2,
+        backupNames.Count.ShouldBe( backupCount / 2,
             $"{backupCount} / 2 snapshot backups should remain after cleanup." );
     }
 
@@ -140,7 +140,7 @@ public class DirectoryStreamStoreTests
 
         var backupNames = streamStore.GetBackupNames( resourceName );
 
-        backupNames.Should().HaveCount( backupCount,
+        backupNames.Count.ShouldBe( backupCount,
             $"{backupCount} snapshot backups should remain after cleanup." );
     }
 
@@ -176,7 +176,7 @@ public class DirectoryStreamStoreTests
 
         var backupNames = streamStore.GetBackupNames( resourceName );
 
-        backupNames.Should().HaveCount( backupCount,
+        backupNames.Count.ShouldBe( backupCount,
             $"{backupCount} snapshot backups should remain after cleanup." );
     }
 

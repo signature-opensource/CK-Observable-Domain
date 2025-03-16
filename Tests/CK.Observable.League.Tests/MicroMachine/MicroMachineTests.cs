@@ -1,5 +1,5 @@
 using CK.Core;
-using FluentAssertions;
+using Shouldly;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
@@ -24,9 +24,9 @@ public class MicroMachineTests
             // CumulateUnloadedTime changes the CumulativeOffset at reload: serialization cannot be idempotent
             // so we disable it.
             d.Root.Machine.Clock.CumulateUnloadedTime = false;
-            d.Root.Machine.IsRunning.Should().BeTrue();
+            d.Root.Machine.IsRunning.ShouldBeTrue();
             d.Root.Machine.CreateThing( 1 );
-            d.Root.Machine.Things.Should().HaveCount( 1 );
+            d.Root.Machine.Things.Count.ShouldBe( 1 );
 
         } );
 
@@ -38,9 +38,9 @@ public class MicroMachineTests
         ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d, restoreSidekicks: true );
         await d.ModifyThrowAsync( TestHelper.Monitor, () =>
         {
-            d.Root.Machine.Things.Should().HaveCount( 1 );
-            d.Root.Machine.Things[0].IdentifiedId.Should().BeNull();
-            d.Root.Machine.Things[0].Error.Should().Be( "IdentificationTimeout" );
+            d.Root.Machine.Things.Count.ShouldBe( 1 );
+            d.Root.Machine.Things[0].IdentifiedId.ShouldBeNull();
+            d.Root.Machine.Things[0].Error.ShouldBe( "IdentificationTimeout" );
 
         } );
 
@@ -49,7 +49,7 @@ public class MicroMachineTests
         Thread.Sleep( 200 );
         d.Read( TestHelper.Monitor, () =>
         {
-            d.Root.Machine.Things.Should().BeEmpty();
+            d.Root.Machine.Things.ShouldBeEmpty();
         } );
     }
 
@@ -76,7 +76,7 @@ public class MicroMachineTests
                 await shell.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) =>
                 {
                     d.Root.Machine.Clock.IsActive = true;
-                    d.Root.Machine.IsRunning.Should().BeTrue();
+                    d.Root.Machine.IsRunning.ShouldBeTrue();
                     d.Root.Machine.CreateThing( 1 );
                     d.Root.Machine.CreateThing( 3712 );
                     // This will be processed by the sidekick even if we had no TestCallEnsureBridge:
@@ -98,31 +98,31 @@ public class MicroMachineTests
                         d.Root.Machine.CreateThing( 3712 + i );
                     }
                     d.Root.Machine.CmdToTheMachine( "no bug" );
-                    d.Root.Machine.CommandReceivedCount.Should().Be( 2 );
+                    d.Root.Machine.CommandReceivedCount.ShouldBe( 2 );
 
                 } );
                 var result = await shell.TryModifyAsync( TestHelper.Monitor, ( m, d ) =>
                 {
                     d.Root.Machine.CmdToTheMachine( "bug" );
-                    d.Root.Machine.CommandReceivedCount.Should().Be( 3 );
+                    d.Root.Machine.CommandReceivedCount.ShouldBe( 3 );
                 } );
-                result.Success.Should().BeFalse();
-                result.CommandHandlingErrors.Should().NotBeEmpty();
+                result.Success.ShouldBeFalse();
+                result.CommandHandlingErrors.ShouldNotBeEmpty();
 
                 result = await shell.TryModifyAsync( TestHelper.Monitor, ( m, d ) =>
                 {
-                    d.Root.Machine.CommandReceivedCount.Should().Be( 3, "This has been committed." );
+                    d.Root.Machine.CommandReceivedCount.ShouldBe( 3, "This has been committed." );
                     d.Root.Machine.CmdToTheMachine( "bug in sending" );
                     Assert.Fail( "We never hit this: line above threw an exception." );
                 } );
-                result.Success.Should().BeFalse();
-                result.Errors.Should().NotBeEmpty();
+                result.Success.ShouldBeFalse();
+                result.Errors.ShouldNotBeEmpty();
 
                 result = await shell.TryModifyAsync( TestHelper.Monitor, ( m, d ) =>
                 {
-                    d.Root.Machine.CommandReceivedCount.Should().Be( 3, "The 4th call has been rollbacked." );
+                    d.Root.Machine.CommandReceivedCount.ShouldBe( 3, "The 4th call has been rollbacked." );
                 } );
-                result.Success.Should().BeTrue();
+                result.Success.ShouldBeTrue();
             }
         }
     }
@@ -139,7 +139,7 @@ public class MicroMachineTests
             d.Root.Machine.Configuration.IdentifyThingTimeout = TimeSpan.FromMilliseconds( 200 );
             d.Root.Machine.Configuration.AutoDestroyedTimeout = TimeSpan.FromMilliseconds( 200 );
             d.Root.Machine.Clock.IsActive = true;
-            d.Root.Machine.IsRunning.Should().BeTrue();
+            d.Root.Machine.IsRunning.ShouldBeTrue();
             for( int i = 0; i < thingCount; ++i )
             {
                 d.Root.Machine.CreateThing( i );
@@ -154,8 +154,8 @@ public class MicroMachineTests
             int count = d.Root.Machine.Things.Count;
             for( int i = 0; i < count; ++i )
             {
-                d.Root.Machine.Things[i].IdentifiedId.Should().BeNull();
-                d.Root.Machine.Things[i].Error.Should().Be( "IdentificationTimeout" );
+                d.Root.Machine.Things[i].IdentifiedId.ShouldBeNull();
+                d.Root.Machine.Things[i].Error.ShouldBe( "IdentificationTimeout" );
             }
         } );
 
@@ -163,7 +163,7 @@ public class MicroMachineTests
         Thread.Sleep( (thingCount * waitTimeBetweenThings) );
         d.Read( TestHelper.Monitor, () =>
         {
-            d.Root.Machine.Things.Should().BeEmpty();
+            d.Root.Machine.Things.ShouldBeEmpty();
         } );
     }
 

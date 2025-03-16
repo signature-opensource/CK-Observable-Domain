@@ -1,5 +1,5 @@
 using CK.Core;
-using FluentAssertions;
+using Shouldly;
 using NUnit.Framework;
 using System;
 using System.Diagnostics;
@@ -37,7 +37,7 @@ public class DomainLifeCycleOptionTests
         // On the CI, the configuration from the Coordinator takes some time to be applied...
         await Task.Delay( 200 );
 
-        loader.IsLoaded.Should().BeTrue( "The domain is kept alive." );
+        loader.IsLoaded.ShouldBeTrue( "The domain is kept alive." );
 
         var tr = await league.Coordinator.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) =>
         {
@@ -45,8 +45,8 @@ public class DomainLifeCycleOptionTests
             loaded.Options = loaded.Options.SetLifeCycleOption( DomainLifeCycleOption.HonorTimedEvent );
         }, waitForDomainPostActionsCompletion: true );
         var domainError = await tr.DomainPostActionsError;
-        domainError.Should().BeNull();
-        loader.IsLoaded.Should().BeFalse( "The domain is no more alive since its LoadOption is Default and there is no active timed events." );
+        domainError.ShouldBeNull();
+        loader.IsLoaded.ShouldBeFalse( "The domain is no more alive since its LoadOption is Default and there is no active timed events." );
     }
 
     static bool OnTimerCalled = false;
@@ -76,25 +76,25 @@ public class DomainLifeCycleOptionTests
         var loader = league["NeverLoaded"];
         Debug.Assert( loader != null );
 
-        loader.IsLoaded.Should().BeFalse( "The domain is NEVER loaded." );
+        loader.IsLoaded.ShouldBeFalse( "The domain is NEVER loaded." );
 
         await using( var shell = await loader.LoadAsync( TestHelper.Monitor, startTimer: true ) )
         {
             Debug.Assert( shell != null );
             await shell.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) =>
             {
-                d.TimeManager.IsRunning.Should().BeTrue();
+                d.TimeManager.IsRunning.ShouldBeTrue();
                 d.TimeManager.Remind( DateTime.UtcNow.AddMilliseconds( 100 ), OnTimer, null, null );
             } );
         }
-        loader.IsLoaded.Should().BeFalse( "The domain is not alive." );
+        loader.IsLoaded.ShouldBeFalse( "The domain is not alive." );
         await Task.Delay( 200 );
-        OnTimerCalled.Should().BeFalse( "The reminder planned in 100 ms has not fired, even after 200 ms." );
-        loader.IsLoaded.Should().BeFalse( "The domain is obviously not alive." );
+        OnTimerCalled.ShouldBeFalse( "The reminder planned in 100 ms has not fired, even after 200 ms." );
+        loader.IsLoaded.ShouldBeFalse( "The domain is obviously not alive." );
 
         await using( var shell = await loader.LoadAsync( TestHelper.Monitor ) )
         {
         }
-        OnTimerCalled.Should().BeTrue( "Loading the domain triggered the reminder." );
+        OnTimerCalled.ShouldBeTrue( "Loading the domain triggered the reminder." );
     }
 }

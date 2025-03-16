@@ -1,6 +1,6 @@
 using CK.Core;
 using CK.Observable.Domain.Tests.Sample;
-using FluentAssertions;
+using Shouldly;
 using NUnit.Framework;
 using System;
 using System.Collections.Concurrent;
@@ -11,6 +11,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
+
 
 namespace CK.Observable.Domain.Tests;
 
@@ -241,8 +242,8 @@ public class PostActionsTests
             d.Root.SendNumber( HandlerTarget.Domain );
         }, parallelDomainPostActions: false, waitForDomainPostActionsCompletion: true );
 
-        LocalNumbers.Should().BeEquivalentTo( new[] { (0, 1000), (1, 1001), (2, 1002) } );
-        DomainNumbers.Should().BeEquivalentTo( new[] { (3, 0), (4, 1), (5, 2) } );
+        LocalNumbers.ShouldBe( new[] { (0, 1000), (1, 1001), (2, 1002) } );
+        DomainNumbers.ShouldBe( new[] { (3, 0), (4, 1), (5, 2) } );
 
         await d.ModifyThrowAsync( TestHelper.Monitor, () =>
         {
@@ -254,8 +255,8 @@ public class PostActionsTests
             d.Root.SendNumber( HandlerTarget.Domain );
         }, parallelDomainPostActions: false, waitForDomainPostActionsCompletion: true );
 
-        LocalNumbers.Should().BeEquivalentTo( new[] { (0, 1000), (1, 1001), (2, 1002), (6, 1003), (7, 1004), (8, 1005) } );
-        DomainNumbers.Should().BeEquivalentTo( new[] { (3, 0), (4, 1), (5, 2), (9, 3), (10, 4), (11, 5) } );
+        LocalNumbers.ShouldBe( [(0, 1000), (1, 1001), (2, 1002), (6, 1003), (7, 1004), (8, 1005)] );
+        DomainNumbers.ShouldBe( [(3, 0), (4, 1), (5, 2), (9, 3), (10, 4), (11, 5)] );
     }
 
     [TestCase( 20, false )]
@@ -274,11 +275,11 @@ public class PostActionsTests
         d.Dispose( TestHelper.Monitor );
 
 
-        LocalNumbers.Count.Should().Be( 3 * nb );
-        LocalNumbers.Select( x => x.Number ).Should().NotBeInAscendingOrder();
+        LocalNumbers.Count.ShouldBe( 3 * nb );
+        LocalNumbers.Select( x => x.Number ).ShouldBeInOrder();
 
-        DomainNumbers.Count.Should().Be( 3 * nb );
-        DomainNumbers.Select( x => x.Number ).Should().BeInAscendingOrder();
+        DomainNumbers.Count.ShouldBe( 3 * nb );
+        DomainNumbers.Select(x => x.Number).ShouldBeInOrder();
 
         async Task Run( int num, IActivityMonitor monitor, ObservableDomain<SimpleRoot> d, Barrier b )
         {
@@ -323,11 +324,11 @@ public class PostActionsTests
             await Task.Delay( nb * 2 * nbTimers * 20 * 20 );
         }
 
-        DomainNumbers.Count.Should().Be( nb * ( 1 + nbTimers * 20) );
-        LocalNumbers.Count.Should().Be( nb * ( 1 + nbTimers * 20) );
+        DomainNumbers.Count.ShouldBe( nb * ( 1 + nbTimers * 20) );
+        LocalNumbers.Count.ShouldBe( nb * ( 1 + nbTimers * 20) );
 
-        DomainNumbers.Select( x => x.Number ).Should().BeInAscendingOrder();
-        LocalNumbers.Select( x => x.Number ).Should().NotBeInAscendingOrder();
+        DomainNumbers.Select(x => x.Number).ShouldBeInOrder();
+        LocalNumbers.Select(x => x.Number).ShouldBeInOrder();
 
         Task Run( int num, IActivityMonitor monitor, ObservableDomain<SimpleRoot> d, Barrier b )
         {
@@ -364,8 +365,9 @@ public class PostActionsTests
         }) ).ToArray();
         await Task.WhenAll( tasks );
 
-        DomainNumbers.Select( x => x.Number ).Should().BeInAscendingOrder();
-        LocalNumbers.Select( x => x.Number ).Should().NotBeInAscendingOrder();
+        DomainNumbers.Select(x => x.Number).ShouldBeInOrder();
+        // There's no ShouldNotBeInOrder.
+        LocalNumbers.Select( x => x.Number ).IsSortedLarge().ShouldBeFalse();
 
         static async Task SafeModify( IActivityMonitor monitor, ObservableDomain<SimpleRoot> d )
         {

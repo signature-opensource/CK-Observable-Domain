@@ -1,4 +1,4 @@
-using FluentAssertions;
+using Shouldly;
 using NUnit.Framework;
 using System;
 
@@ -28,7 +28,7 @@ public class ObservableObjectIdTests
 
             // No Convert.ToDouble is required here:
             double numIdGentle = id.UniqueId;
-            numId.Should().NotBe( numIdGentle );
+            numId.ShouldNotBe( numIdGentle );
 
             // From Javascript.
             var idBack = new ObservableObjectId( BitConverter.DoubleToInt64Bits( numId ), true );
@@ -36,11 +36,11 @@ public class ObservableObjectIdTests
             // Here, Convert.ToInt64 is required!
             var idBackGentle = new ObservableObjectId( Convert.ToInt64( numIdGentle ), true );
 
-            idBack.UniqueId.Should().Be( id.UniqueId );
-            idBack.Uniquifier.Should().Be( id.Uniquifier );
+            idBack.UniqueId.ShouldBe( id.UniqueId );
+            idBack.Uniquifier.ShouldBe( id.Uniquifier );
 
-            idBackGentle.UniqueId.Should().Be( id.UniqueId );
-            idBackGentle.Uniquifier.Should().Be( id.Uniquifier );
+            idBackGentle.UniqueId.ShouldBe( id.UniqueId );
+            idBackGentle.Uniquifier.ShouldBe( id.Uniquifier );
 
         }
     }

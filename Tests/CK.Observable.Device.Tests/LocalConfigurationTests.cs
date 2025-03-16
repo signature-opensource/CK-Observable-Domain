@@ -1,7 +1,7 @@
 using CK.BinarySerialization;
 using CK.Core;
 using CK.DeviceModel;
-using FluentAssertions;
+using Shouldly;
 using NUnit.Framework;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -55,7 +55,7 @@ public class LocalConfigurationTests
 
         sc.Add( host );
 
-        (await host.EnsureDeviceAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.CreateAndStartSucceeded );
+        (await host.EnsureDeviceAsync( TestHelper.Monitor, config )).ShouldBe( DeviceApplyConfigurationResult.CreateAndStartSucceeded );
         var device = host["Default"];
         Debug.Assert( device != null );
         await device.WaitForSynchronizationAsync( considerDeferredCommands: false );
@@ -64,9 +64,9 @@ public class LocalConfigurationTests
 
         await d.ModifyThrowAsync( TestHelper.Monitor, () =>
         {
-            d.Root.Default.DeviceConfiguration.Should().NotBeNull();
-            d.Root.Default.LocalConfiguration.Value.Should().NotBeNull();
-            d.Root.Default.LocalConfiguration.IsDirty.Should().BeFalse();
+            d.Root.Default.DeviceConfiguration.ShouldNotBeNull();
+            d.Root.Default.LocalConfiguration.Value.ShouldNotBeNull();
+            d.Root.Default.LocalConfiguration.IsDirty.ShouldBeFalse();
 
         } );
 
@@ -84,7 +84,7 @@ public class LocalConfigurationTests
         };
         var host = new SampleDeviceHost();
 
-        (await host.EnsureDeviceAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.CreateAndStartSucceeded );
+        (await host.EnsureDeviceAsync( TestHelper.Monitor, config )).ShouldBe( DeviceApplyConfigurationResult.CreateAndStartSucceeded );
         var device = host["Default"];
         Debug.Assert( device != null );
         await device.WaitForSynchronizationAsync( considerDeferredCommands: false );
@@ -95,10 +95,10 @@ public class LocalConfigurationTests
         using var d1 = new ObservableDomain<Root>( TestHelper.Monitor, "Domain 1", startTimer: false, sc );
         using var d2 = new ObservableDomain<Root>( TestHelper.Monitor, "Domain 2", startTimer: false, sc );
 
-        d1.HasWaitingSidekicks.Should().BeTrue();
+        d1.HasWaitingSidekicks.ShouldBeTrue();
         await d1.ModifyThrowAsync( TestHelper.Monitor, null );
 
-        d2.HasWaitingSidekicks.Should().BeTrue();
+        d2.HasWaitingSidekicks.ShouldBeTrue();
         await d2.ModifyThrowAsync( TestHelper.Monitor, null );
 
         CheckStatus( d1, DeviceControlStatus.HasSharedControl );
@@ -114,7 +114,7 @@ public class LocalConfigurationTests
         await ApplyLocalConfigAsync( d1, DeviceControlAction.TakeControl, device );
         CheckStatus( d1, DeviceControlStatus.HasControl );
         CheckStatus( d2, DeviceControlStatus.OutOfControl );
-        device.ExternalConfiguration.Message.Should().Be( "WillChange" );
+        device.ExternalConfiguration.Message.ShouldBe( "WillChange" );
 
         await d2.ModifyThrowAsync( TestHelper.Monitor, () =>
         {
@@ -126,44 +126,44 @@ public class LocalConfigurationTests
         await ApplyLocalConfigAsync( d2, DeviceControlAction.SafeTakeControl, device );
         CheckStatus( d1, DeviceControlStatus.HasControl );
         CheckStatus( d2, DeviceControlStatus.OutOfControl );
-        device.ExternalConfiguration.Message.Should().NotBe( "WillChange2" );
+        device.ExternalConfiguration.Message.ShouldNotBe( "WillChange2" );
 
         await ApplyLocalConfigAsync( d2, DeviceControlAction.SafeReleaseControl, device );
         CheckStatus( d1, DeviceControlStatus.HasControl );
         CheckStatus( d2, DeviceControlStatus.OutOfControl );
-        device.ExternalConfiguration.Message.Should().NotBe( "WillChange2" );
+        device.ExternalConfiguration.Message.ShouldNotBe( "WillChange2" );
 
         await ApplyLocalConfigAsync( d1, DeviceControlAction.SafeReleaseControl, device );
         CheckStatus( d1, DeviceControlStatus.HasSharedControl );
         CheckStatus( d2, DeviceControlStatus.HasSharedControl );
-        device.ExternalConfiguration.Message.Should().NotBe( "WillChange2" );
+        device.ExternalConfiguration.Message.ShouldNotBe( "WillChange2" );
 
         await ApplyLocalConfigAsync( d2, DeviceControlAction.SafeTakeControl, device );
         CheckStatus( d1, DeviceControlStatus.OutOfControl );
         CheckStatus( d2, DeviceControlStatus.HasControl );
-        device.ExternalConfiguration.Message.Should().Be( "WillChange2" );
+        device.ExternalConfiguration.Message.ShouldBe( "WillChange2" );
 
         await ApplyLocalConfigAsync( d1, DeviceControlAction.ReleaseControl, device );
         CheckStatus( d1, DeviceControlStatus.HasSharedControl );
         CheckStatus( d2, DeviceControlStatus.HasSharedControl );
-        device.ExternalConfiguration.Message.Should().Be( "WillChange" );
+        device.ExternalConfiguration.Message.ShouldBe( "WillChange" );
 
         await ApplyLocalConfigAsync( d2, DeviceControlAction.TakeControl, device );
         CheckStatus( d1, DeviceControlStatus.OutOfControl );
         CheckStatus( d2, DeviceControlStatus.HasControl );
-        device.ExternalConfiguration.Message.Should().Be( "WillChange2" );
+        device.ExternalConfiguration.Message.ShouldBe( "WillChange2" );
 
         await ApplyLocalConfigAsync( d1, DeviceControlAction.TakeControl, device );
         CheckStatus( d1, DeviceControlStatus.HasControl );
         CheckStatus( d2, DeviceControlStatus.OutOfControl );
-        device.ExternalConfiguration.Message.Should().Be( "WillChange" );
+        device.ExternalConfiguration.Message.ShouldBe( "WillChange" );
 
         void CheckStatus( ObservableDomain<Root> d, DeviceControlStatus s )
         {
             d.Read( TestHelper.Monitor, () =>
             {
-                d.Root.Default.DeviceControlStatus.Should().Be( s );
-                d.Root.Host.Devices["Default"].Status.Should().Be( s );
+                d.Root.Default.DeviceControlStatus.ShouldBe( s );
+                d.Root.Host.Devices["Default"].Status.ShouldBe( s );
             } );
         }
 
@@ -196,7 +196,7 @@ public class LocalConfigurationTests
 
         var host = new SampleDeviceHost();
 
-        (await host.EnsureDeviceAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.CreateAndStartSucceeded );
+        (await host.EnsureDeviceAsync( TestHelper.Monitor, config )).ShouldBe( DeviceApplyConfigurationResult.CreateAndStartSucceeded );
         var device = host["Default"];
         Debug.Assert( device != null );
         await device.WaitForSynchronizationAsync( considerDeferredCommands: false );
@@ -207,10 +207,10 @@ public class LocalConfigurationTests
         using var d1 = new ObservableDomain<Root>( TestHelper.Monitor, "Domain 1", startTimer: false, sc );
         using var d2 = new ObservableDomain<Root>( TestHelper.Monitor, "Domain 2", startTimer: false, sc );
 
-        d1.HasWaitingSidekicks.Should().BeTrue();
+        d1.HasWaitingSidekicks.ShouldBeTrue();
         await d1.ModifyThrowAsync( TestHelper.Monitor, null );
 
-        d2.HasWaitingSidekicks.Should().BeTrue();
+        d2.HasWaitingSidekicks.ShouldBeTrue();
         await d2.ModifyThrowAsync( TestHelper.Monitor, null );
 
         CheckStatus( d1, DeviceControlStatus.HasOwnership );
@@ -225,27 +225,27 @@ public class LocalConfigurationTests
         await ApplyLocalConfigAsync( d2, DeviceControlAction.TakeControl, device );
         CheckStatus( d1, DeviceControlStatus.HasOwnership );
         CheckStatus( d2, DeviceControlStatus.OutOfControlByConfiguration );
-        device.ControllerKey.Should().Be( "Domain 1" );
-        device.ExternalConfiguration.Message.Should().NotBe( "WillChange" );
+        device.ControllerKey.ShouldBe( "Domain 1" );
+        device.ExternalConfiguration.Message.ShouldNotBe( "WillChange" );
 
         await ApplyLocalConfigAsync( d2, DeviceControlAction.TakeOwnership, device );
         CheckStatus( d1, DeviceControlStatus.OutOfControlByConfiguration );
         CheckStatus( d2, DeviceControlStatus.HasOwnership );
-        device.ControllerKey.Should().Be( "Domain 2" );
-        device.ExternalConfiguration.Message.Should().Be( "WillChange" );
+        device.ControllerKey.ShouldBe( "Domain 2" );
+        device.ExternalConfiguration.Message.ShouldBe( "WillChange" );
 
         await ApplyLocalConfigAsync( d2, DeviceControlAction.ForceReleaseControl, device );
         CheckStatus( d1, DeviceControlStatus.HasSharedControl );
         CheckStatus( d2, DeviceControlStatus.HasSharedControl );
-        device.ControllerKey.Should().BeNull();
-        device.ExternalConfiguration.Message.Should().Be( "WillChange" );
+        device.ControllerKey.ShouldBeNull();
+        device.ExternalConfiguration.Message.ShouldBe( "WillChange" );
 
         void CheckStatus( ObservableDomain<Root> d, DeviceControlStatus s )
         {
             d.Read( TestHelper.Monitor, () =>
             {
-                d.Root.Default.DeviceControlStatus.Should().Be( s );
-                d.Root.Host.Devices["Default"].Status.Should().Be( s );
+                d.Root.Default.DeviceControlStatus.ShouldBe( s );
+                d.Root.Host.Devices["Default"].Status.ShouldBe( s );
             } );
         }
 
@@ -278,7 +278,7 @@ public class LocalConfigurationTests
         };
         var host = new SampleDeviceHost();
 
-        (await host.EnsureDeviceAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.CreateAndStartSucceeded );
+        (await host.EnsureDeviceAsync( TestHelper.Monitor, config )).ShouldBe( DeviceApplyConfigurationResult.CreateAndStartSucceeded );
         var device = host["Default"];
         Debug.Assert( device != null );
         await device.WaitForSynchronizationAsync( considerDeferredCommands: false );
@@ -289,10 +289,10 @@ public class LocalConfigurationTests
         using var d1 = new ObservableDomain<Root>( TestHelper.Monitor, "Domain 1", startTimer: false, sc );
         using var d2 = new ObservableDomain<Root>( TestHelper.Monitor, "Domain 2", startTimer: false, sc );
 
-        d1.HasWaitingSidekicks.Should().BeTrue();
+        d1.HasWaitingSidekicks.ShouldBeTrue();
         await d1.ModifyThrowAsync( TestHelper.Monitor, null );
 
-        d2.HasWaitingSidekicks.Should().BeTrue();
+        d2.HasWaitingSidekicks.ShouldBeTrue();
         await d2.ModifyThrowAsync( TestHelper.Monitor, null );
 
         CheckStatus( d1, DeviceControlStatus.HasOwnership );
@@ -307,7 +307,7 @@ public class LocalConfigurationTests
         await ApplyLocalConfigAsync( d1, null, device );
         CheckStatus( d1, DeviceControlStatus.HasOwnership );
         CheckStatus( d2, DeviceControlStatus.OutOfControlByConfiguration );
-        device.ExternalConfiguration.Message.Should().Be( "WillChange" );
+        device.ExternalConfiguration.Message.ShouldBe( "WillChange" );
 
         await ApplyLocalConfigAsync( d2, DeviceControlAction.TakeOwnership, device );
         CheckStatus( d1, DeviceControlStatus.OutOfControlByConfiguration );
@@ -322,15 +322,15 @@ public class LocalConfigurationTests
         await ApplyLocalConfigAsync( d1, null, device );
         CheckStatus( d1, DeviceControlStatus.OutOfControlByConfiguration );
         CheckStatus( d2, DeviceControlStatus.HasOwnership );
-        device.ExternalConfiguration.Message.Should().NotBe( "WontChange" );
-        device.ExternalConfiguration.Message.Should().Be( "Not used here." );
+        device.ExternalConfiguration.Message.ShouldNotBe( "WontChange" );
+        device.ExternalConfiguration.Message.ShouldBe( "Not used here." );
 
         void CheckStatus( ObservableDomain<Root> d, DeviceControlStatus s )
         {
             d.Read( TestHelper.Monitor, () =>
             {
-                d.Root.Default.DeviceControlStatus.Should().Be( s );
-                d.Root.Host.Devices["Default"].Status.Should().Be( s );
+                d.Root.Default.DeviceControlStatus.ShouldBe( s );
+                d.Root.Host.Devices["Default"].Status.ShouldBe( s );
             } );
         }
 
@@ -366,20 +366,20 @@ public class LocalConfigurationTests
         using var d1 = new ObservableDomain<Root>( TestHelper.Monitor, "Domain 1", startTimer: false, sp );
         using var d2 = new ObservableDomain<Root>( TestHelper.Monitor, "Domain 2", startTimer: false, sp );
 
-        d1.HasWaitingSidekicks.Should().BeTrue();
+        d1.HasWaitingSidekicks.ShouldBeTrue();
         await d1.ModifyThrowAsync( TestHelper.Monitor, null );
 
-        d2.HasWaitingSidekicks.Should().BeTrue();
+        d2.HasWaitingSidekicks.ShouldBeTrue();
         await d2.ModifyThrowAsync( TestHelper.Monitor, null );
 
 
         await d1.ModifyThrowAsync( TestHelper.Monitor, () =>
         {
-            d1.Root.Default.IsBoundDevice.Should().BeFalse();
-            d1.Root.Default.DeviceControlStatus.Should().Be( DeviceControlStatus.MissingDevice );
-            d1.Root.Default.DeviceConfiguration.Should().BeNull();
-            d1.Root.Default.Message.Should().BeNull();
-            d1.Root.Default.IsRunning.Should().BeNull();
+            d1.Root.Default.IsBoundDevice.ShouldBeFalse();
+            d1.Root.Default.DeviceControlStatus.ShouldBe( DeviceControlStatus.MissingDevice );
+            d1.Root.Default.DeviceConfiguration.ShouldBeNull();
+            d1.Root.Default.Message.ShouldBeNull();
+            d1.Root.Default.IsRunning.ShouldBeNull();
 
             d1.Root.Default.LocalConfiguration.Value.Name = "Default";
             d1.Root.Default.LocalConfiguration.Value.Status = DeviceConfigurationStatus.AlwaysRunning;
@@ -399,8 +399,8 @@ public class LocalConfigurationTests
         {
             d.Read( TestHelper.Monitor, () =>
             {
-                d.Root.Default.DeviceControlStatus.Should().Be( s );
-                d.Root.Host.Devices["Default"].Status.Should().Be( s );
+                d.Root.Default.DeviceControlStatus.ShouldBe( s );
+                d.Root.Host.Devices["Default"].Status.ShouldBe( s );
             } );
         }
 
@@ -435,7 +435,7 @@ public class LocalConfigurationTests
         var host = new SampleDeviceHost();
         sc.Add( host );
 
-        (await host.EnsureDeviceAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.CreateAndStartSucceeded );
+        (await host.EnsureDeviceAsync( TestHelper.Monitor, config )).ShouldBe( DeviceApplyConfigurationResult.CreateAndStartSucceeded );
         var device = host["Default"];
         Debug.Assert( device != null );
         await device.WaitForSynchronizationAsync( considerDeferredCommands: false );
@@ -444,17 +444,17 @@ public class LocalConfigurationTests
 
         await d.ModifyThrowAsync( TestHelper.Monitor, () =>
         {
-            d.Root.Default.DeviceConfiguration.Should().NotBeNull();
-            d.Root.Default.LocalConfiguration.Value.Should().NotBeNull();
+            d.Root.Default.DeviceConfiguration.ShouldNotBeNull();
+            d.Root.Default.LocalConfiguration.Value.ShouldNotBeNull();
 
-            d.Root.Default.LocalConfiguration.UpdateIsDirty().Should().BeFalse();
-            d.Root.Default.LocalConfiguration.IsDirty.Should().BeFalse();
+            d.Root.Default.LocalConfiguration.UpdateIsDirty().ShouldBeFalse();
+            d.Root.Default.LocalConfiguration.IsDirty.ShouldBeFalse();
 
             d.Root.Default.LocalConfiguration.Value.Message = "WillChange2";
             d.Root.Default.LocalConfiguration.Value.PeriodMilliseconds = 4000;
 
-            d.Root.Default.LocalConfiguration.UpdateIsDirty().Should().BeTrue();
-            d.Root.Default.LocalConfiguration.IsDirty.Should().BeTrue();
+            d.Root.Default.LocalConfiguration.UpdateIsDirty().ShouldBeTrue();
+            d.Root.Default.LocalConfiguration.IsDirty.ShouldBeTrue();
 
         } );
 
@@ -487,7 +487,7 @@ public class LocalConfigurationTests
             } );
             ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, obs );
         }
-        error.Should().BeFalse( "There should be no error." );
+        error.ShouldBeFalse( "There should be no error." );
     }
 
     [Test]
@@ -516,7 +516,7 @@ public class LocalConfigurationTests
             } );
             ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, obs );
         }
-        error.Should().BeFalse( "There should be no error." );
+        error.ShouldBeFalse( "There should be no error." );
     }
 
     [Test]
@@ -534,7 +534,7 @@ public class LocalConfigurationTests
 
         sc.Add( host );
 
-        (await host.EnsureDeviceAsync( TestHelper.Monitor, config )).Should().Be( DeviceApplyConfigurationResult.CreateAndStartSucceeded );
+        (await host.EnsureDeviceAsync( TestHelper.Monitor, config )).ShouldBe( DeviceApplyConfigurationResult.CreateAndStartSucceeded );
         var device = host["Default"];
         Debug.Assert( device != null );
         await device.WaitForSynchronizationAsync( considerDeferredCommands: false );
@@ -544,17 +544,17 @@ public class LocalConfigurationTests
 
         await d.ModifyThrowAsync( TestHelper.Monitor, () =>
         {
-            d.Root.Default.DeviceConfiguration.Should().NotBeNull();
-            d.Root.Default.LocalConfiguration.Value.Should().NotBeNull();
+            d.Root.Default.DeviceConfiguration.ShouldNotBeNull();
+            d.Root.Default.LocalConfiguration.Value.ShouldNotBeNull();
 
-            d.Root.Default.LocalConfiguration.IsDirty.Should().Be( d.Root.Default._dirtyRaisedEventValue );
+            d.Root.Default.LocalConfiguration.IsDirty.ShouldBe( d.Root.Default._dirtyRaisedEventValue );
 
             d.Root.Default.LocalConfiguration.Value.Message = "WillChange2";
             d.Root.Default.LocalConfiguration.Value.PeriodMilliseconds = 4000;
 
-            d.Root.Default.LocalConfiguration.IsDirty.Should().Be( d.Root.Default._dirtyRaisedEventValue );
+            d.Root.Default.LocalConfiguration.IsDirty.ShouldBe( d.Root.Default._dirtyRaisedEventValue );
 
-            d.Root.Default.LocalConfiguration.UpdateIsDirty().Should().BeTrue();
+            d.Root.Default.LocalConfiguration.UpdateIsDirty().ShouldBeTrue();
 
 
         } );

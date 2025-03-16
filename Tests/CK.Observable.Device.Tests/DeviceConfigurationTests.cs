@@ -1,7 +1,7 @@
 using CK.BinarySerialization;
 using CK.Core;
 using CK.DeviceModel;
-using FluentAssertions;
+using Shouldly;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
@@ -41,20 +41,20 @@ public class DeviceConfigurationTests
             device1.LocalConfiguration.Value = config;
             device1.LocalConfiguration.SendDeviceConfigureCommand();
             // We have to wait for the event to be handled.
-            device1.IsBoundDevice.Should().BeFalse();
-            device1.DeviceConfiguration.Should().BeNull();
+            device1.IsBoundDevice.ShouldBeFalse();
+            device1.DeviceConfiguration.ShouldBeNull();
         } );
         Debug.Assert( device1 != null );
         await Task.Delay( 2000 );
 
         obs.Read( TestHelper.Monitor, () =>
         {
-            device1.IsBoundDevice.Should().BeTrue( "The ObservableDevice has created its Device!" );
+            device1.IsBoundDevice.ShouldBeTrue( "The ObservableDevice has created its Device!" );
             Debug.Assert( device1.DeviceConfiguration != null );
-            ((SampleDeviceConfiguration)device1.DeviceConfiguration).Message.Should().Be( "Hello World!" );
+            ((SampleDeviceConfiguration)device1.DeviceConfiguration).Message.ShouldBe( "Hello World!" );
             // The ObservableDevice.Configuration is a safe clone.
-            device1.DeviceConfiguration.Should().NotBeSameAs( config );
-            device1.DeviceConfiguration.Should().BeEquivalentTo( config );
+            device1.DeviceConfiguration.ShouldNotBeSameAs( config );
+            device1.DeviceConfiguration.ShouldBe( config );
         } );
 
         // Even if the ObservableDevice.Configuration is a safe clone and COULD be used to reconfigure the device,
@@ -70,7 +70,7 @@ public class DeviceConfigurationTests
 
         obs.Read( TestHelper.Monitor, () =>
         {
-            ((SampleDeviceConfiguration)device1.DeviceConfiguration!).Message.Should().Be( "Hello World!" );
+            ((SampleDeviceConfiguration)device1.DeviceConfiguration!).Message.ShouldBe( "Hello World!" );
         } );
 
         // By sending the destroy command from the domain, the Device is destroyed...
@@ -82,8 +82,8 @@ public class DeviceConfigurationTests
 
         obs.Read( TestHelper.Monitor, () =>
         {
-            device1.IsBoundDevice.Should().BeFalse( "The Device has been destroyed." );
-            device1.DeviceConfiguration.Should().BeNull();
+            device1.IsBoundDevice.ShouldBeFalse( "The Device has been destroyed." );
+            device1.DeviceConfiguration.ShouldBeNull();
         } );
     }
 
@@ -129,15 +129,15 @@ public class DeviceConfigurationTests
 
         obs.Read( TestHelper.Monitor, () =>
         {
-            obs.Root.OHost.Devices.Should().BeEmpty( "Sidekick instantiation is deferred to the first transaction." );
+            obs.Root.OHost.Devices.ShouldBeEmpty( "Sidekick instantiation is deferred to the first transaction." );
         } );
-        obs.HasWaitingSidekicks.Should().BeTrue( "This indicates that at least one sidekick should be handled." );
+        obs.HasWaitingSidekicks.ShouldBeTrue( "This indicates that at least one sidekick should be handled." );
 
         await obs.ModifyThrowAsync( TestHelper.Monitor, null );
 
         obs.Read( TestHelper.Monitor, () =>
         {
-            obs.Root.OHost.Devices.Should().NotBeEmpty( "Sidekick instantiation done." );
+            obs.Root.OHost.Devices.ShouldNotBeEmpty( "Sidekick instantiation done." );
         } );
 
     }
@@ -167,14 +167,14 @@ public class DeviceConfigurationTests
             await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 var oDevice = new OSampleDevice( "TheDevice" );
-                obs.Root.OHost.Devices["TheDevice"].Object.Should().BeSameAs( oDevice );
-                oDevice.IsBoundDevice.Should().BeFalse();
-                oDevice.DeviceControlStatus.Should().Be( DeviceControlStatus.MissingDevice );
+                obs.Root.OHost.Devices["TheDevice"].Object.ShouldBeSameAs( oDevice );
+                oDevice.IsBoundDevice.ShouldBeFalse();
+                oDevice.DeviceControlStatus.ShouldBe( DeviceControlStatus.MissingDevice );
                 var c = oDevice.LocalConfiguration.Value;
-                c.CheckValid( TestHelper.Monitor ).Should().BeTrue( "An empty configuration is valid." );
+                c.CheckValid( TestHelper.Monitor ).ShouldBeTrue( "An empty configuration is valid." );
                 c.Status = DeviceConfigurationStatus.Runnable;
                 c.PeriodMilliseconds = 3712;
-                c.CheckValid( TestHelper.Monitor ).Should().BeTrue();
+                c.CheckValid( TestHelper.Monitor ).ShouldBeTrue();
                 oDevice.LocalConfiguration.SendDeviceConfigureCommand( initialConfiAction );
             } );
 
@@ -187,8 +187,8 @@ public class DeviceConfigurationTests
             {
                 var oDevice = obs.Root.OHost.Devices["TheDevice"].Object;
                 Debug.Assert( oDevice != null );
-                oDevice.DeviceControlStatus.Should().Be( expectedControlStatus );
-                oDevice.LocalConfiguration.IsDirty.Should().BeFalse();
+                oDevice.DeviceControlStatus.ShouldBe( expectedControlStatus );
+                oDevice.LocalConfiguration.IsDirty.ShouldBeFalse();
             } );
             TestHelper.Monitor.Info( "Saving and disposing domain." );
             obs.Save( TestHelper.Monitor, memory );
@@ -209,20 +209,20 @@ public class DeviceConfigurationTests
             {
                 var oDevice = obs.Root.OHost.Devices["TheDevice"].Object;
                 Debug.Assert( oDevice != null );
-                oDevice.DeviceConfiguration.Should().BeNull();
-                oDevice.LocalConfiguration.Should().NotBeNull();
-                oDevice.DeviceControlStatus.Should().Be( expectedControlStatus );
+                oDevice.DeviceConfiguration.ShouldBeNull();
+                oDevice.LocalConfiguration.ShouldNotBeNull();
+                oDevice.DeviceControlStatus.ShouldBe( expectedControlStatus );
                 //if( clearDeviceHost )
                 //{
-                //    oDevice.DeviceConfiguration.Should().BeNull();
-                //    oDevice.DeviceControlStatus.Should().Be( DeviceControlStatus.MissingDevice );
+                //    oDevice.DeviceConfiguration.ShouldBeNull();
+                //    oDevice.DeviceControlStatus.ShouldBe( DeviceControlStatus.MissingDevice );
                 //}
                 //else
                 {
-                    oDevice.DeviceConfiguration.Should().NotBeNull();
-                    oDevice.DeviceControlStatus.Should().Be( expectedControlStatus );
+                    oDevice.DeviceConfiguration.ShouldNotBeNull();
+                    oDevice.DeviceControlStatus.ShouldBe( expectedControlStatus );
                 }
-                oDevice.IsBoundDevice.Should().BeTrue();
+                oDevice.IsBoundDevice.ShouldBeTrue();
             } );
         }
 

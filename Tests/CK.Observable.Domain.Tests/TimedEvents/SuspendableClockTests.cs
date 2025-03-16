@@ -1,6 +1,6 @@
 using CK.Core;
 using CK.Observable.Domain.Tests.Sample;
-using FluentAssertions;
+using Shouldly;
 using NUnit.Framework;
 using System;
 using System.Collections.Concurrent;
@@ -38,24 +38,26 @@ public class SuspendableClockTests
             await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 counter = new StupidAutoCounter( deltaTime );
-                counter.IsRunning.Should().BeTrue();
+                counter.IsRunning.ShouldBeTrue();
 
                 clock = new SuspendableClock();
                 counter.SuspendableClock = clock;
 
-                clock.IsActive.Should().BeTrue();
-                counter.IsRunning.Should().BeTrue();
+                clock.IsActive.ShouldBeTrue();
+                counter.IsRunning.ShouldBeTrue();
 
             } );
+            counter.ShouldNotBeNull();
+            clock.ShouldNotBeNull();
 
             int intermediateCount = 0;
             Thread.Sleep( deltaTime * 6 );
             await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 TestHelper.Monitor.Trace( $"counter.Count = {counter.Count}." );
-                (intermediateCount = counter.Count).Should().Match( c => c == 6 || c == 7 );
+                (intermediateCount = counter.Count).ShouldMatch( c => c == 6 || c == 7 );
                 clock.IsActive = false;
-                counter.IsRunning.Should().BeFalse( "The bound clock is suspended." );
+                counter.IsRunning.ShouldBeFalse( "The bound clock is suspended." );
 
             } );
 
@@ -63,12 +65,12 @@ public class SuspendableClockTests
             d.Read( TestHelper.Monitor, () =>
             {
                 TestHelper.Monitor.Trace( $"counter.Count = {counter.Count}." );
-                counter.Count.Should().Be( intermediateCount );
+                counter.Count.ShouldBe( intermediateCount );
             } );
             await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 clock.IsActive = true;
-                counter.IsRunning.Should().BeTrue( "Back to business." );
+                counter.IsRunning.ShouldBeTrue( "Back to business." );
 
             } );
 
@@ -76,7 +78,8 @@ public class SuspendableClockTests
             d.Read( TestHelper.Monitor, () =>
             {
                 TestHelper.Monitor.Trace( $"counter.Count = {counter.Count}." );
-                counter.Count.Should().BeCloseTo( intermediateCount + 5, 2 );
+                counter.Count.ShouldBeGreaterThan( intermediateCount + 5 - 2 );
+                counter.Count.ShouldBeLessThan( intermediateCount + 5 + 2 );
             } );
         }
     }
@@ -101,7 +104,7 @@ public class SuspendableClockTests
             }
             r.Elapsed += Reminder_Elapsed;
             r.SuspendableClock = c;
-            r.IsActive.Should().BeTrue( "The clock is active and the duetime is later." );
+            r.IsActive.ShouldBeTrue( "The clock is active and the duetime is later." );
 
             initialExpected = r.DueTimeUtc;
         } );
@@ -114,12 +117,12 @@ public class SuspendableClockTests
             var r = handler.Domain.TimeManager.Reminders.Single();
             if( mode == "CumulateUnloadedTime = false" )
             {
-                r.IsActive.Should().BeFalse( "Already fired." );
-                r.DueTimeUtc.Should().Be( Util.UtcMinValue );
+                r.IsActive.ShouldBeFalse( "Already fired." );
+                r.DueTimeUtc.ShouldBe( Util.UtcMinValue );
             }
             else
             {
-                r.DueTimeUtc.Should().BeCloseTo( minUpdated, TimeSpan.FromMilliseconds( enoughMilliseconds / 6 ) );
+                r.DueTimeUtc.ShouldBe( minUpdated, tolerance: TimeSpan.FromMilliseconds( enoughMilliseconds / 6 ) );
             }
         } );
     }
@@ -137,7 +140,7 @@ public class SuspendableClockTests
         await handler.Domain.ModifyThrowAsync( TestHelper.Monitor, () =>
         {
             counter = new StupidAutoCounter( (3 * enoughMilliseconds) / 5 );
-            counter.IsRunning.Should().BeTrue();
+            counter.IsRunning.ShouldBeTrue();
             reminder = new ObservableReminder( DateTime.UtcNow.AddMilliseconds( enoughMilliseconds / 2 ) );
             reminder.Elapsed += Reminder_Elapsed;
 
@@ -146,25 +149,25 @@ public class SuspendableClockTests
             reminder.SuspendableClock = clock;
             clock.IsActiveChanged += Clock_IsActiveChanged;
 
-            clock.IsActive.Should().BeTrue();
-            counter.IsRunning.Should().BeTrue();
+            clock.IsActive.ShouldBeTrue();
+            counter.IsRunning.ShouldBeTrue();
 
         } );
 
 
         handler.Domain.Read( TestHelper.Monitor, () =>
         {
-            ClockIsActiveChanged.Should().BeFalse();
-            ReminderHasElapsed.Should().BeFalse();
-            counter.Count.Should().Be( 1, "AutoCounter fires immediately." );
+            ClockIsActiveChanged.ShouldBeFalse();
+            ReminderHasElapsed.ShouldBeFalse();
+            counter.Count.ShouldBe( 1, "AutoCounter fires immediately." );
         } );
 
         handler.ReloadNewDomain( TestHelper.Monitor, idempotenceCheck: false );
 
         handler.Domain.Read( TestHelper.Monitor, () =>
         {
-            ReminderHasElapsed.Should().BeFalse();
-            ClockIsActiveChanged.Should().BeFalse();
+            ReminderHasElapsed.ShouldBeFalse();
+            ClockIsActiveChanged.ShouldBeFalse();
 
             counter = handler.Domain.AllObjects.Items.OfType<StupidAutoCounter>().Single();
             clock = handler.Domain.AllInternalObjects.OfType<SuspendableClock>().Single();
@@ -175,22 +178,22 @@ public class SuspendableClockTests
         TestHelper.Monitor.Info( "End sleeping..." );
         handler.Domain.Read( TestHelper.Monitor, () =>
         {
-            ReminderHasElapsed.Should().BeTrue();
-            ClockIsActiveChanged.Should().BeFalse();
+            ReminderHasElapsed.ShouldBeTrue();
+            ClockIsActiveChanged.ShouldBeFalse();
 
-            reminder.IsActive.Should().BeFalse( "Reminder fired. Is is now inactive." );
-            counter.Count.Should().Be( 2 );
-            counter.IsRunning.Should().BeTrue();
+            reminder.IsActive.ShouldBeFalse( "Reminder fired. Is is now inactive." );
+            counter.Count.ShouldBe( 2 );
+            counter.IsRunning.ShouldBeTrue();
         } );
         await handler.Domain.ModifyThrowAsync( TestHelper.Monitor, () =>
         {
-            ClockIsActiveChanged.Should().BeFalse();
+            ClockIsActiveChanged.ShouldBeFalse();
             clock.IsActive = false;
-            ClockIsActiveChanged.Should().BeTrue();
+            ClockIsActiveChanged.ShouldBeTrue();
             ClockIsActiveChanged = false;
 
-            counter.IsRunning.Should().BeFalse();
-            reminder.IsActive.Should().BeFalse();
+            counter.IsRunning.ShouldBeFalse();
+            reminder.IsActive.ShouldBeFalse();
 
         } );
 
@@ -198,26 +201,26 @@ public class SuspendableClockTests
         handler.ReloadNewDomain( TestHelper.Monitor, idempotenceCheck: true );
         Thread.Sleep( enoughMilliseconds );
         handler.ReloadNewDomain( TestHelper.Monitor, idempotenceCheck: true );
-        ReminderHasElapsed.Should().BeFalse();
+        ReminderHasElapsed.ShouldBeFalse();
 
         handler.Domain.Read( TestHelper.Monitor, () =>
         {
             counter = handler.Domain.AllObjects.Items.OfType<StupidAutoCounter>().Single();
             clock = handler.Domain.AllInternalObjects.OfType<SuspendableClock>().Single();
             reminder = handler.Domain.TimeManager.Reminders.Single();
-            counter.Count.Should().Be( 2 );
+            counter.Count.ShouldBe( 2 );
         } );
 
         // Reactivating the clock: the counter starts again.
         await handler.Domain.ModifyThrowAsync( TestHelper.Monitor, () =>
         {
-            ClockIsActiveChanged.Should().BeFalse();
+            ClockIsActiveChanged.ShouldBeFalse();
             clock.IsActive = true;
-            ClockIsActiveChanged.Should().BeTrue();
+            ClockIsActiveChanged.ShouldBeTrue();
             ClockIsActiveChanged = false;
 
-            counter.IsRunning.Should().BeTrue();
-            reminder.IsActive.Should().BeFalse( "Reminder has already fired." );
+            counter.IsRunning.ShouldBeTrue();
+            reminder.IsActive.ShouldBeFalse( "Reminder has already fired." );
 
         } );
 
@@ -225,30 +228,30 @@ public class SuspendableClockTests
 
         handler.Domain.Read( TestHelper.Monitor, () =>
         {
-            ReminderHasElapsed.Should().BeFalse();
-            counter.Count.Should().Be( 4 );
-            reminder.IsActive.Should().BeFalse();
+            ReminderHasElapsed.ShouldBeFalse();
+            counter.Count.ShouldBe( 4 );
+            reminder.IsActive.ShouldBeFalse();
         } );
 
         TestHelper.Monitor.Info( "*** Reactivating the Reminder. ***" );
         await handler.Domain.ModifyThrowAsync( TestHelper.Monitor, () =>
         {
             reminder.DueTimeUtc = DateTime.UtcNow.AddMilliseconds( enoughMilliseconds / 2 );
-            reminder.IsActive.Should().BeTrue();
+            reminder.IsActive.ShouldBeTrue();
 
         } );
 
         handler.ReloadNewDomain( TestHelper.Monitor, idempotenceCheck: false );
         Thread.Sleep( enoughMilliseconds );
 
-        ReminderHasElapsed.Should().BeTrue();
-        ClockIsActiveChanged.Should().BeFalse();
+        ReminderHasElapsed.ShouldBeTrue();
+        ClockIsActiveChanged.ShouldBeFalse();
 
         await handler.Domain.ModifyThrowAsync( TestHelper.Monitor, () =>
         {
-            handler.Domain.TimeManager.IsRunning.Should().BeTrue();
+            handler.Domain.TimeManager.IsRunning.ShouldBeTrue();
             handler.Domain.TimeManager.Stop();
-            handler.Domain.TimeManager.IsRunning.Should().BeFalse();
+            handler.Domain.TimeManager.IsRunning.ShouldBeFalse();
             clock = handler.Domain.AllInternalObjects.OfType<SuspendableClock>().Single();
             clock.IsActive = false;
 

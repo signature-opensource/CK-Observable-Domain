@@ -1,5 +1,5 @@
 using CK.Core;
-using FluentAssertions;
+using Shouldly;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
@@ -50,9 +50,9 @@ public class ObservableEventHandlerTests
     public void ObservableDelegate_and_ObservableEventHandler_are_structs()
     {
         var e = new OE();
-        e.IsSet.Should().BeFalse();
+        e.IsSet.ShouldBeFalse();
         e.Set( this );
-        e.IsSet.Should().BeTrue();
+        e.IsSet.ShouldBeTrue();
     }
 
     #endregion
@@ -73,27 +73,27 @@ public class ObservableEventHandlerTests
     {
         {
             var h = new ObservableEventHandler<EventArgs>();
-            h.HasHandlers.Should().BeFalse();
+            h.HasHandlers.ShouldBeFalse();
             h.Add( StaticOnEvent, nameof( StaticOnEvent ) );
-            h.HasHandlers.Should().BeTrue();
-            h.Invoking( _ => _.Raise( this, EArgs ) )
-                .Should().Throw<Exception>().WithMessage( "Such an ugly test...(EventArgs)" );
+            h.HasHandlers.ShouldBeTrue();
+            Util.Invokable( () => h.Raise( this, EArgs ) )
+                .ShouldThrow<Exception>().Message.ShouldBe( "Such an ugly test...(EventArgs)" );
         }
         {
             var h = new ObservableEventHandler<EventMonitoredArgs>();
-            h.HasHandlers.Should().BeFalse();
+            h.HasHandlers.ShouldBeFalse();
             h.Add( StaticOnEvent, nameof( StaticOnEvent ) );
-            h.HasHandlers.Should().BeTrue();
-            h.Invoking( _ => _.Raise( this, MArgs ) )
-                .Should().Throw<Exception>().WithMessage( "Such an ugly test...(EventMonitoredArgs)" );
+            h.HasHandlers.ShouldBeTrue();
+            Util.Invokable( () => h.Raise( this, MArgs ) )
+                .ShouldThrow<Exception>().Message.ShouldBe( "Such an ugly test...(EventMonitoredArgs)" );
         }
         {
             var h = new ObservableEventHandler<MoreSpecializedEventArgs>();
-            h.HasHandlers.Should().BeFalse();
+            h.HasHandlers.ShouldBeFalse();
             h.Add( StaticOnEvent, nameof( StaticOnEvent ) );
-            h.HasHandlers.Should().BeTrue();
-            h.Invoking( _ => _.Raise( this, OArgs ) )
-                .Should().Throw<Exception>().WithMessage( "Such an ugly test...(MoreSpecializedEventArgs)" );
+            h.HasHandlers.ShouldBeTrue();
+            Util.Invokable( () => h.Raise( this, OArgs ) )
+                .ShouldThrow<Exception>().Message.ShouldBe( "Such an ugly test...(MoreSpecializedEventArgs)" );
         }
     }
 
@@ -118,16 +118,16 @@ public class ObservableEventHandlerTests
             h.Add( StaticOnEvent, nameof( StaticOnEvent ) );
             {
                 var h2 = TestHelper.SaveAndLoad( h, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<EventArgs>( r ) );
-                h2.HasHandlers.Should().BeTrue();
-                h2.Invoking( _ => _.Raise( this, EArgs ) )
-                                        .Should().Throw<Exception>().WithMessage( "Such an ugly test...(EventArgs)" );
+                h2.HasHandlers.ShouldBeTrue();
+                Util.Invokable( () => h2.Raise( this, EArgs ) )
+                                        .ShouldThrow<Exception>().Message.ShouldBe( "Such an ugly test...(EventArgs)" );
             }
             h.RemoveAll();
             {
                 var h2 = TestHelper.SaveAndLoad( h, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<EventArgs>( r ) );
-                h2.HasHandlers.Should().BeFalse();
-                h2.Invoking( _ => _.Raise( this, EArgs ) )
-                                        .Should().NotThrow();
+                h2.HasHandlers.ShouldBeFalse();
+                Util.Invokable( () => h2.Raise( this, EArgs ) )
+                                        .ShouldNotThrow();
             }
         }
         {
@@ -135,16 +135,16 @@ public class ObservableEventHandlerTests
             h.Add( StaticOnEvent, nameof( StaticOnEvent ) );
             {
                 var h2 = TestHelper.SaveAndLoad( h, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<EventMonitoredArgs>( r ) );
-                h2.HasHandlers.Should().BeTrue();
-                h2.Invoking( _ => _.Raise( this, MArgs ) )
-                                        .Should().Throw<Exception>().WithMessage( "Such an ugly test...(EventMonitoredArgs)" );
+                h2.HasHandlers.ShouldBeTrue();
+                Util.Invokable( () => h2.Raise( this, MArgs ) )
+                                        .ShouldThrow<Exception>().Message.ShouldBe( "Such an ugly test...(EventMonitoredArgs)" );
             }
             h.RemoveAll();
             {
                 var h2 = TestHelper.SaveAndLoad( h, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<EventMonitoredArgs>( r ) );
-                h2.HasHandlers.Should().BeFalse();
-                h2.Invoking( _ => _.Raise( this, MArgs ) )
-                                        .Should().NotThrow();
+                h2.HasHandlers.ShouldBeFalse();
+                Util.Invokable( () => h2.Raise( this, MArgs ) )
+                                        .ShouldNotThrow();
             }
         }
         {
@@ -152,16 +152,16 @@ public class ObservableEventHandlerTests
             h.Add( StaticOnEvent, nameof( StaticOnEvent ) );
             {
                 var h2 = TestHelper.SaveAndLoad( h, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<MoreSpecializedEventArgs>( r ) );
-                h2.HasHandlers.Should().BeTrue();
-                h2.Invoking( _ => _.Raise( this, OArgs ) )
-                                        .Should().Throw<Exception>().WithMessage( "Such an ugly test...(MoreSpecializedEventArgs)" );
+                h2.HasHandlers.ShouldBeTrue();
+                Util.Invokable( () => h2.Raise( this, OArgs ) )
+                                        .ShouldThrow<Exception>().Message.ShouldBe( "Such an ugly test...(MoreSpecializedEventArgs)" );
             }
             h.RemoveAll();
             {
                 var h2 = TestHelper.SaveAndLoad( h, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<MoreSpecializedEventArgs>( r ) );
-                h2.HasHandlers.Should().BeFalse();
-                h2.Invoking( _ => _.Raise( this, OArgs ) )
-                                        .Should().NotThrow();
+                h2.HasHandlers.ShouldBeFalse();
+                Util.Invokable( () => h2.Raise( this, OArgs ) )
+                                        .ShouldNotThrow();
             }
         }
     }
@@ -207,16 +207,16 @@ public class ObservableEventHandlerTests
         {
             _typeCalled = 0;
             var hM2 = TestHelper.SaveAndLoad( hM, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<EventMonitoredArgs>( r ) );
-            hM2.HasHandlers.Should().BeTrue();
+            hM2.HasHandlers.ShouldBeTrue();
             hM2.Raise( this, MArgs );
-            _typeCalled.Should().Be( 2 );
+            _typeCalled.ShouldBe( 2 );
         }
         {
             _typeCalled = 0;
             var hO2 = TestHelper.SaveAndLoad( hO, ( x, w ) => x.Write( w ), r => new ObservableEventHandler<MoreSpecializedEventArgs>( r ) );
-            hO2.HasHandlers.Should().BeTrue();
+            hO2.HasHandlers.ShouldBeTrue();
             hO2.Raise( this, OArgs );
-            _typeCalled.Should().Be( 3 );
+            _typeCalled.ShouldBe( 3 );
         }
     }
 
@@ -231,31 +231,31 @@ public class ObservableEventHandlerTests
                 Sample.Car c = new Sample.Car( "First Car" );
                 c.TestSpeedChanged += counter.Increment;
 
-                counter.Count.Should().Be( 0 );
+                counter.Count.ShouldBe( 0 );
                 c.TestSpeed = 89;
-                counter.Count.Should().Be( 1 );
+                counter.Count.ShouldBe( 1 );
                 counter.Destroy();
                 c.TestSpeed = 1;
-                counter.Count.Should().Be( 1 );
+                counter.Count.ShouldBe( 1 );
 
                 counter = new TestCounter();
                 var counter2 = new TestCounter();
                 c.TestSpeedChanged += counter.Increment;
                 c.TestSpeedChanged += counter2.Increment;
-                counter.Count.Should().Be( 0 );
-                counter2.Count.Should().Be( 0 );
+                counter.Count.ShouldBe( 0 );
+                counter2.Count.ShouldBe( 0 );
 
                 c.TestSpeed = 89;
-                counter.Count.Should().Be( 1 );
-                counter2.Count.Should().Be( 1 );
+                counter.Count.ShouldBe( 1 );
+                counter2.Count.ShouldBe( 1 );
                 counter.Destroy();
                 c.TestSpeed = 1;
-                counter.Count.Should().Be( 1 );
-                counter2.Count.Should().Be( 2 );
+                counter.Count.ShouldBe( 1 );
+                counter2.Count.ShouldBe( 2 );
                 counter2.Destroy();
                 c.TestSpeed = 2;
-                counter.Count.Should().Be( 1 );
-                counter2.Count.Should().Be( 2 );
+                counter.Count.ShouldBe( 1 );
+                counter2.Count.ShouldBe( 2 );
 
                 counter = new TestCounter();
                 counter2 = new TestCounter();
@@ -263,32 +263,32 @@ public class ObservableEventHandlerTests
                 c.TestSpeedChanged += counter.Increment;
                 c.TestSpeedChanged += counter2.Increment;
                 c.TestSpeedChanged += counter3.Increment;
-                counter.Count.Should().Be( 0 );
-                counter2.Count.Should().Be( 0 );
-                counter3.Count.Should().Be( 0 );
+                counter.Count.ShouldBe( 0 );
+                counter2.Count.ShouldBe( 0 );
+                counter3.Count.ShouldBe( 0 );
 
                 c.TestSpeed = 89;
-                counter.Count.Should().Be( 1 );
-                counter2.Count.Should().Be( 1 );
-                counter3.Count.Should().Be( 1 );
+                counter.Count.ShouldBe( 1 );
+                counter2.Count.ShouldBe( 1 );
+                counter3.Count.ShouldBe( 1 );
 
                 counter2.Destroy();
                 c.TestSpeed = 1;
-                counter.Count.Should().Be( 2 );
-                counter2.Count.Should().Be( 1 );
-                counter3.Count.Should().Be( 2 );
+                counter.Count.ShouldBe( 2 );
+                counter2.Count.ShouldBe( 1 );
+                counter3.Count.ShouldBe( 2 );
 
                 counter3.Destroy();
                 c.TestSpeed = 2;
-                counter.Count.Should().Be( 3 );
-                counter2.Count.Should().Be( 1 );
-                counter3.Count.Should().Be( 2 );
+                counter.Count.ShouldBe( 3 );
+                counter2.Count.ShouldBe( 1 );
+                counter3.Count.ShouldBe( 2 );
 
                 counter.Destroy();
                 c.TestSpeed = 3;
-                counter.Count.Should().Be( 3 );
-                counter2.Count.Should().Be( 1 );
-                counter3.Count.Should().Be( 2 );
+                counter.Count.ShouldBe( 3 );
+                counter2.Count.ShouldBe( 1 );
+                counter3.Count.ShouldBe( 2 );
             } );
         }
 

@@ -1,5 +1,5 @@
 using CK.Observable.Domain.Tests.Sample;
-using FluentAssertions;
+using Shouldly;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using System;
@@ -28,26 +28,27 @@ public partial class GarbageCollectorTests
             var p2 = new RootSample.Product( new RootSample.ProductInfo( "Pow2", 3712 ) );
             od.Root.ProductStateList.Add( p2 );
         } );
-        od.CurrentLostObjectTracker.Should().BeNull();
-        od.EnsureLostObjectTracker( TestHelper.Monitor ).HasIssues.Should().BeFalse();
-        od.CurrentLostObjectTracker.Should().BeSameAs( od.EnsureLostObjectTracker( TestHelper.Monitor ) );
+        od.CurrentLostObjectTracker.ShouldBeNull();
+        od.EnsureLostObjectTracker( TestHelper.Monitor ).HasIssues.ShouldBeFalse();
+        od.CurrentLostObjectTracker.ShouldBeSameAs( od.EnsureLostObjectTracker( TestHelper.Monitor ) );
 
         await od.ModifyThrowAsync( TestHelper.Monitor, () =>
         {
             od.Root.ProductStateList.RemoveAt( 0 );
         } );
 
-        od.EnsureLostObjectTracker( TestHelper.Monitor ).HasIssues.Should().BeTrue();
-        od.CurrentLostObjectTracker.UnreacheableObservables.Should().HaveCount( 1 );
-        var lostPow = od.CurrentLostObjectTracker.UnreacheableObservables[0].As<RootSample.Product>();
-        lostPow.IsDestroyed.Should().BeFalse();
-        lostPow.ProductInfo.Name.Should().Be( "Pow" );
+        var tracker = od.EnsureLostObjectTracker( TestHelper.Monitor ).ShouldNotBeNull();
+        tracker.HasIssues.ShouldBeTrue();
+        od.CurrentLostObjectTracker.ShouldBeSameAs( tracker );
+        var lostPow = tracker.UnreacheableObservables.ShouldHaveSingleItem().ShouldBeOfType<RootSample.Product>();
+        lostPow.IsDestroyed.ShouldBeFalse();
+        lostPow.ProductInfo.Name.ShouldBe( "Pow" );
 
         var r = await od.GarbageCollectAsync( TestHelper.Monitor );
-        r.Should().BeTrue();
+        r.ShouldBeTrue();
 
-        lostPow.IsDestroyed.Should().BeTrue();
-        od.EnsureLostObjectTracker( TestHelper.Monitor ).HasIssues.Should().BeFalse();
+        lostPow.IsDestroyed.ShouldBeTrue();
+        od.EnsureLostObjectTracker( TestHelper.Monitor ).HasIssues.ShouldBeFalse();
     }
 
     [Test]
@@ -61,25 +62,31 @@ public partial class GarbageCollectorTests
             m.Internal = new InternalSample() { Name = "Demo" };
             od.Root.Objects.Add( m );
         } );
-        od.CurrentLostObjectTracker.Should().BeNull();
-        od.EnsureLostObjectTracker( TestHelper.Monitor ).HasIssues.Should().BeFalse();
-        od.CurrentLostObjectTracker.Should().BeSameAs( od.EnsureLostObjectTracker( TestHelper.Monitor ) );
+        od.CurrentLostObjectTracker.ShouldBeNull();
+        var initialTracker = od.EnsureLostObjectTracker( TestHelper.Monitor ).ShouldNotBeNull();
+        initialTracker.HasIssues.ShouldBeFalse( "No issue." );
+        od.CurrentLostObjectTracker.ShouldBeSameAs( initialTracker );
 
         await od.ModifyThrowAsync( TestHelper.Monitor, () =>
         {
-            od.Root.Objects[0].As<Machine>().Internal = null;
+            ((Machine)od.Root.Objects[0]).Internal = null;
         } );
 
-        od.EnsureLostObjectTracker( TestHelper.Monitor ).HasIssues.Should().BeTrue();
-        od.CurrentLostObjectTracker.UnreacheableInternals.Should().HaveCount( 1 );
-        var lost = od.CurrentLostObjectTracker.UnreacheableInternals[0].As<InternalSample>();
-        lost.IsDestroyed.Should().BeFalse();
-        lost.Name.Should().Be( "Demo" );
+        var tracker = od.EnsureLostObjectTracker( TestHelper.Monitor ).ShouldNotBeNull();
+        tracker.ShouldNotBeSameAs( initialTracker );
+        tracker.HasIssues.ShouldBeTrue( "Now we have an issue!" );
+        tracker.ShouldBeSameAs( od.CurrentLostObjectTracker );
+        tracker.UnreacheableInternals.Count.ShouldBe( 1 );
+        var lost = tracker.UnreacheableInternals[0]
+                    .ShouldBeOfType<InternalSample>()
+                    .ShouldMatch( lost => lost.Name == "Demo"
+                                          && !lost.IsDestroyed );
 
-        (await od.GarbageCollectAsync( TestHelper.Monitor )).Should().BeTrue();
+        (await od.GarbageCollectAsync( TestHelper.Monitor )).ShouldBeTrue();
 
-        lost.IsDestroyed.Should().BeTrue();
-        od.EnsureLostObjectTracker( TestHelper.Monitor ).HasIssues.Should().BeFalse();
+        lost.IsDestroyed.ShouldBeTrue();
+        od.EnsureLostObjectTracker( TestHelper.Monitor )
+            .ShouldNotBeNull().HasIssues.ShouldBeFalse( "Issue has been fixed." );
     }
 
     [Test]
@@ -97,10 +104,10 @@ public partial class GarbageCollectorTests
                 od.Root.TimedEvents.Add( t );
             }
         } );
-        od.CurrentLostObjectTracker.Should().BeNull();
-        od.EnsureLostObjectTracker( TestHelper.Monitor ).HasIssues.Should().BeFalse();
-        od.CurrentLostObjectTracker.Should().BeSameAs( od.EnsureLostObjectTracker( TestHelper.Monitor ) );
-        od.TimeManager.AllObservableTimedEvents.Should().HaveCount( 10 );
+        od.CurrentLostObjectTracker.ShouldBeNull();
+        od.EnsureLostObjectTracker( TestHelper.Monitor ).HasIssues.ShouldBeFalse();
+        od.CurrentLostObjectTracker.ShouldBeSameAs( od.EnsureLostObjectTracker( TestHelper.Monitor ) );
+        od.TimeManager.AllObservableTimedEvents.Count.ShouldBe( 10 );
 
         await od.ModifyThrowAsync( TestHelper.Monitor, () =>
         {
@@ -109,14 +116,14 @@ public partial class GarbageCollectorTests
                 od.Root.TimedEvents.RemoveAt( i );
             }
         } );
-        od.EnsureLostObjectTracker( TestHelper.Monitor ).HasIssues.Should().BeTrue();
-        od.TimeManager.AllObservableTimedEvents.Should().HaveCount( 10 );
-        od.CurrentLostObjectTracker.UnreacheableTimedObjects.Should().HaveCount( 5 );
+        od.EnsureLostObjectTracker( TestHelper.Monitor ).HasIssues.ShouldBeTrue();
+        od.TimeManager.AllObservableTimedEvents.Count.ShouldBe( 10 );
+        od.CurrentLostObjectTracker.UnreacheableTimedObjects.Count.ShouldBe( 5 );
 
-        (await od.GarbageCollectAsync( TestHelper.Monitor )).Should().BeTrue();
+        (await od.GarbageCollectAsync( TestHelper.Monitor )).ShouldBeTrue();
 
-        od.TimeManager.AllObservableTimedEvents.Should().HaveCount( 5 );
-        od.EnsureLostObjectTracker( TestHelper.Monitor ).HasIssues.Should().BeFalse();
+        od.TimeManager.AllObservableTimedEvents.Count.ShouldBe( 5 );
+        od.EnsureLostObjectTracker( TestHelper.Monitor ).HasIssues.ShouldBeFalse();
     }
 
     [Test]
@@ -153,17 +160,17 @@ public partial class GarbageCollectorTests
                 }
             }
         } );
-        od.TimeManager.AllObservableTimedEvents.Should().HaveCount( 10 );
+        od.TimeManager.AllObservableTimedEvents.Count.ShouldBe( 10 );
 
-        od.CurrentLostObjectTracker.Should().BeNull();
+        od.CurrentLostObjectTracker.ShouldBeNull();
         var c = od.EnsureLostObjectTracker( TestHelper.Monitor );
-        c.HasIssues.Should().BeTrue();
-        c.UnreacheableTimedObjects.Should().HaveCount( 6 );
+        c.HasIssues.ShouldBeTrue();
+        c.UnreacheableTimedObjects.Count.ShouldBe( 6 );
 
-        (await od.GarbageCollectAsync( TestHelper.Monitor )).Should().BeTrue();
+        (await od.GarbageCollectAsync( TestHelper.Monitor )).ShouldBeTrue();
 
-        od.TimeManager.AllObservableTimedEvents.Should().HaveCount( 4 );
-        od.EnsureLostObjectTracker( TestHelper.Monitor ).HasIssues.Should().BeFalse();
+        od.TimeManager.AllObservableTimedEvents.Count.ShouldBe( 4 );
+        od.EnsureLostObjectTracker( TestHelper.Monitor ).HasIssues.ShouldBeFalse();
     }
 
     [Test]
@@ -188,22 +195,22 @@ public partial class GarbageCollectorTests
                 }
             }
         } );
-        od.TimeManager.AllObservableTimedEvents.Should().HaveCount( 50 );
-        od.CurrentLostObjectTracker.Should().BeNull();
+        od.TimeManager.AllObservableTimedEvents.Count.ShouldBe( 50 );
+        od.CurrentLostObjectTracker.ShouldBeNull();
         var c = od.EnsureLostObjectTracker( TestHelper.Monitor );
-        c.HasIssues.Should().BeFalse();
-        c.UnusedPooledReminderCount.Should().Be( 0 );
+        c.HasIssues.ShouldBeFalse();
+        c.UnusedPooledReminderCount.ShouldBe( 0 );
 
         await Task.Delay( 250 );
 
         c = od.EnsureLostObjectTracker( TestHelper.Monitor );
-        c.UnusedPooledReminderCount.Should().Be( 25 );
+        c.UnusedPooledReminderCount.ShouldBe( 25 );
 
-        (await od.GarbageCollectAsync( TestHelper.Monitor )).Should().BeTrue();
+        (await od.GarbageCollectAsync( TestHelper.Monitor )).ShouldBeTrue();
 
         c = od.EnsureLostObjectTracker( TestHelper.Monitor );
-        od.TimeManager.AllObservableTimedEvents.Should().HaveCount( 50 );
-        c.UnusedPooledReminderCount.Should().Be( 25, "There is exactly half the number of unused." );
+        od.TimeManager.AllObservableTimedEvents.Count.ShouldBe( 50 );
+        c.UnusedPooledReminderCount.ShouldBe( 25, "There is exactly half the number of unused." );
 
     }
 
@@ -229,24 +236,24 @@ public partial class GarbageCollectorTests
                 }
             }
         } );
-        od.TimeManager.AllObservableTimedEvents.Should().HaveCount( 30 );
-        od.CurrentLostObjectTracker.Should().BeNull();
+        od.TimeManager.AllObservableTimedEvents.Count.ShouldBe( 30 );
+        od.CurrentLostObjectTracker.ShouldBeNull();
         var c = od.EnsureLostObjectTracker( TestHelper.Monitor );
-        c.HasIssues.Should().BeFalse();
-        c.UnusedPooledReminderCount.Should().Be( 0 );
+        c.HasIssues.ShouldBeFalse();
+        c.UnusedPooledReminderCount.ShouldBe( 0 );
 
         await Task.Delay( 250 );
 
         c = od.EnsureLostObjectTracker( TestHelper.Monitor );
-        c.UnusedPooledReminderCount.Should().Be( 20 );
-        c.ShouldTrimPooledReminders.Should().BeTrue();
+        c.UnusedPooledReminderCount.ShouldBe( 20 );
+        c.ShouldTrimPooledReminders.ShouldBeTrue();
 
-        (await od.GarbageCollectAsync( TestHelper.Monitor )).Should().BeTrue();
-        od.TimeManager.AllObservableTimedEvents.Should().HaveCount( 20 );
+        (await od.GarbageCollectAsync( TestHelper.Monitor )).ShouldBeTrue();
+        od.TimeManager.AllObservableTimedEvents.Count.ShouldBe( 20 );
 
         c = od.EnsureLostObjectTracker( TestHelper.Monitor );
-        c.UnusedPooledReminderCount.Should().Be( 10 );
-        c.ShouldTrimPooledReminders.Should().BeFalse();
+        c.UnusedPooledReminderCount.ShouldBe( 10 );
+        c.ShouldTrimPooledReminders.ShouldBeFalse();
 
         ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, od );
     }

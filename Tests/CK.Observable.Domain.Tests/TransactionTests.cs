@@ -1,5 +1,5 @@
 using CK.Observable.Domain.Tests.Sample;
-using FluentAssertions;
+using Shouldly;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
@@ -17,18 +17,18 @@ public class TransactionManagerTests
     {
         using( var d = new ObservableDomain(TestHelper.Monitor, "TEST", startTimer: true, client: new Clients.ConcreteMemoryTransactionProviderClient()))
         {
-            d.TransactionSerialNumber.Should().Be( 0 );
+            d.TransactionSerialNumber.ShouldBe( 0 );
             var result = await d.TryModifyAsync( TestHelper.Monitor, () =>
             {
                 new Car( "V1" );
                 new Car( "V2" );
-                d.AllObjects.Items.Should().HaveCount( 2 );
+                d.AllObjects.Items.Count.ShouldBe( 2 );
                 throw new Exception( "Failure." );
             } );
-            result.Errors.Should().NotBeEmpty();
-            d.TransactionSerialNumber.Should().Be( 0 );
-            d.AllObjects.Items.Should().HaveCount( 0 );
-            d.GetFreeList().Should().BeEmpty();
+            result.Errors.ShouldNotBeEmpty();
+            d.TransactionSerialNumber.ShouldBe( 0 );
+            d.AllObjects.Items.Count.ShouldBe( 0 );
+            d.GetFreeList().ShouldBeEmpty();
         }
     }
 
@@ -37,22 +37,22 @@ public class TransactionManagerTests
     {
         using( var d = await SampleDomain.CreateSampleAsync( new Clients.ConcreteMemoryTransactionProviderClient() ) )
         {
-            d.TransactionSerialNumber.Should().Be( 1 );
+            d.TransactionSerialNumber.ShouldBe( 1 );
             var r = await SampleDomain.TrySetPaulMincLastNameAsync( d, "No-More-Minc" );
-            r.Success.Should().BeTrue();
-            d.TransactionSerialNumber.Should().Be( 2 );
-            d.AllObjects.Items.OfType<Person>().Single( x => x.FirstName == "Paul" ).LastName.Should().Be( "No-More-Minc" );
+            r.Success.ShouldBeTrue();
+            d.TransactionSerialNumber.ShouldBe( 2 );
+            d.AllObjects.Items.OfType<Person>().Single( x => x.FirstName == "Paul" ).LastName.ShouldBe( "No-More-Minc" );
 
             r = await SampleDomain.TrySetPaulMincLastNameAsync( d, "Minc" );
-            r.Success.Should().BeTrue();
-            d.TransactionSerialNumber.Should().Be( 3 );
+            r.Success.ShouldBeTrue();
+            d.TransactionSerialNumber.ShouldBe( 3 );
 
             SampleDomain.CheckSampleGarage( d );
 
             r = await SampleDomain.TrySetPaulMincLastNameAsync( d, "No-More-Minc", throwException: true );
-            r.Success.Should().BeFalse();
-            r.Errors.Should().NotBeEmpty();
-            d.TransactionSerialNumber.Should().Be( 3 );
+            r.Success.ShouldBeFalse();
+            r.Errors.ShouldNotBeEmpty();
+            d.TransactionSerialNumber.ShouldBe( 3 );
 
             // The domain has been rolled back.
             SampleDomain.CheckSampleGarage( d );

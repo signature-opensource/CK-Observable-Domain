@@ -1,7 +1,7 @@
 using CK.BinarySerialization;
 using CK.Core;
 using CK.DeviceModel;
-using FluentAssertions;
+using Shouldly;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
@@ -86,10 +86,10 @@ public class DeviceControlTests
         using var d1 = new ObservableDomain<Root>( TestHelper.Monitor, "Domain n°1", false, serviceProvider: sp );
         using var d2 = new ObservableDomain<Root>( TestHelper.Monitor, "Domain n°2", false, serviceProvider: sp );
 
-        d1.HasWaitingSidekicks.Should().BeTrue();
+        d1.HasWaitingSidekicks.ShouldBeTrue();
         await d1.ModifyThrowAsync( TestHelper.Monitor, null );
 
-        d2.HasWaitingSidekicks.Should().BeTrue();
+        d2.HasWaitingSidekicks.ShouldBeTrue();
         await d2.ModifyThrowAsync( TestHelper.Monitor, null );
 
         // Nobody controls the device.
@@ -132,8 +132,8 @@ public class DeviceControlTests
         {
             d.Read( TestHelper.Monitor, () =>
             {
-                d.Root.TheOne.DeviceControlStatus.Should().Be( s );
-                d.Root.Host.Devices["TheOne"].Status.Should().Be( s );
+                d.Root.TheOne.DeviceControlStatus.ShouldBe( s );
+                d.Root.Host.Devices["TheOne"].Status.ShouldBe( s );
             } );
         }
 
@@ -172,10 +172,10 @@ public class DeviceControlTests
         using( var d2 = new ObservableDomain<Root>( TestHelper.Monitor, "Domain n°2", false, serviceProvider: sp ) )
         {
 
-            d1.HasWaitingSidekicks.Should().BeTrue();
+            d1.HasWaitingSidekicks.ShouldBeTrue();
             await d1.ModifyThrowAsync( TestHelper.Monitor, null );
 
-            d2.HasWaitingSidekicks.Should().BeTrue();
+            d2.HasWaitingSidekicks.ShouldBeTrue();
             await d2.ModifyThrowAsync( TestHelper.Monitor, null );
 
             CheckStatus( d1, DeviceControlStatus.HasOwnership );
@@ -198,8 +198,8 @@ public class DeviceControlTests
         {
             d.Read( TestHelper.Monitor, () =>
             {
-                d.Root.TheOne.DeviceControlStatus.Should().Be( s );
-                d.Root.Host.Devices["TheOne"].Status.Should().Be( s );
+                d.Root.TheOne.DeviceControlStatus.ShouldBe( s );
+                d.Root.Host.Devices["TheOne"].Status.ShouldBe( s );
             } );
         }
 
