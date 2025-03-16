@@ -61,9 +61,9 @@ public class DeviceHostTests
         // Here the Device exists but not the ObservableDevice.
         await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
         {
-            obs.Root.Host.Devices.Should().ContainKey( "TheOne" );
-            obs.Root.Host.Devices["TheOne"].Object.Should().BeNull( "No ObservableObject yet." );
-            obs.Root.Host.Devices["TheOne"].Status.Should().BeNull( "Since Object is null, DeviceControlStatus property also returns null." );
+            obs.Root.Host.Devices.Keys.ShouldContain( "TheOne" );
+            obs.Root.Host.Devices["TheOne"].Object.ShouldBeNull( "No ObservableObject yet." );
+            obs.Root.Host.Devices["TheOne"].Status.ShouldBeNull( "Since Object is null, DeviceControlStatus property also returns null." );
         } );
 
         // Now we create the TheOne ObservableObject.
@@ -137,10 +137,10 @@ public class DeviceHostTests
         obs.HasWaitingSidekicks.ShouldBeTrue();
         await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
         {
-            obs.Root.Host.Devices.Should().ContainKey( "TheOne", "The host is synchronized." );
-            obs.Root.Host.Devices["TheOne"].Object.Should().BeNull( "No ObservableObject yet." );
-            obs.Root.Host.Devices["TheOne"].Status.Should().BeNull( "Since Object is null, DeviceControlStatus property also returns null." );
-            obs.Root.Host.Devices["TheOne"].IsRunning.Should().BeFalse();
+            obs.Root.Host.Devices.Keys.ShouldContain( "TheOne", "The host is synchronized." );
+            obs.Root.Host.Devices["TheOne"].Object.ShouldBeNull( "No ObservableObject yet." );
+            obs.Root.Host.Devices["TheOne"].Status.ShouldBeNull( "Since Object is null, DeviceControlStatus property also returns null." );
+            obs.Root.Host.Devices["TheOne"].IsRunning.ShouldBeFalse();
         } );
         Debug.Assert( lastEvents != null );
         lastEvents.Select( e => e.ToString() ).ShouldBe( [
