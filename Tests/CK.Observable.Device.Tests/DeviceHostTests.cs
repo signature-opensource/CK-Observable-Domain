@@ -61,9 +61,9 @@ public class DeviceHostTests
         // Here the Device exists but not the ObservableDevice.
         await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
         {
-            obs.Root.Host.Devices.Keys.ShouldContain( "TheOne" );
-            obs.Root.Host.Devices["TheOne"].Object.ShouldBeNull( "No ObservableObject yet." );
-            obs.Root.Host.Devices["TheOne"].Status.ShouldBe( DeviceControlStatus.HasSharedControl );
+            obs.Root.Host.Devices.Should().ContainKey( "TheOne" );
+            obs.Root.Host.Devices["TheOne"].Object.Should().BeNull( "No ObservableObject yet." );
+            obs.Root.Host.Devices["TheOne"].Status.Should().BeNull( "Since Object is null, DeviceControlStatus property also returns null." );
         } );
 
         // Now we create the TheOne ObservableObject.
@@ -137,21 +137,21 @@ public class DeviceHostTests
         obs.HasWaitingSidekicks.ShouldBeTrue();
         await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
         {
-            obs.Root.Host.Devices.Keys.ShouldContain( "TheOne", "The host is synchronized." );
-            obs.Root.Host.Devices["TheOne"].Object.ShouldBeNull( "No ObservableObject yet." );
-            obs.Root.Host.Devices["TheOne"].Status.ShouldBe( DeviceControlStatus.HasSharedControl );
-            obs.Root.Host.Devices["TheOne"].IsRunning.ShouldBeFalse();
+            obs.Root.Host.Devices.Should().ContainKey( "TheOne", "The host is synchronized." );
+            obs.Root.Host.Devices["TheOne"].Object.Should().BeNull( "No ObservableObject yet." );
+            obs.Root.Host.Devices["TheOne"].Status.Should().BeNull( "Since Object is null, DeviceControlStatus property also returns null." );
+            obs.Root.Host.Devices["TheOne"].IsRunning.Should().BeFalse();
         } );
         Debug.Assert( lastEvents != null );
         lastEvents.Select( e => e.ToString() ).ShouldBe( [
             "NewObject 3 (ODeviceInfo<OSampleDevice>).",
-            "CollectionMapSet 2[TheOne] = Device: TheOne [Stopped, HasSharedControl]",
+            "CollectionMapSet 2[TheOne] = Device: TheOne [Stopped, ]",
             "NewProperty DeviceName -> 0.",
             "PropertyChanged 3.DeviceName = TheOne.",
             "NewProperty Object -> 1.",
             "PropertyChanged 3.Object = null.",
             "NewProperty Status -> 2.",
-            "PropertyChanged 3.Status = HasSharedControl.",
+            "PropertyChanged 3.Status = null.",
             "NewProperty IsRunning -> 3.",
             "PropertyChanged 3.IsRunning = False.",
             "NewProperty ControllerKey -> 4.",
