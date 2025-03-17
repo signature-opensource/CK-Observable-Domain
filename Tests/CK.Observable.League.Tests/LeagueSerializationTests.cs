@@ -1,5 +1,5 @@
 using CK.Core;
-using FluentAssertions;
+using Shouldly;
 using NUnit.Framework;
 using System;
 using System.Diagnostics;
@@ -50,14 +50,14 @@ public class LeagueSearializationTests
         var league2 = await ObservableLeague.LoadAsync( TestHelper.Monitor, store );
         Debug.Assert( league2 != null );
 
-        league2.Coordinator.Read( TestHelper.Monitor, ( m, d ) => d.Root.Domains.Count ).Should().Be( 1 );
+        league2.Coordinator.Read( TestHelper.Monitor, ( m, d ) => d.Root.Domains.Count ).ShouldBe( 1 );
 
         var first2 = league2.Find( "First" )!;
-        first2.Should().NotBeNull();
+        first2.ShouldNotBeNull();
         // Using the strongly typed IObservableDomain<T>.
         await using( var f = await first2.LoadAsync<Model.School>( TestHelper.Monitor ) )
         {
-            f.Read( TestHelper.Monitor, ( m, d ) => d.Root.Persons[0].FirstName ).Should().Be( "A" );
+            f.Read( TestHelper.Monitor, ( m, d ) => d.Root.Persons[0].FirstName ).ShouldBe( "A" );
         }
         await league2.CloseAsync( TestHelper.Monitor );
     }
@@ -107,24 +107,24 @@ public class LeagueSearializationTests
         var loader = league["Witness"];
         Debug.Assert( loader != null );
 
-        loader.IsLoaded.Should().BeFalse();
-        InstantiationTracker.ContructorCount.Should().Be( 0, "The ObservableDomain has NOT been created yet (DomainLifeCycleOption.Never)." );
-        InstantiationTracker.DeserializationCount.Should().Be( 0 );
-        InstantiationTracker.WriteCount.Should().Be( 0 );
+        loader.IsLoaded.ShouldBeFalse();
+        InstantiationTracker.ContructorCount.ShouldBe( 0, "The ObservableDomain has NOT been created yet (DomainLifeCycleOption.Never)." );
+        InstantiationTracker.DeserializationCount.ShouldBe( 0 );
+        InstantiationTracker.WriteCount.ShouldBe( 0 );
 
         // Loads/Unload it: this triggers its creation.
         await (await loader.LoadAsync<InstantiationTracker>( TestHelper.Monitor ))!.DisposeAsync( TestHelper.Monitor );
 
-        InstantiationTracker.ContructorCount.Should().Be( 1 );
-        InstantiationTracker.DeserializationCount.Should().Be( 0 );
-        InstantiationTracker.WriteCount.Should().Be( 3, "One save after load, one after modify, one after dispose." );
+        InstantiationTracker.ContructorCount.ShouldBe( 1 );
+        InstantiationTracker.DeserializationCount.ShouldBe( 0 );
+        InstantiationTracker.WriteCount.ShouldBe( 3, "One save after load, one after modify, one after dispose." );
 
         // Loads/Unload it again.
         await (await loader.LoadAsync<InstantiationTracker>( TestHelper.Monitor ))!.DisposeAsync( TestHelper.Monitor );
 
-        InstantiationTracker.ContructorCount.Should().Be( 1, "This will never change from now on: the domain is always deserialized." );
-        InstantiationTracker.DeserializationCount.Should().Be( 1 );
-        InstantiationTracker.WriteCount.Should().Be( 5 );
+        InstantiationTracker.ContructorCount.ShouldBe( 1, "This will never change from now on: the domain is always deserialized." );
+        InstantiationTracker.DeserializationCount.ShouldBe( 1 );
+        InstantiationTracker.WriteCount.ShouldBe( 5 );
 
         // Loads/Unload it again and creates a transaction.
         await using( var shell = await loader.LoadAsync<InstantiationTracker>( TestHelper.Monitor ) )
@@ -133,9 +133,9 @@ public class LeagueSearializationTests
             await shell.ModifyThrowAsync( TestHelper.Monitor, (m,d) => { } );
         }
 
-        InstantiationTracker.ContructorCount.Should().Be( 1, "This will never change from now on: the domain is always deserialized." );
-        InstantiationTracker.DeserializationCount.Should().Be( 2 );
-        InstantiationTracker.WriteCount.Should().Be( 8 );
+        InstantiationTracker.ContructorCount.ShouldBe( 1, "This will never change from now on: the domain is always deserialized." );
+        InstantiationTracker.DeserializationCount.ShouldBe( 2 );
+        InstantiationTracker.WriteCount.ShouldBe( 8 );
 
     }
 

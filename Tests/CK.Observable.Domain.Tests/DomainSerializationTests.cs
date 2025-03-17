@@ -1,6 +1,6 @@
 using CK.Core;
 using CK.Observable.Domain.Tests.Sample;
-using FluentAssertions;
+using Shouldly;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
@@ -41,7 +41,7 @@ public class DomainSerializationTests
     public void how_specialized_collections_can_handle_specific_serialization_issues()
     {
         var o = new B();
-        o.Called.Should().Be( "B" );
+        o.Called.ShouldBe( "B" );
     }
 
     [Test]
@@ -55,20 +55,20 @@ public class DomainSerializationTests
         } );
 
         using var d2 = TestHelper.CloneDomain( domain );
-        domain.IsDisposed.Should().BeTrue( "SaveAndLoad disposed it." );
+        domain.IsDisposed.ShouldBeTrue( "SaveAndLoad disposed it." );
 
         IReadOnlyList<ObservableEvent>? events = null;
         d2.TransactionDone += ( d, ev ) => events = ev.Events;
 
         var c = d2.AllObjects.Items.OfType<Car>().Single();
-        c.Name.Should().Be( "Hello" );
-        c.TestSpeed.Should().Be( 10 );
+        c.Name.ShouldBe( "Hello" );
+        c.TestSpeed.ShouldBe( 10 );
 
         await d2.ModifyThrowAsync( TestHelper.Monitor, () =>
         {
             c.TestSpeed = 10000;
         } );
-        events.Should().HaveCount( 1 );
+        events.Count.ShouldBe( 1 );
     }
 
     [Test]
@@ -80,8 +80,8 @@ public class DomainSerializationTests
         {
             defValue = new MultiPropertyType();
             var other = new MultiPropertyType();
-            domain.AllObjects.Items.First().Should().BeSameAs( defValue );
-            domain.AllObjects.Items.ElementAt( 1 ).Should().BeSameAs( other );
+            domain.AllObjects.Items.First().ShouldBeSameAs( defValue );
+            domain.AllObjects.Items.ElementAt( 1 ).ShouldBeSameAs( other );
         } );
 
         using var d2 = TestHelper.CloneDomain( domain );
@@ -92,13 +92,13 @@ public class DomainSerializationTests
             var other = d2.AllObjects.Items.OfType<MultiPropertyType>().ElementAt( 1 );
             other.ChangeAll( "Changed", 3, Guid.NewGuid() );
         } );
-        d2.AllObjects.Items.First().Should().Match( o => o.Equals( defValue ) );
-        d2.AllObjects.Items.ElementAt( 1 ).Should().Match( o => !o.Equals( defValue ) );
+        d2.AllObjects.Items.First().ShouldBe( defValue );
+        d2.AllObjects.Items.ElementAt( 1 ).ShouldNotBe( defValue );
 
         using( var d3 = TestHelper.CloneDomain( d2 ) )
         {
-            d3.AllObjects.Items.First().Should().Match( o => o.Equals( defValue ) );
-            d3.AllObjects.Items.ElementAt( 1 ).Should().Match( o => !o.Equals( defValue ) );
+            d3.AllObjects.Items.First().ShouldBe( defValue );
+            d3.AllObjects.Items.ElementAt( 1 ).ShouldNotBe( defValue );
         }
     }
 
@@ -120,8 +120,8 @@ public class DomainSerializationTests
 
         using var d2 = TestHelper.CloneDomain( domain );
         var g2 = d2.AllObjects.Items.OfType<Garage>().Single();
-        g2.CompanyName.Should().Be( "Hello" );
-        g2.OId.Should().Be( g1OId );
+        g2.CompanyName.ShouldBe( "Hello" );
+        g2.OId.ShouldBe( g1OId );
     }
 
 
@@ -138,15 +138,15 @@ public class DomainSerializationTests
         var pA1 = domain.AllObjects.Items.OfType<Person>().Single( p => p.FirstName == "A" );
         var pB1 = domain.AllObjects.Items.OfType<Person>().Single( p => p.FirstName == "B" );
 
-        pA1.Friend.Should().BeSameAs( pB1 );
-        pB1.Friend.Should().BeSameAs( pA1 );
+        pA1.Friend.ShouldBeSameAs( pB1 );
+        pB1.Friend.ShouldBeSameAs( pA1 );
 
         using var d2 = TestHelper.CloneDomain( domain );
         var pA2 = d2.AllObjects.Items.OfType<Person>().Single( p => p.FirstName == "A" );
         var pB2 = d2.AllObjects.Items.OfType<Person>().Single( p => p.FirstName == "B" );
 
-        pA2.Friend.Should().BeSameAs( pB2 );
-        pB2.Friend.Should().BeSameAs( pA2 );
+        pA2.Friend.ShouldBeSameAs( pB2 );
+        pB2.Friend.ShouldBeSameAs( pA2 );
     }
 
     [Test]
@@ -159,11 +159,11 @@ public class DomainSerializationTests
             p.Friend = p;
         } );
         var p1 = domain.AllObjects.Items.OfType<Person>().Single();
-        p1.Friend.Should().BeSameAs( p1 );
+        p1.Friend.ShouldBeSameAs( p1 );
 
         using var d2 = TestHelper.CloneDomain( domain );
         var p2 = d2.AllObjects.Items.OfType<Person>().Single();
-        p2.Friend.Should().BeSameAs( p2 );
+        p2.Friend.ShouldBeSameAs( p2 );
     }
 
     [Test]
@@ -252,15 +252,15 @@ public class DomainSerializationTests
         await d2.ModifyThrowAsync( TestHelper.Monitor, () =>
         {
             var list = d2.AllObjects.Items.OfType<ObservableList<object>>().Single();
-            list.Count.Should().Be( 4 );
+            list.Count.ShouldBe( 4 );
             foreach( IDestroyable o in list )
             {
-                o.IsDestroyed.Should().BeTrue();
+                o.IsDestroyed.ShouldBeTrue();
             }
         } );
 
         Debug.Assert( d2.CurrentLostObjectTracker != null );
-        d2.CurrentLostObjectTracker.ReferencedDestroyed.Should().HaveCount( 4 );
+        d2.CurrentLostObjectTracker.ReferencedDestroyed.Count.ShouldBe( 4 );
     }
 
     [Test]
@@ -273,42 +273,42 @@ public class DomainSerializationTests
         {
             var r = new ObservableReminder( DateTime.UtcNow.AddMilliseconds( 100 ) );
             r.Elapsed += OnElapsedFire;
-            d.TimeManager.IsRunning.Should().BeTrue();
-            d.TimeManager.Reminders.Single().Should().BeSameAs( r );
-            r.IsActive.Should().BeTrue();
+            d.TimeManager.IsRunning.ShouldBeTrue();
+            d.TimeManager.Reminders.Single().ShouldBeSameAs( r );
+            r.IsActive.ShouldBeTrue();
         } );
 
         using var d2 = TestHelper.CloneDomain( d, startTimer: false, pauseMilliseconds: 150 );
-        d.IsDisposed.Should().BeTrue( "Initial domain has been disposed.");
+        d.IsDisposed.ShouldBeTrue( "Initial domain has been disposed." );
 
         d2.Read( TestHelper.Monitor, () =>
         {
-            d2.TimeManager.IsRunning.Should().BeFalse();
-            d2.TimeManager.Reminders.Single().IsActive.Should().BeTrue( "Not triggered by Load." );
+            d2.TimeManager.IsRunning.ShouldBeFalse();
+            d2.TimeManager.Reminders.Single().IsActive.ShouldBeTrue( "Not triggered by Load." );
         } );
         Thread.Sleep( 100 );
         d2.Read( TestHelper.Monitor, () =>
         {
-            d2.TimeManager.IsRunning.Should().BeFalse();
-            d2.TimeManager.Reminders.Single().IsActive.Should().BeTrue( "Waiting for TimeManager.Start()." );
-            ElapsedFired.Should().BeFalse();
+            d2.TimeManager.IsRunning.ShouldBeFalse();
+            d2.TimeManager.Reminders.Single().IsActive.ShouldBeTrue( "Waiting for TimeManager.Start()." );
+            ElapsedFired.ShouldBeFalse();
         } );
         await d2.ModifyThrowAsync( TestHelper.Monitor, () =>
         {
-            d2.TimeManager.IsRunning.Should().BeFalse();
-            d2.TimeManager.Reminders.Single().IsActive.Should().BeTrue();
+            d2.TimeManager.IsRunning.ShouldBeFalse();
+            d2.TimeManager.Reminders.Single().IsActive.ShouldBeTrue();
         } );
 
-        ElapsedFired.Should().BeFalse( "Still waiting." );
+        ElapsedFired.ShouldBeFalse( "Still waiting." );
 
         await d2.ModifyThrowAsync( TestHelper.Monitor, () =>
         {
             d2.TimeManager.Start();
-            d2.TimeManager.IsRunning.Should().BeTrue();
-            d2.TimeManager.Reminders.Single().IsActive.Should().BeTrue( "Will be raised at the end of the transaction." );
+            d2.TimeManager.IsRunning.ShouldBeTrue();
+            d2.TimeManager.Reminders.Single().IsActive.ShouldBeTrue( "Will be raised at the end of the transaction." );
         } );
 
-        ElapsedFired.Should().BeTrue( "TimeManager.IsRunning: reminder has fired." );
+        ElapsedFired.ShouldBeTrue( "TimeManager.IsRunning: reminder has fired." );
 
     }
 

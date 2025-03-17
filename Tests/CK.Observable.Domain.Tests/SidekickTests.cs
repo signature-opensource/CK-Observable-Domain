@@ -1,5 +1,5 @@
 using CK.Core;
-using FluentAssertions;
+using Shouldly;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 using System;
@@ -70,7 +70,10 @@ public partial class SidekickTests
             {
                 monitor.Info( $"Registered: {o.GetType().Name} after deserialization." );
                 Debug.Assert( _ctorValue is not null );
-                _ctorValue.Value.Should().BeEquivalentTo( Manager.DeserializationInfo );
+                _ctorValue.Value.InactiveDelay.ShouldBe( Manager.DeserializationInfo.InactiveDelay );
+                _ctorValue.Value.IsRollback.ShouldBe( Manager.DeserializationInfo.IsRollback );
+                _ctorValue.Value.IsDangerousRollback.ShouldBe( Manager.DeserializationInfo.IsDangerousRollback );
+                _ctorValue.Value.IsSafeRollback.ShouldBe( Manager.DeserializationInfo.IsSafeRollback );
                 oS.DeserializationInfo = _ctorValue;
             }
             else
@@ -190,11 +193,11 @@ public partial class SidekickTests
             Domain.EnsureSidekicks();
             if( Domain.CurrentTransactionStatus.IsRegular() )
             {
-                SidekickIsHere.Should().BeTrue();   
+                SidekickIsHere.ShouldBeTrue();   
             }
             else
             {
-                SidekickIsHere.Should().BeFalse();
+                SidekickIsHere.ShouldBeFalse();
             }
         }
 
@@ -293,11 +296,11 @@ public partial class SidekickTests
             Domain.EnsureSidekicks();
             if( Domain.CurrentTransactionStatus.IsRegular() )
             {
-                SidekickIsHere.Should().BeTrue();
+                SidekickIsHere.ShouldBeTrue();
             }
             else
             {
-                SidekickIsHere.Should().BeFalse();
+                SidekickIsHere.ShouldBeFalse();
             }
         }
 
@@ -330,29 +333,29 @@ public partial class SidekickTests
                 if( type == "ObservableObject" )
                 {
                     o = mode == "UseSidekickAttribute" ? new ObjWithSKSimpleAttr() : new ObjWithSKSimple();
-                    obs.AllObjects.Items.Should().HaveCount( 1 );
+                    obs.AllObjects.Items.Count.ShouldBe( 1 );
                 }
                 else
                 {
                     o = mode == "UseSidekickAttribute" ? new InternalObjWithSKSimpleAttr() : new InternalObjWithSKSimple();
-                    obs.AllInternalObjects.Should().HaveCount( 1 );
+                    obs.AllInternalObjects.Count.ShouldBe( 1 );
                 }
                 o.CommandMessage = "Hello!";
             } );
         }
         logs.SingleOrDefault( l => l.Text == "Handling [Hello!]" )
-            .Should().NotBeNull();
+            .ShouldNotBeNull();
 
         if( mode == "UseSidekickAttribute" )
         {
-            logs.Any( logs => logs.Text.StartsWith( "Registered: " ) ).Should().BeFalse();
+            logs.Any( logs => logs.Text.StartsWith( "Registered: " ) ).ShouldBeFalse();
         }
         else
         {
             logs.SingleOrDefault( logs => logs.Text == (type == "ObservableObject"
                                                                 ? "Registered: ObjWithSKSimple while running sidekick."
                                                                 : "Registered: InternalObjWithSKSimple while running sidekick.") )
-                .Should().NotBeNull();
+                .ShouldNotBeNull();
         }
 
         using( TestHelper.Monitor.CollectEntries( out logs, LogLevelFilter.Info ) )
@@ -364,7 +367,7 @@ public partial class SidekickTests
                     ObjWithSKBase another = mode == "UseSidekickAttribute"
                                                         ? new ObjWithSKSimpleAttr()
                                                         : new ObjWithSKSimple();
-                    obs.AllObjects.Items.Should().HaveCount( 2 );
+                    obs.AllObjects.Items.Count.ShouldBe( 2 );
                     var o = (ObjWithSKBase)obs.AllObjects.Items.First();
                     o.CommandMessage = "FromO";
                     another.CommandMessage = "FromA";
@@ -374,25 +377,25 @@ public partial class SidekickTests
                     InternalObjWithSKBase another = mode == "UseSidekickAttribute"
                                                         ? new InternalObjWithSKSimpleAttr()
                                                         : new InternalObjWithSKSimple();
-                    obs.AllInternalObjects.Should().HaveCount( 2 );
+                    obs.AllInternalObjects.Count.ShouldBe( 2 );
                     var o = (InternalObjWithSKBase)obs.AllInternalObjects.First();
                     o.CommandMessage = "FromO";
                     another.CommandMessage = "FromA";
                 }
             } );
         }
-        logs.SingleOrDefault( l => l.Text == "Handling [FromO]" ).Should().NotBeNull();
-        logs.SingleOrDefault( l => l.Text == "Handling [FromA]" ).Should().NotBeNull();
+        logs.SingleOrDefault( l => l.Text == "Handling [FromO]" ).ShouldNotBeNull();
+        logs.SingleOrDefault( l => l.Text == "Handling [FromA]" ).ShouldNotBeNull();
         if( mode == "UseSidekickAttribute" )
         {
-            logs.Any( logs => logs.Text.StartsWith( "Registered: " ) ).Should().BeFalse();
+            logs.Any( logs => logs.Text.StartsWith( "Registered: " ) ).ShouldBeFalse();
         }
         else
         {
             logs.SingleOrDefault( logs => logs.Text == (type == "ObservableObject"
                                                                 ? "Registered: ObjWithSKSimple while running sidekick."
                                                                 : "Registered: InternalObjWithSKSimple while running sidekick.") )
-                .Should().NotBeNull();
+                .ShouldNotBeNull();
         }
 
         using( TestHelper.Monitor.CollectEntries( out logs, LogLevelFilter.Info ) )
@@ -416,20 +419,20 @@ public partial class SidekickTests
                 }
             } );
         }
-        obs.IsDisposed.Should().BeTrue( "SaveAndLoad disposed the original domain." );
+        obs.IsDisposed.ShouldBeTrue( "SaveAndLoad disposed the original domain." );
 
-        logs.SingleOrDefault( l => l.Text == "Handling [O!]" ).Should().NotBeNull();
-        logs.SingleOrDefault( l => l.Text == "Handling [A!]" ).Should().NotBeNull();
+        logs.SingleOrDefault( l => l.Text == "Handling [O!]" ).ShouldNotBeNull();
+        logs.SingleOrDefault( l => l.Text == "Handling [A!]" ).ShouldNotBeNull();
         if( mode == "UseSidekickAttribute" )
         {
-            logs.Any( logs => logs.Text.StartsWith( "Registered: " ) ).Should().BeFalse();
+            logs.Any( logs => logs.Text.StartsWith( "Registered: " ) ).ShouldBeFalse();
         }
         else
         {
             logs.Where( logs => logs.Text == (type == "ObservableObject"
                                                 ? "Registered: ObjWithSKSimple after deserialization."
                                                 : "Registered: InternalObjWithSKSimple after deserialization.") )
-                .Should().HaveCount( 2 );
+                .Count().ShouldBe( 2 );
         }
     }
 
@@ -446,8 +449,8 @@ public partial class SidekickTests
             var oO = new ObjWithSKSimple();
             // Since Domain.EnsureSidekicks() is called from their constructors, sidekick instantiation
             // has been done.
-            oI.SidekickIsHere.Should().BeTrue();
-            oO.SidekickIsHere.Should().BeTrue();
+            oI.SidekickIsHere.ShouldBeTrue();
+            oO.SidekickIsHere.ShouldBeTrue();
 
         } );
 

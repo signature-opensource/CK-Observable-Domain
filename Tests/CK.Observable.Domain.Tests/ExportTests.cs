@@ -1,6 +1,6 @@
 using CK.Core;
 using CK.Observable.Domain.Tests.Sample;
-using FluentAssertions;
+using Shouldly;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using System;
@@ -69,24 +69,24 @@ public class ExportTests
         {
             eventCollector.CollectEvent( d, false );
             eventCollector.LastEventChanged.Sync += TrackLastEvent;
-            d.TransactionSerialNumber.Should().Be( 0, "Nothing happened yet." );
+            d.TransactionSerialNumber.ShouldBe( 0, "Nothing happened yet." );
 
             var initial = d.ExportToString();
 
             await d.ModifyThrowAsync( TestHelper.Monitor, null );
             await Task.Delay( 20 );
 
-            d.TransactionSerialNumber.Should().Be( 1, "Even if nothing changed, TransactionNumber is incremented." );
-            LastEvent.TransactionNumber.Should().Be( 1 );
-            LastEvent.ExportedEvents.Should().BeEmpty();
+            d.TransactionSerialNumber.ShouldBe( 1, "Even if nothing changed, TransactionNumber is incremented." );
+            LastEvent.TransactionNumber.ShouldBe( 1 );
+            LastEvent.ExportedEvents.ShouldBeEmpty();
 
             // Transaction number 1 is not kept: null means "I can't give you the diff, do a full export!".
-            eventCollector.GetTransactionEvents( 0 ).Events.Should().BeNull();
-            eventCollector.GetTransactionEvents( 1 ).Events.Should().BeEmpty();
+            eventCollector.GetTransactionEvents( 0 ).Events.ShouldBeNull();
+            eventCollector.GetTransactionEvents( 1 ).Events.ShouldBeEmpty();
             // Transaction number 1 is not kept: empty means "I can't give you the diff: your transaction number is too big.".
             var r2 = eventCollector.GetTransactionEvents( 2 );
-            r2.TransactionNumber.Should().Be( 0 );
-            r2.Events.Should().BeEmpty();
+            r2.TransactionNumber.ShouldBe( 0 );
+            r2.Events.ShouldBeEmpty();
 
             await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
@@ -94,7 +94,7 @@ public class ExportTests
             } );
             await Task.Delay( 20 );
 
-            LastEvent.TransactionNumber.Should().Be( 2 );
+            LastEvent.TransactionNumber.ShouldBe( 2 );
             string t2 = LastEvent.ExportedEvents;
 
             await d.ModifyThrowAsync( TestHelper.Monitor, () =>
@@ -167,16 +167,16 @@ public class ExportTests
             var eventCollector = new JsonEventCollector( d );
             eventCollector.LastEventChanged.Sync += TrackLastEvent;
 
-            d.TransactionSerialNumber.Should().Be( 0, "Nothing happened yet." );
+            d.TransactionSerialNumber.ShouldBe( 0, "Nothing happened yet." );
             var r0 = eventCollector.GetTransactionEvents( 0 );
-            r0.TransactionNumber.Should().Be( 0 );
-            r0.Events.Should().BeNull( "Asking for 0: a full export must be made." );
+            r0.TransactionNumber.ShouldBe( 0 );
+            r0.Events.ShouldBeNull( "Asking for 0: a full export must be made." );
             var r1 = eventCollector.GetTransactionEvents( 1 );
-            r1.TransactionNumber.Should().Be( 0 );
-            r1.Events.Should().BeEmpty( "Asking for any number greater or equal to the current transaction number: empty means transaction number is too big." );
+            r1.TransactionNumber.ShouldBe( 0 );
+            r1.Events.ShouldBeEmpty( "Asking for any number greater or equal to the current transaction number: empty means transaction number is too big." );
             var r2 = eventCollector.GetTransactionEvents( 2 );
-            r2.TransactionNumber.Should().Be( 0 );
-            r2.Events.Should().BeEmpty();
+            r2.TransactionNumber.ShouldBe( 0 );
+            r2.Events.ShouldBeEmpty();
 
             ObservableList<int>? oneObject = null;
             await d.ModifyThrowAsync( TestHelper.Monitor, () =>
@@ -187,17 +187,17 @@ public class ExportTests
             Debug.Assert( oneObject != null );
             await Task.Delay( 20 );
 
-            d.TransactionSerialNumber.Should().Be( 1, "TransactionNumber is incremented." );
-            LastEvent.TransactionNumber.Should().Be( 1 );
-            LastEvent.ExportedEvents.Should().BeEmpty( "The event n°1 is special, it is sent empty: a full export must be made." );
+            d.TransactionSerialNumber.ShouldBe( 1, "TransactionNumber is incremented." );
+            LastEvent.TransactionNumber.ShouldBe( 1 );
+            LastEvent.ExportedEvents.ShouldBeEmpty( "The event n°1 is special, it is sent empty: a full export must be made." );
             var event1 = LastEvent;
 
             r0 = eventCollector.GetTransactionEvents( 0 );
-            r0.Events.Should().BeNull( "Asking for 0: a full export must always be made." );
+            r0.Events.ShouldBeNull( "Asking for 0: a full export must always be made." );
             r1 = eventCollector.GetTransactionEvents( 1 );
-            r1.Events.Should().BeEmpty( "Asking for any number greater or equal to the current transaction number: empty means transaction number is too big." );
+            r1.Events.ShouldBeEmpty( "Asking for any number greater or equal to the current transaction number: empty means transaction number is too big." );
             r2 = eventCollector.GetTransactionEvents( 2 );
-            r2.Events.Should().BeEmpty();
+            r2.Events.ShouldBeEmpty();
 
             await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
@@ -205,18 +205,18 @@ public class ExportTests
 
             } );
             await Task.Delay( 20 );
-            d.TransactionSerialNumber.Should().Be( 2, "TransactionNumber is incremented." );
-            LastEvent.TransactionNumber.Should().Be( 2 );
-            LastEvent.ExportedEvents.Should().Be( "[\"I\",0,0,1]" );
+            d.TransactionSerialNumber.ShouldBe( 2, "TransactionNumber is incremented." );
+            LastEvent.TransactionNumber.ShouldBe( 2 );
+            LastEvent.ExportedEvents.ShouldBe( "[\"I\",0,0,1]" );
             var event2 = LastEvent;
 
             r0 = eventCollector.GetTransactionEvents( 0 );
-            r0.TransactionNumber.Should().Be( 2 );
-            r0.Events.Should().BeNull( "Asking for 0: a full export must always be made." );
+            r0.TransactionNumber.ShouldBe( 2 );
+            r0.Events.ShouldBeNull( "Asking for 0: a full export must always be made." );
             r1 = eventCollector.GetTransactionEvents( 1 );
-            r1.Events.Should().BeEquivalentTo( new[] { event2 } );
+            r1.Events.ShouldBe( new[] { event2 } );
             r2 = eventCollector.GetTransactionEvents( 2 );
-            r2.Events.Should().BeEmpty();
+            r2.Events.ShouldBeEmpty();
 
             await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
@@ -225,17 +225,17 @@ public class ExportTests
             } );
             await Task.Delay( 20 );
 
-            d.TransactionSerialNumber.Should().Be( 3, "TransactionNumber is incremented." );
-            LastEvent.TransactionNumber.Should().Be( 3 );
-            LastEvent.ExportedEvents.Should().Be( "[\"D\",0]" );
+            d.TransactionSerialNumber.ShouldBe( 3, "TransactionNumber is incremented." );
+            LastEvent.TransactionNumber.ShouldBe( 3 );
+            LastEvent.ExportedEvents.ShouldBe( "[\"D\",0]" );
             var event3 = LastEvent;
 
             r0 = eventCollector.GetTransactionEvents( 0 );
-            r0.Events.Should().BeNull( "Asking for 0: a full export must always be made." );
+            r0.Events.ShouldBeNull( "Asking for 0: a full export must always be made." );
             r1 = eventCollector.GetTransactionEvents( 1 );
-            r1.Events.Should().BeEquivalentTo( new[] { event2, event3 } );
+            r1.Events.ShouldBe( new[] { event2, event3 } );
             r2 = eventCollector.GetTransactionEvents( 2 );
-            r2.Events.Should().BeEquivalentTo( new[] { event3 } );
+            r2.Events.ShouldBe( new[] { event3 } );
         }
     }
 
@@ -248,7 +248,7 @@ public class ExportTests
         using( var d = await SampleDomain.CreateSampleAsync() )
         {
             eventCollector.CollectEvent( d, false );
-            d.TransactionSerialNumber.Should().Be( 1 );
+            d.TransactionSerialNumber.ShouldBe( 1 );
 
             var initial = d.ExportToString();
             Debug.Assert( initial != null );
@@ -262,9 +262,9 @@ public class ExportTests
             await Task.Delay( 20 );
             Debug.Assert( LastEvent != null );
 
-            LastEvent.TransactionNumber.Should().Be( 2 );
+            LastEvent.TransactionNumber.ShouldBe( 2 );
             string t1 = LastEvent.ExportedEvents;
-            t1.Should().Be( "[\"C\",16,0,\"Signature Code\"]" );
+            t1.ShouldBe( "[\"C\",16,0,\"Signature Code\"]" );
 
             await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
@@ -273,7 +273,7 @@ public class ExportTests
                 var newOne = new Mechanic( g2 ) { FirstName = "X", LastName = "Y" };
             } );
             await Task.Delay( 20 );
-            LastEvent.TransactionNumber.Should().Be( 3 );
+            LastEvent.TransactionNumber.ShouldBe( 3 );
             string t2 = LastEvent.ExportedEvents;
 
             await d.ModifyThrowAsync( TestHelper.Monitor, () =>
@@ -282,9 +282,9 @@ public class ExportTests
                 spi.Destroy();
             } );
             await Task.Delay( 20 );
-            LastEvent.TransactionNumber.Should().Be( 4 );
+            LastEvent.TransactionNumber.ShouldBe( 4 );
             string t3 = LastEvent.ExportedEvents;
-            t3.Should().Be( "[\"R\",17,5],[\"D\",25]" );
+            t3.ShouldBe( "[\"R\",17,5],[\"D\",25]" );
 
             await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
@@ -292,9 +292,9 @@ public class ExportTests
                 g1.ReplacementCar.Remove( g1.Cars[0] );
             } );
             await Task.Delay( 20 );
-            LastEvent.TransactionNumber.Should().Be( 5 );
+            LastEvent.TransactionNumber.ShouldBe( 5 );
             string t4 = LastEvent.ExportedEvents;
-            t4.Should().Be( "[\"K\",3,{\"=\":4}]" );
+            t4.ShouldBe( "[\"K\",3,{\"=\":4}]" );
 
         }
     }
@@ -323,13 +323,15 @@ public class ExportTests
             await Task.Delay( 20 );
             Debug.Assert( LastEvent != null );
 
-            d.Root.ProductStateList[0].OId.Index.Should().Be( 7, "Product n°1 OId.Index is 7." );
-            d.TransactionSerialNumber.Should().Be( 1 );
+            d.Root.ProductStateList[0].OId.Index.ShouldBe( 7, "Product n°1 OId.Index is 7." );
+            d.TransactionSerialNumber.ShouldBe( 1 );
 
-            var initial = d.ExportToString();
-            initial.Should().ContainAll( "Name n°1", "Product n°1", @"""CurrentProductState"":{"">"":7}" );
-            initial.Should().Contain( @"[""Toto"",""TVal""]" );
-            initial.Should().Contain( @"[""Tata"",""TVal""]" );
+            var initial = d.ExportToString().ShouldNotBeNull();
+            initial.ShouldContain( "Name n°1" );
+            initial.ShouldContain( "Product n°1" );
+            initial.ShouldContain( @"""CurrentProductState"":{"">"":7}" );
+            initial.ShouldContain( @"[""Toto"",""TVal""]" );
+            initial.ShouldContain( @"[""Tata"",""TVal""]" );
             await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 var p2 = new RootSample.ProductInfo( "Name n°2", 22 );
@@ -338,28 +340,28 @@ public class ExportTests
                 d.Root.ProductStateList.Add( new RootSample.Product( p2 ) { Name = "Product n°2" } );
                 d.Root.CurrentProductState = d.Root.ProductStateList[1];
             } );
-            d.Root.ProductStateList[1].OId.Index.Should().Be( 6, "Product n°2 OId.Index is 6." );
+            d.Root.ProductStateList[1].OId.Index.ShouldBe( 6, "Product n°2 OId.Index is 6." );
 
             await Task.Delay( 20 );
             string t1 = LastEvent.ExportedEvents;
             // p2 is the object n°5.
-            t1.Should().Contain( @"[""N"",6,""""]" );
+            t1.ShouldContain( @"[""N"",6,""""]" );
             // p2.ExtraData is exported as a Map.
-            t1.Should().Contain( @"[""Ex2"","">>Ex2""]" );
+            t1.ShouldContain( @"[""Ex2"","">>Ex2""]" );
             // ApplicationState.CurrentProduct is p2:
-            t1.Should().Contain( @"[""C"",0,1,{""="":6}]" );
+            t1.ShouldContain( @"[""C"",0,1,{""="":6}]" );
 
             await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 Debug.Assert( d.Root.CurrentProductState != null );
-                d.Root.CurrentProductState.Name.Should().Be( "Product n°2" );
+                d.Root.CurrentProductState.Name.ShouldBe( "Product n°2" );
                 d.Root.SkipToNextProduct();
-                d.Root.CurrentProductState.Name.Should().Be( "Product n°1" );
+                d.Root.CurrentProductState.Name.ShouldBe( "Product n°1" );
             } );
             await Task.Delay( 20 );
             string t2 = LastEvent.ExportedEvents;
             // Switch to Product n°1 (OId is 7).
-            t2.Should().Contain( @"[""C"",0,1,{""="":7}]" );
+            t2.ShouldContain( @"[""C"",0,1,{""="":7}]" );
         }
     }
 
@@ -434,14 +436,14 @@ public class ExportTests
         var eventCollector = new JsonEventCollector( d );
         await d.ModifyThrowAsync( TestHelper.Monitor, () =>
         {
-            d.TransactionSerialNumber.Should().Be( 0 );
+            d.TransactionSerialNumber.ShouldBe( 0 );
             new TryingToExportNotExportableProperties1();
 
         } );
 
-        d.Invoking( x => x.ExportToString() )
-            .Should().Throw<CKException>()
-            .WithMessage( "Exporting 'ObservableDomain' is forbidden: No interaction with the ObservableDomain must be made from the observable objects." );
+        Util.Invokable( () => d.ExportToString() )
+            .ShouldThrow<CKException>()
+            .Message.ShouldBe( "Exporting 'ObservableDomain' is forbidden: No interaction with the ObservableDomain must be made from the observable objects." );
 
         await d.ModifyThrowAsync( TestHelper.Monitor, () =>
         {
@@ -450,9 +452,9 @@ public class ExportTests
 
         } );
 
-        d.Invoking( x => x.ExportToString() )
-            .Should().Throw<CKException>()
-            .WithMessage( "Exporting 'DomainView' is forbidden: DomainView must not be exposed. Only the protected Domain should be used." );
+        Util.Invokable( () => d.ExportToString() )
+            .ShouldThrow<CKException>()
+            .Message.ShouldBe( "Exporting 'DomainView' is forbidden: DomainView must not be exposed. Only the protected Domain should be used." );
 
         await d.ModifyThrowAsync( TestHelper.Monitor, () =>
         {
@@ -460,9 +462,9 @@ public class ExportTests
             new TryingToExportNotExportableProperties3();
         } );
 
-        d.Invoking( x => x.ExportToString() )
-            .Should().Throw<CKException>()
-            .WithMessage( "Exporting 'TryingToExportNotExportableProperties3.NoWay' is forbidden: Missed..." );
+        Util.Invokable( () => d.ExportToString() )
+            .ShouldThrow<CKException>()
+            .Message.ShouldBe( "Exporting 'TryingToExportNotExportableProperties3.NoWay' is forbidden: Missed..." );
     }
 
     [SerializationVersion(0)]
@@ -503,12 +505,17 @@ public class ExportTests
 
         await d.ModifyThrowAsync( TestHelper.Monitor, () =>
         {
-            d.TransactionSerialNumber.Should().Be( 1, "Not incremented yet (still inside the transaction n°2)." );
+            d.TransactionSerialNumber.ShouldBe( 1, "Not incremented yet (still inside the transaction n°2)." );
             new TimerAndRemiderProperties();
         } );
-        d.ExportToString().Should().NotContainAny( "Timer", "Reminder" ).And.Contain( "ThisIsExported" );
+        var export = d.ExportToString().ShouldNotBeNull();
+        export.ShouldNotContain( "Timer" );
+        export.ShouldNotContain( "Reminder" );
+        export.ShouldContain( "ThisIsExported" );
         var events = eventCollector.GetTransactionEvents( 1 ).Events!.Single().ExportedEvents;
-        events.Should().NotContainAny( "Timer", "Reminder" ).And.Contain( "ThisIsExported" );
+        events.ShouldNotContain( "Timer" );
+        events.ShouldNotContain( "Reminder" );
+        events.ShouldContain( "ThisIsExported" );
     }
 
     [SerializationVersion(0)]
@@ -543,13 +550,13 @@ public class ExportTests
 
         await d.ModifyThrowAsync( TestHelper.Monitor, () =>
         {
-            d.TransactionSerialNumber.Should().Be( 1, "Not incremented yet (still inside the transaction n°2)." );
+            d.TransactionSerialNumber.ShouldBe( 1, "Not incremented yet (still inside the transaction n°2)." );
             new NormalizedPathProperty();
         } );
 
-        d.ExportToString().Should().Contain( "NormalizedPath" );
+        d.ExportToString().ShouldContain( "NormalizedPath" );
         var events = eventCollector.GetTransactionEvents( 1 ).Events!.Single().ExportedEvents;
-        events.Should().Contain( "NormalizedPath" );
+        events.ShouldContain( "NormalizedPath" );
     }
 
     [SerializationVersion( 0 )]
@@ -642,25 +649,24 @@ public class ExportTests
         ExportableObjectWithNotExportableProperty o = null!;
         await d.ModifyThrowAsync( TestHelper.Monitor, () =>
         {
-            d.TransactionSerialNumber.Should().Be( 1, "Not incremented yet (still inside the transaction n°2)." );
+            d.TransactionSerialNumber.ShouldBe( 1, "Not incremented yet (still inside the transaction n°2)." );
             o = new ExportableObjectWithNotExportableProperty();
         } );
         // N = 2
 
         string jsonExport = d.ExportToString()!;
         DomainJsonExport ex = JsonSerializer.Deserialize<DomainJsonExport>( jsonExport )!;
-        ex.N.Should().Be( 2, "_transactionSerialNumber = 2" );
-        ex.C.Should().Be( 1, "_actualObjectCount = 1" );
-        ex.P.Should().HaveCount( 4, "4 properties exist" );
-        ex.O.Should().HaveCount( 2, "2 indexed objects exist" );
-        ex.R.Should().HaveCount( 0, "There are no roots in this test domain" );
+        ex.N.ShouldBe( 2, "_transactionSerialNumber = 2" );
+        ex.C.ShouldBe( 1, "_actualObjectCount = 1" );
+        ex.P.Count.ShouldBe( 4, "4 properties exist" );
+        ex.O.Count.ShouldBe( 2, "2 indexed objects exist" );
+        ex.R.Count.ShouldBe( 0, "There are no roots in this test domain" );
 
-        eventCollector.LastEvent.Should().NotBeNull( "There was an event sent on N = 2" );
+        eventCollector.LastEvent.ShouldNotBeNull( "There was an event sent on N = 2" );
         var transactionEvent = eventCollector.LastEvent!;
-        transactionEvent.TransactionNumber.Should().Be( 2, "_transactionSerialNumber = 2" );
-        transactionEvent.LastExportedTransactionNumber.Should().Be( 0, "There were no events before" );
-        transactionEvent.TimeUtc.Should().BeWithin( TimeSpan.FromMinutes( 2 ) );
-        transactionEvent.ExportedEvents.Should().NotBeNullOrEmpty();
+        transactionEvent.TransactionNumber.ShouldBe( 2, "_transactionSerialNumber = 2" );
+        transactionEvent.LastExportedTransactionNumber.ShouldBe( 0, "There were no events before" );
+        transactionEvent.ExportedEvents.ShouldNotBeNullOrEmpty();
 
         await d.ModifyThrowAsync( TestHelper.Monitor, () =>
         {
@@ -669,8 +675,8 @@ public class ExportTests
         // N = 3
         // No event here
 
-        eventCollector.LastEvent.Should().Be( transactionEvent, "No event was sent" );
-        transactionEvent.TransactionNumber.Should().Be( 2, "Previous transactionSerialNumber = 2" );
+        eventCollector.LastEvent.ShouldBe( transactionEvent, "No event was sent" );
+        transactionEvent.TransactionNumber.ShouldBe( 2, "Previous transactionSerialNumber = 2" );
 
         await d.ModifyThrowAsync( TestHelper.Monitor, () =>
         {
@@ -678,13 +684,13 @@ public class ExportTests
         } );
         // N = 4
 
-        eventCollector.LastEvent.Should().NotBe( transactionEvent, "A new event was sent" );
-        eventCollector.LastEvent.Should().NotBeNull( "There was an event sent on N = 4" );
+        eventCollector.LastEvent.ShouldNotBe( transactionEvent, "A new event was sent" );
+        eventCollector.LastEvent.ShouldNotBeNull( "There was an event sent on N = 4" );
         transactionEvent = eventCollector.LastEvent!;
-        transactionEvent.TransactionNumber.Should().Be( 4, "transactionSerialNumber = 4" );
-        transactionEvent.LastExportedTransactionNumber.Should().Be( 2, "Previous T with events = 2" );
-        transactionEvent.TimeUtc.Should().BeWithin( TimeSpan.FromMinutes( 2 ) );
-        transactionEvent.ExportedEvents.Should().NotBeNullOrEmpty();
+        transactionEvent.TransactionNumber.ShouldBe( 4, "transactionSerialNumber = 4" );
+        transactionEvent.LastExportedTransactionNumber.ShouldBe( 2, "Previous T with events = 2" );
+        transactionEvent.TimeUtc.ShouldBe( DateTime.UtcNow, tolerance: TimeSpan.FromMinutes( 2 ) );
+        transactionEvent.ExportedEvents.ShouldNotBeNullOrEmpty();
     }
 
     sealed class DomainJsonExport
@@ -709,38 +715,40 @@ public class ExportTests
         ExportableObjectWithNotExportableClass o = null!;
         await d.ModifyThrowAsync( TestHelper.Monitor, () =>
         {
-            d.TransactionSerialNumber.Should().Be( 1, "Not incremented yet (still inside the transaction n°2)." );
+            d.TransactionSerialNumber.ShouldBe( 1, "Not incremented yet (still inside the transaction n°2)." );
             o = new ExportableObjectWithNotExportableClass();
         }, waitForDomainPostActionsCompletion: true );
         // N = 2
 
-        eventCollector.LastEvent.Should().NotBeNull( "There was an event sent on N = 2" );
-        eventCollector.LastEvent!.ExportedEvents.Should().NotContain( "HelloNotExportable", "This property value is in a type marked NotExportable." );
-        eventCollector.LastEvent!.ExportedEvents.Should().NotContain( "NotExportableClassProperty", "This property name is in a InternalObject." );
+        eventCollector.LastEvent.ShouldNotBeNull( "There was an event sent on N = 2" );
+        eventCollector.LastEvent.ExportedEvents
+            .ShouldNotContain( "HelloNotExportable", "This property value is in a type marked NotExportable." );
+        eventCollector.LastEvent.ExportedEvents
+            .ShouldNotContain( "NotExportableClassProperty", "This property name is in a InternalObject." );
         // This is NOT good!
         // A Property marked NotExportable SHOULD NOT leak (even its name)...
-        //eventCollector.LastEvent!.ExportedEvents.Should().NotContain( "NotExportableClass", "This property name is on a Property marked NotExportable." );
+        //eventCollector.LastEvent!.ExportedEvents.ShouldNotContain( "NotExportableClass", "This property name is on a Property marked NotExportable." );
 
         string jsonExport = null!;
         Action act = () =>
         {
             jsonExport = d.ExportToString()!;
         };
-        act.Should().NotThrow("Exporting a Type with a Property marked NotExportable, having a type marked NotExportable should be okay");
+        act.ShouldNotThrow("Exporting a Type with a Property marked NotExportable, having a type marked NotExportable should be okay");
 
         DomainJsonExport export = JsonSerializer.Deserialize<DomainJsonExport>( jsonExport )!;
-        export.N.Should().Be( 2, "_transactionSerialNumber = 2" );
+        export.N.ShouldBe( 2, "_transactionSerialNumber = 2" );
 
         var transactionEvent = eventCollector.LastEvent!;
-        transactionEvent.TransactionNumber.Should().Be( 2, "_transactionSerialNumber = 2" );
-        transactionEvent.LastExportedTransactionNumber.Should().Be( 0, "There were no events before" );
-        transactionEvent.TimeUtc.Should().BeWithin( TimeSpan.FromMinutes( 2 ) );
-        transactionEvent.ExportedEvents.Should().NotBeNullOrEmpty();
+        transactionEvent.TransactionNumber.ShouldBe( 2, "_transactionSerialNumber = 2" );
+        transactionEvent.LastExportedTransactionNumber.ShouldBe( 0, "There were no events before" );
+        transactionEvent.TimeUtc.ShouldBe( DateTime.UtcNow, TimeSpan.FromMinutes( 2 ) );
+        transactionEvent.ExportedEvents.ShouldNotBeNullOrEmpty();
 
-        jsonExport.Should().NotContain( "HelloNotExportable", "This property value is in a type marked NotExportable." );
-        jsonExport.Should().NotContain( "NotExportableClassProperty", "This property name is in a type marked NotExportable." );
+        jsonExport.ShouldNotContain( "HelloNotExportable", "This property value is in a type marked NotExportable." );
+        jsonExport.ShouldNotContain( "NotExportableClassProperty", "This property name is in a type marked NotExportable." );
         // This is NOT good!
         // A Property marked NotExportable SHOULD NOT leak.
-        //jsonExport.Should().NotContain( "NotExportableClass", "This property name is on a Property marked NotExportable." );
+        //jsonExport.ShouldNotContain( "NotExportableClass", "This property name is on a Property marked NotExportable." );
     }
 }

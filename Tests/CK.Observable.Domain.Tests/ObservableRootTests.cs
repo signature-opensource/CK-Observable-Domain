@@ -1,7 +1,7 @@
 using NUnit.Framework;
 using System.Linq;
 using CK.Observable.Domain.Tests.RootSample;
-using FluentAssertions;
+using Shouldly;
 using System.IO;
 using CK.Core;
 using static CK.Testing.MonitorTestHelper;
@@ -20,12 +20,12 @@ public class ObservableRootTests
     public void initializing_and_persisting_new_empty_domain()
     {
         using var d = new ObservableDomain<ApplicationState>(TestHelper.Monitor, nameof( initializing_and_persisting_new_empty_domain), startTimer: true );
-        d.Root.Should().NotBeNull();
-        d.TransactionSerialNumber.Should().Be( 0 );
+        d.Root.ShouldNotBeNull();
+        d.TransactionSerialNumber.ShouldBe( 0 );
 
         using var d2 = SaveAndLoad( d );
-        d.Root.Should().NotBeNull();
-        d.TransactionSerialNumber.Should().Be( 0 );
+        d.Root.ShouldNotBeNull();
+        d.TransactionSerialNumber.ShouldBe( 0 );
     }
 
     [Test]
@@ -37,7 +37,7 @@ public class ObservableRootTests
         using( var d = new ObservableDomain<ApplicationState>(TestHelper.Monitor, nameof( initializing_and_persisting_domain_Async ), startTimer: true ) )
         {
             eventCollector.CollectEvent( d, false );
-            d.Root.ToDoNumbers.Should().BeEmpty();
+            d.Root.ToDoNumbers.ShouldBeEmpty();
 
             await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
@@ -45,12 +45,12 @@ public class ObservableRootTests
             } );
             await Task.Delay( 20 );
             string t1 = LastEvent.ExportedEvents;
-            t1.Should().Be( "" );
+            t1.ShouldBe( "" );
 
             using( var d2 = SaveAndLoad( d ) )
             {
-                d2.TransactionSerialNumber.Should().Be( 1 );
-                d2.Root.ToDoNumbers[0].Should().Be( 42 );
+                d2.TransactionSerialNumber.ShouldBe( 1 );
+                d2.Root.ToDoNumbers[0].ShouldBe( 42 );
 
                 ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d2 );
             }

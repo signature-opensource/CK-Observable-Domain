@@ -1,4 +1,4 @@
-using FluentAssertions;
+using Shouldly;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -48,16 +48,16 @@ public static class SampleDomain
         d.Read( TestHelper.Monitor, () =>
         {
             var g1 = d.AllObjects.Items.OfType<Garage>().Where( x => x.CompanyName == "Boite" ).Single();
-            g1.Cars.Select( c => c.Name ).Should().BeEquivalentTo( Enumerable.Range( 0, 10 ).Select( i => $"Renault n°{i}" ) );
+            g1.Cars.Select( c => c.Name ).ShouldBe( Enumerable.Range( 0, 10 ).Select( i => $"Renault n°{i}" ) );
             var minc = d.AllObjects.Items.OfType<Person>().Single( x => x.FirstName == "Paul" );
-            minc.LastName.Should().Be( "Minc" );
+            minc.LastName.ShouldBe( "Minc" );
             var scott = d.AllObjects.Items.OfType<Mechanic>().Single( x => x.FirstName == "Scott" );
-            scott.CurrentCar.Should().BeSameAs( g1.Cars[2] );
-            scott.Garage.Should().BeSameAs( g1 );
-            g1.Employees.Should().Contain( scott );
-            g1.ReplacementCar.Should().HaveCount( 2 );
-            g1.ReplacementCar[g1.Cars[0]].Should().BeSameAs( g1.Cars[1] );
-            g1.ReplacementCar[g1.Cars[2]].Should().BeSameAs( g1.Cars[3] );
+            scott.CurrentCar.ShouldBeSameAs( g1.Cars[2] );
+            scott.Garage.ShouldBeSameAs( g1 );
+            g1.Employees.ShouldContain( scott );
+            g1.ReplacementCar.Count.ShouldBe( 2 );
+            g1.ReplacementCar[g1.Cars[0]].ShouldBeSameAs( g1.Cars[1] );
+            g1.ReplacementCar[g1.Cars[2]].ShouldBeSameAs( g1.Cars[3] );
         } );
     }
 }

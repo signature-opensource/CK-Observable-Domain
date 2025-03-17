@@ -1,7 +1,7 @@
 using CK.BinarySerialization;
 using CK.Core;
 using CK.Observable.Domain.Tests.Sample;
-using FluentAssertions;
+using Shouldly;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
@@ -24,7 +24,7 @@ public class ObservableObjectLifetimeTests
         using( var d = new ObservableDomain(TestHelper.Monitor, "TEST", startTimer: true ) )
         {
             Action outOfTran = () => new Car( "" );
-            outOfTran.Should().Throw<InvalidOperationException>().WithMessage( "A transaction is required (Observable objects can be created only inside a transaction)." );
+            outOfTran.ShouldThrow<InvalidOperationException>().Message.ShouldBe( "A transaction is required (Observable objects can be created only inside a transaction)." );
         }
     }
 
@@ -35,8 +35,8 @@ public class ObservableObjectLifetimeTests
         {
             await d.ModifyThrowAsync( TestHelper.Monitor, () => new Car( "Yes!" ) );
 
-            FluentActions.Invoking( () => d.AllObjects.Items.OfType<Car>().Single().TestSpeed = 3 )
-                .Should().Throw<InvalidOperationException>().WithMessage( "A transaction is required." );
+            Util.Invokable( () => d.AllObjects.Items.OfType<Car>().Single().TestSpeed = 3 )
+                .ShouldThrow<InvalidOperationException>().Message.ShouldBe( "A transaction is required." );
         }
     }
 
@@ -56,8 +56,8 @@ public class ObservableObjectLifetimeTests
         {
             await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
-                d.Invoking( sut => sut.ExportToString() )
-                 .Should().Throw<LockRecursionException>();
+                Util.Invokable( () => d.ExportToString() )
+                 .ShouldThrow<LockRecursionException>();
             } );
         }
     }
@@ -69,8 +69,8 @@ public class ObservableObjectLifetimeTests
         {
             await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
-                d.Invoking( sut => sut.Save( TestHelper.Monitor, new MemoryStream() ) )
-                 .Should().NotThrow();
+                Util.Invokable( () => d.Save( TestHelper.Monitor, new MemoryStream() ) )
+                 .ShouldNotThrow();
             } );
         }
     }
@@ -83,14 +83,14 @@ public class ObservableObjectLifetimeTests
         {
             await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
-                d.Invoking( sut => sut.Save( TestHelper.Monitor, s ) ).Should().NotThrow();
+                Util.Invokable( () => d.Save( TestHelper.Monitor, s ) ).ShouldNotThrow();
                 s.Position = 0;
-                d.Invoking( sut => sut.Load( TestHelper.Monitor, RewindableStream.FromStream( s ) ) ).Should().NotThrow();
+                Util.Invokable( () => d.Load( TestHelper.Monitor, RewindableStream.FromStream( s ) ) ).ShouldNotThrow();
             } );
             s.Position = 0;
-            d.Invoking( sut => sut.Load( TestHelper.Monitor, RewindableStream.FromStream( s ) ) ).Should().NotThrow();
+            Util.Invokable( () => d.Load( TestHelper.Monitor, RewindableStream.FromStream( s ) ) ).ShouldNotThrow();
             s.Position = 0;
-            d.Invoking( sut => sut.Save( TestHelper.Monitor, s ) ).Should().NotThrow();
+            Util.Invokable( () => d.Save( TestHelper.Monitor, s ) ).ShouldNotThrow();
         }
     }
 
@@ -102,29 +102,29 @@ public class ObservableObjectLifetimeTests
             // ModifyAsync( Read ) throws.
             await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
-                d.Invoking( sut => sut.Read( TestHelper.Monitor, () => { } ) )
-                 .Should().Throw<LockRecursionException>();
+                Util.Invokable( () => d.Read( TestHelper.Monitor, () => { } ) )
+                 .ShouldThrow<LockRecursionException>();
             } );
 
             // This is nonsense but this test that Read( ModifyAsync ) throws.
             await d.Read( TestHelper.Monitor, async () =>
             {
-                await d.Awaiting( sut => sut.ModifyThrowAsync( TestHelper.Monitor, null ) )
-                        .Should().ThrowAsync<LockRecursionException>();
+                await Util.Awaitable( () => d.ModifyThrowAsync( TestHelper.Monitor, null ) )
+                        .ShouldThrowAsync<LockRecursionException>();
             } );
 
             // ModifyAsync( ModifyAsync ) throws.
             await d.ModifyThrowAsync( TestHelper.Monitor, async () =>
             {
-                await d.Awaiting( sut => sut.ModifyThrowAsync( TestHelper.Monitor, null ) )
-                        .Should().ThrowAsync<LockRecursionException>();
+                await Util.Awaitable( () => d.ModifyThrowAsync( TestHelper.Monitor, null ) )
+                        .ShouldThrowAsync<LockRecursionException>();
             } );
 
             // Read( Read ) throws.
             d.Read( TestHelper.Monitor, () =>
             {
-                d.Invoking( sut => sut.Read( TestHelper.Monitor, () => { } ) )
-                 .Should().Throw<LockRecursionException>();
+                Util.Invokable( () => d.Read( TestHelper.Monitor, () => { } ) )
+                 .ShouldThrow<LockRecursionException>();
             } );
         }
     }
@@ -138,12 +138,12 @@ public class ObservableObjectLifetimeTests
             await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 var c = new Car( "Titine" );
-                d.AllObjects.Items.Should().ContainSingle( x => x == c );
-                d.AllObjects.Items.Should().HaveCount( 1 );
+                d.AllObjects.Items.ShouldHaveSingleItem().ShouldBeSameAs( c );
+                d.AllObjects.Items.Count.ShouldBe( 1 );
                 c.Destroyed += OnDestroy;
                 c.Destroy();
-                OnDestroyCalled.Should().BeTrue();
-                d.AllObjects.Items.Should().BeEmpty();
+                OnDestroyCalled.ShouldBeTrue();
+                d.AllObjects.Items.ShouldBeEmpty();
             } );
         }
     }

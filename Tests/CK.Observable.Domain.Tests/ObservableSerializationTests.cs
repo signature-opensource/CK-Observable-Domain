@@ -1,6 +1,6 @@
 using CK.Core;
 using CK.Observable.Domain.Tests.Sample;
-using FluentAssertions;
+using Shouldly;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
@@ -43,19 +43,19 @@ public class ObservableSerializationTests
         {
             if( o is ObservableObject )
             {
-                handler.Domain.AllObjects.Items.Should().HaveCount( 1 );
+                handler.Domain.AllObjects.Items.Count.ShouldBe( 1 );
             }
             else if( o is ObservableTimer )
             {
-                handler.Domain.TimeManager.Timers.Should().HaveCount( 1 );
+                handler.Domain.TimeManager.Timers.Count.ShouldBe( 1 );
             }
             else if( o is ObservableReminder )
             {
-                handler.Domain.TimeManager.Reminders.Should().HaveCount( 1 );
+                handler.Domain.TimeManager.Reminders.Count.ShouldBe( 1 );
             }
             else if( o is InternalObject )
             {
-                handler.Domain.AllInternalObjects.Should().HaveCount( 1 );
+                handler.Domain.AllInternalObjects.Count.ShouldBe( 1 );
             }
         } );
 
@@ -69,7 +69,7 @@ public class ObservableSerializationTests
         {
             TestHelper.Monitor.Info( "Test 1" );
             await d.ModifyThrowAsync( TestHelper.Monitor, () => new Sample.Car( "Zoé" ) );
-            d.AllObjects.Items.Should().HaveCount( 1 );
+            d.AllObjects.Items.Count.ShouldBe( 1 );
             ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
 
             TestHelper.Monitor.Info( "Test 2" );
@@ -122,9 +122,9 @@ public class ObservableSerializationTests
             await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 var ketru = d.AllObjects.Items.OfType<ObservableWithJaggedArrays>().Single();
-                ketru.Cars[0].Should().HaveCount( 2 );
-                ketru.Cars[1].Should().HaveCount( 3 );
-                ketru.Cars[1][2].Name.Should().Be( "O3" );
+                ketru.Cars[0].Length.ShouldBe( 2 );
+                ketru.Cars[1].Length.ShouldBe( 3 );
+                ketru.Cars[1][2].Name.ShouldBe( "O3" );
             } );
 
         }
@@ -182,7 +182,7 @@ public class ObservableSerializationTests
 
                 // Remove Observable from List of Root
                 bool removed = od.Root.CustomObservableList.Remove( myCustomObservable );
-                removed.Should().BeTrue();
+                removed.ShouldBeTrue();
             } );
         }
     }
@@ -200,9 +200,9 @@ public class ObservableSerializationTests
             } );
             ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, d );
 
-            oldObject.Should().NotBeNull();
-            oldObject.IsDestroyed.Should().BeTrue( "The reference of the object was disposed when the domain was reloaded" );
-            oldObject.ChildObject.IsDestroyed.Should().BeTrue( "The reference of the object's ObservableObject child was disposed when the domain was reloaded" );
+            oldObject.ShouldNotBeNull();
+            oldObject.IsDestroyed.ShouldBeTrue( "The reference of the object was disposed when the domain was reloaded" );
+            oldObject.ChildObject.IsDestroyed.ShouldBeTrue( "The reference of the object's ObservableObject child was disposed when the domain was reloaded" );
         }
     }
 
@@ -387,8 +387,8 @@ public class ObservableSerializationTests
                 new ReminderAndTimerBag( 1 ).Create( 1 );
 
             } );
-            od.AllInternalObjects.Should().HaveCount( 1 );
-            od.TimeManager.AllObservableTimedEvents.Should().HaveCount( 4 );
+            od.AllInternalObjects.Count.ShouldBe( 1 );
+            od.TimeManager.AllObservableTimedEvents.Count.ShouldBe( 4 );
             ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, od );
 
             await od.ModifyThrowAsync( TestHelper.Monitor, () =>
@@ -396,8 +396,8 @@ public class ObservableSerializationTests
                 new ReminderAndTimerBag( 2 ).Create( 20 );
 
             } );
-            od.AllInternalObjects.Should().HaveCount( 2 );
-            od.TimeManager.AllObservableTimedEvents.Should().HaveCount( 4 * 21 );
+            od.AllInternalObjects.Count.ShouldBe( 2 );
+            od.TimeManager.AllObservableTimedEvents.Count.ShouldBe( 4 * 21 );
             ObservableDomain.IdempotenceSerializationCheck( TestHelper.Monitor, od );
         }
     }

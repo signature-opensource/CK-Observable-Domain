@@ -1,6 +1,6 @@
 using CK.BinarySerialization;
 using CK.Core;
-using FluentAssertions;
+using Shouldly;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
@@ -11,6 +11,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
+using Microsoft.VisualStudio.TestPlatform.CoreUtilities.Extensions;
 
 namespace CK.Observable.Device.Tests;
 
@@ -60,17 +61,17 @@ public class DeviceHostTests
         // Here the Device exists but not the ObservableDevice.
         await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
         {
-            obs.Root.Host.Devices.Should().ContainKey( "TheOne" );
-            obs.Root.Host.Devices["TheOne"].Object.Should().BeNull( "No ObservableObject yet." );
-            obs.Root.Host.Devices["TheOne"].Status.Should().Be( DeviceControlStatus.HasSharedControl );
+            obs.Root.Host.Devices.Keys.ShouldContain( "TheOne" );
+            obs.Root.Host.Devices["TheOne"].Object.ShouldBeNull( "No ObservableObject yet." );
+            obs.Root.Host.Devices["TheOne"].Status.ShouldBeNull( "Since Object is null, DeviceControlStatus property also returns null." );
         } );
 
         // Now we create the TheOne ObservableObject.
         await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
         {
             var d = new OSampleDevice( "TheOne" );
-            d.IsBoundDevice.Should().BeTrue( "It has been automatically bound to the Device." );
-            obs.Root.Host.Devices["TheOne"].Object.Should().BeSameAs( d, "The ObservableHostDevice has updated its DeviceInfo." );
+            d.IsBoundDevice.ShouldBeTrue( "It has been automatically bound to the Device." );
+            obs.Root.Host.Devices["TheOne"].Object.ShouldBeSameAs( d, "The ObservableHostDevice has updated its DeviceInfo." );
         } );
 
         // Starts the device.
@@ -80,10 +81,10 @@ public class DeviceHostTests
         {
             var oInfo = obs.Root.Host.Devices["TheOne"];
             Debug.Assert( oInfo.Object != null );
-            oInfo.Object.IsBoundDevice.Should().BeTrue();
-            oInfo.Object.IsRunning.Should().BeTrue();
-            oInfo.IsRunning.Should().BeTrue();
-            oInfo.Status.Should().Be( DeviceControlStatus.HasSharedControl );
+            oInfo.Object.IsBoundDevice.ShouldBeTrue();
+            oInfo.Object.IsRunning.ShouldNotBeNull().ShouldBeTrue();
+            oInfo.IsRunning.ShouldBeTrue();
+            oInfo.Status.ShouldBe( DeviceControlStatus.HasSharedControl );
         } );
 
         // Destroying the Device.
@@ -93,9 +94,9 @@ public class DeviceHostTests
         {
             var oInfo = obs.Root.Host.Devices["TheOne"];
             Debug.Assert( oInfo.Object != null );
-            oInfo.Object.IsBoundDevice.Should().BeFalse( "No more bound to the Device." );
-            oInfo.IsRunning.Should().BeFalse();
-            oInfo.Status.Should().Be( DeviceControlStatus.MissingDevice );
+            oInfo.Object.IsBoundDevice.ShouldBeFalse( "No more bound to the Device." );
+            oInfo.IsRunning.ShouldBeFalse();
+            oInfo.Status.ShouldBe( DeviceControlStatus.MissingDevice );
         } );
 
         // Now we destroy the ObservableObject.
@@ -105,8 +106,8 @@ public class DeviceHostTests
             var d = obs.Root.Host.Devices["TheOne"].Object;
             Debug.Assert( d != null );
             d.Destroy();
-            obs.Root.Host.Devices.Should().BeEmpty( "The ObservableHostDevice has no more info to keep (no device, no observable)." );
-            oDeviceInfo.IsDestroyed.Should().BeTrue( "The ODeviceInfo should have been destroyed with the ObservableDeviceObject." );
+            obs.Root.Host.Devices.ShouldBeEmpty( "The ObservableHostDevice has no more info to keep (no device, no observable)." );
+            oDeviceInfo.IsDestroyed.ShouldBeTrue( "The ODeviceInfo should have been destroyed with the ObservableDeviceObject." );
         } );
 
     }
@@ -133,24 +134,24 @@ public class DeviceHostTests
         var obs = new ObservableDomain<Root>( TestHelper.Monitor, nameof( deserialization_triggers_events_when_resynchronizing_Async ), false, serviceProvider: sp );
         obs.TransactionDone += ( d, ev ) => lastEvents = ev.Events;
 
-        obs.HasWaitingSidekicks.Should().BeTrue();
+        obs.HasWaitingSidekicks.ShouldBeTrue();
         await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
         {
-            obs.Root.Host.Devices.Should().ContainKey( "TheOne", "The host is synchronized." );
-            obs.Root.Host.Devices["TheOne"].Object.Should().BeNull( "No ObservableObject yet." );
-            obs.Root.Host.Devices["TheOne"].Status.Should().Be( DeviceControlStatus.HasSharedControl );
-            obs.Root.Host.Devices["TheOne"].IsRunning.Should().BeFalse();
+            obs.Root.Host.Devices.Keys.ShouldContain( "TheOne", "The host is synchronized." );
+            obs.Root.Host.Devices["TheOne"].Object.ShouldBeNull( "No ObservableObject yet." );
+            obs.Root.Host.Devices["TheOne"].Status.ShouldBeNull( "Since Object is null, DeviceControlStatus property also returns null." );
+            obs.Root.Host.Devices["TheOne"].IsRunning.ShouldBeFalse();
         } );
         Debug.Assert( lastEvents != null );
-        lastEvents.Select( e => e.ToString() ).Should().BeEquivalentTo( new[] {
+        lastEvents.Select( e => e.ToString() ).ShouldBe( [
             "NewObject 3 (ODeviceInfo<OSampleDevice>).",
-            "CollectionMapSet 2[TheOne] = Device: TheOne [Stopped, HasSharedControl]",
+            "CollectionMapSet 2[TheOne] = Device: TheOne [Stopped, ]",
             "NewProperty DeviceName -> 0.",
             "PropertyChanged 3.DeviceName = TheOne.",
             "NewProperty Object -> 1.",
             "PropertyChanged 3.Object = null.",
             "NewProperty Status -> 2.",
-            "PropertyChanged 3.Status = HasSharedControl.",
+            "PropertyChanged 3.Status = null.",
             "NewProperty IsRunning -> 3.",
             "PropertyChanged 3.IsRunning = False.",
             "NewProperty ControllerKey -> 4.",
@@ -160,7 +161,7 @@ public class DeviceHostTests
             "NewProperty IsDestroyed -> 6.",
             "PropertyChanged 3.IsDestroyed = False.",
             "NewProperty OId -> 7.",
-            "PropertyChanged 3.OId = 3." }, o => o.WithStrictOrdering() );
+            "PropertyChanged 3.OId = 3." ] );
         lastEvents = null;
 
         // Saving the domain while the device is stopped.
@@ -171,11 +172,11 @@ public class DeviceHostTests
         await host.GetDevices()["TheOne"].StartAsync( TestHelper.Monitor );
         obs.Read( TestHelper.Monitor, () =>
         {
-            obs.Root.Host.Devices["TheOne"].IsRunning.Should().BeTrue( "The observable has been updated." );
+            obs.Root.Host.Devices["TheOne"].IsRunning.ShouldBeTrue( "The observable has been updated." );
         } );
         Debug.Assert( lastEvents != null );
-        lastEvents.Should().HaveCount( 1 );
-        lastEvents[0].ToString().Should().Be( "PropertyChanged 3.IsRunning = True." );
+        lastEvents.Count.ShouldBe( 1 );
+        lastEvents[0].ToString().ShouldBe( "PropertyChanged 3.IsRunning = True." );
         lastEvents = null;
 
         // Reloads the domain: for the serialized state, the device is not running.
@@ -187,17 +188,17 @@ public class DeviceHostTests
         }
         obs.Read( TestHelper.Monitor, () =>
         {
-            obs.Root.Host.Devices["TheOne"].IsRunning.Should().BeFalse( "No sidekick yet." );
+            obs.Root.Host.Devices["TheOne"].IsRunning.ShouldBeFalse( "No sidekick yet." );
         } );
-        lastEvents.Should().BeNull( "No real transaction: no event." );
+        lastEvents.ShouldBeNull( "No real transaction: no event." );
         await obs.ModifyThrowAsync( TestHelper.Monitor, null );
         obs.Read( TestHelper.Monitor, () =>
         {
-            obs.Root.Host.Devices["TheOne"].IsRunning.Should().BeTrue( "The sidekick has been instantiated." );
+            obs.Root.Host.Devices["TheOne"].IsRunning.ShouldBeTrue( "The sidekick has been instantiated." );
         } );
         Debug.Assert( lastEvents != null );
-        lastEvents.Should().HaveCount( 1 );
-        lastEvents[0].ToString().Should().Be( "PropertyChanged 3.IsRunning = True.", "Sidekick resynchronized the value." );
+        lastEvents.Count.ShouldBe( 1 );
+        lastEvents[0].ToString().ShouldBe( "PropertyChanged 3.IsRunning = True.", "Sidekick resynchronized the value." );
         lastEvents = null;
 
         // Same reload but now within a real transaction.
@@ -212,11 +213,11 @@ public class DeviceHostTests
          } );
         obs.Read( TestHelper.Monitor, () =>
         {
-            obs.Root.Host.Devices["TheOne"].IsRunning.Should().BeTrue( "The observable has been updated by the sidekick." );
+            obs.Root.Host.Devices["TheOne"].IsRunning.ShouldBeTrue( "The observable has been updated by the sidekick." );
         } );
         Debug.Assert( lastEvents != null, "The initialization of the sidekicks exposes its side effects." );
-        lastEvents.Should().HaveCount( 1 );
-        lastEvents[0].ToString().Should().Be( "PropertyChanged 3.IsRunning = True." );
+        lastEvents.Count.ShouldBe( 1 );
+        lastEvents[0].ToString().ShouldBe( "PropertyChanged 3.IsRunning = True." );
         lastEvents = null;
 
         // Destroying the Device.
@@ -234,11 +235,11 @@ public class DeviceHostTests
         // Same as before: the resynchronization is visible through the events.
         obs.Read( TestHelper.Monitor, () =>
         {
-            obs.Root.Host.Devices.Should().BeEmpty();
+            obs.Root.Host.Devices.ShouldBeEmpty();
         } );
         Debug.Assert( lastEvents != null, "The initialization of the sidekicks exposes its side effects." );
-        lastEvents.Should().HaveCount( 1 );
-        lastEvents[0].ToString().Should().Be( "CollectionRemoveKey 2[TheOne]" );
+        lastEvents.Count.ShouldBe( 1 );
+        lastEvents[0].ToString().ShouldBe( "CollectionRemoveKey 2[TheOne]" );
 
         await host.ClearAsync( TestHelper.Monitor, true );
         obs.Dispose();

@@ -1,5 +1,5 @@
 using CK.Core;
-using FluentAssertions;
+using Shouldly;
 using NUnit.Framework;
 using System;
 using System.Diagnostics;
@@ -34,7 +34,7 @@ public class BasicLeagueTests
 
         Debug.Assert( league != null );
 
-        league.Find( "FirstDomain" ).Should().BeNull( "Empty store. Not created yet." );
+        league.Find( "FirstDomain" ).ShouldBeNull( "Empty store. Not created yet." );
 
         await league.Coordinator.ModifyThrowAsync(
             TestHelper.Monitor,
@@ -44,21 +44,21 @@ public class BasicLeagueTests
 
         var loader = league.Find( "FirstDomain" );
         Debug.Assert( loader != null );
-        loader.IsDestroyed.Should().BeFalse();
-        loader.IsLoaded.Should().BeTrue();
+        loader.IsDestroyed.ShouldBeFalse();
+        loader.IsLoaded.ShouldBeTrue();
 
         await using( var shell = await loader.LoadAsync<Model.School>( TestHelper.Monitor ) )
         {
-            shell.Should().BeSameAs( loader, "Since the ActivityMonitor is the same, the loader is the shell." );
+            shell.ShouldBeSameAs( loader, "Since the ActivityMonitor is the same, the loader is the shell." );
 
             // Closing the league only disposes the domains that are preloaded (by the domain options)
             // and are not still in use (all shells have been disposed).
             await league.CloseAsync( TestHelper.Monitor );
 
             var afterClosing = league.Find( "FirstDomain" );
-            afterClosing.Should().BeNull( "league has been closed. Domain cannot be found anymore." );
+            afterClosing.ShouldBeNull( "league has been closed. Domain cannot be found anymore." );
 
-            (await loader.LoadAsync( TestHelper.Monitor )).Should().BeNull( "league has been closed. Loader cannot give us a shell." );
+            (await loader.LoadAsync( TestHelper.Monitor )).ShouldBeNull( "league has been closed. Loader cannot give us a shell." );
 
             // The previously obtained shell is still here: the domain is available.
             await shell.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) =>
@@ -83,27 +83,27 @@ public class BasicLeagueTests
             shell2.Read( TestHelper.Monitor, ( m, d ) =>
             {
                 var p = d.Root.Persons[0];
-                p.FirstName.Should().Be( "X" );
-                p.LastName.Should().Be( "Y" );
+                p.FirstName.ShouldBe( "X" );
+                p.LastName.ShouldBe( "Y" );
                 return p.Age;
-            } ).Should().Be( 22 );
+            } ).ShouldBe( 22 );
 
             // We dispose the Domain in the Coordinator domain: it is now marked as Destroyed.
             await league2.Coordinator.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) =>
             {
                 d.Root.Domains["FirstDomain"].Destroy();
             }, waitForDomainPostActionsCompletion: true );
-            shell2.IsDestroyed.Should().BeTrue( "The loader and shells expose the IsDestroyed marker." );
-            loader2.IsDestroyed.Should().BeTrue();
+            shell2.IsDestroyed.ShouldBeTrue( "The loader and shells expose the IsDestroyed marker." );
+            loader2.IsDestroyed.ShouldBeTrue();
 
-            league2.Find( "FirstDomain" ).Should().BeNull( "One cannot Find a destroyed domain anymore..." );
-            (await loader2.LoadAsync( TestHelper.Monitor )).Should().BeNull( "...and cannot obtain new shells to play with them." );
+            league2.Find( "FirstDomain" ).ShouldBeNull( "One cannot Find a destroyed domain anymore..." );
+            (await loader2.LoadAsync( TestHelper.Monitor )).ShouldBeNull( "...and cannot obtain new shells to play with them." );
 
             await shell2.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) => d.Root.Persons[0].Age = 42 );
             shell2.TryRead( TestHelper.Monitor,
-                            ( m, d ) => d.Root.Persons[0].Age.Should().Be( 42, "Existing shells CAN continue to work with Destroyed domains." ),
+                            ( m, d ) => d.Root.Persons[0].Age.ShouldBe( 42, "Existing shells CAN continue to work with Destroyed domains." ),
                             millisecondsTimeout: -1 )
-            .Should().BeTrue();
+            .ShouldBeTrue();
         }
     }
 
@@ -186,8 +186,8 @@ public class BasicLeagueTests
         await league.Coordinator.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) =>
         {
             ODomain newOne = d.Root.CreateDomain( "4Roots", roots.Select( t => t.AssemblyQualifiedName ) );
-            newOne.DomainName.Should().Be( "4Roots" );
-            newOne.RootTypes.Should().BeEquivalentTo( roots.Select( t => t.AssemblyQualifiedName ) );
+            newOne.DomainName.ShouldBe( "4Roots" );
+            newOne.RootTypes.ShouldBe( roots.Select( t => t.AssemblyQualifiedName ) );
         }, waitForDomainPostActionsCompletion: true );
 
         await Check4RootsDomainAsync( league );
@@ -206,12 +206,12 @@ public class BasicLeagueTests
         {
             d.Read( TestHelper.Monitor, ( m, d ) =>
             {
-                d.Root1.Should().BeOfType<Root1>();
-                d.Root2.Should().BeOfType<Root2>();
-                d.Root3.Should().BeOfType<Root3>();
+                d.Root1.ShouldBeOfType<Root1>();
+                d.Root2.ShouldBeOfType<Root2>();
+                d.Root3.ShouldBeOfType<Root3>();
                 return d.Root4.GetType();
             } )
-            .Should().Be( typeof( Root4 ) );
+            .ShouldBe( typeof( Root4 ) );
         }
     }
 }

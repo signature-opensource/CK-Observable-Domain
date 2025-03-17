@@ -1,6 +1,6 @@
 using CK.BinarySerialization;
 using CK.Core;
-using FluentAssertions;
+using Shouldly;
 using NUnit.Framework;
 using System;
 using System.Diagnostics;
@@ -56,7 +56,7 @@ public class HouseKeepingTests
         Throw.DebugAssert( loader != null );
 
         // Create 10 backups
-        store.GetBackupNames( resourceName ).Should().HaveCount( 0, "There must not be any backup!" );
+        store.GetBackupNames( resourceName ).Count.ShouldBe( 0, "There must not be any backup!" );
         for( int i = 0; i < 10; i++ )
         {
             await using( var shell = await loader.LoadAsync<Model.School>( TestHelper.Monitor ) )
@@ -67,9 +67,9 @@ public class HouseKeepingTests
                     d.Root.Persons.Add( new Model.Person() { FirstName = "X", LastName = "Y", Age = 22 } );
                 } );
             }
-            store.GetBackupNames( resourceName ).Should().HaveCount( i+1, $"We must have {i} backups." );
+            store.GetBackupNames( resourceName ).Count.ShouldBe( i+1, $"We must have {i} backups." );
         }
-        store.GetBackupNames( resourceName ).Should().HaveCount( 10, "The cleanup should not be done because of the 500 milliseconds guaranty." );
+        store.GetBackupNames( resourceName ).Count.ShouldBe( 10, "The cleanup should not be done because of the 500 milliseconds guaranty." );
 
         // Wait 500 ms
         await Task.Delay( 500 );
@@ -86,7 +86,7 @@ public class HouseKeepingTests
                 } );
             }
         }
-        store.GetBackupNames( resourceName ).Should().HaveCountLessOrEqualTo( 10, "At least 10 backups should have been deleted with the time rule." );
+        store.GetBackupNames( resourceName ).Count.ShouldBeLessThanOrEqualTo( 10, "At least 10 backups should have been deleted with the time rule." );
     }
 
     [SerializationVersion(0)]
@@ -150,18 +150,18 @@ public class HouseKeepingTests
                 var o = new OJustForTheSize( new String( 'g', 6*1024 ) );
             } );
         }
-        store.GetBackupNames( "d-m" ).Should().HaveCount( 1 );
+        store.GetBackupNames( "d-m" ).Count.ShouldBe( 1 );
         // An empty transaction is committed: this creates 4 backups.
         await shell.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) => { } );
         await shell.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) => { } );
         await shell.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) => { } );
         await shell.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) => { } );
-        store.GetBackupNames( "d-m" ).Should().HaveCount( 5 );
+        store.GetBackupNames( "d-m" ).Count.ShouldBe( 5 );
 
         await Task.Delay( 300 );
 
         await shell.ModifyThrowAsync( TestHelper.Monitor, ( m, d ) => { } );
-        store.GetBackupNames( "d-m" ).Should().HaveCount( 1 );
+        store.GetBackupNames( "d-m" ).Count.ShouldBe( 1 );
 
     }
 }

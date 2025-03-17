@@ -11,8 +11,8 @@
     <RunWorkingDirectory>$(MSBuildProjectDirectory)</RunWorkingDirectory>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.AppIdentity.Hosting" Version="0.7.0" />
-    <PackageReference Include="CK.Monitoring.Hosting" Version="22.1.0" />
+    <PackageReference Include="CK.AppIdentity.Hosting" Version="0.8.0" />
+    <PackageReference Include="CK.Monitoring.Hosting" Version="23.0.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CK.Observable.ServerSample.App\CK.Observable.ServerSample.App.csproj" />

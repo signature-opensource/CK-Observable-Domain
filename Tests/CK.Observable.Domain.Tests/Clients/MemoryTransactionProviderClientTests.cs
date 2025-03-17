@@ -6,7 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using CK.BinarySerialization;
 using CK.Core;
-using FluentAssertions;
+using Shouldly;
 using NUnit.Framework;
 using static CK.Testing.MonitorTestHelper;
 
@@ -24,26 +24,26 @@ public partial class MemoryTransactionProviderClientTests
     public async Task an_initial_snapshot_is_always_taken_whatever_the_SkipTransactionCount_is_Async( int skipTransactionCount )
     {
         var client = new ConcreteMemoryTransactionProviderClient() { SkipTransactionCount = skipTransactionCount };
-        client.CurrentSerialNumber.Should().Be( -1, "No snapshot yet." );
-        client.CompressionKind.Should().Be( CompressionKind.None );
+        client.CurrentSerialNumber.ShouldBe( -1, "No snapshot yet." );
+        client.CompressionKind.ShouldBe( CompressionKind.None );
 
         using var d = new ObservableDomain<TestObservableRootObject>( TestHelper.Monitor,
                                                                       nameof( an_initial_snapshot_is_always_taken_whatever_the_SkipTransactionCount_is_Async ),
                                                                       startTimer: false,
                                                                       client: client );
-        client.CurrentSerialNumber.Should().Be( -1,
+        client.CurrentSerialNumber.ShouldBe( -1,
             "An initial snapshot will be taken at the start of the very first transaction (otherwise we could not protect the very fist Modify)." );
 
         await d.ModifyThrowAsync( TestHelper.Monitor, () =>
         {
-            client.CurrentSerialNumber.Should().Be( 0, "First transaction seen by the client: an initial snapshot is ALWAYS taken." );
+            client.CurrentSerialNumber.ShouldBe( 0, "First transaction seen by the client: an initial snapshot is ALWAYS taken." );
 
             d.Root.Prop1 = "Hello";
             d.Root.Prop2 = $"World n°1";
         } );
 
-        d.TransactionSerialNumber.Should().Be( 1, "First real transaction number is 1." );
-        client.CurrentSerialNumber.Should().Be( skipTransactionCount switch
+        d.TransactionSerialNumber.ShouldBe( 1, "First real transaction number is 1." );
+        client.CurrentSerialNumber.ShouldBe( skipTransactionCount switch
                                                                      {
                                                                          0 => 1, // Only the 0 SkipTransactionCount saves the first real transaction.
                                                                          _ => 0  // The other ones skip it.
@@ -55,7 +55,7 @@ public partial class MemoryTransactionProviderClientTests
                 d.Root.Prop1 = "Hello";
                 d.Root.Prop2 = $"World n°{i}";
             } );
-            client.CurrentSerialNumber.Should().Be( skipTransactionCount switch
+            client.CurrentSerialNumber.ShouldBe( skipTransactionCount switch
                                                                          { -1 => 0, // Only the initial state is kept.
                                                                             0 => i, // When SkipTransactionCount is 0, all snapshots are taken.
                                                                             _ => i - (i % (skipTransactionCount + 1)) // Skipped as said.
@@ -70,7 +70,7 @@ public partial class MemoryTransactionProviderClientTests
         var client = new ConcreteMemoryTransactionProviderClient() { SkipTransactionCount = -1 };
 
         using var d = new ObservableDomain<TestObservableRootObject>( TestHelper.Monitor, nameof( when_SkipTransactionCount_is_Minus_1_a_new_domain_is_rolled_back_to_its_creation_state_Async ), startTimer: true, client );
-        d.TransactionSerialNumber.Should().Be( 0, "Just created: 0." );
+        d.TransactionSerialNumber.ShouldBe( 0, "Just created: 0." );
 
         IReadOnlyList<ObservableEvent>? observableEvents = null;
         d.TransactionDone += ( d, ev ) => observableEvents = ev.Events;
@@ -82,30 +82,30 @@ public partial class MemoryTransactionProviderClientTests
             d.Root.Prop2 = "World";
             throw new Exception( "Exception during Modify(). This is a test exception." );
         }, considerRolledbackAsFailure: false );
-        transactionResult.Success.Should().BeTrue( "This is the roll back." );
+        transactionResult.Success.ShouldBeTrue( "This is the roll back." );
         Debug.Assert( transactionResult.RollbackedInfo != null );
-        transactionResult.RollbackedInfo.Failure.Success.Should().BeFalse();
-        transactionResult.RollbackedInfo.IsSafeRollback.Should().BeTrue( "Rollback to the initial start of the transaction is Safe." );
-        transactionResult.RollbackedInfo.IsDangerousRollback.Should().BeFalse();
-        observableEvents.Should().NotBeNull().And.BeEmpty( "No observable events (but TransactionDone has been called)." );
+        transactionResult.RollbackedInfo.Failure.Success.ShouldBeFalse();
+        transactionResult.RollbackedInfo.IsSafeRollback.ShouldBeTrue( "Rollback to the initial start of the transaction is Safe." );
+        transactionResult.RollbackedInfo.IsDangerousRollback.ShouldBeFalse();
+        observableEvents.ShouldNotBeNull().ShouldBeEmpty( "No observable events (but TransactionDone has been called)." );
         observableEvents = null;
         d.Read( TestHelper.Monitor, () =>
         {
-            d.TransactionSerialNumber.Should().Be( 0, "Back to creation." );
-            d.Root.Prop1.Should().BeNull();
-            d.Root.Prop2.Should().BeNull();
+            d.TransactionSerialNumber.ShouldBe( 0, "Back to creation." );
+            d.Root.Prop1.ShouldBeNull();
+            d.Root.Prop2.ShouldBeNull();
         } );
 
         // First real transaction (will be lost).
         await d.ModifyThrowAsync( TestHelper.Monitor, () => d.Root.Prop1 = "Hello" );
-        d.TransactionSerialNumber.Should().Be( 1 );
-        observableEvents.Should().NotBeNull().And.NotBeEmpty();
+        d.TransactionSerialNumber.ShouldBe( 1 );
+        observableEvents.ShouldNotBeNull().ShouldNotBeEmpty();
         observableEvents = null;
 
         // Second transaction (will also be lost).
         await d.ModifyThrowAsync( TestHelper.Monitor, () => d.Root.Prop2 = "World" );
-        d.TransactionSerialNumber.Should().Be( 2 );
-        observableEvents.Should().NotBeNull().And.NotBeEmpty();
+        d.TransactionSerialNumber.ShouldBe( 2 );
+        observableEvents.ShouldNotBeNull().ShouldNotBeEmpty();
         observableEvents = null;
 
         // Failing...
@@ -115,18 +115,18 @@ public partial class MemoryTransactionProviderClientTests
             throw new Exception( "Exception during Modify(). This is a test exception." );
         }, considerRolledbackAsFailure: false );
 
-        transactionResult.Success.Should().BeTrue( "This is the roll back." );
+        transactionResult.Success.ShouldBeTrue( "This is the roll back." );
         Debug.Assert( transactionResult.RollbackedInfo != null );
-        transactionResult.RollbackedInfo.Failure.Success.Should().BeFalse();
-        transactionResult.RollbackedInfo.IsSafeRollback.Should().BeFalse( "Rollback to an older state is..." );
-        transactionResult.RollbackedInfo.IsDangerousRollback.Should().BeTrue( "Dangerous!" );
+        transactionResult.RollbackedInfo.Failure.Success.ShouldBeFalse();
+        transactionResult.RollbackedInfo.IsSafeRollback.ShouldBeFalse( "Rollback to an older state is..." );
+        transactionResult.RollbackedInfo.IsDangerousRollback.ShouldBeTrue( "Dangerous!" );
         d.Read( TestHelper.Monitor, () =>
         {
-            d.TransactionSerialNumber.Should().Be( 0, "Back to creation." );
-            d.Root.Prop1.Should().BeNull();
-            d.Root.Prop2.Should().BeNull();
+            d.TransactionSerialNumber.ShouldBe( 0, "Back to creation." );
+            d.Root.Prop1.ShouldBeNull();
+            d.Root.Prop2.ShouldBeNull();
         } );
-        observableEvents.Should().NotBeNull().And.BeEmpty( "No observable events (but TransactionDone has been called)." );
+        observableEvents.ShouldNotBeNull().ShouldBeEmpty( "No observable events (but TransactionDone has been called)." );
     }
 
     [Test]
@@ -136,16 +136,16 @@ public partial class MemoryTransactionProviderClientTests
                                                                       nameof( when_SkipTransactionCount_is_Minus_1_a_lodaded_domain_is_rolled_back_to_its_load_state_Async ),
                                                                       startTimer: true,
                                                                       new ConcreteMemoryTransactionProviderClient() );
-        initial.TransactionSerialNumber.Should().Be( 0, "Just created: 0." );
+        initial.TransactionSerialNumber.ShouldBe( 0, "Just created: 0." );
         await initial.ModifyThrowAsync( TestHelper.Monitor, () => initial.Root.Prop1 = "Loaded State." );
-        initial.TransactionSerialNumber.Should().Be( 1, "Ready to be reloaded: 1." );
+        initial.TransactionSerialNumber.ShouldBe( 1, "Ready to be reloaded: 1." );
 
         var client = new ConcreteMemoryTransactionProviderClient() {  SkipTransactionCount = -1 };
 
         using var d = TestHelper.CloneDomain( initial, client: client );
-        initial.IsDisposed.Should().BeTrue( "CloneDomain disposed the initial domain." );
+        initial.IsDisposed.ShouldBeTrue( "CloneDomain disposed the initial domain." );
 
-        d.TransactionSerialNumber.Should().Be( 1, "Just loaded: 1." );
+        d.TransactionSerialNumber.ShouldBe( 1, "Just loaded: 1." );
         // Failed transaction (will be rolled back to the loaded state).
         var transactionResult = await d.TryModifyAsync( TestHelper.Monitor, () =>
         {
@@ -153,25 +153,25 @@ public partial class MemoryTransactionProviderClientTests
             d.Root.Prop2 = "World";
             throw new Exception( "Exception during Modify(). This is a test exception." );
         }, considerRolledbackAsFailure: false );
-        transactionResult.Success.Should().BeTrue( "This is the roll back." );
+        transactionResult.Success.ShouldBeTrue( "This is the roll back." );
         Debug.Assert( transactionResult.RollbackedInfo != null );
-        transactionResult.RollbackedInfo.Failure.Success.Should().BeFalse();
-        transactionResult.RollbackedInfo.IsSafeRollback.Should().BeTrue( "Rollback to the initial start of the transaction is Safe." );
-        transactionResult.RollbackedInfo.IsDangerousRollback.Should().BeFalse();
+        transactionResult.RollbackedInfo.Failure.Success.ShouldBeFalse();
+        transactionResult.RollbackedInfo.IsSafeRollback.ShouldBeTrue( "Rollback to the initial start of the transaction is Safe." );
+        transactionResult.RollbackedInfo.IsDangerousRollback.ShouldBeFalse();
         d.Read( TestHelper.Monitor, () =>
         {
-            d.TransactionSerialNumber.Should().Be( 1, "Back to loaded state." );
-            d.Root.Prop1.Should().Be( "Loaded State." );
-            d.Root.Prop2.Should().BeNull();
+            d.TransactionSerialNumber.ShouldBe( 1, "Back to loaded state." );
+            d.Root.Prop1.ShouldBe( "Loaded State." );
+            d.Root.Prop2.ShouldBeNull();
         } );
 
         // First real transaction (will be lost).
         await d.ModifyThrowAsync( TestHelper.Monitor, () => d.Root.Prop1 = "Hello" );
-        d.TransactionSerialNumber.Should().Be( 2 );
+        d.TransactionSerialNumber.ShouldBe( 2 );
 
         // Second transaction (will also be lost).
         await d.ModifyThrowAsync( TestHelper.Monitor, () => d.Root.Prop2 = "World" );
-        d.TransactionSerialNumber.Should().Be( 3 );
+        d.TransactionSerialNumber.ShouldBe( 3 );
 
         // Failing...
         transactionResult = await d.TryModifyAsync( TestHelper.Monitor, () =>
@@ -180,16 +180,16 @@ public partial class MemoryTransactionProviderClientTests
             throw new Exception( "Exception during Modify(). This is a test exception." );
         }, considerRolledbackAsFailure: false );
 
-        transactionResult.Success.Should().BeTrue( "This is the roll back." );
+        transactionResult.Success.ShouldBeTrue( "This is the roll back." );
         Debug.Assert( transactionResult.RollbackedInfo != null );
-        transactionResult.RollbackedInfo.Failure.Success.Should().BeFalse();
-        transactionResult.RollbackedInfo.IsSafeRollback.Should().BeFalse( "Rollback to an older state is..." );
-        transactionResult.RollbackedInfo.IsDangerousRollback.Should().BeTrue( "Dangerous!" );
+        transactionResult.RollbackedInfo.Failure.Success.ShouldBeFalse();
+        transactionResult.RollbackedInfo.IsSafeRollback.ShouldBeFalse( "Rollback to an older state is..." );
+        transactionResult.RollbackedInfo.IsDangerousRollback.ShouldBeTrue( "Dangerous!" );
         d.Read( TestHelper.Monitor, () =>
         {
-            d.TransactionSerialNumber.Should().Be( 1, "Dangerous roll back to loaded state." );
-            d.Root.Prop1.Should().Be( "Loaded State." );
-            d.Root.Prop2.Should().BeNull();
+            d.TransactionSerialNumber.ShouldBe( 1, "Dangerous roll back to loaded state." );
+            d.Root.Prop1.ShouldBe( "Loaded State." );
+            d.Root.Prop2.ShouldBeNull();
         } );
     }
 
@@ -211,7 +211,7 @@ public partial class MemoryTransactionProviderClientTests
             d.Root.Prop2 = "World";
         } );
         Debug.Assert( events != null );
-        events.Count.Should().Be( 4 );
+        events.Count.ShouldBe( 4 );
 
         // Raise exception during Write()
         events = null;
@@ -222,15 +222,15 @@ public partial class MemoryTransactionProviderClientTests
             d.Root.TestBehavior__ThrowOnWrite = true;
         } );
 
-        transactionResult.Errors.Should().BeEmpty( $"No errors happened during Modify()" );
-        transactionResult.ClientError.Should().NotBeNull();
+        transactionResult.Errors.ShouldBeEmpty( $"No errors happened during Modify()" );
+        transactionResult.ClientError.ShouldNotBeNull();
 
-        events.Should().BeNull( "OnSuccessfulTransaction has not been raised." );
-        transactionResult.IsCriticalError.Should().BeTrue( "Since Write fails, this is CRITICAL!" );
+        events.ShouldBeNull( "OnSuccessfulTransaction has not been raised." );
+        transactionResult.IsCriticalError.ShouldBeTrue( "Since Write fails, this is CRITICAL!" );
         d.Read( TestHelper.Monitor, () =>
         {
-            d.Root.Prop1.Should().Be( "This will" );
-            d.Root.Prop2.Should().Be( "be set even when Write fails" );
+            d.Root.Prop1.ShouldBe( "This will" );
+            d.Root.Prop2.ShouldBe( "be set even when Write fails" );
         } );
     }
 
@@ -250,7 +250,7 @@ public partial class MemoryTransactionProviderClientTests
             d.Root.Prop1 = "Hello";
             d.Root.Prop2 = "World";
         } );
-        observableEvents.Should().NotBeNull().And.NotBeEmpty();
+        observableEvents.ShouldNotBeNull().ShouldNotBeEmpty();
         observableEvents = null;
 
         // Raise exception during Modify()
@@ -260,19 +260,19 @@ public partial class MemoryTransactionProviderClientTests
             d.Root.Prop2 = "never be set";
             throw new Exception( "Exception during Modify(). This is a test exception." );
         } );
-        observableEvents.Should().NotBeNull().And.BeEmpty( "No observable events (but TransactionDone has been called)." );
+        observableEvents.ShouldNotBeNull().ShouldBeEmpty( "No observable events (but TransactionDone has been called)." );
 
-        transactionResult.Errors.Should().NotBeEmpty( $"Errors happened during Modify()" );
-        transactionResult.ClientError.Should().BeNull( "No client errors happened" );
-        transactionResult.IsCriticalError.Should().BeFalse( "The domain is in a valid state, this is not CRITICAL." );
+        transactionResult.Errors.ShouldNotBeEmpty( $"Errors happened during Modify()" );
+        transactionResult.ClientError.ShouldBeNull( "No client errors happened" );
+        transactionResult.IsCriticalError.ShouldBeFalse( "The domain is in a valid state, this is not CRITICAL." );
         d.Read( TestHelper.Monitor, () =>
         {
-            d.Root.Prop1.Should().Be( "Hello" );
-            d.Root.Prop2.Should().Be( "World" );
-            d.AllObjects.Count.Should().Be( 1 );
-            d.AllRoots.Count.Should().Be( 1 );
-            d.Root.Should().Be( (TestObservableRootObject)d.AllObjects.Items.First() );
-            d.Root.Should().Be( (TestObservableRootObject)d.AllRoots.First() );
+            d.Root.Prop1.ShouldBe( "Hello" );
+            d.Root.Prop2.ShouldBe( "World" );
+            d.AllObjects.Count.ShouldBe( 1 );
+            d.AllRoots.Count.ShouldBe( 1 );
+            d.Root.ShouldBe( (TestObservableRootObject)d.AllObjects.Items.First() );
+            d.Root.ShouldBe( (TestObservableRootObject)d.AllRoots.First() );
         } );
     }
 
@@ -296,14 +296,14 @@ public partial class MemoryTransactionProviderClientTests
                                                                            new ConcreteMemoryTransactionProviderClient(),
                                                                            RewindableStream.FromStream( domainStream ) );
 
-            d2.TimeManager.IsRunning.Should().BeTrue();
+            d2.TimeManager.IsRunning.ShouldBeTrue();
 
             d2.Read( TestHelper.Monitor, () =>
             {
-                d2.Root.Prop1.Should().Be( "Hello" );
-                d2.Root.Prop2.Should().Be( "World" );
-                d2.AllObjects.Count.Should().Be( 1 );
-                d2.AllRoots.Count.Should().Be( 1 );
+                d2.Root.Prop1.ShouldBe( "Hello" );
+                d2.Root.Prop2.ShouldBe( "World" );
+                d2.AllObjects.Count.ShouldBe( 1 );
+                d2.AllRoots.Count.ShouldBe( 1 );
             } );
         }
     }
@@ -331,21 +331,21 @@ public partial class MemoryTransactionProviderClientTests
         {
             d.Root.Prop1 = "This will";
             d.Root.Prop2 = "never be set";
-            d.Root.Invoking( x => x.Destroy() )
-                .Should().Throw<InvalidOperationException>( "Roots still can't be disposed during regular operation" );
+            Util.Invokable( () => d.Root.Destroy() )
+                .ShouldThrow<InvalidOperationException>( "Roots still can't be disposed during regular operation" );
             throw new Exception( "Exception during Modify(). This is a test exception." );
         } );
 
         d.Read( TestHelper.Monitor, () =>
         {
             restoredObservableObject = d.Root;
-            d.Root.Prop1.Should().Be( "Hello" );
-            d.Root.Prop2.Should().Be( "World" );
+            d.Root.Prop1.ShouldBe( "Hello" );
+            d.Root.Prop2.ShouldBe( "World" );
         } );
 
-        restoredObservableObject.Should().NotBe( initialObservableObject );
-        initialObservableObject.IsDestroyed.Should().BeTrue( "Root was disposed following a reload" );
-        restoredObservableObject.IsDestroyed.Should().BeFalse();
+        restoredObservableObject.ShouldNotBe( initialObservableObject );
+        initialObservableObject.IsDestroyed.ShouldBeTrue( "Root was disposed following a reload" );
+        restoredObservableObject.IsDestroyed.ShouldBeFalse();
     }
 
 }

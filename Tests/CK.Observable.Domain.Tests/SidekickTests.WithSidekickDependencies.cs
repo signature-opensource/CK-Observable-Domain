@@ -1,5 +1,5 @@
 using CK.Core;
-using FluentAssertions;
+using Shouldly;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 using System.Collections.Generic;
@@ -29,7 +29,7 @@ public partial class SidekickTests
 
         protected override void RegisterClientObject( IActivityMonitor monitor, IDestroyable o )
         {
-            o.GetType().Name.Should().Be( "ObjWithSKWithDependenciesViaInterface" );
+            o.GetType().Name.ShouldBe( "ObjWithSKWithDependenciesViaInterface" );
             monitor.Info( "ISidekickClientObject<T> registers the objects that implements it." );
         }
 
@@ -110,11 +110,11 @@ public partial class SidekickTests
                 o.CommandMessage = "Hello!";
             } );
         }
-        logs.Select( l => l.Text ).Should().Contain( "Initializing SKWithDependencies." );
-        logs.Select( l => l.Text ).Should().Contain( "SKWithDependencies[Formatted by ExternalService: 'Hello!'.]" );
+        logs.Select( l => l.Text ).ShouldContain( "Initializing SKWithDependencies." );
+        logs.Select( l => l.Text ).ShouldContain( "SKWithDependencies[Formatted by ExternalService: 'Hello!'.]" );
         if( mode == "ISidekickClientObject<>" )
         {
-            logs.Select( l => l.Text ).Should().Contain( "ISidekickClientObject<T> registers the objects that implements it." );
+            logs.Select( l => l.Text ).ShouldContain( "ISidekickClientObject<T> registers the objects that implements it." );
         }
     }
 
