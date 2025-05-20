@@ -32,9 +32,10 @@ builder.Services.Configure<DefaultObservableLeagueOptions>( c =>
 } );
 // /Bad!
 
-
-var map = new CK.StObj.GeneratedRootContext( monitor );
-//var map = StObjContextRoot.Load( System.Reflection.Assembly.GetExecutingAssembly(), monitor );
+// The following line requires having a G0.cs.
+// This would be the goal, removing reflection from map loading.
+//var map = new CK.StObj.GeneratedRootContext( monitor );
+var map = StObjContextRoot.Load( System.Reflection.Assembly.GetExecutingAssembly(), monitor );
 var app = builder.CKBuild( map );
 app.UseCris();
 app.MapHub<ObservableAppHub>( "/hub/league" );
