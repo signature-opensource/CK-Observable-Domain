@@ -12,7 +12,8 @@
     "typescript": "=5.4.5"
   },
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "ck-watch": "dotnet \"$PROJECT_CWD/../../bin/Debug/net8.0/CK.TypeScript.LiveEngine.dll\""
   },
   "dependencies": {
     "rxjs": ">=7.5.6"
@@ -22,5 +23,5 @@
     "mqtt": "=5.10.1"
   },
   "ckVersion": 1,
-  "packageManager": "yarn@4.6.0"
+  "packageManager": "yarn@4.8.1"
 }

@@ -27,8 +27,16 @@ module.exports = {
         // backend servers).
         // Do NOT alter the comments below.
         // Start-CKTypeScriptEnv
-        CKTypeScriptEnv: {}
-        // Stop-CKTypeScriptEnv-Stop
+        CKTypeScriptEnv: {},
+        // Stop-CKTypeScriptEnv
+    },
+    // TestHelper.CreateTypeScriptTestRunner also replaces the 'http://localhost' (that is the default)
+    // with the server address (like 'http://[::1]:55235' - a free dynamic port is used). 
+    // Do NOT alter the comments below.
+    testEnvironmentOptions: { 
+        // Start-CKTypeScriptSrv
+        url: 'http://localhost',
+        // Stop-CKTypeScriptSrv
     },
     setupFilesAfterEnv: ['<rootDir>/jest-setup.ts']
 };
