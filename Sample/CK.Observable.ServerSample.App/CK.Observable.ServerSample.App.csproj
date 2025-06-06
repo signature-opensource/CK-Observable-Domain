@@ -6,8 +6,8 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="CK.AspNet.Auth" Version="26.1.0" />
-    <PackageReference Include="CK.Cris.Auth" Version="0.0.0--05f3t37-explo" />
-    <PackageReference Include="CK.Cris.AspNet" Version="0.0.0--05f3t37-explo" />
+    <PackageReference Include="CK.Cris.Auth" Version="0.0.0--05fifyn-explo" />
+    <PackageReference Include="CK.Cris.AspNet" Version="0.0.0--05fy9b3-explo" />
     <PackageReference Include="CK.Monitoring.Hosting" Version="23.1.0" />
     <PackageReference Include="CK.WeakAssemblyNameResolver" Version="0.5.2" />
     <PackageReference Include="Fody" Version="6.8.2" PrivateAssets="All" />

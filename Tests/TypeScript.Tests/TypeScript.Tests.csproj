@@ -1,12 +1,12 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="CK.Testing.NUnit" Version="12.1.0" />
-    <PackageReference Include="CK.Testing.TypeScriptEngine" Version="0.0.0--05f3sf5-explo" />
-    <PackageReference Include="CK.Cris.AspNet.Engine" Version="0.0.0--05f3t37-explo" />
+    <PackageReference Include="CK.Testing.TypeScriptEngine" Version="0.0.0--05fwv2h-explo" />
+    <PackageReference Include="CK.Cris.AspNet.Engine" Version="0.0.0--05fy9b3-explo" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
     <PackageReference Include="NUnit3TestAdapter" PrivateAssets="all" Version="4.6.0" />
   </ItemGroup>
