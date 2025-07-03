@@ -4,6 +4,6 @@
     <RootNamespace>CK.ObservableDomain</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.TypeScript" Version="0.25.1--0002-develop" />
+    <PackageReference Include="CK.TypeScript" Version="0.25.1--0003-develop" />
   </ItemGroup>
 </Project>
