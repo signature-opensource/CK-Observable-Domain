@@ -368,7 +368,7 @@ public partial class ObservableLeague
         // This is called on PostActions of the Coordinator's domain modify.
         // If the domain must be loaded/created, the error is thrown so that the exception is captured and
         // a Coordinator.ModifyThrowAsync() actually throws.
-        public Task SynchronizeOptionsAsync( IActivityMonitor monitor, ManagedDomainOptions? options, DateTime? nextActiveTime )
+        public async Task SynchronizeOptionsAsync( IActivityMonitor monitor, ManagedDomainOptions? options, DateTime? nextActiveTime )
         {
             if( options != null )
             {
@@ -391,12 +391,16 @@ public partial class ObservableLeague
                 _preLoaded = shouldBeLoaded;
                 using( monitor.OpenDebug( $"The domain must be {(shouldBeLoaded ? "" : "un")}loaded (LifeCycleOption: {_lifeCycleOption}, NextActiveTime: {_nextActiveTime})." ) )
                 {
-                    return shouldBeLoaded
-                            ? DoShellLoadAsync( monitor, throwError: true, startTimer: null )
-                            : DoShellDisposeAsync( monitor ).AsTask();
+                    if( shouldBeLoaded )
+                    {
+                        await DoShellLoadAsync( monitor, throwError: true, startTimer: null ).ConfigureAwait( false );
+                    }
+                    else
+                    {
+                        await DoShellDisposeAsync( monitor ).ConfigureAwait( false );
+                    }
                 }
             }
-            return Task.CompletedTask;
         }
 
         protected ObservableDomain LoadedDomain => _domain!;

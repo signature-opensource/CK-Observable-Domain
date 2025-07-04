@@ -261,13 +261,13 @@ public sealed class TransactionResult
         }
         if( l.ActionCount > 0 )
         {
-            return Execute();
+            return ExecuteAsync();
         }
         if( !parallelDomainPostActions ) _forDomainPostActionsExecutor.SetResult( d );
 
         return Task.CompletedTask;
 
-        async Task Execute()
+        async Task ExecuteAsync()
         {
             var ctx = new PostActionContext( m, l, this );
             try
