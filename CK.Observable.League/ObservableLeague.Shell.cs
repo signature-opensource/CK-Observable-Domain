@@ -393,7 +393,7 @@ public partial class ObservableLeague
                 {
                     if( shouldBeLoaded )
                     {
-                        await DoShellLoadAsync( monitor, throwError: true, startTimer: null ).ConfigureAwait( false )
+                        await DoShellLoadAsync( monitor, throwError: true, startTimer: null ).ConfigureAwait( false );
                     }
                     else
                     {
