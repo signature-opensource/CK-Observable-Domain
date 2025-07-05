@@ -13,9 +13,9 @@ public struct ProductInfo : BinarySerialization.ICKSlicedSerializable
         ExtraData = new Dictionary<string, string>();
     }
 
-    ProductInfo( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
+    public ProductInfo( BinarySerialization.IBinaryDeserializer d, BinarySerialization.ITypeReadInfo info )
     {
-        Name = d.Reader.ReadNullableString();
+        Name = d.Reader.ReadString();
         Power = d.Reader.ReadInt32();
         ExtraData = d.ReadObject<IDictionary<string, string>>();
     }

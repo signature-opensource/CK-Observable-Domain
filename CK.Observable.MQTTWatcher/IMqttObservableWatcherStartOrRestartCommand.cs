@@ -3,7 +3,7 @@ using CK.TypeScript;
 
 namespace CK.Observable.MQTTWatcher;
 
-[TypeScript]
+[TypeScriptType]
 public interface IMQTTObservableWatcherStartOrRestartCommand : ICommand<string>
 {
     public string MqttClientId { get; set; } //Must be removed when auth is implemented.

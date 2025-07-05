@@ -362,7 +362,7 @@ public class PostActionsTests
             }
             else
             {
-                return SafeModify( i == 0 ? TestHelper.Monitor : new ActivityMonitor(), d );
+                return SafeModifyAsync( i == 0 ? TestHelper.Monitor : new ActivityMonitor(), d );
             }
         }) ).ToArray();
         await Task.WhenAll( tasks );
@@ -371,7 +371,7 @@ public class PostActionsTests
         // There's no ShouldNotBeInOrder.
         LocalNumbers.Select( x => x.Number ).IsSortedLarge().ShouldBeFalse();
 
-        static async Task SafeModify( IActivityMonitor monitor, ObservableDomain<SimpleRoot> d )
+        static async Task SafeModifyAsync( IActivityMonitor monitor, ObservableDomain<SimpleRoot> d )
         {
             try
             {
