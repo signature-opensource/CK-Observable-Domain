@@ -11,7 +11,7 @@
                       IntegrationMode = "Inline"
                       AutoInstallJest="false">
             <Types>
-              <Type Type="CK.Observable.ServerSample.App.ISliderCommand, CK.Observable.ServerSample.App" />
+              <Type Name="CK.Observable.ServerSample.App.ISliderCommand, CK.Observable.ServerSample.App" />
             </Types>
           </TypeScript>
         </Multiple>
