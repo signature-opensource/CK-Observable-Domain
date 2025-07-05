@@ -4,12 +4,13 @@ using System.Collections.Generic;
 namespace CK.Observable.Domain.Tests.RootSample;
 
 [SerializationVersion(0)]
-public struct ProductInfo : BinarySerialization.ICKSlicedSerializable
+public readonly struct ProductInfo : BinarySerialization.ICKSlicedSerializable
 {
-    public ProductInfo( string n, int p )
+    public ProductInfo( string name, int power )
     {
-        Name = n;
-        Power = p;
+        Throw.CheckNotNullArgument( name );
+        Name = name;
+        Power = power;
         ExtraData = new Dictionary<string, string>();
     }
 
@@ -22,7 +23,7 @@ public struct ProductInfo : BinarySerialization.ICKSlicedSerializable
 
     public static void Write( BinarySerialization.IBinarySerializer s, in ProductInfo o )
     {
-        s.Writer.WriteNullableString( o.Name );
+        s.Writer.Write( o.Name );
         s.Writer.Write( o.Power );
         s.WriteObject( o.ExtraData );
     }

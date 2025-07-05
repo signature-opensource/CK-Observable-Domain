@@ -241,6 +241,8 @@ public class ObservableSerializationTests
 
         public CustomImmutable( string id, string title )
         {
+            Throw.CheckNotNullArgument( id );
+            Throw.CheckNotNullArgument( title );
             Id = id;
             Title = title;
         }
@@ -254,8 +256,8 @@ public class ObservableSerializationTests
 
         public static void Write( BinarySerialization.IBinarySerializer w, in CustomImmutable o )
         {
-            w.Writer.WriteNullableString( o.Id );
-            w.Writer.WriteNullableString( o.Title );
+            w.Writer.Write( o.Id );
+            w.Writer.Write( o.Title );
         }
 
     }
