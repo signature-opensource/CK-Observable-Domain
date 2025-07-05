@@ -4,7 +4,8 @@
   "scripts": {
     "build": "tsc && vite build",
     "start": "vite serve",
-    "clean": "rimraf dist"
+    "clean": "rimraf dist",
+    "ck-watch": "dotnet \"$PROJECT_CWD/../../../CK.Observable.ServerSample.Builder/bin/Debug/net8.0/CK.TypeScript.LiveEngine.dll\""
   },
   "devDependencies": {
     "@microsoft/signalr": ">=6.0.23",
@@ -25,5 +26,5 @@
     "mqtt": "=5.10.1"
   },
   "ckVersion": 1,
-  "packageManager": "yarn@4.6.0"
+  "packageManager": "yarn@4.8.1"
 }
