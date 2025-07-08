@@ -7,7 +7,7 @@
     <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="24.0.1--0001-develop" />
     <PackageReference Include="CK.PerfectEvent" Version="25.0.1--0001-develop" />
     <PackageReference Include="System.Threading.Channels" Version="9.0.0" />
-    <PackageReference Include="CK.BinarySerialization.Sliced" Version="10.0.1--0002-develop" />
+    <PackageReference Include="CK.BinarySerialization.Sliced" Version="10.0.1--0004-develop" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="MSBuild/CK.Observable.Domain.targets">
