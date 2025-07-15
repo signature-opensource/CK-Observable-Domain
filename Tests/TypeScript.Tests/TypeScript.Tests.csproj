@@ -5,10 +5,10 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="CK.Testing.NUnit" Version="13.0.0" />
-    <PackageReference Include="CK.Testing.TypeScriptEngine" Version="0.26.0" />
-    <PackageReference Include="CK.Cris.AspNet.Engine" Version="0.39.0" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
-    <PackageReference Include="NUnit3TestAdapter" PrivateAssets="all" Version="4.6.0" />
+    <PackageReference Include="CK.Testing.TypeScriptEngine" Version="0.26.2" />
+    <PackageReference Include="CK.Cris.AspNet.Engine" Version="0.39.1" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="NUnit3TestAdapter" PrivateAssets="all" Version="5.0.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\CK.Observable.MQTTWatcher\CK.Observable.MQTTWatcher.csproj" />
