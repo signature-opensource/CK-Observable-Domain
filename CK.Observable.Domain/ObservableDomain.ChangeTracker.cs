@@ -114,7 +114,7 @@ public partial class ObservableDomain
         /// <param name="o">The object itself.</param>
         /// <param name="objectId">The assigned object identifier.</param>
         /// <param name="exporter">The export driver of the object. Can be null.</param>
-        internal void OnNewObject( ObservableObject o, ObservableObjectId objectId, IObjectExportTypeDriver exporter )
+        internal void OnNewObject( ObservableObject o, ObservableObjectId objectId, IObjectExportTypeDriver? exporter )
         {
             _changeEvents.Add( new NewObjectEvent( o, objectId ) );
             if( exporter != null )
