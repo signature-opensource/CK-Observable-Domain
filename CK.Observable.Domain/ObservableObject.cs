@@ -14,13 +14,16 @@ namespace CK.Observable;
 /// which properties changes and <see cref="Destroy()"/> are tracked.
 /// </summary>
 [SerializationVersion( 1 )]
-public abstract partial class ObservableObject : INotifyPropertyChanged, IKnowMyExportDriver, IDestroyableObject, BinarySerialization.ICKSlicedSerializable
+public abstract partial class ObservableObject :  IObservableDomainObject, INotifyPropertyChanged, IKnowMyExportDriver,BinarySerialization.ICKSlicedSerializable
 {
     ObservableObjectId _oid;
     internal readonly ObservableDomain ActualDomain;
-    internal readonly IObjectExportTypeDriver _exporter;
+    internal readonly IObjectExportTypeDriver? _exporter;
     ObservableEventHandler<ObservableDomainEventArgs> _destroyed;
     ObservableEventHandler<PropertyChangedEventArgs> _propertyChanged;
+
+    void IDestroyableObject.LocalImplementationOnly() { }
+    void IObservableDomainObject.LocalImplementationOnly() { }
 
     /// <summary>
     /// Raised when this object is <see cref="Destroy">destroyed</see>.
@@ -77,6 +80,10 @@ public abstract partial class ObservableObject : INotifyPropertyChanged, IKnowMy
     ObservableObject( ObservableDomain domain )
     {
         Throw.CheckNotNullArgument( domain );
+        if( this is IObservableDomainSingleton s )
+        {
+            ObservableDomain.ThrowOnPublicConstructors( s );
+        }
         ActualDomain = domain;
         _exporter = ActualDomain._exporters.FindDriver( GetType() );
         _oid = ActualDomain.Register( this );
@@ -136,7 +143,7 @@ public abstract partial class ObservableObject : INotifyPropertyChanged, IKnowMy
 
     internal virtual ObjectExportedKind ExportedKind => ObjectExportedKind.Object;
 
-    IObjectExportTypeDriver IKnowMyExportDriver.ExportDriver => _exporter;
+    IObjectExportTypeDriver? IKnowMyExportDriver.ExportDriver => _exporter;
 
     /// <summary>
     /// Destroys this object (can be called multiple times).
@@ -154,11 +161,14 @@ public abstract partial class ObservableObject : INotifyPropertyChanged, IKnowMy
             {
                 Throw.InvalidOperationException( "ObservableRootObject cannot be disposed." );
             }
-            ActualDomain.CheckBeforeDestroy( this );
-            OnUnload();
-            OnDestroy();
-            ActualDomain.Unregister( this );
-            _oid = ObservableObjectId.Destroyed;
+            if( this is not IObservableDomainSingleton s || ActualDomain.ShouldDestroySingleton( s ) )
+            {
+                ActualDomain.CheckBeforeDestroy( this );
+                OnUnload();
+                OnDestroy();
+                ActualDomain.Unregister( this );
+                _oid = ObservableObjectId.Destroyed;
+            }
         }
     }
 

@@ -11,12 +11,15 @@ namespace CK.Observable;
 /// </summary>
 [NotExportable]
 [SerializationVersion( 0 )]
-public abstract class InternalObject : IDestroyableObject, BinarySerialization.ICKSlicedSerializable
+public abstract class InternalObject : IObservableDomainObject, BinarySerialization.ICKSlicedSerializable
 {
     internal ObservableDomain? ActualDomain;
     internal InternalObject? Next;
     internal InternalObject? Prev;
     ObservableEventHandler<ObservableDomainEventArgs> _destroyed;
+
+    void IDestroyableObject.LocalImplementationOnly() { }
+    void IObservableDomainObject.LocalImplementationOnly() { }
 
     /// <summary>
     /// Raised when this object is <see cref="Destroy()">destroyed</see>.
@@ -48,6 +51,10 @@ public abstract class InternalObject : IDestroyableObject, BinarySerialization.I
     protected InternalObject( ObservableDomain domain )
     {
         Throw.CheckNotNullArgument( domain );
+        if( this is IObservableDomainSingleton s )
+        {
+            ObservableDomain.ThrowOnPublicConstructors( s );
+        }
         ActualDomain = domain;
         ActualDomain.Register( this );
     }
@@ -110,7 +117,8 @@ public abstract class InternalObject : IDestroyableObject, BinarySerialization.I
     /// </remarks>
     public void Destroy()
     {
-        if( ActualDomain != null )
+        if( ActualDomain != null
+            && (this is not IObservableDomainSingleton s || ActualDomain.ShouldDestroySingleton( s )) )
         {
             ActualDomain.CheckBeforeDestroy( this );
             OnUnload();

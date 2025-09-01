@@ -46,6 +46,8 @@ public abstract class ObservableTimedEventBase : IDestroyableObject, BinarySeria
         TimeManager.OnCreated( this, true );
     }
 
+    void IDestroyableObject.LocalImplementationOnly() { }
+
     /// <summary>
     /// Specialized deserialization constructor for specialized classes.
     /// </summary>

@@ -8,6 +8,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -28,6 +29,7 @@ namespace CK.Observable;
 [NotExportable( Error = "No interaction with the ObservableDomain must be made from the observable objects." )]
 public partial class ObservableDomain : IObservableDomain, IDisposable, IObservableDomainInspector
 {
+
     /// <summary>
     /// An artificial <see cref="CKExceptionData"/> that is added to
     /// <see cref="TransactionResult.Errors"/> whenever a transaction
@@ -59,6 +61,7 @@ public partial class ObservableDomain : IObservableDomain, IDisposable, IObserva
     readonly TimeManager _timeManager;
     readonly SidekickManager _sidekickManager;
     readonly ObservableDomainPostActionExecutor _domainPostActionExecutor;
+    readonly Dictionary<Type, (int ICount, IObservableDomainSingleton Instance)> _singletons;
     internal readonly Random _random;
     Action<ITransactionDoneEvent>? _inspectorEvent;
     BinarySerializerContext _serializerContext;
@@ -366,6 +369,7 @@ public partial class ObservableDomain : IObservableDomain, IDisposable, IObserva
         Debug.Assert( instantionKind == CurrentTransactionStatus.Instantiating || instantionKind == CurrentTransactionStatus.Deserializing );
 
         _pocoDirectory = serviceProvider?.GetService<PocoDirectory>( false );
+        _singletons = new Dictionary<Type, (int ICount, IObservableDomainSingleton Instance)>();
 
         // This class should be sealed for the external world. But since ObservableDomain<T>...<T1,T2,T3,T4>
         // that are defined in this assembly needs to extend it, it cannot be sealed.
@@ -434,7 +438,7 @@ public partial class ObservableDomain : IObservableDomain, IDisposable, IObserva
 
     static byte[] CreateSecret()
     {
-        using( var c = new System.Security.Cryptography.Rfc2898DeriveBytes( Guid.NewGuid().ToString(), Guid.NewGuid().ToByteArray(), 1000 ) )
+        using( var c = new Rfc2898DeriveBytes( Guid.NewGuid().ToString(), Guid.NewGuid().ToByteArray(), 1000, HashAlgorithmName.SHA1 ) )
         {
             return c.GetBytes( DomainSecretKeyLength );
         }
