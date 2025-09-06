@@ -3,9 +3,9 @@
     <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.Cris.Typescript" Version="0.50.0-a00-00-0050-develop" />
-    <PackageReference Include="CK.Cris.AspNet" Version="0.50.0-a00-00-0050-develop" />
-    <PackageReference Include="CK.MQTT.LocalMQTTDemiServer" Version="0.30.1--0022-develop" />
+    <PackageReference Include="CK.Cris.Typescript" Version="0.50.0-a00-00-0051-develop" />
+    <PackageReference Include="CK.Cris.AspNet" Version="0.50.0-a00-00-0051-develop" />
+    <PackageReference Include="CK.MQTT.LocalMQTTDemiServer" Version="0.30.1--0023-develop" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CK.Observable.League\CK.Observable.League.csproj" />
