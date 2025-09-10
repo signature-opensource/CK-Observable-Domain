@@ -10,7 +10,7 @@
     <PackageReference Include="CK.Cris.AspNet" Version="0.50.0-a00-00-0067-develop" />
     <PackageReference Include="CK.Monitoring.Hosting" Version="24.0.1--0026-develop" />
     <PackageReference Include="CK.WeakAssemblyNameResolver" Version="0.5.2" />
-    <PackageReference Include="Fody" Version="6.8.2" PrivateAssets="All" />
+    <PackageReference Include="Fody" Version="6.9.3" PrivateAssets="All" />
     <PackageReference Include="PropertyChanged.Fody" Version="4.1.0" PrivateAssets="All" />
   </ItemGroup>
   <ItemGroup>
