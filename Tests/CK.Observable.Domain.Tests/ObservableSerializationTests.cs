@@ -211,24 +211,24 @@ public class ObservableSerializationTests
     [SerializationVersion( 0 )]
     public class CustomRoot : ObservableRootObject
     {
-        public ObservableDictionary<string, CustomImmutable> ImmutablesById { get; set; }
-        public ObservableList<string> SomeList { get; set; }
+        public ObservableDictionary<string, CustomImmutable>? ImmutablesById { get; set; }
+        public ObservableList<string>? SomeList { get; set; }
         public ObservableList<CustomObservable>? CustomObservableList { get; set; }
 
         public CustomRoot() { }
 
-        CustomRoot( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
-            : base( BinarySerialization.Sliced.Instance )
+        public CustomRoot( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+                    : base( BinarySerialization.Sliced.Instance )
         {
-            ImmutablesById = r.ReadObject<ObservableDictionary<string, CustomImmutable>>();
-            SomeList = r.ReadObject<ObservableList<string>>();
+            ImmutablesById = r.ReadNullableObject<ObservableDictionary<string, CustomImmutable>>();
+            SomeList = r.ReadNullableObject<ObservableList<string>>();
             CustomObservableList = r.ReadNullableObject<ObservableList<CustomObservable>>();
         }
 
         public static void Write( BinarySerialization.IBinarySerializer w, in CustomRoot o )
         {
-            w.WriteObject( o.ImmutablesById );
-            w.WriteObject( o.SomeList );
+            w.WriteNullableObject( o.ImmutablesById );
+            w.WriteNullableObject( o.SomeList );
             w.WriteNullableObject( o.CustomObservableList );
         }
     }
@@ -241,21 +241,23 @@ public class ObservableSerializationTests
 
         public CustomImmutable( string id, string title )
         {
+            Throw.CheckNotNullArgument( id );
+            Throw.CheckNotNullArgument( title );
             Id = id;
             Title = title;
         }
 
-        CustomImmutable( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo? info )
+        public CustomImmutable( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo? info )
         {
-            Id = r.Reader.ReadNullableString();
-            Title = r.Reader.ReadNullableString();
+            Id = r.Reader.ReadString();
+            Title = r.Reader.ReadString();
         }
 
 
         public static void Write( BinarySerialization.IBinarySerializer w, in CustomImmutable o )
         {
-            w.Writer.WriteNullableString( o.Id );
-            w.Writer.WriteNullableString( o.Title );
+            w.Writer.Write( o.Id );
+            w.Writer.Write( o.Title );
         }
 
     }

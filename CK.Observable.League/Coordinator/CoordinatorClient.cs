@@ -47,6 +47,7 @@ internal class CoordinatorClient : StreamStoreClient, IObservableDomainAccess<OC
         : base( String.Empty, store, next: null )
     {
         _serviceProvider = serviceProvider;
+        Domain = null!;
     }
 
     /// <summary>

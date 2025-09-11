@@ -109,7 +109,7 @@ public interface IBarcodeScannerState
 public class BarcodeScannerState : ObservableObject, IBarcodeScannerState
 {
     public DateTime LastSeen { get; private set; }
-    public string LastScanIdentifier { get; private set; }
+    public string? LastScanIdentifier { get; private set; }
     public ObservableDictionary<string, string> LastScanMetadata { get; }
 
     IReadOnlyDictionary<string, string> IBarcodeScannerState.LastScanMetadata => LastScanMetadata;
@@ -119,8 +119,8 @@ public class BarcodeScannerState : ObservableObject, IBarcodeScannerState
         LastScanMetadata = new ObservableDictionary<string, string>();
     }
 
-    BarcodeScannerState( CK.BinarySerialization.IBinaryDeserializer r, CK.BinarySerialization.ITypeReadInfo info )
-            : base( CK.BinarySerialization.Sliced.Instance )
+    public BarcodeScannerState( CK.BinarySerialization.IBinaryDeserializer r, CK.BinarySerialization.ITypeReadInfo info )
+                : base( CK.BinarySerialization.Sliced.Instance )
     {
         LastSeen = r.Reader.ReadDateTime();
         LastScanIdentifier = r.Reader.ReadNullableString();
@@ -153,10 +153,12 @@ public class BarcodeScannerState : ObservableObject, IBarcodeScannerState
     public class DispatchProductResult
     {
         public DispatchProductResultType DispatchProductResultType { get; }
-        public string ProductId { get; }
-        public ObservableList<string> OrdersWithProduct { get; }
+        public string? ProductId { get; }
+        public ObservableList<string>? OrdersWithProduct { get; }
 
-        public DispatchProductResult( DispatchProductResultType dispatchProductResultType, string productId = null, IEnumerable<string> ordersWithProduct = null )
+        public DispatchProductResult( DispatchProductResultType dispatchProductResultType,
+                                      string? productId = null,
+                                      IEnumerable<string>? ordersWithProduct = null )
         {
             DispatchProductResultType = dispatchProductResultType;
             ProductId = productId;
@@ -187,10 +189,12 @@ public class BarcodeScannerState : ObservableObject, IBarcodeScannerState
 public class DispatchProductResult
 {
     public DispatchProductResultType DispatchProductResultType { get; }
-    public string ProductId { get; }
-    public ObservableList<string> OrdersWithProduct { get; }
+    public string? ProductId { get; }
+    public ObservableList<string>? OrdersWithProduct { get; }
 
-    public DispatchProductResult( DispatchProductResultType dispatchProductResultType, string productId = null, IEnumerable<string> ordersWithProduct = null )
+    public DispatchProductResult( DispatchProductResultType dispatchProductResultType,
+                                  string? productId = null,
+                                  IEnumerable<string>? ordersWithProduct = null )
     {
         DispatchProductResultType = dispatchProductResultType;
         ProductId = productId;
@@ -205,14 +209,14 @@ public class DispatchProductResult
     {
         DispatchProductResultType = r.ReadValue<DispatchProductResultType>();
         ProductId = r.Reader.ReadNullableString();
-        OrdersWithProduct = r.ReadObject<ObservableList<string>>();
+        OrdersWithProduct = r.ReadNullableObject<ObservableList<string>>();
     }
 
     public static void Write( CK.BinarySerialization.IBinarySerializer w, in DispatchProductResult o )
     {
         w.WriteValue( o.DispatchProductResultType );
         w.Writer.WriteNullableString( o.ProductId );
-        w.WriteObject( o.OrdersWithProduct );
+        w.WriteNullableObject( o.OrdersWithProduct );
     }
 
     public bool Success

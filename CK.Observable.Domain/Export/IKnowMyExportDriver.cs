@@ -9,5 +9,5 @@ public interface IKnowMyExportDriver
     /// <summary>
     /// Gets the export driver to use.
     /// </summary>
-    IObjectExportTypeDriver ExportDriver { get; }
+    IObjectExportTypeDriver? ExportDriver { get; }
 }

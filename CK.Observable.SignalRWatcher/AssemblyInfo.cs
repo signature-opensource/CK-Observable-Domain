@@ -1,1 +1,1 @@
-[assembly: CK.Core.PreserveAssemblyReference( typeof( CK.Cris.TypeScriptCrisCommandGenerator ) )]
+[assembly: CK.Setup.PreserveAssemblyReference( typeof( CK.Cris.TypeScriptCrisCommandGenerator ) )]

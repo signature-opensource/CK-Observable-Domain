@@ -7,20 +7,11 @@
       <TypeScript>
         <Multiple>
 
-          <TypeScript TargetProjectPath="{ProjectPath}Clients/NpmPackage"
-                      IntegrationMode = "NpmPackage"
-                      TypeFilterName="TypeScriptN">
-            <Types>
-              <Type Type="CK.Observable.ServerSample.App.ISliderCommand, CK.Observable.ServerSample.App" />
-            </Types>
-          </TypeScript>
-
           <TypeScript TargetProjectPath="{ProjectPath}Clients/Inline"
                       IntegrationMode = "Inline"
-                      AutoInstallJest="false"
-                      TypeFilterName="TypeScriptI">
+                      AutoInstallJest="false">
             <Types>
-              <Type Type="CK.Observable.ServerSample.App.ISliderCommand, CK.Observable.ServerSample.App" />
+              <Type Name="CK.Observable.ServerSample.App.ISliderCommand, CK.Observable.ServerSample.App" />
             </Types>
           </TypeScript>
         </Multiple>

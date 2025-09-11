@@ -34,7 +34,7 @@ public partial class ObservableDomain
 
         void Track( BinarySerialization.IDestroyable o )
         {
-            if( destroyedRefList == null ) destroyedRefList = new List<BinarySerialization.IDestroyable>();
+            destroyedRefList ??= new List<BinarySerialization.IDestroyable>();
             Debug.Assert( !destroyedRefList.Contains( o ) );
             destroyedRefList.Add( o );
         }
@@ -67,7 +67,7 @@ public partial class ObservableDomain
             {
                 using( monitor.OpenInfo( $"Saving domain ({_actualObjectCount} objects, {_internalObjectCount} internals, {_timeManager.AllObservableTimedEvents.Count} timed events)." ) )
                 {
-                    s.Writer.Write( (byte)0 ); // Version
+                    s.Writer.Write( (byte)1 ); // Version
                     s.DebugWriteMode( debugMode ? (bool?)debugMode : null );
                     s.Writer.Write( _currentObjectUniquifier );
                     Debug.Assert( _domainSecret != null );
@@ -95,6 +95,15 @@ public partial class ObservableDomain
                     // Internal and Timed objects) will be written. Event callbacks' object will
                     // not if they are destroyed => any non saved objects after these roots
                     // are de facto not reachable from the roots.
+                    // Singletons are def acto roots, they must also be written here.
+                    s.Writer.WriteNonNegativeSmallInt32( _singletons.Count );
+                    foreach( var (type,(count,instance)) in _singletons )
+                    {
+                        s.WriteObject( type );
+                        s.Writer.WriteNonNegativeSmallInt32( count );
+                        s.WriteObject( instance );
+                    }
+
                     s.Writer.WriteNonNegativeSmallInt32( _roots.Count );
                     foreach( var r in _roots )
                     {
@@ -203,7 +212,9 @@ public partial class ObservableDomain
         // this must be called before any PostActions added by the objects.
         d.PostActions.Add( BindRoots );
 
-        d.Reader.ReadByte(); // Local version.
+        // Local version: v0 before singletons support.
+        //                v1 introduces singletons support.
+        var version = d.Reader.ReadByte(); 
         d.DebugReadMode();
         if( firstPass )
         {
@@ -293,13 +304,42 @@ public partial class ObservableDomain
             Array.Resize( ref _objects, _objects.Length * 2 );
         }
 
-        // Reading roots first (including their Internal and Timed objects).
+        // Reading singleton and roots first (including their Internal and Timed objects).
+        if( version > 0 )
+        {
+            Throw.DebugAssert( "Unload did its job.", _singletons.Count == 0 );
+            int singletonCount = d.Reader.ReadNonNegativeSmallInt32();
+            for( int i = 0; i < singletonCount; i++ )
+            {
+                var type = d.ReadObject<Type>();
+                if( !typeof( IObservableDomainSingleton ).IsAssignableFrom( type ) )
+                {
+                    // The type was a singleton but this no more the case.
+                    // This mutation is rather easy to handle: we simply not register it in the
+                    // singletons dictionary... This is easy for us but NOT for the applicative code:
+                    // the same instance is still used, the first participant that will call Destroy will
+                    // destroy the object.
+                    // Such mutation must be handled carefully.
+                    // The opposite mutation is handled when reading the whole set of objects below:
+                    // if a type is a IObservableDomainSingleton we check that it appears in the singletons dictionary
+                    // and if not, we add it... with an instantiation count of 1 and track it: if more than one instance
+                    // of this type appears, we fail the deserialization.
+                    d.Reader.ReadNonNegativeSmallInt32();
+                    d.ReadObject<IObservableDomainSingleton>();
+                }
+                else
+                {
+                    _singletons.Add( type, (d.Reader.ReadNonNegativeSmallInt32(), d.ReadObject<IObservableDomainSingleton>()) );
+                }
+            }
+        }
         int rootCount = d.Reader.ReadNonNegativeSmallInt32();
         for( int i = 0; i < rootCount; ++i )
         {
             _roots.Add( d.ReadObject<ObservableRootObject>() );
         }
-        // Reads all the objects. 
+        // Reads all the objects.
+        HashSet<Type>? newSingletonTracker = null;
         for( int i = 0; i < count; ++i )
         {
             var o = d.ReadNullableObject<ObservableObject>();
@@ -310,16 +350,26 @@ public partial class ObservableDomain
                 // a new OId for the object.
                 Throw.InvalidDataException( $"Deserialization error for '{o.GetType().ToCSharpName()}': its deserialization constructor must call \": base( Sliced.{nameof(Sliced.Instance)} )\"." );
             }
+            if( o is IObservableDomainSingleton s )
+            {
+                CheckDeserializedInstance( s, ref newSingletonTracker );
+            }
             _objects[i] = o;
         }
 
         // Reading InternalObjects.
         d.DebugCheckSentinel();
+        // It is useless to have any remaining ObservableObject new IObservableDomainSingleton in the tracker.
+        newSingletonTracker?.Clear();
         count = d.Reader.ReadNonNegativeSmallInt32();
         while( --count >= 0 )
         {
             var o = d.ReadObject<InternalObject>();
             Debug.Assert( !o.IsDestroyed );
+            if( o is IObservableDomainSingleton s )
+            {
+                CheckDeserializedInstance( s, ref newSingletonTracker );
+            }
             Register( o );
         }
         // Reading Timed events.
@@ -365,7 +415,8 @@ public partial class ObservableDomain
             _objectsListCount = 0;
             _actualObjectCount = 0;
 
-            // Clears root list.
+            // Clears singletons dictionary and root list.
+            _singletons.Clear();
             _roots.Clear();
 
             // Free sidekicks and IObservableDomainActionTracker.

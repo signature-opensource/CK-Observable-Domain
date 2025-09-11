@@ -187,4 +187,10 @@ public readonly struct DomainView
     /// Gets a central domain simple random number generator.
     /// </summary>
     public Random Random => _d._random;
+
+    /// <inheritdoc cref="ObservableDomain.CreateSingleton(Type)"/>
+    public IObservableDomainObject CreateSingleton( Type type ) => _d.CreateSingleton( type );
+
+    /// <inheritdoc cref="ObservableDomain.CreateSingleton{T}()"/>
+    public T CreateSingleton<T>() where T : class, IObservableDomainSingleton => _d.CreateSingleton<T>();
 }

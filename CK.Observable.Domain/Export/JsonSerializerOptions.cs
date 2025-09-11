@@ -11,7 +11,7 @@ public class JsonSerializerOptions
     /// <summary>
     /// Default that should always be used.
     /// </summary>
-    internal static readonly JsonSerializerOptions Default = new JsonSerializerOptions { CultureInfo = CultureInfo.InvariantCulture };
+    internal static readonly JsonSerializerOptions Default = new JsonSerializerOptions();
 
     /// <summary>
     /// Gets or sets the culture. Defaults to <see cref="CultureInfo.InvariantCulture"/>.
@@ -38,6 +38,7 @@ public class JsonSerializerOptions
     /// </summary>
     public JsonSerializerOptions()
     {
+        CultureInfo = CultureInfo.InvariantCulture;
         DateTimeConverter = o => o.ToString( "o", CultureInfo );
         DateTimeOffsetConverter = o => o.ToString( "o", CultureInfo );
         TimeSpanConverter = o => o.ToString();

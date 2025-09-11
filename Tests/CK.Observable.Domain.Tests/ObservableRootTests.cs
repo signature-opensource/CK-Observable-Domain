@@ -60,7 +60,7 @@ public class ObservableRootTests
     [Test]
     public async Task serialization_tests_Async()
     {
-        using( var d = new ObservableDomain<ApplicationState>(TestHelper.Monitor, nameof( serialization_tests_Async ), startTimer: true ) )
+        using( var d = new ObservableDomain<ApplicationState>( TestHelper.Monitor, nameof( serialization_tests_Async ), startTimer: true ) )
         {
             await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
@@ -74,7 +74,7 @@ public class ObservableRootTests
                 }
             } );
             var ctx = new BinaryDeserializerContext();
-            ctx.Services.Add<ObservableDomain>( new ObservableDomain<ApplicationState>(TestHelper.Monitor, nameof( serialization_tests_Async ), startTimer: true ) );
+            ctx.Services.Add<ObservableDomain>( new ObservableDomain<ApplicationState>( TestHelper.Monitor, nameof( serialization_tests_Async ), startTimer: true ) );
             BinarySerializer.IdempotenceCheck( d.Root, deserializerContext: ctx );
         }
     }

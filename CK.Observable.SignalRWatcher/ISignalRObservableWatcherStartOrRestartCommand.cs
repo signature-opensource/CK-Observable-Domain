@@ -3,7 +3,7 @@ using CK.TypeScript;
 
 namespace CK.Observable.SignalRWatcher;
 
-[TypeScript]
+[TypeScriptType]
 public interface ISignalRObservableWatcherStartOrRestartCommand : ICommand<string>
 {
     public string ClientId { get; set; }

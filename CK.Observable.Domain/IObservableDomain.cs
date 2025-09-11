@@ -57,6 +57,32 @@ public interface IObservableDomain
     ITimeManager TimeManager { get; }
 
     /// <summary>
+    /// Creates a singleton instance from its type. Even if it is named "Create", this actually is a "find or create".
+    /// <para>
+    /// Once useless, the object should be destroyed if it has also been created by other participants: its real destruction
+    /// will wait until all participants have also destroyed their obtained instance.
+    /// </para>
+    /// </summary>
+    /// <param name="type">
+    /// The singleton type.
+    /// Must be a <see cref="IObservableDomainSingleton"/> otherwise an <see cref="ArgumentException"/> is thrown.
+    /// </param>
+    /// <returns>A new or already existing instance.</returns>
+    IObservableDomainObject CreateSingleton( Type type );
+
+    /// <summary>
+    /// Creates a singleton instance for type <typeparamref name="T"/>. Even if it is named "Create", this actually
+    /// is a "find or create".
+    /// <para>
+    /// Once useless, the object should be destroyed if it has also been created by other participants: its real destruction
+    /// will wait until all participants have also destroyed their obtained instance.
+    /// </para>
+    /// </summary>
+    /// <typeparam name="T">The type of singleton to obtain.</typeparam>
+    /// <returns>A new or already existing instance.</returns>
+    T CreateSingleton<T>() where T : class, IObservableDomainSingleton;
+
+    /// <summary>
     /// Saves this domain.
     /// </summary>
     /// <param name="monitor">The monitor to use. Cannot be null.</param>

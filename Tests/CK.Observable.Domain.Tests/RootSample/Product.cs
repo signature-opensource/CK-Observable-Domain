@@ -10,8 +10,8 @@ public class Product : ObservableObject
         ProductInfo = p;
     }
 
-    Product( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
-            : base( BinarySerialization.Sliced.Instance )
+    public Product( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+                : base( BinarySerialization.Sliced.Instance )
     {
         ProductNumber = r.Reader.ReadInt32();
         Name = r.Reader.ReadNullableString();
@@ -29,5 +29,5 @@ public class Product : ObservableObject
 
     public int ProductNumber { get; set; }
 
-    public string Name { get; set; }
+    public string? Name { get; set; }
 }

@@ -19,7 +19,9 @@ public abstract class Machine : ObservableObject, ISidekickClientObject<MachineS
         Domain.EnsureSidekicks();
     }
 
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
     protected Machine( Sliced _ ) : base( _ ) { }
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
 
     Machine( IBinaryDeserializer d, ITypeReadInfo info )
             : base( Sliced.Instance )

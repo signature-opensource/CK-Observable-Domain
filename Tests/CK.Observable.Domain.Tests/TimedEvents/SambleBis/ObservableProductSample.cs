@@ -29,7 +29,7 @@ class ObservableProductSample : ObservableObject
     {
         w.Writer.WriteNullableString( o.Name );
         w.WriteObject( o.Machine );
-        w.WriteObject( o._autoDestroyReminder );
+        w.WriteNullableObject( o._autoDestroyReminder );
     }
 
     protected override void OnDestroy()
