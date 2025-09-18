@@ -1,11 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using CK.DeviceModel;
-
-namespace CK.Observable.Device;
+namespace CK.IO.ObservableDevice;
 
 /// <summary>
 /// Defines the level of ownership of a <see cref="ObservableDeviceObject"/> on the actual device.
@@ -69,5 +62,4 @@ public enum DeviceControlStatus
     /// </para>
     /// </summary>
     HasOwnership
-
 }

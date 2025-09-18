@@ -1,6 +1,4 @@
-using CK.DeviceModel;
-
-namespace CK.Observable.Device;
+namespace CK.IO.ObservableDevice;
 
 /// <summary>
 /// Defines the <see cref="ObservableDeviceObject.SendDeviceControlCommand(DeviceControlAction)"/> parameter.

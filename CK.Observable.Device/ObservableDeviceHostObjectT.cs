@@ -1,10 +1,10 @@
 using CK.BinarySerialization;
 using CK.Core;
 using CK.DeviceModel;
+using CK.IO.ObservableDevice;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Runtime.InteropServices;
 
 namespace CK.Observable.Device;
 

@@ -8,7 +8,6 @@ namespace CodeCake;
 /// <summary>
 /// Standard build "script".
 /// </summary>
-
 public partial class Build : CodeCakeHost
 {
     public Build()

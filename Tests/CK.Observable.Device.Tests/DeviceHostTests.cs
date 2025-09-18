@@ -2,16 +2,15 @@ using CK.BinarySerialization;
 using CK.Core;
 using Shouldly;
 using NUnit.Framework;
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
-using Microsoft.VisualStudio.TestPlatform.CoreUtilities.Extensions;
+using CK.IO.DeviceModel;
+using CK.IO.ObservableDevice;
 
 namespace CK.Observable.Device.Tests;
 
@@ -49,7 +48,7 @@ public class DeviceHostTests
         await host.EnsureDeviceAsync( TestHelper.Monitor, new SampleDeviceConfiguration()
         {
             Name = "TheOne",
-            Status = DeviceModel.DeviceConfigurationStatus.Runnable,
+            Status = DeviceConfigurationStatus.Runnable,
             PeriodMilliseconds = 100,
             Message = "Not used here."
         } );
@@ -122,7 +121,7 @@ public class DeviceHostTests
         await host.EnsureDeviceAsync( TestHelper.Monitor, new SampleDeviceConfiguration()
         {
             Name = "TheOne",
-            Status = DeviceModel.DeviceConfigurationStatus.Runnable,
+            Status = DeviceConfigurationStatus.Runnable,
             PeriodMilliseconds = Timeout.Infinite,
             Message = "Not used here."
         } );

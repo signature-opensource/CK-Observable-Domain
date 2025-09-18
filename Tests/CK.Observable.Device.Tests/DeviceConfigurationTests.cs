@@ -1,16 +1,13 @@
 using CK.BinarySerialization;
 using CK.Core;
-using CK.DeviceModel;
 using Shouldly;
 using NUnit.Framework;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Net.NetworkInformation;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
+using CK.IO.DeviceModel;
+using CK.IO.ObservableDevice;
 
 namespace CK.Observable.Device.Tests;
 

@@ -4,14 +4,13 @@ using CK.DeviceModel;
 using Shouldly;
 using NUnit.Framework;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using System.Xml;
 using static CK.Testing.MonitorTestHelper;
+using CK.IO.DeviceModel;
+using CK.IO.ObservableDevice;
 
 namespace CK.Observable.Device.Tests;
 
@@ -162,7 +161,6 @@ public class DeviceBridgeTests
         (await host.EnsureDeviceAsync( TestHelper.Monitor, config )).ShouldBe( DeviceApplyConfigurationResult.CreateAndStartSucceeded );
 
         using var obs = new ObservableDomain(TestHelper.Monitor, nameof(Start_and_Stop_commands_Async), true, serviceProvider: sp );
-
 
         OSampleDevice? device = null;
         await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
