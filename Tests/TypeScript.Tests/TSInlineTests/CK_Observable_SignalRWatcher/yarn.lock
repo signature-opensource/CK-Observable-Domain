@@ -752,16 +752,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@microsoft/signalr@npm:>=6.0.23":
-  version: 8.0.0
-  resolution: "@microsoft/signalr@npm:8.0.0"
+"@microsoft/signalr@npm:^8.0.17":
+  version: 8.0.17
+  resolution: "@microsoft/signalr@npm:8.0.17"
   dependencies:
     abort-controller: "npm:^3.0.0"
     eventsource: "npm:^2.0.2"
     fetch-cookie: "npm:^2.0.3"
     node-fetch: "npm:^2.6.7"
-    ws: "npm:^7.4.5"
-  checksum: 10/c160afed5b791aa10e36f5d17df56d8226ce7df350ab812bb43ee40930118dfcc1aadb72df9f6c4cf2ccccc69d773c8bf3cdc7a3b72209da2c84f375755ea6f5
+    ws: "npm:^7.5.10"
+  checksum: 10/378907e59bdaa4ab38db6e6172f1d2e0f9c3c89d3d3d3d3ff8b007980f5f884bd6d4996e92e6c2def4e713271b3bad3bdeb5aeda4a0e68e83225831c2867316e
   languageName: node
   linkType: hard
 
@@ -1406,7 +1406,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "ck_observable_signalrwatcher@workspace:."
   dependencies:
-    "@microsoft/signalr": "npm:>=6.0.23"
+    "@microsoft/signalr": "npm:^8.0.17"
     "@types/jest": "npm:^29.5.12"
     "@types/node": "npm:^20.14.2"
     axios: "npm:^1.5.1"
@@ -1417,7 +1417,7 @@ __metadata:
     ts-jest: "npm:^29.1.4"
     typescript: "npm:=5.4.5"
   peerDependencies:
-    "@microsoft/signalr": ">=6.0.23"
+    "@microsoft/signalr": ^8.0.17
     axios: ^1.5.1
   languageName: unknown
   linkType: soft
@@ -4207,9 +4207,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ws@npm:^7.4.5":
-  version: 7.5.9
-  resolution: "ws@npm:7.5.9"
+"ws@npm:^7.5.10":
+  version: 7.5.10
+  resolution: "ws@npm:7.5.10"
   peerDependencies:
     bufferutil: ^4.0.1
     utf-8-validate: ^5.0.2
@@ -4218,7 +4218,7 @@ __metadata:
       optional: true
     utf-8-validate:
       optional: true
-  checksum: 10/171e35012934bd8788150a7f46f963e50bac43a4dc524ee714c20f258693ac4d3ba2abadb00838fdac42a47af9e958c7ae7e6f4bc56db047ba897b8a2268cf7c
+  checksum: 10/9c796b84ba80ffc2c2adcdfc9c8e9a219ba99caa435c9a8d45f9ac593bba325563b3f83edc5eb067cc6d21b9a6bf2c930adf76dd40af5f58a5ca6859e81858f0
   languageName: node
   linkType: hard
 

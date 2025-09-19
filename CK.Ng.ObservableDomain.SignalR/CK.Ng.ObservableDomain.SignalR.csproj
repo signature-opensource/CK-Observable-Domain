@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+    </PropertyGroup>
+    
+    <ItemGroup>
+        <PackageReference Include="CK.Ng.Cris.AspNet" Version="0.50.2--0004-develop" />
+    </ItemGroup>
+    
+    <ItemGroup>
+        <ProjectReference Include="..\CK.Observable.SignalRWatcher\CK.Observable.SignalRWatcher.csproj" />
+    </ItemGroup>
+
+</Project>

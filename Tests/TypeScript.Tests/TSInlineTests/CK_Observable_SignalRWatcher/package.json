@@ -2,7 +2,7 @@
   "name": "ck_observable_signalrwatcher",
   "private": true,
   "devDependencies": {
-    "@microsoft/signalr": ">=6.0.23",
+    "@microsoft/signalr": "^8.0.17",
     "@types/jest": "^29.5.12",
     "@types/node": "^20.14.2",
     "axios": "^1.5.1",
@@ -21,7 +21,7 @@
   },
   "ckVersion": 1,
   "peerDependencies": {
-    "@microsoft/signalr": ">=6.0.23",
+    "@microsoft/signalr": "^8.0.17",
     "axios": "^1.5.1"
   },
   "packageManager": "yarn@4.8.1"

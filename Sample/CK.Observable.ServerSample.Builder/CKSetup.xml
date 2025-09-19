@@ -4,17 +4,10 @@
 
   <BinPaths>
     <BinPath>
-      <TypeScript>
-        <Multiple>
-
-          <TypeScript TargetProjectPath="{ProjectPath}Clients/Inline"
-                      IntegrationMode = "Inline"
-                      AutoInstallJest="false">
-            <Types>
+      <TypeScript TargetProjectPath="{ProjectPath}Clients/ObservableDomainNgSample">
+          <Types>
               <Type Name="CK.Observable.ServerSample.App.ISliderCommand, CK.Observable.ServerSample.App" />
-            </Types>
-          </TypeScript>
-        </Multiple>
+          </Types>
       </TypeScript>
     </BinPath>
   </BinPaths>
