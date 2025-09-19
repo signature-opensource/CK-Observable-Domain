@@ -26,21 +26,6 @@ public class TSTests
     }
 
     [Test]
-    public async Task CK_Observable_MQTTWatcher_Async()
-    {
-        var targetProjectPath = TestHelper.GetTypeScriptInlineTargetProjectPath();
-
-        var configuration = TestHelper.CreateDefaultEngineConfiguration();
-        configuration.FirstBinPath.EnsureTypeScriptConfigurationAspect( targetProjectPath );
-        configuration.FirstBinPath.Assemblies.Add( "CK.Observable.MQTTWatcher" );
-        configuration.FirstBinPath.Assemblies.Add( "CK.Cris.AspNet" );
-        await configuration.RunSuccessfullyAsync();
-
-        await using var runner = TestHelper.CreateTypeScriptRunner( targetProjectPath );
-        runner.Run();
-    }
-
-    [Test]
     public async Task CK_Observable_SignalRWatcher_Async()
     {
         var targetProjectPath = TestHelper.GetTypeScriptInlineTargetProjectPath();

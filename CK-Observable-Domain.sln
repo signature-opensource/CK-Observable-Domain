@@ -31,8 +31,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.Device", "CK.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.Device.Tests", "Tests\CK.Observable.Device.Tests\CK.Observable.Device.Tests.csproj", "{FAE59D3D-5DB5-48F1-93BB-85B3A05537F7}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.MQTTWatcher", "CK.Observable.MQTTWatcher\CK.Observable.MQTTWatcher.csproj", "{03E900E7-8D10-4C3C-93E6-216A35F83446}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.ServerSample.Host", "Sample\CK.Observable.ServerSample.Host\CK.Observable.ServerSample.Host.csproj", "{D9CD2C0F-79FB-4DB7-B5E1-2C98BF07565B}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.Observable.ServerSample.App", "Sample\CK.Observable.ServerSample.App\CK.Observable.ServerSample.App.csproj", "{9EAEBFBE-0E86-486D-A774-3482AC88E6F0}"
@@ -89,10 +87,6 @@ Global
 		{FAE59D3D-5DB5-48F1-93BB-85B3A05537F7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FAE59D3D-5DB5-48F1-93BB-85B3A05537F7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FAE59D3D-5DB5-48F1-93BB-85B3A05537F7}.Release|Any CPU.Build.0 = Release|Any CPU
-		{03E900E7-8D10-4C3C-93E6-216A35F83446}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{03E900E7-8D10-4C3C-93E6-216A35F83446}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{03E900E7-8D10-4C3C-93E6-216A35F83446}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{03E900E7-8D10-4C3C-93E6-216A35F83446}.Release|Any CPU.Build.0 = Release|Any CPU
 		{D9CD2C0F-79FB-4DB7-B5E1-2C98BF07565B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{D9CD2C0F-79FB-4DB7-B5E1-2C98BF07565B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D9CD2C0F-79FB-4DB7-B5E1-2C98BF07565B}.Release|Any CPU.ActiveCfg = Release|Any CPU

@@ -1,5 +1,4 @@
 using CK.Core;
-using CK.MQTT.Server;
 using CK.Observable.League;
 using CK.Observable.ServerSample.App;
 using CK.Observable.SignalRWatcher;
@@ -17,7 +16,6 @@ builder.Services.AddCors();
 builder.Services.AddSignalR();
 
 // Bad!
-builder.Services.Configure<MQTTDemiServerConfig>( builder.Configuration.GetSection( "MQTTDemiServerConfig" ) );
 builder.Services.Configure<DefaultObservableLeagueOptions>( c =>
 {
     c.StorePath = builder.Configuration["CK-ObservableLeague:StorePath"];

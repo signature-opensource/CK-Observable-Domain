@@ -11,7 +11,6 @@
     <PackageReference Include="NUnit3TestAdapter" PrivateAssets="all" Version="5.1.0" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\CK.Observable.MQTTWatcher\CK.Observable.MQTTWatcher.csproj" />
     <ProjectReference Include="..\..\CK.Observable.SignalRWatcher\CK.Observable.SignalRWatcher.csproj" />
     <ProjectReference Include="..\..\CK.TS.ObservableDomain\CK.TS.ObservableDomain.csproj" />
   </ItemGroup>
