@@ -1,12 +1,12 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <IsPackable>false</IsPackable>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.AspNet" Version="19.0.0" />
-    <PackageReference Include="CK.Monitoring.Hosting" Version="25.0.0" />
+    <PackageReference Include="CK.AspNet" Version="19.0.1--0003-develop" />
+    <PackageReference Include="CK.Monitoring.Hosting" Version="25.0.1--0003-develop" />
     <PackageReference Include="CK.WeakAssemblyNameResolver" Version="0.5.2" />
     <PackageReference Include="Fody" Version="6.9.3" PrivateAssets="All" />
     <PackageReference Include="PropertyChanged.Fody" Version="4.1.0" PrivateAssets="All" />
