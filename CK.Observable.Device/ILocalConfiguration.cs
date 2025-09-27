@@ -1,4 +1,5 @@
 using CK.DeviceModel;
+using CK.IO.ObservableDevice;
 
 namespace CK.Observable.Device;
 

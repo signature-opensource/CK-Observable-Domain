@@ -5,16 +5,14 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.AspNet.Auth" Version="28.0.1" />
-    <PackageReference Include="CK.Cris.Auth" Version="0.40.1" />
-    <PackageReference Include="CK.Cris.AspNet" Version="0.50.1" />
-    <PackageReference Include="CK.Monitoring.Hosting" Version="25.0.0" />
+    <PackageReference Include="CK.AspNet" Version="19.0.1" />
+    <PackageReference Include="CK.Monitoring.Hosting" Version="25.0.1" />
     <PackageReference Include="CK.WeakAssemblyNameResolver" Version="0.5.2" />
     <PackageReference Include="Fody" Version="6.9.3" PrivateAssets="All" />
     <PackageReference Include="PropertyChanged.Fody" Version="4.1.0" PrivateAssets="All" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\CK.Observable.MQTTWatcher\CK.Observable.MQTTWatcher.csproj" />
+    <ProjectReference Include="..\..\CK.Ng.ObservableDomain.SignalR\CK.Ng.ObservableDomain.SignalR.csproj" />
     <ProjectReference Include="..\..\CK.Observable.SignalRWatcher\CK.Observable.SignalRWatcher.csproj" />
   </ItemGroup>
 </Project>

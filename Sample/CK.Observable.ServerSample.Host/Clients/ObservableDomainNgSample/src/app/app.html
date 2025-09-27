@@ -1,0 +1,6 @@
+<h1>Hello, {{ title() }}</h1>
+
+ORoot.Slider: {{ root()?.Slider }} <br/>
+<input #ranger type="range" id="slider-right" min="0" max="1000" style="width: 100%;" (input)="sliderUpdate(ranger.value)">
+
+<router-outlet />

@@ -3,12 +3,11 @@ using CK.Core;
 using CK.DeviceModel;
 using Shouldly;
 using NUnit.Framework;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Security.Cryptography;
 using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
+using CK.IO.DeviceModel;
+using CK.IO.ObservableDevice;
 
 namespace CK.Observable.Device.Tests;
 

@@ -1,13 +1,11 @@
 using CK.BinarySerialization;
 using CK.Core;
 using CK.DeviceModel;
-using Microsoft.Extensions.Configuration;
+using CK.IO.ObservableDevice;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
-using System.Text;
 
 namespace CK.Observable.Device;
 

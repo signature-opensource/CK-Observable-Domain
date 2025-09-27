@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="CK.AppIdentity.Hosting" Version="0.11.1" />
+    <PackageReference Include="CK.Cris.AspNet.Engine" Version="0.51.0" />
+    <PackageReference Include="CK.Testing.AspNetServer" Version="19.0.1" />
+    <PackageReference Include="CK.Testing.Nunit" Version="14.0.1" />
+    <PackageReference Include="CK.Testing.TypeScriptEngine" Version="0.27.2" />
+    <PackageReference Include="CK.TS.Angular.Engine" Version="0.27.2" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="NUnit3TestAdapter" Version="5.1.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\CK.Ng.ObservableDomain.SignalR\CK.Ng.ObservableDomain.SignalR.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Res\ts-locales\" />
+    <Folder Include="TSInlineTests\" />
+  </ItemGroup>
+</Project>

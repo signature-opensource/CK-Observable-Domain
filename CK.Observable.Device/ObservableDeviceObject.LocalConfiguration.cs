@@ -1,10 +1,9 @@
-using CK.BinarySerialization;
 using CK.Core;
 using CK.DeviceModel;
 using System.Diagnostics;
 using System.Text;
-using System;
 using Microsoft.IO;
+using CK.IO.ObservableDevice;
 
 namespace CK.Observable.Device;
 

@@ -2,11 +2,9 @@ using System;
 using CK.Core;
 using CK.Cris;
 using CK.Observable.League;
-using CK.Observable.MQTTWatcher;
 using System.Threading.Tasks;
 
 namespace CK.Observable.ServerSample.App;
-
 
 public class SliderCommandHandler : IAutoService
 {
@@ -32,8 +30,6 @@ public class SliderCommandHandler : IAutoService
        }
 
         var x1 = typeof( CK.Cris.AspNet.CrisAspNetService );
-        var x2 = typeof( CK.Auth.CrisAuthenticationService );
-        var x3 = typeof( CK.Observable.MQTTWatcher.DefaultMQTTObservableServer );
         var x4 = typeof( CK.Observable.SignalRWatcher.HubObservableWatcher );
 
        await shell.ModifyThrowAsync(m, ( monitor, domain ) =>

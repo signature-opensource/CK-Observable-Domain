@@ -1,20 +1,14 @@
 using CK.Core;
-using CK.Observable.Domain.Tests.Sample;
 using Shouldly;
 using NUnit.Framework;
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
 
-
 namespace CK.Observable.Domain.Tests;
-
 
 [TestFixture]
 public class PostActionsTests

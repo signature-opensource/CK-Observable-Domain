@@ -3,7 +3,6 @@ using CK.Core;
 using CK.DeviceModel;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 
 namespace CK.Observable.Device;
 
