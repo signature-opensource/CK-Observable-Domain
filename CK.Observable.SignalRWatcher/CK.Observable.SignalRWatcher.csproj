@@ -4,8 +4,8 @@
   </PropertyGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="CK.Cris.Typescript" Version="0.51.1--0001-develop" />
-    <PackageReference Include="CK.Cris.AspNet" Version="0.51.1--0001-develop" />
+    <PackageReference Include="CK.Cris.Typescript" Version="0.51.1--0002-develop" />
+    <PackageReference Include="CK.Cris.AspNet" Version="0.51.1--0002-develop" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CK.Observable.League\CK.Observable.League.csproj" />
