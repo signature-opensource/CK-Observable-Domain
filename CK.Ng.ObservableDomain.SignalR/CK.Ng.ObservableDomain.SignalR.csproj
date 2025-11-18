@@ -3,7 +3,7 @@
     <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.Ng.Cris.AspNet" Version="0.54.0" />
+    <PackageReference Include="CK.Ng.Cris.AspNet" Version="0.54.1--0001-develop" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CK.Observable.SignalRWatcher\CK.Observable.SignalRWatcher.csproj" />
