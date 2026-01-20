@@ -9,7 +9,7 @@ namespace CK.Observable.League;
 /// <summary>
 /// Immutable definition of options for domains managed in a <see cref="ObservableLeague"/>.
 /// </summary>
-[SerializationVersion( 4 )]
+[SerializationVersion( 5 )]
 public sealed class ManagedDomainOptions : IEquatable<ManagedDomainOptions>, ICKSlicedSerializable
 {
     /// <summary>
@@ -21,6 +21,12 @@ public sealed class ManagedDomainOptions : IEquatable<ManagedDomainOptions>, ICK
     /// The Snapshot compression kind.
     /// </summary>
     public readonly CompressionKind CompressionKind;
+
+    /// <summary>
+    /// Gets whether debug mode is enabled for serialization.
+    /// When true, sentinel bytes are written that can be verified during deserialization.
+    /// </summary>
+    public readonly bool DebugMode;
 
     /// <summary>
     /// Number of transactions to skip after every commit.
@@ -100,7 +106,8 @@ public sealed class ManagedDomainOptions : IEquatable<ManagedDomainOptions>, ICK
                                                                                                             SnapshotMaximalTotalKiB,
                                                                                                             ExportedEventKeepDuration,
                                                                                                             ExportedEventKeepLimit,
-                                                                                                            HousekeepingRate
+                                                                                                            HousekeepingRate,
+                                                                                                            DebugMode
                                                                                                         );
 
     /// <summary>
@@ -120,9 +127,30 @@ public sealed class ManagedDomainOptions : IEquatable<ManagedDomainOptions>, ICK
                                                                                     SnapshotMaximalTotalKiB,
                                                                                     ExportedEventKeepDuration,
                                                                                     ExportedEventKeepLimit,
-                                                                                    HousekeepingRate
+                                                                                    HousekeepingRate,
+                                                                                    DebugMode
                                                                                 );
 
+    /// <summary>
+    /// Returns a new immutable option with an updated <see cref="DebugMode"/>.
+    /// </summary>
+    /// <param name="debugMode">Whether debug mode is enabled.</param>
+    /// <returns>This or a new option instance.</returns>
+    public ManagedDomainOptions SetDebugMode( bool debugMode ) => DebugMode == debugMode
+                                                                    ? this
+                                                                    : new ManagedDomainOptions
+                                                                        (
+                                                                            LifeCycleOption,
+                                                                            CompressionKind,
+                                                                            SkipTransactionCount,
+                                                                            SnapshotSaveDelay,
+                                                                            SnapshotKeepDuration,
+                                                                            SnapshotMaximalTotalKiB,
+                                                                            ExportedEventKeepDuration,
+                                                                            ExportedEventKeepLimit,
+                                                                            HousekeepingRate,
+                                                                            debugMode
+                                                                        );
 
     /// <summary>
     /// Initializes a new <see cref="ManagedDomainOptions"/>.
@@ -135,7 +163,8 @@ public sealed class ManagedDomainOptions : IEquatable<ManagedDomainOptions>, ICK
                                  int snapshotMaximalTotalKiB,
                                  TimeSpan eventKeepDuration,
                                  int eventKeepLimit,
-                                 int housekeepingRate )
+                                 int housekeepingRate,
+                                 bool debugMode = false )
     {
         LifeCycleOption = loadOption;
         CompressionKind = c;
@@ -146,6 +175,7 @@ public sealed class ManagedDomainOptions : IEquatable<ManagedDomainOptions>, ICK
         ExportedEventKeepDuration = eventKeepDuration;
         ExportedEventKeepLimit = eventKeepLimit;
         HousekeepingRate = housekeepingRate;
+        DebugMode = debugMode;
     }
 
     ManagedDomainOptions( IBinaryDeserializer d, ITypeReadInfo info )
@@ -167,6 +197,10 @@ public sealed class ManagedDomainOptions : IEquatable<ManagedDomainOptions>, ICK
         ExportedEventKeepLimit = r.ReadInt32();
         SkipTransactionCount = r.ReadInt32();
         HousekeepingRate = r.ReadInt32();
+        if( info.Version >= 5 )
+        {
+            DebugMode = r.ReadBoolean();
+        }
     }
 
     public static void Write( IBinarySerializer s, in ManagedDomainOptions o )
@@ -181,6 +215,8 @@ public sealed class ManagedDomainOptions : IEquatable<ManagedDomainOptions>, ICK
         w.Write( o.ExportedEventKeepLimit );
         w.Write( o.SkipTransactionCount );
         w.Write( o.HousekeepingRate );
+        // v5
+        w.Write( o.DebugMode );
     }
 
     /// <summary>
@@ -200,7 +236,8 @@ public sealed class ManagedDomainOptions : IEquatable<ManagedDomainOptions>, ICK
                                                            SnapshotKeepDuration,
                                                            SnapshotMaximalTotalKiB,
                                                            ExportedEventKeepDuration,
-                                                           ExportedEventKeepLimit + SkipTransactionCount );
+                                                           ExportedEventKeepLimit + SkipTransactionCount,
+                                                           DebugMode );
 
     /// <summary>
     /// Value semantic equality.
@@ -216,5 +253,6 @@ public sealed class ManagedDomainOptions : IEquatable<ManagedDomainOptions>, ICK
                                                          && SnapshotMaximalTotalKiB == other.SnapshotMaximalTotalKiB
                                                          && ExportedEventKeepDuration == other.ExportedEventKeepDuration
                                                          && ExportedEventKeepLimit == other.ExportedEventKeepLimit
-                                                         && HousekeepingRate == other.HousekeepingRate;
+                                                         && HousekeepingRate == other.HousekeepingRate
+                                                         && DebugMode == other.DebugMode;
 }

@@ -75,10 +75,17 @@ public abstract class MemoryTransactionProviderClient : IObservableDomainClient
     public CompressionKind? CurrentSnapshotKind => _currentSnapshotKind;
 
     /// <summary>
-    /// Gets or sets the compression kind to use. It will be used for the next snapshot. 
+    /// Gets or sets the compression kind to use. It will be used for the next snapshot.
     /// Defaults to <see cref="CompressionKind.None"/>.
     /// </summary>
     public CompressionKind CompressionKind { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether debug mode is enabled for serialization.
+    /// When true, sentinel bytes are written that can be verified during deserialization.
+    /// Defaults to false.
+    /// </summary>
+    public bool DebugMode { get; set; }
 
     /// <summary>
     /// Gets the next client if any.
@@ -414,13 +421,13 @@ public abstract class MemoryTransactionProviderClient : IObservableDomainClient
             {
                 using( var gz = new GZipStream( _memory, CompressionLevel.Optimal, leaveOpen: true ) )
                 {
-                    d.Save( monitor, gz );
+                    d.Save( monitor, gz, debugMode: DebugMode );
                 }
             }
             else
             {
                 Debug.Assert( CompressionKind == CompressionKind.None );
-                d.Save( monitor, _memory );
+                d.Save( monitor, _memory, debugMode: DebugMode );
             }
             _currentSnapshotHeaderLength = SnapshotHeaderLength;
             _currentSnapshotKind = CompressionKind;
