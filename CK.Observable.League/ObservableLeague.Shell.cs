@@ -356,7 +356,8 @@ public partial class ObservableLeague
                                              snapshotMaximalTotalKiB: Client.SnapshotMaximalTotalKiB,
                                              eventKeepDuration: Client.JsonEventCollector.KeepDuration,
                                              eventKeepLimit: Client.JsonEventCollector.KeepLimit,
-                                             housekeepingRate: Client.HousekeepingRate );
+                                             housekeepingRate: Client.HousekeepingRate,
+                                             debugMode: Client.DebugMode );
         }
 
         void IInternalManagedDomain.Destroy( IActivityMonitor monitor, IManagedLeague league )
@@ -381,6 +382,7 @@ public partial class ObservableLeague
                 Client.HousekeepingRate = options.HousekeepingRate;
                 Client.JsonEventCollector.KeepDuration = options.ExportedEventKeepDuration;
                 Client.JsonEventCollector.KeepLimit = options.ExportedEventKeepLimit;
+                Client.DebugMode = options.DebugMode;
             }
             if( nextActiveTime.HasValue ) _nextActiveTime = nextActiveTime.Value;
             bool shouldBeLoaded = IsLoadable

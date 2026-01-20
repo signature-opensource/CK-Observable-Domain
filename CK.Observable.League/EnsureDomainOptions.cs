@@ -118,4 +118,14 @@ public sealed class EnsureDomainOptions
     /// This is used only if and when the domain must be created.
     /// </para>
     public int CreateExportedEventKeepLimit { get; set; } = 10;
+
+    /// <summary>
+    /// Gets or sets whether debug mode should be enabled for the created domain.
+    /// When true, sentinel bytes are written during serialization that can be verified during deserialization.
+    /// Defaults to false.
+    /// <para>
+    /// This is used only if and when the domain must be created.
+    /// </para>
+    /// </summary>
+    public bool CreateDebugMode { get; set; }
 }

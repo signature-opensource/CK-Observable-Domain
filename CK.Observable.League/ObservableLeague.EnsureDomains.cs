@@ -62,7 +62,8 @@ public partial class ObservableLeague
                                                                                o.CreateSnapshotMaximalTotalKiB,
                                                                                o.CreateExportedEventKeepDuration,
                                                                                o.CreateExportedEventKeepLimit,
-                                                                               o.CreateHousekeepingRate );
+                                                                               o.CreateHousekeepingRate,
+                                                                               o.CreateDebugMode );
                                 d.Root.CreateDomain( o.DomainName!, o.RootTypes, initialOptions );
                             }
                         }, parallelDomainPostActions: false, waitForDomainPostActionsCompletion: true );
