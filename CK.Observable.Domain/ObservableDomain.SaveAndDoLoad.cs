@@ -95,7 +95,7 @@ public partial class ObservableDomain
                     // Internal and Timed objects) will be written. Event callbacks' object will
                     // not if they are destroyed => any non saved objects after these roots
                     // are de facto not reachable from the roots.
-                    // Singletons are def acto roots, they must also be written here.
+                    // Singletons are de facto roots, they must also be written here.
                     s.Writer.WriteNonNegativeSmallInt32( _singletons.Count );
                     foreach( var (type,(count,instance)) in _singletons )
                     {
@@ -110,7 +110,7 @@ public partial class ObservableDomain
                         s.WriteObject( r );
                     }
                     // The tracking list of non reachable objects from roots.
-                    bool trackLostObjects = _roots.Count > 0;
+                    bool trackLostObjects = _roots.Count > 0 || _singletons.Count > 0;
                     List<ObservableObject>? lostObservableObjects = null;
                     List<InternalObject>? lostInternalObjects = null;
                     // Then writes all the Observable objects: track the non reachable
