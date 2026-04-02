@@ -42,6 +42,10 @@ export class ObservableDomainClient {
         this.loopReconnectAsync();
     }
 
+    public getDomain(domainName: string): ObservableDomain | undefined {
+        return this.domains[domainName]?.domain;
+    }
+
     public async listenToDomainAsync(domainName: string): Promise<Observable<ReadonlyArray<any>>> {
         if (this.domains[domainName] === undefined) {
             const od = new ObservableDomain();
