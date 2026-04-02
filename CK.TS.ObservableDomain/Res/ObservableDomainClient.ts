@@ -1,6 +1,6 @@
 import { ObservableDomain, WatchEvent } from './ObservableDomain';
 import { BehaviorSubject, Observable } from 'rxjs';
-import { IObservableDomainLeagueDriver } from './IObservableDomainLeagueDriver';
+import { IObservableDomainConnection } from './IObservableDomainConnection';
 
 export enum ObservableDomainClientConnectionState {
     Disconnected,
@@ -19,10 +19,10 @@ export class ObservableDomainClient {
         [domainName: string]: { domain: ObservableDomain, obs: BehaviorSubject<ReadonlyArray<any>> };
     } = {};
     constructor(
-        private readonly driver: IObservableDomainLeagueDriver
+        private readonly connection: IObservableDomainConnection
     ) {
-        this.driver.onMessage(this.onMessage);
-        this.driver.onClose(this.onClose);
+        this.connection.onMessage(this.onMessage);
+        this.connection.onClose(this.onClose);
     }
     private onClose = (e: Error | undefined) => {
         if (this.onCloseHandler != undefined) {
@@ -51,7 +51,7 @@ export class ObservableDomainClient {
                 obs: subject
             };
             if (this.connectionState.value != ObservableDomainClientConnectionState.Disconnected) {
-                const res = (await this.driver.startListeningAsync([{ domainName: domainName, transactionCount: 0 }]))[domainName];
+                const res = (await this.connection.startListeningAsync([{ domainName: domainName, transactionCount: 0 }]))[domainName];
                 od.applyWatchEvent(res);
             }
 
@@ -64,9 +64,9 @@ export class ObservableDomainClient {
             try {
                 this.buffering = true;
                 this.bufferedEvents = [];
-                if (!await this.driver.startAsync()) continue;
+                if (!await this.connection.startAsync()) continue;
                 this.connectionState.next(ObservableDomainClientConnectionState.CatchingUp);
-                const domainExports = await this.driver.startListeningAsync(Object.keys(this.domains).map((d => {
+                const domainExports = await this.connection.startListeningAsync(Object.keys(this.domains).map((d => {
                     return {
                         domainName: d,
                         transactionCount: this.domains[d]?.domain.transactionNumber ?? 0
@@ -90,9 +90,9 @@ export class ObservableDomainClient {
                     (resolve) => {
                         this.onCloseHandler = ((error) => {
                             if (error != null) {
-                                console.log("OD driver Disconnected due to : " + error);
+                                console.log("OD connection Disconnected due to : " + error);
                             } else {
-                                console.log("OD driver Disconnected for an unknown reason");
+                                console.log("OD connection Disconnected for an unknown reason");
                             }
                             resolve();
                         });
@@ -105,7 +105,7 @@ export class ObservableDomainClient {
             }
             finally {
                 this.connectionState.next(ObservableDomainClientConnectionState.Disconnected);
-                this.driver.stopAsync();
+                this.connection.stopAsync();
             }
 
         }
@@ -113,7 +113,7 @@ export class ObservableDomainClient {
 
     public async stopAsync(): Promise<void> {
         this.stopping = true;
-        await this.driver.stopAsync();
+        await this.connection.stopAsync();
         this.connectionState.complete();
     }
 
@@ -144,7 +144,7 @@ export class ObservableDomainClient {
         } catch (e) {
             console.error(e);
             curr.domain = new ObservableDomain(); // reset the domain
-            this.driver.stopAsync(); // kill the whole connection, which will reload this domain from scratch.
+            this.connection.stopAsync(); // kill the whole connection, which will reload this domain from scratch.
             return;
         }
     }

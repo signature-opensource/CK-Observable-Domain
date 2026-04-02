@@ -1,5 +1,5 @@
 import { WatchEvent } from '../../ObservableDomain/ObservableDomain';
-import { IObservableDomainLeagueDriver } from '../../ObservableDomain/IObservableDomainLeagueDriver';
+import { IObservableDomainConnection } from '../../ObservableDomain/IObservableDomainConnection';
 import { HttpTransportType, HubConnection, HubConnectionBuilder, IRetryPolicy, RetryContext } from '@microsoft/signalr';
 import { CrisEndpoint } from "../../Cris/CrisEndpoint";
 import { SignalRObservableWatcherStartOrRestartCommand } from "./SignalRObservableWatcherStartOrRestartCommand";
@@ -10,7 +10,7 @@ class NoRetryPolicy implements IRetryPolicy {
   }
 }
 
-export class SignalRObservableLeagueDomainService implements IObservableDomainLeagueDriver {
+export class SignalRObservableLeagueDomainService implements IObservableDomainConnection {
   private readonly connection: HubConnection;
   private static noRetryPolicy = new NoRetryPolicy();
 

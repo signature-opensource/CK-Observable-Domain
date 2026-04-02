@@ -1,6 +1,6 @@
 import { WatchEvent } from './ObservableDomain';
 
-export interface IObservableDomainLeagueDriver {
+export interface IObservableDomainConnection {
     startAsync(): Promise<boolean>;
     startListeningAsync(domainsNames: { domainName: string, transactionCount: number }[]): Promise<{ [domainName: string]: WatchEvent }>;
     onMessage(eventHandler: (domainName: string, eventsJson: WatchEvent) => void): void;

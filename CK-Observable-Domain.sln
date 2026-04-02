@@ -1,4 +1,4 @@
-Microsoft Visual Studio Solution File, Format Version 12.00
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
 VisualStudioVersion = 18.0.11005.162
 MinimumVisualStudioVersion = 10.0.40219.1
@@ -52,6 +52,10 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CK.Ng.ObservableDomain.SignalR", "CK.Ng.ObservableDomain.SignalR\CK.Ng.ObservableDomain.SignalR.csproj", "{92CA871A-5C3F-49FA-A143-E6D14EABA021}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CK.Ng.ObservableDomain.SignalR.Tests", "Tests\CK.Ng.ObservableDomain.SignalR.Tests\CK.Ng.ObservableDomain.SignalR.Tests.csproj", "{7DEEB432-E00C-41E3-9E30-BF805F916A43}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CK.Observable.WebSocketWatcher", "CK.Observable.WebSocketWatcher\CK.Observable.WebSocketWatcher.csproj", "{10FA9552-CE60-4271-B97C-F93083B6B4BD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CK.Ng.ObservableDomain.WebSocket", "CK.Ng.ObservableDomain.WebSocket\CK.Ng.ObservableDomain.WebSocket.csproj", "{EE10232F-47D6-4F03-A39F-4856BDC1C01B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -127,6 +131,14 @@ Global
 		{7DEEB432-E00C-41E3-9E30-BF805F916A43}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7DEEB432-E00C-41E3-9E30-BF805F916A43}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7DEEB432-E00C-41E3-9E30-BF805F916A43}.Release|Any CPU.Build.0 = Release|Any CPU
+		{10FA9552-CE60-4271-B97C-F93083B6B4BD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{10FA9552-CE60-4271-B97C-F93083B6B4BD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{10FA9552-CE60-4271-B97C-F93083B6B4BD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{10FA9552-CE60-4271-B97C-F93083B6B4BD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EE10232F-47D6-4F03-A39F-4856BDC1C01B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EE10232F-47D6-4F03-A39F-4856BDC1C01B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EE10232F-47D6-4F03-A39F-4856BDC1C01B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EE10232F-47D6-4F03-A39F-4856BDC1C01B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
