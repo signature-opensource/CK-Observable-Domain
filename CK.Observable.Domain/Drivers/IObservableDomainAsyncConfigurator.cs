@@ -15,6 +15,7 @@ public interface IObservableDomainAsyncConfigurator : IAutoService
 {
     /// <summary>
     /// Configures the <paramref name="host"/> during its startup phase.
+    /// Returning false here is a strong signal that will throw an InvalidOperationException.
     /// </summary>
     /// <param name="monitor">The monitor to use.</param>
     /// <param name="host">The driver host being started.</param>

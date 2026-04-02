@@ -34,9 +34,13 @@ public sealed class ObservableDomainDriverHost : IRealObject
 
     private async Task OnHostStartAsync( IActivityMonitor monitor, IEnumerable<IObservableDomainAsyncConfigurator> configurators )
     {
+        var success = true;
         foreach( var configurator in configurators )
         {
-            await configurator.ConfigureHostAsync( monitor, this );
+            success &= await configurator.ConfigureHostAsync( monitor, this );
         }
+
+        if( !success )
+            Throw.InvalidOperationException( "One or more domain configurators failed." );
     }
 }

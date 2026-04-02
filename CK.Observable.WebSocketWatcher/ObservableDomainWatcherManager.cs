@@ -34,13 +34,12 @@ public sealed class ObservableDomainWatcherManager : IRealObject
     /// <param name="command">The command to handle.</param>
     /// <returns>A JSON export of the started or restarted watch.</returns>
     [CommandHandler]
-    public async Task<string> HandleStartOrRestartWatchAsync( IActivityMonitor monitor, IObservableDomainWatcherStartOrRestartCommand command )
+    public Task<string> HandleStartOrRestartWatchAsync( IActivityMonitor monitor, IObservableDomainWatcherStartOrRestartCommand command )
     {
         if( _watchers.TryGetValue( command.ConnectionId, out var watcher ) is false)
             Throw.InvalidDataException( $"{command.ConnectionId} does not exist, or is not identified as you." );
 
-        var jsonExport = await watcher.StartOrRestartWatchAsync( monitor, command.DomainName, command.TransactionNumber ).ConfigureAwait( false );
-        return jsonExport;
+        return watcher.StartOrRestartWatchAsync( monitor, command.DomainName, command.TransactionNumber );
     }
 
     internal bool CreateWatcher( IWebsocketConnectionContext<ReadOnlyMemory<byte>> connection )

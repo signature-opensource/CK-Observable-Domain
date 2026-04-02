@@ -64,8 +64,14 @@ public abstract class TransientDomainDriver<TSelf> : IObservableDomainDriver, IR
         {
             PreConfigure( monitor, _domain );
 
+            var success = true;
             foreach( var configurator in configurators )
-                configurator.ConfigureDomain( monitor, _domain );
+            {
+                success &= configurator.ConfigureDomain( monitor, _domain );
+            }
+
+            if( !success )
+                Throw.InvalidOperationException( "One or more domain configurators failed." );
 
             PostConfigure( monitor, _domain );
 
