@@ -16,6 +16,7 @@
   </Folder>
   <Folder Name="/Tests/">
     <Project Path="Tests/CK.Ng.ObservableDomain.SignalR.Tests/CK.Ng.ObservableDomain.SignalR.Tests.csproj" />
+    <Project Path="Tests/CK.Ng.ObservableDomain.WebSocket.Tests/CK.Ng.ObservableDomain.WebSocket.Tests.csproj" />
     <Project Path="Tests/CK.Observable.Device.Tests/CK.Observable.Device.Tests.csproj" />
     <Project Path="Tests/CK.Observable.Domain.Tests/CK.Observable.Domain.Tests.csproj" />
     <Project Path="Tests/CK.Observable.League.Tests/CK.Observable.League.Tests.csproj" />
@@ -23,10 +24,12 @@
   </Folder>
   <Project Path="CK.IO.ObservableDevice/CK.IO.ObservableDevice.csproj" />
   <Project Path="CK.Ng.ObservableDomain.SignalR/CK.Ng.ObservableDomain.SignalR.csproj" />
+  <Project Path="CK.Ng.ObservableDomain.WebSocket/CK.Ng.ObservableDomain.WebSocket.csproj" />
   <Project Path="CK.Observable.Cris/CK.Observable.Cris.csproj" />
   <Project Path="CK.Observable.Device/CK.Observable.Device.csproj" />
   <Project Path="CK.Observable.Domain/CK.Observable.Domain.csproj" />
   <Project Path="CK.Observable.League/CK.Observable.League.csproj" />
   <Project Path="CK.Observable.SignalRWatcher/CK.Observable.SignalRWatcher.csproj" />
+  <Project Path="CK.Observable.WebSocketWatcher/CK.Observable.WebSocketWatcher.csproj" />
   <Project Path="CK.TS.ObservableDomain/CK.TS.ObservableDomain.csproj" />
 </Solution>
