@@ -4,6 +4,8 @@ using CK.Cris;
 
 namespace CK.Observable.ServerSample.App;
 
+// Note: this attribute should be removed once the collection injection defines a dependency on the base class.
+[RealObject( RequiredBy = [ typeof( ObservableDomainDriverHost ) ])]
 public sealed class SampleDriver : TransientDomainDriver<SampleDriver>
 {
     SampleSingleton _singleton = null!;
