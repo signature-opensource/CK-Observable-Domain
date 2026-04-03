@@ -18,13 +18,16 @@ namespace CK.Observable.WebSocketWatcher;
 /// to the client in real time via the <see cref="JsonEventCollector.LastEventChanged"/> event.
 /// </para>
 /// </summary>
-public sealed class ObservableDomainWatcher : IDisposable
+public sealed class ObservableDomainWatcher : IDisposable, IAsyncDisposable
 {
     private readonly ObservableDomainDriverHost _host;
     private readonly IWebsocketConnectionContext<ReadOnlyMemory<byte>> _connection;
     private readonly SemaphoreSlim _lock;
     private readonly SemaphoreSlim _writeLock;
     private readonly Dictionary<string, DomainSubscription> _watched;
+    // Guards against in-flight event handlers writing to a disposed connection,
+    // and prevents double-dispose of semaphores if disposal paths ever overlap.
+    private volatile bool _disposed;
 
     /// <summary>
     /// Initializes a new <see cref="ObservableDomainWatcher"/> for the given WebSocket connection.
@@ -142,9 +145,11 @@ public sealed class ObservableDomainWatcher : IDisposable
 
     private async ValueTask WriteAsync( ReadOnlyMemory<byte> message )
     {
+        if( _disposed ) return; // In-flight event after dispose: silently bail out.
         await _writeLock.WaitAsync().ConfigureAwait( false );
         try
         {
+            if( _disposed ) return; // Dispose happened while waiting for the lock.
             await _connection.WriteAsync( message ).ConfigureAwait( false );
         }
         finally
@@ -158,6 +163,8 @@ public sealed class ObservableDomainWatcher : IDisposable
     /// </summary>
     public void Dispose()
     {
+        if( _disposed ) return; // Already disposed.
+        _disposed = true;
         _lock.Wait();
         try
         {
@@ -169,6 +176,27 @@ public sealed class ObservableDomainWatcher : IDisposable
         {
             _lock.Release();
         }
+        _lock.Dispose();
+        _writeLock.Dispose();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if( _disposed ) return; // Already disposed.
+        _disposed = true;
+        await _lock.WaitAsync();
+        try
+        {
+            foreach( var sub in _watched.Values )
+                sub.Dispose();
+            _watched.Clear();
+        }
+        finally
+        {
+            _lock.Release();
+        }
+        _lock.Dispose();
+        _writeLock.Dispose();
     }
 
     private sealed class DomainSubscription : IDisposable

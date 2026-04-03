@@ -54,14 +54,25 @@ public sealed class ObservableDomainWatcherManager : IRealObject
         return true;
     }
 
-    internal bool DestroyWatcher( string connectionId )
+    internal async Task<bool> DestroyWatcherAsync( string connectionId )
     {
         if( _watchers.TryRemove( connectionId, out var watcher ) )
         {
-            watcher.Dispose();
+            await watcher.DisposeAsync();
             return true;
         }
 
         return false;
+    }
+
+    async Task OnHostStopAsync( IActivityMonitor monitor )
+    {
+        foreach( var (connectionId, watcher) in _watchers )
+        {
+            if( _watchers.TryRemove( connectionId, out _ ) )
+            {
+                await watcher.DisposeAsync();
+            }
+        }
     }
 }

@@ -44,10 +44,9 @@ public sealed class ObservableDomainWatcherDispatcher : IWebSocketMessageDispatc
     /// </summary>
     /// <param name="connection">The connection that is being disconnected.</param>
     /// <param name="exception">The exception that caused the disconnection, if any.</param>
-    public Task OnDisconnectedAsync( IWebsocketConnectionContext<ReadOnlyMemory<byte>> connection, Exception? exception )
+    public async Task OnDisconnectedAsync( IWebsocketConnectionContext<ReadOnlyMemory<byte>> connection, Exception? exception )
     {
-        _manager.DestroyWatcher( connection.ConnectionId );
-        return Task.CompletedTask;
+        await _manager.DestroyWatcherAsync( connection.ConnectionId );
     }
 
     /// <summary>
