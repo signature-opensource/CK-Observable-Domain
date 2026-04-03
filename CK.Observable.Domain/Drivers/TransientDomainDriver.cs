@@ -158,7 +158,7 @@ public abstract class TransientDomainDriver<TSelf> : IObservableDomainDriver, IR
                                                    bool parallelDomainPostActions,
                                                    bool waitForDomainPostActionsCompletion )
     {
-        Throw.CheckState( monitor is not null );
+        Throw.CheckState( _domain is not null );
         return _domain.ModifyAsync( monitor,
                                     () => actions.Invoke( monitor, _domain ),
                                     throwException,
