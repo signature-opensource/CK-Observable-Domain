@@ -18,7 +18,7 @@ namespace CK.Observable.WebSocketWatcher;
 /// to the client in real time via the <see cref="JsonEventCollector.LastEventChanged"/> event.
 /// </para>
 /// </summary>
-public sealed class ObservableDomainWatcher : IDisposable, IAsyncDisposable
+public sealed class ObservableDomainWatcher : IAsyncDisposable
 {
     private readonly ObservableDomainDriverHost _host;
     private readonly IWebsocketConnectionContext<ReadOnlyMemory<byte>> _connection;
@@ -158,33 +158,11 @@ public sealed class ObservableDomainWatcher : IDisposable, IAsyncDisposable
         }
     }
 
-    /// <summary>
-    /// Stops watching all domains and disposes their corresponding subscription.
-    /// </summary>
-    public void Dispose()
-    {
-        if( _disposed ) return; // Already disposed.
-        _disposed = true;
-        _lock.Wait();
-        try
-        {
-            foreach( var sub in _watched.Values )
-                sub.Dispose();
-            _watched.Clear();
-        }
-        finally
-        {
-            _lock.Release();
-        }
-        _lock.Dispose();
-        _writeLock.Dispose();
-    }
-
     public async ValueTask DisposeAsync()
     {
         if( _disposed ) return; // Already disposed.
         _disposed = true;
-        await _lock.WaitAsync();
+        await _lock.WaitAsync().ConfigureAwait( false );
         try
         {
             foreach( var sub in _watched.Values )
@@ -243,7 +221,7 @@ public sealed class ObservableDomainWatcher : IDisposable, IAsyncDisposable
             }
             writer.WriteEndObject();
             writer.WriteEndArray();
-            await writer.FlushAsync( cancellation );
+            await writer.FlushAsync( cancellation ).ConfigureAwait( false );
 
             await _watcher.WriteAsync( buffer.WrittenMemory ).ConfigureAwait( false );
         }

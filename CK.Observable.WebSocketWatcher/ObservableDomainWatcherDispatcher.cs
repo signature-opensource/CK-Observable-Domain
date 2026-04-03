@@ -29,7 +29,7 @@ public sealed class ObservableDomainWatcherDispatcher : IWebSocketMessageDispatc
     /// <param name="connection">The newly established connection.</param>
     public async Task OnConnectedAsync( IWebsocketConnectionContext<ReadOnlyMemory<byte>> connection )
     {
-        _manager.CreateWatcher( connection );
+        await _manager.CreateWatcherAsync( connection ).ConfigureAwait( false );
         var buffer = new ArrayBufferWriter<byte>( 256 );
         await using var writer = new Utf8JsonWriter( buffer );
         writer.WriteStartObject();
@@ -46,7 +46,7 @@ public sealed class ObservableDomainWatcherDispatcher : IWebSocketMessageDispatc
     /// <param name="exception">The exception that caused the disconnection, if any.</param>
     public async Task OnDisconnectedAsync( IWebsocketConnectionContext<ReadOnlyMemory<byte>> connection, Exception? exception )
     {
-        await _manager.DestroyWatcherAsync( connection.ConnectionId );
+        await _manager.DestroyWatcherAsync( connection.ConnectionId ).ConfigureAwait( false );
     }
 
     /// <summary>

@@ -42,12 +42,12 @@ public sealed class ObservableDomainWatcherManager : IRealObject
         return watcher.StartOrRestartWatchAsync( monitor, command.DomainName, command.TransactionNumber );
     }
 
-    internal bool CreateWatcher( IWebsocketConnectionContext<ReadOnlyMemory<byte>> connection )
+    internal async Task<bool> CreateWatcherAsync( IWebsocketConnectionContext<ReadOnlyMemory<byte>> connection )
     {
         var watcher = new ObservableDomainWatcher( _host, connection );
         if( _watchers.TryAdd( connection.ConnectionId, watcher ) is false )
         {
-            watcher.Dispose();
+            await watcher.DisposeAsync().ConfigureAwait( false );
             return false;
         }
 
@@ -58,20 +58,20 @@ public sealed class ObservableDomainWatcherManager : IRealObject
     {
         if( _watchers.TryRemove( connectionId, out var watcher ) )
         {
-            await watcher.DisposeAsync();
+            await watcher.DisposeAsync().ConfigureAwait( false );
             return true;
         }
 
         return false;
     }
 
-    async Task OnHostStopAsync( IActivityMonitor monitor )
+    private async Task OnHostStopAsync( IActivityMonitor monitor )
     {
         foreach( var (connectionId, watcher) in _watchers )
         {
             if( _watchers.TryRemove( connectionId, out _ ) )
             {
-                await watcher.DisposeAsync();
+                await watcher.DisposeAsync().ConfigureAwait( false );
             }
         }
     }
