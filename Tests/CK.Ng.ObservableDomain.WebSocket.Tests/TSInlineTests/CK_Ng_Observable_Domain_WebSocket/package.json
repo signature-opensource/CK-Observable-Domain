@@ -1,0 +1,57 @@
+{
+  "name": "ck-ng-observable-domain-web-socket",
+  "version": "0.0.0",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build",
+    "watch": "ng build --watch --configuration development",
+    "test": "jest",
+    "ck-watch": "dotnet \"$PROJECT_CWD/../../bin/Debug/net8.0/CK.TypeScript.LiveEngine.dll\""
+  },
+  "prettier": {
+    "printWidth": 100,
+    "singleQuote": true,
+    "overrides": [
+      {
+        "files": "*.html",
+        "options": {
+          "parser": "angular"
+        }
+      }
+    ]
+  },
+  "private": true,
+  "dependencies": {
+    "@angular/common": "^20.3",
+    "@angular/compiler": "^20.3",
+    "@angular/core": "^20.3",
+    "@angular/forms": "^20.3",
+    "@angular/platform-browser": "^20.3",
+    "@angular/platform-browser-dynamic": "^20.3",
+    "@angular/router": "^20.3",
+    "rxjs": "~7.8",
+    "tslib": "^2.3"
+  },
+  "devDependencies": {
+    "@angular/build": "^20.3.22",
+    "@angular/cli": "^20.3.22",
+    "@angular/compiler-cli": "^20.3",
+    "@types/jest": "^30",
+    "@types/node": "^25.5",
+    "@yarnpkg/sdks": "^3.2.3",
+    "axios": "^1.7.7",
+    "jest": "^30.3",
+    "jest-environment-jsdom": "^30.3",
+    "jest-preset-angular": "^15",
+    "jest-util": "^30.3",
+    "less": "^4.4.1",
+    "ts-jest": "^29.4.9",
+    "typescript": "~5.9.2"
+  },
+  "ckVersion": 1,
+  "peerDependencies": {
+    "axios": "^1.7.7"
+  },
+  "packageManager": "yarn@4.8.1"
+}
