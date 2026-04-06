@@ -246,8 +246,8 @@ public sealed class TransactionResult
             if( _forDomainPostActionsExecutor != null )
             {
                 Debug.Assert( _domainPostActionsErrorSource != null );
-                _forDomainPostActionsExecutor.SetResult( null );
-                _domainPostActionsErrorSource.SetResult( null );
+                _forDomainPostActionsExecutor.TrySetResult( null );
+                _domainPostActionsErrorSource.TrySetResult( null );
             }
             return Task.CompletedTask;
         }
@@ -257,13 +257,13 @@ public sealed class TransactionResult
         // number of post actions count.
         if( parallelDomainPostActions )
         {
-            _forDomainPostActionsExecutor.SetResult( d );
+            _forDomainPostActionsExecutor.TrySetResult( d );
         }
         if( l.ActionCount > 0 )
         {
             return ExecuteAsync();
         }
-        if( !parallelDomainPostActions ) _forDomainPostActionsExecutor.SetResult( d );
+        if( !parallelDomainPostActions ) _forDomainPostActionsExecutor.TrySetResult( d );
 
         return Task.CompletedTask;
 
@@ -282,7 +282,7 @@ public sealed class TransactionResult
                     }
                     else
                     {
-                        _forDomainPostActionsExecutor.SetResult( d );
+                        _forDomainPostActionsExecutor.TrySetResult( d );
                     }
                 }
             }
@@ -303,10 +303,10 @@ public sealed class TransactionResult
             {
                 m.Warn( $"Skipping execution of {d.ActionCount} domain post actions since executing a post action raised an error." );
             }
-            _forDomainPostActionsExecutor.SetResult( null );
+            _forDomainPostActionsExecutor.TrySetResult( null );
             // No execution leads to non error.
             Debug.Assert( _domainPostActionsErrorSource != null );
-            _domainPostActionsErrorSource.SetResult( null );
+            _domainPostActionsErrorSource.TrySetResult( null );
         }
     }
 
@@ -315,7 +315,7 @@ public sealed class TransactionResult
     internal void SetDomainPostActionsResult( Exception? result )
     {
         Debug.Assert( _domainPostActionsErrorSource != null );
-        _domainPostActionsErrorSource.SetResult( result );
+        _domainPostActionsErrorSource.TrySetResult( result );
     }
 
     internal TransactionResult( TransactionDoneEventArgs c )

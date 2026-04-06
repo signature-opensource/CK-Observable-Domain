@@ -154,7 +154,7 @@ public class SampleDevice : Device<SampleDeviceConfiguration>
         {
             Interlocked.Increment( ref _commandCount );
             _messagePrefixFromCommand = c.MessagePrefix;
-            c.Completion.SetResult();
+            c.Completion.TrySetResult();
             return Task.CompletedTask;
         }
         return base.DoHandleCommandAsync( monitor, command );
