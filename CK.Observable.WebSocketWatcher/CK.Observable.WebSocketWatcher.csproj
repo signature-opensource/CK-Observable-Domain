@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\CK.Observable.Domain\CK.Observable.Domain.csproj" />
+      <ProjectReference Include="..\CK.TS.ObservableDomain\CK.TS.ObservableDomain.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="CK.Cris.Typescript" Version="0.54.3--0001-develop" />
+        <PackageReference Include="CK.Cris.AspNet" Version="0.54.3--0001-develop" />
+        <PackageReference Include="SimpleR.Server" Version="1.0.0" />
+    </ItemGroup>
+
+</Project>

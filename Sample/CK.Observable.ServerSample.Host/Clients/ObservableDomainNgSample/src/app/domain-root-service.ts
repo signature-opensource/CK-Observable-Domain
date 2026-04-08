@@ -1,10 +1,16 @@
-import { inject, Injectable, signal, WritableSignal } from '@angular/core';
-import { ObservableDomainClient } from '@local/ck-gen/CK/ObservableDomain/ObservableDomainClient';
-import { ReplaySubject } from 'rxjs';
+import {inject, Injectable, Signal, signal, WritableSignal} from '@angular/core';
+import {ObservableDomainClient} from '@local/ck-gen/CK/ObservableDomain/ObservableDomainClient';
 
-export interface ORoot {
-  Slider: number;
-}
+type ProjectSignals<T> =
+  T extends WritableSignal<infer U> ? Signal<ProjectSignals<U>> :
+    T extends Signal<infer U> ? Signal<ProjectSignals<U>> :
+      T extends readonly (infer E)[] ? readonly ProjectSignals<E>[] :
+        T extends (infer E)[] ? ProjectSignals<E>[] :
+          T extends object ? { [K in keyof T]: ProjectSignals<T[K]> } :
+            T;
+
+interface __SampleSingleton { Slider: number; }
+type SampleSingleton = WritableSignal<{ Slider: WritableSignal<number> }>;
 
 @Injectable( {
   providedIn: 'root'
@@ -12,20 +18,35 @@ export interface ORoot {
 export class DomainRootService {
   readonly #odClient = inject( ObservableDomainClient );
 
-  public readonly domainName: string = 'Test-Domain';
-  root: WritableSignal<ORoot | undefined> = signal( undefined );
-  root$ = new ReplaySubject<ORoot>( 1 );
+  readonly #sampleSingleton: SampleSingleton = signal( { Slider: signal( 0 )} );
+  public get sampleSingleton(): ProjectSignals<SampleSingleton> { return this.#sampleSingleton; }
 
   constructor() {
-    this.#odClient.listenToDomainAsync( this.domainName ).then( ( agentRoot$ ) => {
-      agentRoot$.subscribe( ( x ) => {
-        if ( x && x.length > 0 ) {
-          console.debug( 'Domain update:', x[0] );
-          this.root.set( x[0] );
-          this.root$.next( x[0] );
-          console.debug( 'Root update:', this.root() );
-        }
+    const domainName: string = 'Test-Domain';
+    this.#odClient.listenToDomainAsync( domainName ).then( ( updates$ ) => {
+      const domain = this.#odClient.getDomain( domainName );
+      updates$.subscribe( () => {
+        const singleton = this.#findSingleton( domain?.allObjects );
+        if( singleton !== undefined ) this.#sampleSingleton().Slider.set( singleton.Slider );
       } );
     } );
+  }
+
+  #findSingleton( objects: Iterable<unknown> | undefined ): __SampleSingleton | undefined {
+    if (!objects) {
+      return undefined;
+    }
+
+    for (const o of objects) {
+      if (this.#isSampleSingleton(o)) {
+        return o;
+      }
+    }
+
+    return undefined;
+  }
+
+  #isSampleSingleton(o: unknown): o is __SampleSingleton {
+    return (o as __SampleSingleton).Slider !== undefined;
   }
 }

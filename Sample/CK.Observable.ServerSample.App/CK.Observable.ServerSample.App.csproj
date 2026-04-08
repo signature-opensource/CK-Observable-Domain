@@ -5,14 +5,13 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.AspNet" Version="20.1.1" />
-    <PackageReference Include="CK.Monitoring.Hosting" Version="25.1.0" />
+    <PackageReference Include="CK.AspNet" Version="20.1.2--0003-develop" />
+    <PackageReference Include="CK.Monitoring.Hosting" Version="25.1.1--0006-develop" />
     <PackageReference Include="CK.WeakAssemblyNameResolver" Version="0.5.2" />
     <PackageReference Include="Fody" Version="6.9.3" PrivateAssets="All" />
     <PackageReference Include="PropertyChanged.Fody" Version="4.1.0" PrivateAssets="All" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\CK.Ng.ObservableDomain.SignalR\CK.Ng.ObservableDomain.SignalR.csproj" />
-    <ProjectReference Include="..\..\CK.Observable.SignalRWatcher\CK.Observable.SignalRWatcher.csproj" />
+    <ProjectReference Include="..\..\CK.Ng.ObservableDomain.WebSocket\CK.Ng.ObservableDomain.WebSocket.csproj" />
   </ItemGroup>
 </Project>

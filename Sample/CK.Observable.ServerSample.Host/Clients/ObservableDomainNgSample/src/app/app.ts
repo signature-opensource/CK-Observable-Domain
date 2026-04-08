@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import {Component, computed, effect, inject, signal} from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { CKGenAppModule } from '@local/ck-gen/CK/Angular/CKGenAppModule';
 import { HttpCrisEndpoint } from '@local/ck-gen/CK/Cris/HttpCrisEndpoint';
@@ -16,10 +16,7 @@ export class App {
   #domain = inject( DomainRootService );
 
   protected readonly title = signal( 'ObservableDomainNgSample' );
-
-  root = this.#domain.root;
-  constructor() {
-  }
+  protected readonly sliderValue = computed( () => this.#domain.sampleSingleton().Slider() ?? 0 );
 
   async sliderUpdate( sliderValue: string ): Promise<void> {
     await this.#crisEndpoint.sendOrThrowAsync<void>( new SliderCommand( parseFloat( sliderValue ) ) );

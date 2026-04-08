@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="CK.Ng.Cris.AspNet" Version="0.54.3--0001-develop" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\CK.Observable.WebSocketWatcher\CK.Observable.WebSocketWatcher.csproj" />
+    </ItemGroup>
+
+</Project>
