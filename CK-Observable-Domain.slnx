@@ -1,0 +1,32 @@
+<Solution>
+  <Folder Name="/Sample/">
+    <Project Path="Sample/CK.Observable.ServerSample.App/CK.Observable.ServerSample.App.csproj" />
+    <Project Path="Sample/CK.Observable.ServerSample.Builder/CK.Observable.ServerSample.Builder.csproj" />
+    <Project Path="Sample/CK.Observable.ServerSample.Host/CK.Observable.ServerSample.Host.csproj" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path=".gitignore" />
+    <File Path=".yarnrc.yml" />
+    <File Path="appveyor.yml" />
+    <File Path="BinarySerializationMigration.md" />
+    <File Path="Directory.Build.props" />
+    <File Path="NuGet.config" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="Tests/CK.Ng.ObservableDomain.SignalR.Tests/CK.Ng.ObservableDomain.SignalR.Tests.csproj" />
+    <Project Path="Tests/CK.Observable.Device.Tests/CK.Observable.Device.Tests.csproj" />
+    <Project Path="Tests/CK.Observable.Domain.Tests/CK.Observable.Domain.Tests.csproj" />
+    <Project Path="Tests/CK.Observable.League.Tests/CK.Observable.League.Tests.csproj" />
+    <Project Path="Tests/TypeScript.Tests/TypeScript.Tests.csproj" />
+  </Folder>
+  <Project Path="CK.IO.ObservableDevice/CK.IO.ObservableDevice.csproj" />
+  <Project Path="CK.Ng.ObservableDomain.SignalR/CK.Ng.ObservableDomain.SignalR.csproj" />
+  <Project Path="CK.Observable.Cris/CK.Observable.Cris.csproj" />
+  <Project Path="CK.Observable.Device/CK.Observable.Device.csproj" />
+  <Project Path="CK.Observable.Domain/CK.Observable.Domain.csproj" />
+  <Project Path="CK.Observable.League/CK.Observable.League.csproj" />
+  <Project Path="CK.Observable.SignalRWatcher/CK.Observable.SignalRWatcher.csproj" />
+  <Project Path="CK.TS.ObservableDomain/CK.TS.ObservableDomain.csproj" />
+</Solution>
