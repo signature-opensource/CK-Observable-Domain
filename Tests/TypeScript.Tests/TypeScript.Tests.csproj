@@ -4,11 +4,11 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.Testing.NUnit" Version="14.1.2--0001-develop" />
-    <PackageReference Include="CK.Testing.TypeScriptEngine" Version="0.30.4--0003-develop" />
-    <PackageReference Include="CK.Cris.AspNet.Engine" Version="0.54.3--0001-develop" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
-    <PackageReference Include="NUnit3TestAdapter" PrivateAssets="all" Version="5.1.0" />
+    <PackageReference Include="CK.Testing.NUnit" Version="15.0.0--ci.6" />
+    <PackageReference Include="CK.Testing.TypeScriptEngine" Version="0.31.0--ci.11" />
+    <PackageReference Include="CK.Cris.AspNet.Engine" Version="0.55.0--ci.7" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+    <PackageReference Include="NUnit3TestAdapter" PrivateAssets="all" Version="6.1.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\CK.Observable.SignalRWatcher\CK.Observable.SignalRWatcher.csproj" />

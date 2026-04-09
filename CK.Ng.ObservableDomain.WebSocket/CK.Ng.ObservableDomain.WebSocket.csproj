@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <TargetFramework>net8.0</TargetFramework>
@@ -6,7 +6,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="CK.Ng.Cris.AspNet" Version="0.54.3--0001-develop" />
+        <PackageReference Include="CK.Ng.Cris.AspNet" Version="0.55.0--ci.7" />
     </ItemGroup>
 
     <ItemGroup>
