@@ -11,7 +11,7 @@
     <RunWorkingDirectory>$(MSBuildProjectDirectory)</RunWorkingDirectory>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.AppIdentity.Hosting" Version="0.14.0--ci.6" />
+    <PackageReference Include="CK.AppIdentity.Hosting" Version="0.14.0--ci.9" />
     <PackageReference Include="Microsoft.AspNetCore.SpaServices.Extensions" Version="8.0.20" />
   </ItemGroup>
   <ItemGroup>

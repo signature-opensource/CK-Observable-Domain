@@ -6,7 +6,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="CK.Ng.Cris.AspNet" Version="0.55.0--ci.9" />
+        <PackageReference Include="CK.Ng.Cris.AspNet" Version="0.55.0--ci.11" />
     </ItemGroup>
 
     <ItemGroup>
