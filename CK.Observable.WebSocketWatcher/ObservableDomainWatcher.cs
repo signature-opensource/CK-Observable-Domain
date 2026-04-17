@@ -214,7 +214,7 @@ public sealed class ObservableDomainWatcher : IAsyncDisposable
                 writer.WritePropertyName( "E" );
                 writer.WriteStartArray();
                 writer.WriteStartArray();
-                writer.WriteRawValue( e.ExportedEvents );
+                writer.WriteRawValue( e.ExportedEvents, skipInputValidation: true );
                 writer.WriteEndArray();
                 writer.WriteEndArray();
                 writer.WriteNumber( "L", e.LastExportedTransactionNumber );

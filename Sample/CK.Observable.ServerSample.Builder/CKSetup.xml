@@ -7,6 +7,7 @@
       <TypeScript TargetProjectPath="{ProjectPath}Clients/ObservableDomainNgSample">
           <Types>
               <Type Name="CK.Observable.ServerSample.App.ISliderCommand, CK.Observable.ServerSample.App" />
+              <Type Name="CK.Observable.ServerSample.App.IMultiEventCommand, CK.Observable.ServerSample.App" />
           </Types>
       </TypeScript>
     </BinPath>
