@@ -1,6 +1,7 @@
 import { ObservableDomain, WatchEvent } from './ObservableDomain';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { IObservableDomainConnection } from './IObservableDomainConnection';
+import { setDeprecationWarningsEnabled } from './DualCasingProxy';
 
 export enum ObservableDomainClientConnectionState {
     Disconnected,
@@ -18,9 +19,21 @@ export class ObservableDomainClient {
     private readonly domains: {
         [domainName: string]: { domain: ObservableDomain, obs: BehaviorSubject<ReadonlyArray<any>> };
     } = {};
+    /**
+     * @param connection The connection to the OD server.
+     * @param options Optional client configuration.
+     *   - `suppressDeprecationWarnings`: when true, the global PascalCase deprecation
+     *     warning is silenced. Note: this is a module-global toggle. If multiple
+     *     clients are constructed with conflicting flags, the last one wins. In
+     *     practice every host process owns a single client.
+     */
     constructor(
-        private readonly connection: IObservableDomainConnection
+        private readonly connection: IObservableDomainConnection,
+        options?: { suppressDeprecationWarnings?: boolean }
     ) {
+        if (options?.suppressDeprecationWarnings) {
+            setDeprecationWarningsEnabled(false);
+        }
         this.connection.onMessage(this.onMessage);
         this.connection.onClose(this.onClose);
     }

@@ -1,4 +1,5 @@
 import { deserialize } from "./GraphSerializer";
+import { wrapDeep, wrapDualCasing } from "./DualCasingProxy";
 
 export type WatchEvent = TransactionSetEvent | DomainExportEvent | ErrorEvent | '';
 
@@ -114,6 +115,9 @@ export class ObservableDomain {
             this._tranNum = o.N;
             this._objCount = o.C;
             this._graph = o.O;
+            for (let i = 0; i < this._graph.length; i++) {
+                this._graph[i] = wrapDeep(this._graph[i]);
+            }
             this._roots = o.R.map(i => this._graph[i]);
         }
     }
@@ -211,6 +215,9 @@ export class ObservableDomain {
 
         this._graph.splice(0, this._graph.length); // Clear array
         for (let i = 0; i < e.O.length; i++) this._graph.push(e.O[i]); // Fill array
+        for (let i = 0; i < this._graph.length; i++) {
+            this._graph[i] = wrapDeep(this._graph[i]);
+        }
 
         this._roots.splice(0, this._roots.length); // Clear array
         for (let i = 0; i < e.R.length; i++) this._roots.push(this._graph[e.R[i]]); // Fill array
@@ -231,7 +238,7 @@ export class ObservableDomain {
                     {
                         let newOne;
                         switch (e[2]) {
-                            case "": newOne = {}; break;
+                            case "": newOne = wrapDualCasing({}); break;
                             case "A": newOne = []; break;
                             case "M": newOne = new Map(); break;
                             case "S": newOne = new Set(); break;
@@ -315,7 +322,7 @@ export class ObservableDomain {
             var ref = o["="];
             if (ref !== undefined) return this._graph[ref];
         }
-        return o;
+        return wrapDeep(o);
     }
 }
 
