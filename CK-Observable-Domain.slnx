@@ -31,5 +31,6 @@
   <Project Path="CK.Observable.League/CK.Observable.League.csproj" />
   <Project Path="CK.Observable.SignalRWatcher/CK.Observable.SignalRWatcher.csproj" />
   <Project Path="CK.Observable.WebSocketWatcher/CK.Observable.WebSocketWatcher.csproj" />
+  <Project Path="CK.TS.ObservableDomain.DualCasing/CK.TS.ObservableDomain.DualCasing.csproj" />
   <Project Path="CK.TS.ObservableDomain/CK.TS.ObservableDomain.csproj" />
 </Solution>

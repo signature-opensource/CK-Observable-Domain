@@ -11,6 +11,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\CK.Observable.WebSocketWatcher\CK.Observable.WebSocketWatcher.csproj" />
+      <ProjectReference Include="..\CK.TS.ObservableDomain.DualCasing\CK.TS.ObservableDomain.DualCasing.csproj" />
     </ItemGroup>
 
 </Project>

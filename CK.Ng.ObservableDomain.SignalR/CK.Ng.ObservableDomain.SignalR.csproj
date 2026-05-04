@@ -7,5 +7,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CK.Observable.SignalRWatcher\CK.Observable.SignalRWatcher.csproj" />
+    <ProjectReference Include="..\CK.TS.ObservableDomain.DualCasing\CK.TS.ObservableDomain.DualCasing.csproj" />
   </ItemGroup>
 </Project>
