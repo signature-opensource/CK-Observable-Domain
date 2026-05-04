@@ -9,8 +9,8 @@ type ProjectSignals<T> =
           T extends object ? { [K in keyof T]: ProjectSignals<T[K]> } :
             T;
 
-interface __SampleSingleton { Slider: number; }
-type SampleSingleton = WritableSignal<{ Slider: WritableSignal<number> }>;
+interface __SampleSingleton { slider: number; }
+type SampleSingleton = WritableSignal<{ slider: WritableSignal<number> }>;
 
 @Injectable( {
   providedIn: 'root'
@@ -18,7 +18,7 @@ type SampleSingleton = WritableSignal<{ Slider: WritableSignal<number> }>;
 export class DomainRootService {
   readonly #odClient = inject( ObservableDomainClient );
 
-  readonly #sampleSingleton: SampleSingleton = signal( { Slider: signal( 0 )} );
+  readonly #sampleSingleton: SampleSingleton = signal( { slider: signal( 0 )} );
   public get sampleSingleton(): ProjectSignals<SampleSingleton> { return this.#sampleSingleton; }
 
   constructor() {
@@ -27,7 +27,7 @@ export class DomainRootService {
       const domain = this.#odClient.getDomain( domainName );
       updates$.subscribe( () => {
         const singleton = this.#findSingleton( domain?.allObjects );
-        if( singleton !== undefined ) this.#sampleSingleton().Slider.set( singleton.Slider );
+        if( singleton !== undefined ) this.#sampleSingleton().slider.set( singleton.slider );
       } );
     } );
   }
@@ -47,6 +47,6 @@ export class DomainRootService {
   }
 
   #isSampleSingleton(o: unknown): o is __SampleSingleton {
-    return (o as __SampleSingleton).Slider !== undefined;
+    return (o as __SampleSingleton).slider !== undefined;
   }
 }

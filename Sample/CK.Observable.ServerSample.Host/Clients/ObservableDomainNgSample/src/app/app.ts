@@ -17,7 +17,7 @@ export class App {
   #domain = inject( DomainRootService );
 
   protected readonly title = signal( 'ObservableDomainNgSample' );
-  protected readonly sliderValue = computed( () => this.#domain.sampleSingleton().Slider() ?? 0 );
+  protected readonly sliderValue = computed( () => this.#domain.sampleSingleton().slider() ?? 0 );
   protected readonly multiEventCounter = signal( 0 );
 
   async sliderUpdate( sliderValue: string ): Promise<void> {
