@@ -1,6 +1,7 @@
 create <ts> transformer on "CK/ObservableDomain/ObservableDomainClient.ts"
 begin
     ensure import { setDeprecationWarningsEnabled } from "./DualCasingProxy";
+    ensure import { IObservableDomainClientConfiguration } from "./IObservableDomainClientConfiguration";
 
     replace single """
         constructor(
@@ -21,7 +22,7 @@ begin
          */
         constructor(
             private readonly connection: IObservableDomainConnection,
-            options?: { suppressDeprecationWarnings?: boolean }
+            options?: IObservableDomainClientConfiguration
         ) {
             if (options?.suppressDeprecationWarnings) {
                 setDeprecationWarningsEnabled(false);

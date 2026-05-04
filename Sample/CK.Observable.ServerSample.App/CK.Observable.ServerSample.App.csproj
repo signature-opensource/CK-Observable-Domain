@@ -13,6 +13,5 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\CK.Ng.ObservableDomain.WebSocket\CK.Ng.ObservableDomain.WebSocket.csproj" />
-    <ProjectReference Include="..\..\CK.TS.ObservableDomain.DualCasing\CK.TS.ObservableDomain.DualCasing.csproj" />
   </ItemGroup>
 </Project>
