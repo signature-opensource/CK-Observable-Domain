@@ -12,7 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\CK.Observable.SignalRWatcher\CK.Observable.SignalRWatcher.csproj" />
-    <ProjectReference Include="..\..\CK.TS.ObservableDomain\CK.TS.ObservableDomain.csproj" />
+    <ProjectReference Include="..\..\CK.TS.ObservableDomain.DualCasing\CK.TS.ObservableDomain.DualCasing.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="TSInlineTests\CK_TS_ObservableDomain\ck-gen\CK\Core\" />
