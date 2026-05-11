@@ -28,4 +28,15 @@ public sealed class SampleDriver : TransientDomainDriver<SampleDriver>
             _singleton.Slider = command.SliderValue;
         } );
     }
+
+    [CommandHandler]
+    public async Task HandleMultiEventCommandAsync( IActivityMonitor monitor, IMultiEventCommand command )
+    {
+        await ModifyThrowAsync( monitor, ( _, _ ) =>
+        {
+            _singleton.Slider = command.SliderValue;
+            _singleton.AddItem( command.Label, command.Counter );
+            _singleton.AddItem( command.Label + "-2", command.Counter + 1 );
+        } );
+    }
 }

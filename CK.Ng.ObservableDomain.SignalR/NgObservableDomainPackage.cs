@@ -3,12 +3,13 @@ using CK.Ng.Cris.AspNet;
 using CK.TypeScript;
 using CK.TS.Angular;
 using CK.Observable.SignalRWatcher;
+using CK.ObservableDomain;
 
 namespace CK.Ng.ObservableDomain;
 
 [TypeScriptPackage]
-[Requires<CrisAspNetPackage, ObservableSignalRPackage>]
-[TypeScriptFile( "observable-domain-provider.ts", "initializeObservableDomainClient" )]
+[Requires<CrisAspNetPackage, ObservableSignalRPackage, TSObservableDomainDualCasingPackage>]
+[TypeScriptFile( "observable-domain-provider.ts", "initializeObservableDomainClient", "OBSERVABLE_DOMAIN_CLIENT_CONFIGURATION" )]
 [NgProviderImport( "initializeObservableDomainClient", From = "@local/ck-gen/CK/Ng/ObservableDomain/observable-domain-provider" )]
 [NgProviderImport( "ObservableDomainClient", From = "@local/ck-gen/CK/ObservableDomain/ObservableDomainClient" )]
 [NgProvider( "{ provide: ObservableDomainClient, useFactory: initializeObservableDomainClient }" )]

@@ -2,15 +2,15 @@
 
     <PropertyGroup>
         <TargetFramework>net8.0</TargetFramework>
-        <Nullable>enable</Nullable>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="CK.Ng.Cris.AspNet" Version="0.55.0--ci.17" />
+        <PackageReference Include="CK.Ng.Cris.AspNet" Version="0.55.2--ci.1" />
     </ItemGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\CK.Observable.WebSocketWatcher\CK.Observable.WebSocketWatcher.csproj" />
+      <ProjectReference Include="..\CK.TS.ObservableDomain.DualCasing\CK.TS.ObservableDomain.DualCasing.csproj" />
     </ItemGroup>
 
 </Project>

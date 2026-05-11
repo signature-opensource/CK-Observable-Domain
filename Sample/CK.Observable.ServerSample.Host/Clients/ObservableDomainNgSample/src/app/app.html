@@ -3,4 +3,11 @@
 ORoot.Slider: {{ sliderValue() }} <br/>
 <input #ranger class="ranger" type="range" min="0" value="0" max="1000" (input)="sliderUpdate(ranger.value)">
 
+<br/>
+<br/>
+Multi-event test:
+<button (click)="sendMultiEvent()">Send Multi-Event (creates 2 objects + sets slider)</button>
+<br/>
+Sent: {{ multiEventCounter() }} times
+
 <router-outlet />
