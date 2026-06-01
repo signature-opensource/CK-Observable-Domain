@@ -29,7 +29,13 @@ public sealed class ObservableDomainWatcherDispatcher : IWebSocketMessageDispatc
     /// <param name="connection">The newly established connection.</param>
     public async Task OnConnectedAsync( IWebsocketConnectionContext<ReadOnlyMemory<byte>> connection )
     {
-        await _manager.CreateWatcherAsync( connection ).ConfigureAwait( false );
+        // CreateWatcherAsync returns false (and has already aborted the connection) when the host is
+        // stopping or the connection id collides. Don't write the connectionId acknowledgement onto an
+        // aborted connection: return and let the cancelled read loop end the connection.
+        if( await _manager.CreateWatcherAsync( connection ).ConfigureAwait( false ) is false )
+        {
+            return;
+        }
         var buffer = new ArrayBufferWriter<byte>( 256 );
         await using var writer = new Utf8JsonWriter( buffer );
         writer.WriteStartObject();

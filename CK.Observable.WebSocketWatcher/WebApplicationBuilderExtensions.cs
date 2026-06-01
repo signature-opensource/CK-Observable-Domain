@@ -33,7 +33,10 @@ public static class WebApplicationBuilderExtensions
             {
                 b.UseEndOfMessageDelimitedProtocol( new WatcherMessageProtocol() );
                 b.UseDispatcher<ObservableDomainWatcherDispatcher>();
-            } );
+            },
+            // Aborting (on ApplicationStopping) still triggers a graceful close that waits CloseTimeout (5s) for the
+            // client handshake; zero tears the socket down at once so shutdown never depends on client behaviour.
+            options => options.WebSockets.CloseTimeout = TimeSpan.Zero );
         } );
 
         return app;

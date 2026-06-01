@@ -158,6 +158,12 @@ public sealed class ObservableDomainWatcher : IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Aborts the connection (idempotent): cancels the pending SimpleR read and drives the normal disconnect path,
+    /// so on host shutdown Kestrel drains immediately instead of waiting out <c>HostOptions.ShutdownTimeout</c>.
+    /// </summary>
+    public void Abort() => _connection.Abort();
+
     public async ValueTask DisposeAsync()
     {
         if( _disposed ) return; // Already disposed.
