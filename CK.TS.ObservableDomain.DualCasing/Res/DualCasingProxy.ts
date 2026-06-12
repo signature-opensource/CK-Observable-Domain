@@ -75,8 +75,8 @@ const handler: ProxyHandler<Record<string, unknown>> = {
         const alt = isUpper ? toCamel(prop) : toPascal(prop);
         if (alt === prop) return Reflect.get(target, prop, receiver);
 
-        const hasProp = Object.prototype.hasOwnProperty.call(target, prop);
-        const hasAlt = Object.prototype.hasOwnProperty.call(target, alt);
+        const hasProp = Object.hasOwn(target, prop);
+        const hasAlt = Object.hasOwn(target, alt);
         if (hasProp && hasAlt) {
             throw new Error(`[ObservableDomain] Casing clash on read: object has both '${prop}' and '${alt}' as own keys.`);
         }
@@ -88,7 +88,7 @@ const handler: ProxyHandler<Record<string, unknown>> = {
             if (isUpper) emitWarning(target, prop);
             return target[alt];
         }
-        return undefined;
+        return Reflect.get(target, prop, receiver);
     },
 
     set(target, prop, value, receiver) {
@@ -96,11 +96,11 @@ const handler: ProxyHandler<Record<string, unknown>> = {
         if (isStringKey && prop.length > 0 && isAsciiLetter(prop[0])) {
             const isUpper = isAsciiUpper(prop[0]);
             const alt = isUpper ? toCamel(prop) : toPascal(prop);
-            if (Object.prototype.hasOwnProperty.call(target, alt)) {
+            if (Object.hasOwn(target, alt)) {
                 throw new Error(`[ObservableDomain] Casing clash on insert: object already has '${alt}', refusing to add '${prop}'.`);
             }
         }
-        if (isStringKey && !Object.prototype.hasOwnProperty.call(target, prop)) {
+        if (isStringKey && !Object.hasOwn(target, prop)) {
             clearShapeSignature(target);
         }
         return Reflect.set(target, prop, value, receiver);

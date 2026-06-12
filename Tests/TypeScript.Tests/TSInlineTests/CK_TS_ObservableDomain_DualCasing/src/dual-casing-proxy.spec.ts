@@ -120,6 +120,15 @@ describe('Proxy get trap', () => {
         expect((p as Record<string, unknown>)['Missing']).toBeUndefined();
     });
 
+    it('delegates to the prototype for inherited members instead of masking them as undefined', () => {
+        const p = wrapDualCasing({ Code: 'X' }) as Record<string, unknown>;
+        // 'toString' is an own key in neither casing, so the get trap reaches its
+        // not-found branch. That branch must delegate to Reflect.get so inherited
+        // members stay reachable; the previous `return undefined` masked them.
+        expect(typeof p['toString']).toBe('function');
+        expect((p as unknown as { toString(): string }).toString()).toBe('[object Object]');
+    });
+
     it('passes through Symbol-keyed access without casing logic', () => {
         const sym = Symbol('marker');
         const target = { Code: 'X', [sym]: 'tagged' } as Record<PropertyKey, unknown>;
