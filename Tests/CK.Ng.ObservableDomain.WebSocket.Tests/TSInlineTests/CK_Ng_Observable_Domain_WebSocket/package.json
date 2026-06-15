@@ -39,7 +39,7 @@
     "@angular/compiler-cli": "^20.3",
     "@types/jest": "^30",
     "@types/node": "^25.5",
-    "@yarnpkg/sdks": "^3.2.3",
+    "@yarnpkg/sdks": "^3.3.0",
     "axios": "^1.7.7",
     "jest": "^30.3",
     "jest-environment-jsdom": "^30.3",

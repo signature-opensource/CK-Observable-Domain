@@ -3590,9 +3590,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@yarnpkg/core@npm:^4.4.3":
-  version: 4.6.0
-  resolution: "@yarnpkg/core@npm:4.6.0"
+"@yarnpkg/core@npm:^4.8.0":
+  version: 4.9.0
+  resolution: "@yarnpkg/core@npm:4.9.0"
   dependencies:
     "@arcanis/slice-ansi": "npm:^1.1.1"
     "@types/semver": "npm:^7.1.0"
@@ -3620,7 +3620,7 @@ __metadata:
     tinylogic: "npm:^2.0.0"
     treeify: "npm:^1.1.0"
     tslib: "npm:^2.4.0"
-  checksum: 10/b13e4b61c6167eacd6792bba04f3b3416289b7dd6b5258e335de48e487950e28108d8661d013c80b04759df72f42daa356bce3b6631f6f3b91dc9a67d88bc954
+  checksum: 10/5f7364855889641c258353c8e06b130bbe09b4d567d4dbfbdf88859b98175714a8b61a223499c92a28eef1bdc1638f12f16938ec116c44363c068f6100faeb92
   languageName: node
   linkType: hard
 
@@ -3663,12 +3663,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@yarnpkg/sdks@npm:^3.2.3":
-  version: 3.2.3
-  resolution: "@yarnpkg/sdks@npm:3.2.3"
+"@yarnpkg/sdks@npm:^3.3.0":
+  version: 3.3.0
+  resolution: "@yarnpkg/sdks@npm:3.3.0"
   dependencies:
-    "@yarnpkg/core": "npm:^4.4.3"
-    "@yarnpkg/fslib": "npm:^3.1.2"
+    "@yarnpkg/core": "npm:^4.8.0"
+    "@yarnpkg/fslib": "npm:^3.1.5"
     "@yarnpkg/parsers": "npm:^3.0.3"
     chalk: "npm:^4.1.2"
     clipanion: "npm:^4.0.0-rc.2"
@@ -3677,7 +3677,7 @@ __metadata:
     tslib: "npm:^2.4.0"
   bin:
     sdks: ./lib/cli.js
-  checksum: 10/373f3a1075624c2a73ab2bba13b02bf866076e1f12a97870651bdbd8323e179c60227e3322f0619ae13bf023d725bb3bec2370cbda5a7e6cdb17fedb725bda44
+  checksum: 10/6e8e63bc95f1abc8ea1d4c198f4d882b4f2993f5cb92cf03423bc98531364d6efa52d5a5023e64eaffd2734971552f4f9d7339ee0499be06b802461a4acca030
   languageName: node
   linkType: hard
 
@@ -4265,7 +4265,7 @@ __metadata:
     "@angular/router": "npm:^20.3"
     "@types/jest": "npm:^30"
     "@types/node": "npm:^25.5"
-    "@yarnpkg/sdks": "npm:^3.2.3"
+    "@yarnpkg/sdks": "npm:^3.3.0"
     axios: "npm:^1.7.7"
     jest: "npm:^30.3"
     jest-environment-jsdom: "npm:^30.3"

@@ -61,6 +61,17 @@ public class ObjectExporter
         Target.EmitEndObject( num, ObjectExportedKind.Map );
     }
 
+    public void ExportSet<TItem>( int num, IObservableReadOnlySet<TItem> tItems, IObjectExportTypeDriver<TItem>? itemExporter = null )
+    {
+        Target.EmitStartObject( num, ObjectExportedKind.Set );
+        foreach( var item in tItems )
+        {
+            if( itemExporter == null ) ExportObject( item );
+            else Export( item, itemExporter );
+        }
+        Target.EmitEndObject( num, ObjectExportedKind.Set );
+    }
+
     public void ExportNamedProperty( string name, object o )
     {
         Target.EmitPropertyName( name );

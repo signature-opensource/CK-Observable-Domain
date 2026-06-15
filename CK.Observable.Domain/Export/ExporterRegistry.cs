@@ -106,8 +106,9 @@ public class ExporterRegistry : IExporterResolver
         IObjectExportTypeDriver d = null;
         if( typeof( System.Collections.IEnumerable ).IsAssignableFrom( type ) )
         {
-            var enumType = type.GetInterfaces().FirstOrDefault( t => t.IsGenericType
-                                                      && t.GetGenericTypeDefinition() == typeof( IEnumerable<> ) );
+            var interfaces = type.GetInterfaces();
+            var enumType = interfaces.FirstOrDefault( t => t.IsGenericType
+                                                           && t.GetGenericTypeDefinition() == typeof( IEnumerable<> ) );
             if( enumType != null )
             {
                 var itemType = enumType.GetGenericArguments()[0];
@@ -120,6 +121,16 @@ public class ExporterRegistry : IExporterResolver
                     if( kTypeExporter != null && vTypeExporter != null )
                     {
                         d = (IObjectExportTypeDriver)Activator.CreateInstance( mapType, kTypeExporter, vTypeExporter );
+                    }
+                }
+                else if( interfaces.FirstOrDefault( t => t.IsGenericType
+                                                         && t.GetGenericTypeDefinition() == typeof( IObservableReadOnlySet<> ) ) != null )
+                {
+                    var setType = typeof( SetTypeExportDriver<> ).MakeGenericType( itemType );
+                    var itemExporter = FindDriver( itemType );
+                    if( itemExporter != null )
+                    {
+                        d = (IObjectExportTypeDriver)Activator.CreateInstance( setType, itemExporter );
                     }
                 }
                 else
