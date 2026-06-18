@@ -13,7 +13,7 @@ export interface TransactionSetEvent {
     /**
      * The array of Transactions. Each Transaction is an array of {@link WatchEvent}.
      */
-    E: any[][];
+    E: Array<WatchEvent[]>;
     /**
      * The last TransactionNumber that should have emitted events.
      */
@@ -44,6 +44,10 @@ export interface DomainExportEvent {
      * The array index of the ObservableDomain root objects in {@link O}.
      */
     R: number[];
+    /**
+     * The tuple array of the full name and index of ObservableDomainSingleton objects in {@link O}.
+     */
+    S: Array<[string, number]>;
 }
 
 export interface ErrorEvent {
@@ -91,6 +95,15 @@ export class ObservableDomain {
     private readonly _roots: any[];
 
     /**
+     * The current ObservableDomainSingleton objects.
+     * @see DomainExportEvent.S
+     * @private
+     */
+    private readonly _singletons: Map<string, any>;
+
+    private readonly _singletonFullNameSymbol = Symbol("singletonFullName");
+
+    /**
      * True if this ObservableDomain has yet to apply any new events on its initial state,
      * or if it has been reset from a DomainExport and has not received new events since.
      * @private
@@ -106,6 +119,7 @@ export class ObservableDomain {
             this._objCount = 0;
             this._graph = [];
             this._roots = [];
+            this._singletons = new Map();
         } else {
             const o: DomainExportEvent = typeof (initialState) === "string"
                 ? deserialize(initialState, { prefix: "" })
@@ -115,6 +129,8 @@ export class ObservableDomain {
             this._objCount = o.C;
             this._graph = o.O;
             this._roots = o.R.map(i => this._graph[i]);
+            this._singletons = new Map();
+            this.applySingletons(o.S);
         }
     }
 
@@ -139,6 +155,10 @@ export class ObservableDomain {
         return this._roots;
     }
 
+    public get singletons(): Map<string, any> {
+        return this._singletons;
+    }
+
     static isTransactionSetEvent(e: WatchEvent): e is TransactionSetEvent {
         if (e === '') return false;
         return 'E' in e;
@@ -160,6 +180,7 @@ export class ObservableDomain {
             this._objCount = 0;
             this._graph.length = 0;
             this._roots.length = 0;
+            this._singletons.clear();
             console.warn('Empty OD watch event.');
             return;
         }
@@ -214,6 +235,9 @@ export class ObservableDomain {
 
         this._roots.splice(0, this._roots.length); // Clear array
         for (let i = 0; i < e.R.length; i++) this._roots.push(this._graph[e.R[i]]); // Fill array
+
+        this.applySingletons(e.S);
+
         this._isInitialExport = true;
     }
 
@@ -229,9 +253,15 @@ export class ObservableDomain {
             switch (code) {
                 case "N": // NewObject
                     {
-                        let newOne;
+                        let newOne: any;
                         switch (e[2]) {
-                            case "": newOne = {}; break;
+                            case "":
+                                newOne = {};
+                                if(e.length >= 4) {
+                                    newOne[this._singletonFullNameSymbol] = e[3];
+                                    this._singletons.set(e[3], newOne)
+                                };
+                                break;
                             case "A": newOne = []; break;
                             case "M": newOne = new Map(); break;
                             case "S": newOne = new Set(); break;
@@ -305,14 +335,36 @@ export class ObservableDomain {
                 default: throw new Error(`Unexpected Event code: '${e[0]}'.`);
             }
         }
-        deleted.forEach(id => this._graph[id] = null);
+        deleted.forEach((id: number) => {
+            const singletonFullName = this._graph[id]?.[this._singletonFullNameSymbol];
+            this._graph[id] = null;
+            if(!!singletonFullName) {
+                this._singletons.delete(singletonFullName);
+            }
+        });
         this._tranNum = N;
         this._isInitialExport = false;
     }
 
+    /**
+     * Rebuilds the {@link singletons} map from the "S" tuple array of a domain export, stamping each
+     * singleton object with its full name so it can be removed from the map when its object is deleted.
+     * @see DomainExportEvent.S
+     * @private
+     */
+    private applySingletons(singletons: Array<[string, number]>): void {
+        this._singletons.clear();
+        for (let i = 0; i < singletons.length; i++) {
+            const fullName = singletons[i][0];
+            const singleton = this._graph[singletons[i][1]];
+            singleton[this._singletonFullNameSymbol] = fullName;
+            this._singletons.set(fullName, singleton);
+        }
+    }
+
     private getValue(o: any) {
         if (o != null) {
-            var ref = o["="];
+            const ref = o["="];
             if (ref !== undefined) return this._graph[ref];
         }
         return o;

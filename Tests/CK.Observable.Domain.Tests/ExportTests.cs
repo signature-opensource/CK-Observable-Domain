@@ -700,6 +700,7 @@ public class ExportTests
         [JsonPropertyName( "P" )] public List<string> P { get; set; } = new();
         [JsonPropertyName( "O" )] public List<JsonElement> O { get; set; } = new();
         [JsonPropertyName( "R" )] public List<int> R { get; set; } = new();
+        [JsonPropertyName( "S" )] public List<JsonElement> S { get; set; } = new();
     }
 
     [Test]
@@ -750,5 +751,77 @@ public class ExportTests
         // This is NOT good!
         // A Property marked NotExportable SHOULD NOT leak.
         //jsonExport.ShouldNotContain( "NotExportableClass", "This property name is on a Property marked NotExportable." );
+    }
+
+    [SerializationVersion( 0 )]
+    public sealed class ExportableSingleton : ObservableObject, IObservableDomainSingleton
+    {
+        public int Value { get; set; }
+
+        internal ExportableSingleton()
+        {
+        }
+
+        ExportableSingleton( BinarySerialization.IBinaryDeserializer r, BinarySerialization.ITypeReadInfo info )
+            : base( BinarySerialization.Sliced.Instance )
+        {
+            Value = r.ReadValue<int>();
+        }
+
+        public static void Write( BinarySerialization.IBinarySerializer s, in ExportableSingleton o )
+        {
+            s.WriteValue( o.Value );
+        }
+    }
+
+    [Test]
+    public async Task singletons_are_exported_in_the_S_property_Async()
+    {
+        using var d = new ObservableDomain( TestHelper.Monitor, nameof( singletons_are_exported_in_the_S_property_Async ), startTimer: true );
+        var eventCollector = new JsonEventCollector( d );
+
+        // To skip the initial transaction where no events are collectable.
+        await d.ModifyThrowAsync( TestHelper.Monitor, null );
+        // N = 1
+
+        // Before any singleton is created, the "S" property is empty.
+        JsonSerializer.Deserialize<DomainJsonExport>( d.ExportToString()! )!.S.Count
+            .ShouldBe( 0, "No singleton has been created yet." );
+
+        ExportableSingleton singleton = null!;
+        await d.ModifyThrowAsync( TestHelper.Monitor, () =>
+        {
+            d.TransactionSerialNumber.ShouldBe( 1, "Not incremented yet (still inside the transaction n°2)." );
+            singleton = d.CreateSingleton<ExportableSingleton>();
+            singleton.Value = 42;
+        } );
+        // N = 2
+
+        string fullName = typeof( ExportableSingleton ).FullName!;
+
+        // The NewObjectEvent emits the singleton's full type name right after the "" Object kind marker.
+        eventCollector.LastEvent.ShouldNotBeNull( "There was an event sent on N = 2." );
+        eventCollector.LastEvent!.ExportedEvents
+            .ShouldContain( $"[\"N\",{singleton.OId.Index},\"\",\"{fullName}\"]" );
+
+        // The full domain export lists the singleton in "S" as a [FullName, OId.Index] pair.
+        string jsonExport = d.ExportToString()!;
+        jsonExport.ShouldContain( $"\"S\":[[\"{fullName}\",{singleton.OId.Index}]]" );
+
+        DomainJsonExport export = JsonSerializer.Deserialize<DomainJsonExport>( jsonExport )!;
+        export.S.Count.ShouldBe( 1 );
+        JsonElement[] pair = export.S[0].EnumerateArray().ToArray();
+        pair[0].GetString().ShouldBe( fullName );
+        pair[1].GetInt32().ShouldBe( singleton.OId.Index );
+
+        // Creating the singleton again returns the very same instance and does not duplicate the "S" entry.
+        ExportableSingleton again = null!;
+        await d.ModifyThrowAsync( TestHelper.Monitor, () =>
+        {
+            again = d.CreateSingleton<ExportableSingleton>();
+        } );
+        again.ShouldBeSameAs( singleton );
+        JsonSerializer.Deserialize<DomainJsonExport>( d.ExportToString()! )!.S.Count
+            .ShouldBe( 1, "The singleton is referenced once, whatever its instantiation count." );
     }
 }

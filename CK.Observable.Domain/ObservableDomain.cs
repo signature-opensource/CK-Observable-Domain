@@ -340,7 +340,7 @@ public partial class ObservableDomain : IObservableDomain, IDisposable, IObserva
         bool isNakedDomain = runtimeType == typeof( ObservableDomain );
         // This has been initialized and checked by the central constructor.
         Debug.Assert( _transactionStatus == CurrentTransactionStatus.Deserializing );
-        Debug.Assert( isNakedDomain 
+        Debug.Assert( isNakedDomain
                       || new[] { typeof(ObservableDomain<> ), typeof( ObservableDomain<,> ), typeof( ObservableDomain<,,> ), typeof( ObservableDomain<,,,> ) }
                             .Contains( runtimeType.GetGenericTypeDefinition() ) );
 
@@ -416,7 +416,7 @@ public partial class ObservableDomain : IObservableDomain, IDisposable, IObserva
         _random = new Random();
         // The serializer context caches the serialization driver.
         _serializerContext = new BinarySerializerContext( BinarySerializer.DefaultSharedContext, serviceProvider );
-        // The deserialization context exposes the services, including this domain, to the deserializer. 
+        // The deserialization context exposes the services, including this domain, to the deserializer.
         _deserializerContext = new BinaryDeserializerContext( BinaryDeserializer.DefaultSharedContext, serviceProvider );
         _deserializerContext.Services.Add( this );
 
@@ -483,7 +483,7 @@ public partial class ObservableDomain : IObservableDomain, IDisposable, IObserva
         void IInternalTransaction.AddError( Exception ex ) { }
 
         TransactionResult IInternalTransaction.Commit() => TransactionResult.EmptySuccess;
-        
+
         /// <summary>
         /// Releases locks and restores initialization context.
         /// </summary>
@@ -516,21 +516,21 @@ public partial class ObservableDomain : IObservableDomain, IDisposable, IObserva
 
     /// <summary>
     /// Gets all the observable objects that this domain contains (roots included).
-    /// These exposed objects are out of any transactions or reentrancy checks: they should not 
+    /// These exposed objects are out of any transactions or reentrancy checks: they should not
     /// be used outside of ModifyAsync or Read methods.
     /// </summary>
     public IObservableAllObjectsCollection AllObjects => _exposedObjects;
 
     /// <summary>
     /// Gets all the internal objects that this domain contains.
-    /// These exposed objects are out of any transactions or reentrancy checks: they should not 
+    /// These exposed objects are out of any transactions or reentrancy checks: they should not
     /// be used outside of ModifyAsync or Read methods.
     /// </summary>
     public IReadOnlyCollection<InternalObject> AllInternalObjects => _exposedInternalObjects;
 
     /// <summary>
     /// Gets the root observable objects that this domain contains.
-    /// These exposed objects are out of any transactions or reentrancy checks: they should not 
+    /// These exposed objects are out of any transactions or reentrancy checks: they should not
     /// be used outside of ModifyAsync or Read methods.
     /// </summary>
     public IReadOnlyList<ObservableRootObject> AllRoots => _roots;
@@ -775,6 +775,20 @@ public partial class ObservableDomain : IObservableDomain, IDisposable, IObserva
             foreach( var r in _roots )
             {
                 target.EmitInt32( r.OId.Index );
+            }
+            target.EmitEndObject( -1, ObjectExportedKind.List );
+
+            target.EmitPropertyName( "S" );
+            target.EmitStartObject( -1, ObjectExportedKind.List );
+            foreach( var r in _singletons )
+            {
+                if( r.Value.Instance is not ObservableObject o )
+                    continue;
+
+                target.EmitStartList();
+                target.EmitString( r.Key.FullName! );
+                target.EmitInt32( o.OId.Index );
+                target.EmitEndList();
             }
             target.EmitEndObject( -1, ObjectExportedKind.List );
 
@@ -1175,7 +1189,7 @@ public partial class ObservableDomain : IObservableDomain, IDisposable, IObserva
             // However, the _lock.Dispose() call below MAY occur while a TryEnter has been successful and before
             // the _transactionStatus check and the release: this would result in an awful "Incorrect Lock Dispose" exception
             // since disposing a lock while it is held is an error.
-            // ==> This solution that seems the cleanest and most reasonable one is eventually NOT an option... 
+            // ==> This solution that seems the cleanest and most reasonable one is eventually NOT an option...
             //
             // Another solution is to defer the actual Disposing. By using the timer for instance: the domain is "logically disposed"
             // but technically perfectly valid until a timer event calls a DoRealDispose(). If this call is made after a "long enough"

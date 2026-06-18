@@ -18,7 +18,7 @@ begin
     """
         before single "this._roots.splice(0, this._roots.length);";
 
-    replace single """case "": newOne = {}; break;""" with """case "": newOne = wrapDualCasing({}); break;""";
+    replace single "newOne = {};" with "newOne = wrapDualCasing({});";
 
     replace single """
             if (ref !== undefined) return this._graph[ref];
