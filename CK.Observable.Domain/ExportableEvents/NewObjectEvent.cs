@@ -35,6 +35,7 @@ public class NewObjectEvent : ObservableEvent
     public NewObjectEvent( ObservableObject o, ObservableObjectId oid )
         : base( ObservableEventType.NewObject )
     {
+        Throw.DebugAssert( o.GetType().FullName is not null );
         ObjectId = oid;
         Object = o;
         ExportedKind = o.ExportedKind;
@@ -50,7 +51,11 @@ public class NewObjectEvent : ObservableEvent
         e.Target.EmitInt32( ObjectId.Index );
         switch( ExportedKind )
         {
-            case ObjectExportedKind.Object: e.Target.EmitString( "" ); break;
+            case ObjectExportedKind.Object:
+                e.Target.EmitString( "" );
+                if( Object is IObservableDomainSingleton )
+                    e.Target.EmitString( Object.GetType().FullName! );
+                break;
             case ObjectExportedKind.List: e.Target.EmitString( "A" ); break;
             case ObjectExportedKind.Map: e.Target.EmitString( "M" ); break;
             case ObjectExportedKind.Set: e.Target.EmitString( "S" ); break;
