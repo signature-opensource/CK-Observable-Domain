@@ -8,6 +8,9 @@
     <ItemGroup>
       <ProjectReference Include="..\CK.Observable.Domain\CK.Observable.Domain.csproj" />
       <ProjectReference Include="..\CK.TS.ObservableDomain\CK.TS.ObservableDomain.csproj" />
+      <!-- TEMPORARY: replace with a PackageReference to CK.AspNet.WebSocketChannel once CK-TypeScript
+           has been released on the CI feed. -->
+      <ProjectReference Include="..\..\..\Web\CK-TypeScript\CK.AspNet.WebSocketChannel\CK.AspNet.WebSocketChannel.csproj" />
     </ItemGroup>
 
     <ItemGroup>

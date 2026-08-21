@@ -2,26 +2,54 @@ import {
     CrisEndpoint,
     IObservableDomainConnection,
     ObservableDomainWatcherStartOrRestartCommand,
-    WatchEvent
+    WatchEvent,
+    WSConnection
 } from "@local/ck-gen";
 
+/**
+ * Channel topic of the observable domain events. Must stay in sync with
+ * `ObservableDomainWatcherManager.Topic`.
+ */
+const OBSERVABLE_TOPIC = 'OD';
+
+/**
+ * Adapts the one WSConnection of the application to IObservableDomainConnection.
+ *
+ * This owns no socket: it claims the `OD` topic on the shared connection, and closing that connection
+ * would take every other feature down with it.
+ *
+ * Which makes this class the only thing that can tell ObservableDomainClient that its watch is over.
+ * The client has two ways of ending one - the socket dropped, or a domain event failed to apply - and
+ * both must end in onClose, because that is what its reconnect loop is parked on. So the two converge
+ * on close(): whichever happens first releases the topic and notifies, the other becomes a no-op.
+ *
+ * Reconnection itself belongs to WSConnection; startAsync() just waits for the next one. Note that the
+ * domain-error path no longer needs a socket to die to recover: the loop comes straight back, and the
+ * next startListeningAsync() re-exports the domain it had reset.
+ */
 export class WebSocketObservableDomainConnection implements IObservableDomainConnection {
     private readonly messageHandlers: Array<(domainName: string, eventsJson: WatchEvent) => void> = [];
     private readonly closeHandlers: Array<(error: (Error | undefined)) => void> = [];
-
-    private connection?: WebSocket;
-    private connectionId?: string;
+    // Whether the `OD` topic is currently ours. Guards close() so that the two ways of ending a watch
+    // cannot notify twice.
+    private started = false;
 
     constructor(
-        private readonly websocketUrl: string,
+        private readonly wsConnection: WSConnection,
         private readonly crisEndpoint: CrisEndpoint
     ) { }
 
     public async startAsync(): Promise<boolean> {
         try {
-            const { webSocket, connectionId } = await this.createWebSocketAsync(this.websocketUrl);
-            this.connection = webSocket;
-            this.connectionId = connectionId;
+            await this.wsConnection.whenConnectedAsync();
+            // Overwrites any previous registration: this is called again on every turn of the client
+            // reconnect loop. onClosed rides with it, so a client that has stopped watching is not
+            // notified of a loss it no longer cares about.
+            this.wsConnection.addHandler(OBSERVABLE_TOPIC, {
+                onMessage: message => this.handleMessage(message),
+                onClosed: error => this.close(error)
+            });
+            this.started = true;
             return true;
         } catch (e) {
             console.error(e);
@@ -29,55 +57,14 @@ export class WebSocketObservableDomainConnection implements IObservableDomainCon
         }
     }
 
-    private createWebSocketAsync(url: string): Promise<{ webSocket: WebSocket, connectionId: string }> {
-        return new Promise<{ webSocket: WebSocket, connectionId: string }>(async (resolve, reject) => {
-            const socket = new WebSocket(url);
-            socket.onerror = (error) => reject(error);
-            socket.onmessage = (event) => this.handleOnMessageEvents(event, { socket, resolve, reject });
-            socket.onclose = (event) => this.handleOnCloseEvents(event);
-        });
-    }
-
-    private handleOnMessageEvents(
-        event: MessageEvent,
-        negociation: {
-            socket: WebSocket,
-            resolve: (value: (PromiseLike<{ webSocket: WebSocket; connectionId: string }> | { webSocket: WebSocket; connectionId: string })) => void;
-            reject: (reason?: any) => void
-        }): void {
-        const data: { connectionId: string } | [ string, WatchEvent ] = JSON.parse(event.data);
-        if( !WebSocketObservableDomainConnection.isWatchEventMessage(data) ) {
-            if( this.connectionId !== undefined )
-                throw new Error("Connection already started");
-
-            this.connectionId = data.connectionId;
-            negociation.resolve({ webSocket: negociation.socket, connectionId: this.connectionId });
-            return;
-        } else {
-            const [ domainName, watchEvent ] = data;
-            for (const messageHandler of this.messageHandlers) {
-                messageHandler(domainName, watchEvent);
-            }
-        }
-    }
-
-    private handleOnCloseEvents(
-        event: CloseEvent
-    ): void {
-        this.connection = this.connectionId = undefined;
-        const error: Error | undefined = event.wasClean ? undefined : new Error(event.reason);
-        for (const closeHandler of this.closeHandlers) {
-            closeHandler(error);
-        }
-    }
-
     public async startListeningAsync(domains: { domainName: string; transactionCount: number }[]): Promise<{ [p: string]: WatchEvent }> {
-        if( this.connectionId === undefined )
+        const connectionId = this.wsConnection.connectionId;
+        if( connectionId === undefined )
             throw new Error("Connection not started");
 
         const res: { [domainName: string]: WatchEvent } = {};
         const promises = domains.map(async domain => {
-            const command = new ObservableDomainWatcherStartOrRestartCommand(this.connectionId, domain.domainName, domain.transactionCount);
+            const command = new ObservableDomainWatcherStartOrRestartCommand(connectionId, domain.domainName, domain.transactionCount);
             const result = await this.crisEndpoint.sendOrThrowAsync(command);
             if (result) {
                 res[domain.domainName] = JSON.parse(result);
@@ -98,25 +85,35 @@ export class WebSocketObservableDomainConnection implements IObservableDomainCon
         this.closeHandlers.push(eventHandler);
     }
 
+    /**
+     * Stops watching: releases the `OD` topic and reports the close. The socket is shared, so it is not
+     * ours to close - only the application closes it, through WSConnection.stopAsync().
+     *
+     * Reporting is the point. ObservableDomainClient calls this to end a watch it wants to restart (a
+     * domain event that failed to apply) and its reconnect loop is waiting on onClose to do so: it used
+     * to get that from the dying socket, and now it gets it from here.
+     */
     public stopAsync(): Promise<void> {
-        if(this.connection === undefined)
-        {
-            console.warn("Connection was not started");
-            return Promise.resolve();
-        }
-
-        return new Promise<void>((resolve, reject) => {
-          try {
-              this.connection!.addEventListener("close", () => { resolve() }, { once: true })
-              this.connection!.close();
-          }  catch (e) {
-              console.error(e);
-              reject();
-          }
-        })
+        this.close(undefined);
+        return Promise.resolve();
     }
 
-    private static isWatchEventMessage( message: { connectionId: string } | [ string, WatchEvent ] ): message is [ string, WatchEvent ] {
-        return Array.isArray(message);
+    // The payload of the OD topic is the very frame the server has always sent: [domainName, watchEvent].
+    private handleMessage(message: unknown): void {
+        const [ domainName, watchEvent ] = message as [ string, WatchEvent ];
+        for (const messageHandler of this.messageHandlers) {
+            messageHandler(domainName, watchEvent);
+        }
+    }
+
+    // Idempotent, and that is what keeps the two causes from notifying twice: on a socket loss onClosed
+    // gets here first, then the loop calls stopAsync() in its finally and finds nothing left to do.
+    private close(error: Error | undefined): void {
+        if (!this.started) return;
+        this.started = false;
+        this.wsConnection.removeHandler(OBSERVABLE_TOPIC);
+        for (const closeHandler of this.closeHandlers) {
+            closeHandler(error);
+        }
     }
 }

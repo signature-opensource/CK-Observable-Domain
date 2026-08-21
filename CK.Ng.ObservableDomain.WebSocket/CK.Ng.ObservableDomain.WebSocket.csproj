@@ -11,6 +11,9 @@
     <ItemGroup>
       <ProjectReference Include="..\CK.Observable.WebSocketWatcher\CK.Observable.WebSocketWatcher.csproj" />
       <ProjectReference Include="..\CK.TS.ObservableDomain.DualCasing\CK.TS.ObservableDomain.DualCasing.csproj" />
+      <!-- TEMPORARY: replace with a PackageReference to CK.Ng.WebSocketChannel once CK-TypeScript
+           has been released on the CI feed. -->
+      <ProjectReference Include="..\..\..\Web\CK-TypeScript\CK.Ng.WebSocketChannel\CK.Ng.WebSocketChannel.csproj" />
     </ItemGroup>
 
 </Project>

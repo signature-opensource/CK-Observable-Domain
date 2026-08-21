@@ -2,7 +2,7 @@ using CK.Core;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using CK.Observable.WebSocketWatcher;
+using CK.AspNet.WebSocketChannel;
 
 var builder = WebApplication.CreateSlimBuilder();
 var monitor = builder.GetBuilderMonitor();
@@ -10,7 +10,7 @@ builder.UseCKMonitoring();
 builder.AddApplicationIdentityServiceConfiguration();
 
 builder.Services.AddCors();
-builder.AddObservableDomainWatching();
+builder.AddWebSocketChannel();
 
 // The following line requires having a G0.cs.
 // This would be the goal, removing reflection from map loading.
@@ -26,7 +26,7 @@ app.UseCors( c =>
         .AllowCredentials() );
 app.UseRouting();
 app.UseCris();
-app.UseObservableDomainWatching();
+app.UseWebSocketChannel();
 
 app.UseSpa( ( b ) =>
 {
