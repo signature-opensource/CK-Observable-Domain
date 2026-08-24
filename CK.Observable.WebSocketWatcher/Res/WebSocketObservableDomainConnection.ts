@@ -12,6 +12,14 @@ import {
  */
 const OBSERVABLE_TOPIC = 'OD';
 
+// Backoff of the negotiation, doubling and capped, mirroring the one WSConnection applies to the socket
+// itself. It covers the other half of the problem: ObservableDomainClient retries in a loop that has no
+// delay of its own, and now that the socket is shared and persistent, startAsync() no longer costs a
+// handshake - so a negotiation that keeps failing (an expired token, typically) would spin at full
+// speed. The socket being up is not enough to conclude that retrying is free.
+const RETRY_MIN_MS = 1000;
+const RETRY_MAX_MS = 30000;
+
 /**
  * Adapts the one WSConnection of the application to IObservableDomainConnection.
  *
@@ -33,6 +41,8 @@ export class WebSocketObservableDomainConnection implements IObservableDomainCon
     // Whether the `OD` topic is currently ours. Guards close() so that the two ways of ending a watch
     // cannot notify twice.
     private started = false;
+    // Consecutive negotiations that failed. Reset by a successful one.
+    private failedNegotiations = 0;
 
     constructor(
         private readonly wsConnection: WSConnection,
@@ -41,6 +51,7 @@ export class WebSocketObservableDomainConnection implements IObservableDomainCon
 
     public async startAsync(): Promise<boolean> {
         try {
+            await this.throttleAsync();
             await this.wsConnection.whenConnectedAsync();
             // Overwrites any previous registration: this is called again on every turn of the client
             // reconnect loop. onClosed rides with it, so a client that has stopped watching is not
@@ -59,22 +70,42 @@ export class WebSocketObservableDomainConnection implements IObservableDomainCon
 
     public async startListeningAsync(domains: { domainName: string; transactionCount: number }[]): Promise<{ [p: string]: WatchEvent }> {
         const connectionId = this.wsConnection.connectionId;
-        if( connectionId === undefined )
+        // !started covers the case where the connection dropped since startAsync(): the identifier may
+        // already be that of a fresh socket, but our topic is no longer registered, so listening on it
+        // would be pointless.
+        if( connectionId === undefined || !this.started ) {
+            this.failedNegotiations++;
             throw new Error("Connection not started");
+        }
 
-        const res: { [domainName: string]: WatchEvent } = {};
-        const promises = domains.map(async domain => {
-            const command = new ObservableDomainWatcherStartOrRestartCommand(connectionId, domain.domainName, domain.transactionCount);
-            const result = await this.crisEndpoint.sendOrThrowAsync(command);
-            if (result) {
-                res[domain.domainName] = JSON.parse(result);
-            } else {
-                console.warn(`Domain ${domain.domainName} doesn't exists.`);
-                res[domain.domainName] = "";
-            }
-        });
-        await Promise.all(promises);
-        return res;
+        try {
+            const res: { [domainName: string]: WatchEvent } = {};
+            const promises = domains.map(async domain => {
+                const command = new ObservableDomainWatcherStartOrRestartCommand(connectionId, domain.domainName, domain.transactionCount);
+                const result = await this.crisEndpoint.sendOrThrowAsync(command);
+                if (result) {
+                    res[domain.domainName] = JSON.parse(result);
+                } else {
+                    console.warn(`Domain ${domain.domainName} doesn't exists.`);
+                    res[domain.domainName] = "";
+                }
+            });
+            await Promise.all(promises);
+            // The connection can drop while the commands are in flight, and reporting the close is not
+            // enough here: ObservableDomainClient installs its onCloseHandler only after this method
+            // returns, so a close raised now is swallowed - and on later turns of its loop it is
+            // swallowed by the stale handler of the previous turn, whose promise is already resolved. It
+            // would then park on a close that can no longer come, since our topic is unregistered.
+            // Throwing sends it to its catch instead, and the loop starts over.
+            if (!this.started) throw new Error("Connection lost while starting to listen.");
+            // Only a completed negotiation proves the round trip healthy: resetting on a mere connection
+            // would let a server that accepts sockets but refuses commands be hammered.
+            this.failedNegotiations = 0;
+            return res;
+        } catch (e) {
+            this.failedNegotiations++;
+            throw e;
+        }
     }
 
     public onMessage(eventHandler: (domainName: string, eventsJson: WatchEvent) => void): void {
@@ -96,6 +127,16 @@ export class WebSocketObservableDomainConnection implements IObservableDomainCon
     public stopAsync(): Promise<void> {
         this.close(undefined);
         return Promise.resolve();
+    }
+
+    // Waits before retrying a negotiation, and returns at once on the nominal path where nothing has
+    // failed. This is what turns ObservableDomainClient's delay-free retry loop into a backoff: it comes
+    // straight back here after any failure, and there is no handshake left to slow it down.
+    private throttleAsync(): Promise<void> {
+        if (this.failedNegotiations === 0) return Promise.resolve();
+        const delay = Math.min(RETRY_MIN_MS * Math.pow(2, this.failedNegotiations - 1), RETRY_MAX_MS);
+        console.warn(`Observable domain negotiation failed ${this.failedNegotiations} time(s), retrying in ${delay} ms.`);
+        return new Promise<void>(resolve => setTimeout(resolve, delay));
     }
 
     // The payload of the OD topic is the very frame the server has always sent: [domainName, watchEvent].
