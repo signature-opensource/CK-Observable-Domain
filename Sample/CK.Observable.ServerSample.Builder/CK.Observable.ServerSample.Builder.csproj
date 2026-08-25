@@ -5,9 +5,9 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="CK.Cris.Executor.Engine" Version="0.43.2--ci.1" />
-    <PackageReference Include="CK.Cris.AspNet.Engine" Version="0.55.3--ci.1" />
+    <PackageReference Include="CK.Cris.AspNet.Engine" Version="0.55.3--ci.5" />
     <PackageReference Include="CK.AppBuilder" Version="33.0.2--ci.1" />
-    <PackageReference Include="CK.TS.Angular.Engine" Version="0.31.3--ci.7" />
+    <PackageReference Include="CK.TS.Angular.Engine" Version="0.31.3--ci.18" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CK.Observable.ServerSample.App\CK.Observable.ServerSample.App.csproj" />
