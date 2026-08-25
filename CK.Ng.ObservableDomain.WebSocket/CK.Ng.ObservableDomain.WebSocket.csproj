@@ -6,11 +6,12 @@
 
     <ItemGroup>
         <PackageReference Include="CK.Ng.Cris.AspNet" Version="0.55.3--ci.5" />
+        <PackageReference Include="CK.Ng.AspNet.WebSocketChannel" Version="0.31.3--ci.18" />
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\CK.Observable.WebSocketWatcher\CK.Observable.WebSocketWatcher.csproj" />
       <ProjectReference Include="..\CK.TS.ObservableDomain.DualCasing\CK.TS.ObservableDomain.DualCasing.csproj" />
+      <ProjectReference Include="..\CK.Observable.WebSocketWatcher\CK.Observable.WebSocketWatcher.csproj" />
     </ItemGroup>
 
 </Project>
