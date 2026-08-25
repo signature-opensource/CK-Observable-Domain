@@ -25,7 +25,7 @@ public sealed class ObservableDomainWatcherManager : IRealObject
     /// The channel topic of the observable domain events. The TypeScript client matches on this exact
     /// string (see <c>WebSocketObservableDomainConnection</c>).
     /// </summary>
-    public const string Topic = "OD";
+    public const string Topic = "CK.Observable.WebSocketWatcher";
 
     private readonly ConcurrentDictionary<string, ObservableDomainWatcher> _watchers = new();
 

@@ -10,7 +10,7 @@ import {
  * Channel topic of the observable domain events. Must stay in sync with
  * `ObservableDomainWatcherManager.Topic`.
  */
-const OBSERVABLE_TOPIC = 'OD';
+const OBSERVABLE_TOPIC = 'CK.Observable.WebSocketWatcher';
 
 // Backoff of the negotiation, doubling and capped, mirroring the one WSConnection applies to the socket
 // itself. It covers the other half of the problem: ObservableDomainClient retries in a loop that has no
