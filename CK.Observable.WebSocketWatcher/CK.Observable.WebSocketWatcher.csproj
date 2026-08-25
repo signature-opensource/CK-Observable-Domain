@@ -8,15 +8,15 @@
     <ItemGroup>
       <ProjectReference Include="..\CK.Observable.Domain\CK.Observable.Domain.csproj" />
       <ProjectReference Include="..\CK.TS.ObservableDomain\CK.TS.ObservableDomain.csproj" />
-      <!-- TEMPORARY: replace with a PackageReference to CK.AspNet.WebSocketChannel once CK-TypeScript
-           has been released on the CI feed. -->
-      <ProjectReference Include="..\..\..\Web\CK-TypeScript\CK.AspNet.WebSocketChannel\CK.AspNet.WebSocketChannel.csproj" />
     </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="CK.Cris.Typescript" Version="0.55.3--ci.1" />
         <PackageReference Include="CK.Cris.AspNet" Version="0.55.3--ci.1" />
         <PackageReference Include="SimpleR.Server" Version="1.0.0" />
+        <!-- TODO: repoint to the CK-AspNet release of CK.AspNet.WebSocketChannel (server only now). -->
+        <PackageReference Include="CK.AspNet.WebSocketChannel" Version="0.31.3--ci.15" />
+        <PackageReference Include="CK.TS.AspNet.WebSocketChannel" Version="0.31.3--ci.15" />
     </ItemGroup>
 
 </Project>

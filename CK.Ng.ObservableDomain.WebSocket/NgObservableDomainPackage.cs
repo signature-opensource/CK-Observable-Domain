@@ -1,6 +1,6 @@
 using CK.Core;
 using CK.Ng.Cris.AspNet;
-using CK.Ng.WebSocketChannel;
+using CK.Ng.AspNet.WebSocketChannel;
 using CK.Observable.WebSocketWatcher;
 using CK.ObservableDomain;
 using CK.TS.Angular;
