@@ -5,7 +5,7 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.AspNet" Version="21.0.2--ci.1" />
+    <PackageReference Include="CK.AspNet" Version="21.0.2--ci.7" />
     <PackageReference Include="CK.Monitoring.Hosting" Version="26.0.1" />
     <PackageReference Include="CK.WeakAssemblyNameResolver" Version="0.5.2" />
     <PackageReference Include="Fody" Version="6.9.3" PrivateAssets="All" />

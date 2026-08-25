@@ -11,8 +11,8 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="CK.Cris.Typescript" Version="0.55.3--ci.1" />
-        <PackageReference Include="CK.Cris.AspNet" Version="0.55.3--ci.1" />
+        <PackageReference Include="CK.Cris.Typescript" Version="0.55.3--ci.5" />
+        <PackageReference Include="CK.Cris.AspNet" Version="0.55.3--ci.5" />
         <PackageReference Include="SimpleR.Server" Version="1.0.0" />
         <!-- TODO: repoint to the CK-AspNet release of CK.AspNet.WebSocketChannel (server only now). -->
         <PackageReference Include="CK.AspNet.WebSocketChannel" Version="0.31.3--ci.15" />
