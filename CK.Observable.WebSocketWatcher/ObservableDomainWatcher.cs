@@ -5,8 +5,8 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using CK.AspNet.WebSocketChannel;
 using CK.Core;
-using SimpleR;
 
 namespace CK.Observable.WebSocketWatcher;
 
@@ -17,30 +17,37 @@ namespace CK.Observable.WebSocketWatcher;
 /// Each watched domain is backed by a <see cref="DomainSubscription"/> that pushes transaction events
 /// to the client in real time via the <see cref="JsonEventCollector.LastEventChanged"/> event.
 /// </para>
+/// <para>
+/// This watcher does not own the socket: it pushes on the application-wide channel under the
+/// <see cref="ObservableDomainWatcherManager.Topic"/> topic. Other features push on the same socket
+/// under theirs, and the channel serializes the writes.
+/// </para>
 /// </summary>
 public sealed class ObservableDomainWatcher : IAsyncDisposable
 {
     private readonly ObservableDomainDriverHost _host;
-    private readonly IWebsocketConnectionContext<ReadOnlyMemory<byte>> _connection;
+    private readonly WebSocketChannelManager _channel;
+    private readonly string _connectionId;
     private readonly SemaphoreSlim _lock;
-    private readonly SemaphoreSlim _writeLock;
     private readonly Dictionary<string, DomainSubscription> _watched;
-    // Guards against in-flight event handlers writing to a disposed connection,
-    // and prevents double-dispose of semaphores if disposal paths ever overlap.
+    // Guards against in-flight event handlers pushing for a released watcher, and prevents
+    // double-dispose of the semaphore if disposal paths ever overlap.
     private volatile bool _disposed;
 
     /// <summary>
-    /// Initializes a new <see cref="ObservableDomainWatcher"/> for the given WebSocket connection.
+    /// Initializes a new <see cref="ObservableDomainWatcher"/> for the given connection.
     /// </summary>
     /// <param name="host">The driver host used to resolve domains by name.</param>
-    /// <param name="connection">The WebSocket connection to push events to.</param>
+    /// <param name="channel">The channel to push events on.</param>
+    /// <param name="connectionId">The connection this watcher belongs to.</param>
     public ObservableDomainWatcher( ObservableDomainDriverHost host,
-                                    IWebsocketConnectionContext<ReadOnlyMemory<byte>> connection )
+                                    WebSocketChannelManager channel,
+                                    string connectionId )
     {
         _host = host;
-        _connection = connection;
+        _channel = channel;
+        _connectionId = connectionId;
         _lock = new SemaphoreSlim( 1, 1 );
-        _writeLock = new SemaphoreSlim( 1, 1 );
         _watched = new Dictionary<string, DomainSubscription>();
     }
 
@@ -130,11 +137,11 @@ public sealed class ObservableDomainWatcher : IAsyncDisposable
             if( _watched.Remove( domainName, out var subscription ) )
             {
                 subscription.Dispose();
-                monitor.Trace( $"Client '{_connection.ConnectionId}' unwatched '{domainName}'." );
+                monitor.Trace( $"Client '{_connectionId}' unwatched '{domainName}'." );
             }
             else
             {
-                monitor.Warn( $"Client '{_connection.ConnectionId}': '{domainName}' not found. Unwatch skipped." );
+                monitor.Warn( $"Client '{_connectionId}': '{domainName}' not found. Unwatch skipped." );
             }
         }
         finally
@@ -143,27 +150,15 @@ public sealed class ObservableDomainWatcher : IAsyncDisposable
         }
     }
 
-    private async ValueTask WriteAsync( ReadOnlyMemory<byte> message )
+    private ValueTask WriteAsync( ReadOnlyMemory<byte> message )
     {
-        if( _disposed ) return; // In-flight event after dispose: silently bail out.
-        await _writeLock.WaitAsync().ConfigureAwait( false );
-        try
-        {
-            if( _disposed ) return; // Dispose happened while waiting for the lock.
-            await _connection.WriteAsync( message ).ConfigureAwait( false );
-        }
-        finally
-        {
-            _writeLock.Release();
-        }
+        // In-flight event after dispose: silently bail out. Pushing on a connection that is gone is
+        // already a no-op on the channel side; this only avoids building the envelope for nothing.
+        if( _disposed ) return ValueTask.CompletedTask;
+        return _channel.SendAsync( _connectionId, ObservableDomainWatcherManager.Topic, message );
     }
 
-    /// <summary>
-    /// Aborts the connection (idempotent): cancels the pending SimpleR read and drives the normal disconnect path,
-    /// so on host shutdown Kestrel drains immediately instead of waiting out <c>HostOptions.ShutdownTimeout</c>.
-    /// </summary>
-    public void Abort() => _connection.Abort();
-
+    /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
         if( _disposed ) return; // Already disposed.
@@ -180,7 +175,6 @@ public sealed class ObservableDomainWatcher : IAsyncDisposable
             _lock.Release();
         }
         _lock.Dispose();
-        _writeLock.Dispose();
     }
 
     private sealed class DomainSubscription : IDisposable
