@@ -1,8 +1,6 @@
 using NUnit.Framework;
 using System.Threading.Tasks;
 using CK.Testing;
-using CK.Cris.AmbientValues;
-using CK.Cris;
 using CK.Setup;
 using static CK.Testing.MonitorTestHelper;
 

@@ -1,6 +1,5 @@
 using CK.BinarySerialization;
 using CK.Core;
-using System;
 
 namespace CK.Observable;
 

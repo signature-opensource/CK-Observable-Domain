@@ -1,6 +1,4 @@
-using CK.Testing;
 using System.Collections.Generic;
-using System.IO;
 using System.Reflection;
 
 namespace CK.Observable.Domain.Tests;

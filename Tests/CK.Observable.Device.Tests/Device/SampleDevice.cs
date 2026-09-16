@@ -1,15 +1,9 @@
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using CK.Core;
-using CK.Core.Impl;
 using CK.DeviceModel;
 using CK.PerfectEvent;
-using NUnit.Framework.Constraints;
-using NUnit.Framework.Internal.Execution;
 
 namespace CK.Observable.Device.Tests;
 

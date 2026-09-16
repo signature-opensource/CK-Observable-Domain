@@ -1,7 +1,6 @@
 using CK.BinarySerialization;
 using CK.Core;
 using System.Diagnostics;
-using System.Text;
 
 namespace CK.Observable.League.Tests.MicroMachine;
 

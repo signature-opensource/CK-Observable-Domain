@@ -1,5 +1,3 @@
-using System;
-
 namespace CK.Observable;
 
 /// <summary>

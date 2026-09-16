@@ -2,10 +2,7 @@ using CK.BinarySerialization;
 using CK.Core;
 using System;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
-using System.IO;
 using System.Linq;
-using System.Text;
 
 namespace CK.Observable;
 

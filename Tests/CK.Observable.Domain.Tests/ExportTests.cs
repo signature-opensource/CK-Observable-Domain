@@ -1,12 +1,10 @@
 using CK.Core;
 using CK.Observable.Domain.Tests.Sample;
 using Shouldly;
-using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;

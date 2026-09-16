@@ -2,8 +2,6 @@ using CK.Core;
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
-using System.Linq;
-using System.IO;
 using CK.BinarySerialization;
 using System.Diagnostics.CodeAnalysis;
 using System.Collections.Generic;

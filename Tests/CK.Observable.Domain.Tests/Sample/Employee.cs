@@ -1,5 +1,4 @@
 using CK.Core;
-using System.Diagnostics;
 
 namespace CK.Observable.Domain.Tests.Sample;
 

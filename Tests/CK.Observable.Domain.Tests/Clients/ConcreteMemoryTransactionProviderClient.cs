@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using CK.BinarySerialization;
 using CK.Core;
 

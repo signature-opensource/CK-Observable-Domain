@@ -150,12 +150,15 @@ public sealed class ObservableDomainWatcher : IAsyncDisposable
         }
     }
 
-    private ValueTask WriteAsync( ReadOnlyMemory<byte> message )
+    ValueTask WriteAsync( ReadOnlyMemory<byte> message )
     {
         // In-flight event after dispose: silently bail out. Pushing on a connection that is gone is
         // already a no-op on the channel side; this only avoids building the envelope for nothing.
-        if( _disposed ) return ValueTask.CompletedTask;
-        return _channel.SendAsync( _connectionId, ObservableDomainWatcherManager.Topic, message );
+        if( _disposed || !_channel.TryGetConnection( _connectionId, out WebSocketChannelConnection? connection ) )
+        {
+            return ValueTask.CompletedTask;
+        }
+        return connection.WriteAsync( ObservableDomainWatcherManager.Topic, message );
     }
 
     /// <inheritdoc />

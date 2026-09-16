@@ -1,5 +1,4 @@
 using CK.Core;
-using CK.Cris.AspNet;
 using CK.Testing;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Hosting;

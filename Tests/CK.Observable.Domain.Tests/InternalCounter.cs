@@ -1,8 +1,5 @@
 using CK.Core;
 using Shouldly;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace CK.Observable.Domain.Tests;
 

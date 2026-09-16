@@ -1,7 +1,4 @@
 using CK.Core;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Threading.Tasks;
 
 namespace CK.Observable;
 

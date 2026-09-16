@@ -1,7 +1,6 @@
 using CK.BinarySerialization;
 using CK.Core;
 using Shouldly;
-using System;
 
 namespace CK.Observable.Domain.Tests.Sample;
 
