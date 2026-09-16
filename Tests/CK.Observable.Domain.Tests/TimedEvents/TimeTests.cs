@@ -199,9 +199,9 @@ public class TimeTests
             await d.ModifyThrowAsync( TestHelper.Monitor, () =>
             {
                 var t = new ObservableTimer( DateTime.UtcNow );
-                Assert.Throws<ArgumentException>( () => t.Elapsed += ( o, e ) => { } );
+                Should.Throw<ArgumentException>( () => t.Elapsed += ( o, e ) => { } );
                 var r = new ObservableReminder( DateTime.UtcNow );
-                Assert.Throws<ArgumentException>( () => r.Elapsed += ( o, e ) => { } );
+                Should.Throw<ArgumentException>( () => r.Elapsed += ( o, e ) => { } );
             } );
         }
     }

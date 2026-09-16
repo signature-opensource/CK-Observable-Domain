@@ -111,7 +111,7 @@ public class BasicEventsTests
             {
                 TestCounter counter = new TestCounter();
                 Car c = new Car( "First Car" );
-                Assert.Throws<NotSupportedException>( () => ((INotifyPropertyChanged)c).PropertyChanged += (o,e) => { } );
+                Should.Throw<NotSupportedException>( () => ((INotifyPropertyChanged)c).PropertyChanged += (o,e) => { } );
             } );
         }
     }
