@@ -1,4 +1,4 @@
-using CK.BinarySerialization;
+﻿using CK.BinarySerialization;
 using CK.Core;
 using CK.DeviceModel;
 using Shouldly;
@@ -7,6 +7,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
 using CK.IO.DeviceModel;
@@ -20,8 +21,8 @@ public class DeviceBridgeTests
     [TestCase( "BeforeObservableDevice" )]
     [TestCase( "AfterObservableDevice" )]
     [TestCase( "AfterDevice" )]
-    [Timeout( 2 * 1000 )]
-    public async Task sample_observable_Async( string createHostStep )
+    [CancelAfter( 2 * 1000 )]
+    public async Task sample_observable_Async( string createHostStep, CancellationToken cancellation )
     {
         using var _ = TestHelper.Monitor.OpenInfo( nameof( sample_observable_Async ) );
         var host = new SampleDeviceHost();
@@ -111,7 +112,7 @@ public class DeviceBridgeTests
 
         await host.Find( "n°1" )!.DestroyAsync( TestHelper.Monitor );
 
-        await Task.Delay( 150 );
+        await Task.Delay( 150, cancellation );
 
         obs.Read( TestHelper.Monitor, () =>
         {
@@ -142,8 +143,8 @@ public class DeviceBridgeTests
     }
 
     [Test]
-    [Timeout( 2 * 1000 )]
-    public async Task Start_and_Stop_commands_Async()
+    [CancelAfter( 2 * 1000 )]
+    public async Task Start_and_Stop_commands_Async( CancellationToken cancellation )
     {
         using var gLog = TestHelper.Monitor.OpenInfo( nameof( Start_and_Stop_commands_Async ) );
         DeviceIsRunningChanged = false;
@@ -185,7 +186,7 @@ public class DeviceBridgeTests
 
         while( isRunning )
         {
-            await Task.Delay( 100 );
+            await Task.Delay( 100, cancellation );
             obs.Read( TestHelper.Monitor, () =>
             {
                 isRunning = device.IsRunning.Value;
@@ -201,7 +202,7 @@ public class DeviceBridgeTests
 
         while( !isRunning )
         {
-            await Task.Delay( 100 );
+            await Task.Delay( 100, cancellation );
             isRunning = obs.Read( TestHelper.Monitor, () => device.IsRunning.Value );
         }
         DeviceIsRunningChanged.ShouldBeTrue();
@@ -226,8 +227,8 @@ public class DeviceBridgeTests
     }
 
     [Test]
-    [Timeout( 10000 )]
-    public async Task commands_are_easy_to_send_Async()
+    [CancelAfter( 10000 )]
+    public async Task commands_are_easy_to_send_Async( CancellationToken cancellation )
     {
         using var gLog = TestHelper.Monitor.OpenInfo( nameof( commands_are_easy_to_send_Async ) );
         var host = new SampleDeviceHost();
@@ -254,7 +255,7 @@ public class DeviceBridgeTests
         Throw.DebugAssert( device != null );
         Throw.DebugAssert( device.IsRunning != null );
 
-        await Task.Delay( 1000 );
+        await Task.Delay( 1000, cancellation );
         await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
         {
             var directState = device.GetSafeState();
@@ -264,7 +265,7 @@ public class DeviceBridgeTests
             device.SendSimpleCommand();
         }, waitForDomainPostActionsCompletion: true );
 
-        await Task.Delay( 2500 );
+        await Task.Delay( 2500, cancellation );
         await obs.ModifyThrowAsync( TestHelper.Monitor, () =>
         {
             var directState = device.GetSafeState();

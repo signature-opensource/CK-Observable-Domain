@@ -1,4 +1,4 @@
-using CK.Core;
+﻿using CK.Core;
 using Shouldly;
 using NUnit.Framework;
 using System;
@@ -255,16 +255,16 @@ public class PostActionsTests
 
     [TestCase( 20, false )]
     [TestCase( 20, true )]
-    [Timeout(30*1000)]
-    public async Task parrallel_operations_respect_the_Domain_PostActions_ordering_guaranty_Async( int nb, bool useAsync )
+    [CancelAfter(30*1000)]
+    public async Task parrallel_operations_respect_the_Domain_PostActions_ordering_guaranty_Async( int nb, bool useAsync, CancellationToken cancellation )
     {
         ResetContext();
 
         using var d = new ObservableDomain<SimpleRoot>( TestHelper.Monitor, $"parrallel_operations_respect_the_Domain_PostActions_ordering_guaranty-{nb}-{useAsync}", startTimer: true );
 
         Barrier b = new Barrier( nb );
-        var tasks = Enumerable.Range( 0, nb ).Select( i => Task.Run( () => Run( i, i == 0 ? TestHelper.Monitor : new ActivityMonitor(), d, b ) ) ).ToArray();
-        await Task.WhenAll( tasks );
+        var tasks = Enumerable.Range( 0, nb ).Select( i => Task.Run( () => Run( i, i == 0 ? TestHelper.Monitor : new ActivityMonitor(), d, b ), cancellation ) ).ToArray();
+        await Task.WhenAll( tasks ).WaitAsync( cancellation );
         TestHelper.Monitor.Info( $"{nb} tasks done! Disposing Domain." );
         d.Dispose( TestHelper.Monitor );
 
@@ -279,7 +279,7 @@ public class PostActionsTests
         async Task Run( int num, IActivityMonitor monitor, ObservableDomain<SimpleRoot> d, Barrier b )
         {
             monitor.Info( $"Run {num}: Waiting for Barrier..." );
-            b.SignalAndWait();
+            b.SignalAndWait( cancellation );
             monitor.Info( $"Running {num}!" );
             var tr = await d.ModifyThrowAsync( monitor, () =>
             {
@@ -293,7 +293,7 @@ public class PostActionsTests
                 d.Root.SendNumber( HandlerTarget.Domain, useAsync );
             } );
             monitor.Info( $"Run {num}: Waiting for DomainPostActionsError..." );
-            await tr.DomainPostActionsError;
+            await tr.DomainPostActionsError.WaitAsync( cancellation );
             monitor.Info( $"Awaited DomainPostActionsError! (Run {num})" );
         }
     }
