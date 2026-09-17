@@ -71,10 +71,12 @@ public sealed class ObservableDomainWatcherManager : IRealObject
     [CommandHandler]
     public async Task<string> HandleStartOrRestartWatchAsync( IActivityMonitor monitor, IObservableDomainWatcherStartOrRestartCommand command )
     {
-        if( _channel.TryGetConnection( command.ConnectionId, out _ ) is false )
+        if( _channel.TryGetConnection( command.ConnectionId, out var connection ) is false )
+        {
             Throw.InvalidDataException( $"{command.ConnectionId} does not exist, or is not identified as you." );
+        }
 
-        var watcher = _watchers.GetOrAdd( command.ConnectionId, id => new ObservableDomainWatcher( _host, _channel, id ) );
+        var watcher = _watchers.GetOrAdd( command.ConnectionId, id => new ObservableDomainWatcher( _host, connection ) );
 
         // The connection can vanish between the check above and this line: the closed event would then
         // have found nothing to remove, and the watcher would stay forever. Clean up rather than leak.

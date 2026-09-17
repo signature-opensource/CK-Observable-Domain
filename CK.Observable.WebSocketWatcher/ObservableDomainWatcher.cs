@@ -25,28 +25,23 @@ namespace CK.Observable.WebSocketWatcher;
 /// </summary>
 public sealed class ObservableDomainWatcher : IAsyncDisposable
 {
-    private readonly ObservableDomainDriverHost _host;
-    private readonly WebSocketChannelManager _channel;
-    private readonly string _connectionId;
-    private readonly SemaphoreSlim _lock;
-    private readonly Dictionary<string, DomainSubscription> _watched;
+    readonly ObservableDomainDriverHost _host;
+    readonly WebSocketChannelConnection _connection;
+    readonly SemaphoreSlim _lock;
+    readonly Dictionary<string, DomainSubscription> _watched;
     // Guards against in-flight event handlers pushing for a released watcher, and prevents
     // double-dispose of the semaphore if disposal paths ever overlap.
-    private volatile bool _disposed;
+    volatile bool _disposed;
 
     /// <summary>
     /// Initializes a new <see cref="ObservableDomainWatcher"/> for the given connection.
     /// </summary>
     /// <param name="host">The driver host used to resolve domains by name.</param>
-    /// <param name="channel">The channel to push events on.</param>
-    /// <param name="connectionId">The connection this watcher belongs to.</param>
-    public ObservableDomainWatcher( ObservableDomainDriverHost host,
-                                    WebSocketChannelManager channel,
-                                    string connectionId )
+    /// <param name="connection">The connection.</param>
+    public ObservableDomainWatcher( ObservableDomainDriverHost host, WebSocketChannelConnection connection )
     {
         _host = host;
-        _channel = channel;
-        _connectionId = connectionId;
+        _connection = connection;
         _lock = new SemaphoreSlim( 1, 1 );
         _watched = new Dictionary<string, DomainSubscription>();
     }
@@ -137,11 +132,11 @@ public sealed class ObservableDomainWatcher : IAsyncDisposable
             if( _watched.Remove( domainName, out var subscription ) )
             {
                 subscription.Dispose();
-                monitor.Trace( $"Client '{_connectionId}' unwatched '{domainName}'." );
+                monitor.Trace( $"Client '{_connection.ConnectionId}' unwatched '{domainName}'." );
             }
             else
             {
-                monitor.Warn( $"Client '{_connectionId}': '{domainName}' not found. Unwatch skipped." );
+                monitor.Warn( $"Client '{_connection.ConnectionId}': '{domainName}' not found. Unwatch skipped." );
             }
         }
         finally
@@ -154,11 +149,9 @@ public sealed class ObservableDomainWatcher : IAsyncDisposable
     {
         // In-flight event after dispose: silently bail out. Pushing on a connection that is gone is
         // already a no-op on the channel side; this only avoids building the envelope for nothing.
-        if( _disposed || !_channel.TryGetConnection( _connectionId, out WebSocketChannelConnection? connection ) )
-        {
-            return ValueTask.CompletedTask;
-        }
-        return connection.WriteAsync( ObservableDomainWatcherManager.Topic, message );
+        return _disposed
+                ? ValueTask.CompletedTask
+                : _connection.WriteAsync( ObservableDomainWatcherManager.Topic, message );
     }
 
     /// <inheritdoc />
