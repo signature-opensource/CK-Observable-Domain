@@ -25,28 +25,10 @@ export class DomainRootService {
     const domainName: string = 'Test-Domain';
     this.#odClient.listenToDomainAsync( domainName ).then( ( updates$ ) => {
       const domain = this.#odClient.getDomain( domainName );
-      updates$.subscribe( () => {
-        const singleton = this.#findSingleton( domain?.allObjects );
+      updates$.subscribe(() => {
+        const singleton = domain?.singletons?.get('CK.Observable.ServerSample.App.SampleSingleton') as __SampleSingleton;
         if( singleton !== undefined ) this.#sampleSingleton().slider.set( singleton.slider );
       } );
     } );
-  }
-
-  #findSingleton( objects: Iterable<unknown> | undefined ): __SampleSingleton | undefined {
-    if (!objects) {
-      return undefined;
-    }
-
-    for (const o of objects) {
-      if (this.#isSampleSingleton(o)) {
-        return o;
-      }
-    }
-
-    return undefined;
-  }
-
-  #isSampleSingleton(o: unknown): o is __SampleSingleton {
-    return (o as __SampleSingleton).slider !== undefined;
   }
 }
