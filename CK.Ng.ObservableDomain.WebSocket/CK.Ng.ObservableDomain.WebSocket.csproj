@@ -5,8 +5,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="CK.Ng.Cris.AspNet" Version="0.56.0--ci.6" />
-        <PackageReference Include="CK.Ng.AspNet.WebSocketChannel" Version="0.32.0--ci.6" />
+        <PackageReference Include="CK.Ng.Cris.AspNet" Version="0.56.0" />
+        <PackageReference Include="CK.Ng.AspNet.WebSocketChannel" Version="0.32.0" />
     </ItemGroup>
 
     <ItemGroup>
