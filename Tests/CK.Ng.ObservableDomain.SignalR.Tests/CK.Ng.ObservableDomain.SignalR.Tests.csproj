@@ -5,7 +5,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="CK.AppIdentity.Hosting" Version="1.0.1--ci.1" />
-    <PackageReference Include="CK.Cris.AspNet.Engine" Version="1.0.1--ci.1" />
+    <PackageReference Include="CK.Cris.AspNet.Engine" Version="1.0.1--ci.2" />
     <PackageReference Include="CK.Testing.AspNetServer" Version="22.0.1--ci.1" />
     <PackageReference Include="CK.Testing.Nunit" Version="16.0.0" />
     <PackageReference Include="CK.Testing.TypeScriptEngine" Version="1.0.1--ci.1" />
