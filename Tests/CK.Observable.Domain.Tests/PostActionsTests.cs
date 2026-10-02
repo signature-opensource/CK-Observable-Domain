@@ -1,4 +1,4 @@
-﻿using CK.Core;
+using CK.Core;
 using Shouldly;
 using NUnit.Framework;
 using System;
@@ -263,11 +263,15 @@ public class PostActionsTests
         using var d = new ObservableDomain<SimpleRoot>( TestHelper.Monitor, $"parrallel_operations_respect_the_Domain_PostActions_ordering_guaranty-{nb}-{useAsync}", startTimer: true );
 
         Barrier b = new Barrier( nb );
-        var tasks = Enumerable.Range( 0, nb ).Select( i => Task.Run( () => Run( i, i == 0 ? TestHelper.Monitor : new ActivityMonitor(), d, b ), cancellation ) ).ToArray();
+        var tasks = Enumerable.Range( 0, nb )
+                              .Select( i => Task.Factory.StartNew( () => Run( i, i == 0 ? TestHelper.Monitor : new ActivityMonitor(), d, b ),
+                                                                   cancellation,
+                                                                   TaskCreationOptions.LongRunning,
+                                                                   TaskScheduler.Default ).Unwrap() )
+                              .ToArray();
         await Task.WhenAll( tasks ).WaitAsync( cancellation );
         TestHelper.Monitor.Info( $"{nb} tasks done! Disposing Domain." );
         d.Dispose( TestHelper.Monitor );
-
 
         LocalNumbers.Count.ShouldBe( 3 * nb );
         // No Shouldly ShouldNotBeInOrder.
