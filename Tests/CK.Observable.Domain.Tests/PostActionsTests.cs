@@ -1,4 +1,4 @@
-﻿using CK.Core;
+using CK.Core;
 using Shouldly;
 using NUnit.Framework;
 using System;
@@ -263,15 +263,15 @@ public class PostActionsTests
         using var d = new ObservableDomain<SimpleRoot>( TestHelper.Monitor, $"parrallel_operations_respect_the_Domain_PostActions_ordering_guaranty-{nb}-{useAsync}", startTimer: true );
 
         // The nb runs start together on an async gate. A blocking Barrier needs nb pool threads at the same time:
-        // when nb is greater than the processor count, the pool must add threads, and on a busy machine it adds
-        // them so slowly that the test exceeds its CancelAfter.
-        int waiting = nb;
-        var start = new TaskCompletionSource( TaskCreationOptions.RunContinuationsAsynchronously );
-        var tasks = Enumerable.Range( 0, nb ).Select( i => Task.Run( () => Run( i, i == 0 ? TestHelper.Monitor : new ActivityMonitor(), d ), cancellation ) ).ToArray();
+        var tasks = Enumerable.Range( 0, nb )
+                              .Select( i => Task.Factory.StartNew( () => Run( i, i == 0 ? TestHelper.Monitor : new ActivityMonitor(), d, b ),
+                                                                   cancellation,
+                                                                   TaskCreationOptions.LongRunning,
+                                                                   TaskScheduler.Default ).Unwrap() )
+                              .ToArray();
         await Task.WhenAll( tasks ).WaitAsync( cancellation );
         TestHelper.Monitor.Info( $"{nb} tasks done! Disposing Domain." );
         d.Dispose( TestHelper.Monitor );
-
 
         LocalNumbers.Count.ShouldBe( 3 * nb );
         // No Shouldly ShouldNotBeInOrder.
