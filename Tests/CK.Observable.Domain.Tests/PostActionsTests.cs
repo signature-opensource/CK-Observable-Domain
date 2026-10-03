@@ -1,4 +1,4 @@
-﻿using CK.Core;
+using CK.Core;
 using Shouldly;
 using NUnit.Framework;
 using System;
@@ -262,12 +262,16 @@ public class PostActionsTests
 
         using var d = new ObservableDomain<SimpleRoot>( TestHelper.Monitor, $"parrallel_operations_respect_the_Domain_PostActions_ordering_guaranty-{nb}-{useAsync}", startTimer: true );
 
-        Barrier b = new Barrier( nb );
-        var tasks = Enumerable.Range( 0, nb ).Select( i => Task.Run( () => Run( i, i == 0 ? TestHelper.Monitor : new ActivityMonitor(), d, b ), cancellation ) ).ToArray();
+        // The nb runs start together on an async gate. A blocking Barrier needs nb pool threads at the same time:
+        var tasks = Enumerable.Range( 0, nb )
+                              .Select( i => Task.Factory.StartNew( () => Run( i, i == 0 ? TestHelper.Monitor : new ActivityMonitor(), d, b ),
+                                                                   cancellation,
+                                                                   TaskCreationOptions.LongRunning,
+                                                                   TaskScheduler.Default ).Unwrap() )
+                              .ToArray();
         await Task.WhenAll( tasks ).WaitAsync( cancellation );
         TestHelper.Monitor.Info( $"{nb} tasks done! Disposing Domain." );
         d.Dispose( TestHelper.Monitor );
-
 
         LocalNumbers.Count.ShouldBe( 3 * nb );
         // No Shouldly ShouldNotBeInOrder.
@@ -276,10 +280,11 @@ public class PostActionsTests
         DomainNumbers.Count.ShouldBe( 3 * nb );
         DomainNumbers.Select(x => x.Number).ShouldBeInOrder();
 
-        async Task Run( int num, IActivityMonitor monitor, ObservableDomain<SimpleRoot> d, Barrier b )
+        async Task Run( int num, IActivityMonitor monitor, ObservableDomain<SimpleRoot> d )
         {
-            monitor.Info( $"Run {num}: Waiting for Barrier..." );
-            b.SignalAndWait( cancellation );
+            monitor.Info( $"Run {num}: Waiting for the start gate..." );
+            if( Interlocked.Decrement( ref waiting ) == 0 ) start.SetResult();
+            await start.Task.WaitAsync( cancellation );
             monitor.Info( $"Running {num}!" );
             var tr = await d.ModifyThrowAsync( monitor, () =>
             {
