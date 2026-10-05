@@ -256,15 +256,21 @@ public class PostActionsTests
     [TestCase( 20, false )]
     [TestCase( 20, true )]
     [CancelAfter(30*1000)]
-    public async Task parrallel_operations_respect_the_Domain_PostActions_ordering_guaranty_Async( int nb, bool useAsync, CancellationToken cancellation )
+    public async Task parallel_operations_respect_the_Domain_PostActions_ordering_guaranty_Async( int nb, bool useAsync, CancellationToken cancellation )
     {
         ResetContext();
 
-        using var d = new ObservableDomain<SimpleRoot>( TestHelper.Monitor, $"parrallel_operations_respect_the_Domain_PostActions_ordering_guaranty-{nb}-{useAsync}", startTimer: true );
+        using var d = new ObservableDomain<SimpleRoot>( TestHelper.Monitor, $"parallel_operations_respect_the_Domain_PostActions_ordering_guaranty-{nb}-{useAsync}", startTimer: true );
 
         // The nb runs start together on an async gate. A blocking Barrier needs nb pool threads at the same time:
+        Barrier b = new Barrier( nb );
         var tasks = Enumerable.Range( 0, nb )
-                              .Select( i => Task.Factory.StartNew( () => Run( i, i == 0 ? TestHelper.Monitor : new ActivityMonitor(), d, b ),
+                              .Select( i => Task.Factory.StartNew( () => Run( i,
+                                                                              i == 0 ? TestHelper.Monitor : new ActivityMonitor(),
+                                                                              d,
+                                                                              b,
+                                                                              useAsync,
+                                                                              cancellation ),
                                                                    cancellation,
                                                                    TaskCreationOptions.LongRunning,
                                                                    TaskScheduler.Default ).Unwrap() )
@@ -280,11 +286,15 @@ public class PostActionsTests
         DomainNumbers.Count.ShouldBe( 3 * nb );
         DomainNumbers.Select(x => x.Number).ShouldBeInOrder();
 
-        async Task Run( int num, IActivityMonitor monitor, ObservableDomain<SimpleRoot> d )
+        static async Task Run( int num,
+                               IActivityMonitor monitor,
+                               ObservableDomain<SimpleRoot> d,
+                               Barrier b,
+                               bool useAsync,
+                               CancellationToken cancellation )
         {
-            monitor.Info( $"Run {num}: Waiting for the start gate..." );
-            if( Interlocked.Decrement( ref waiting ) == 0 ) start.SetResult();
-            await start.Task.WaitAsync( cancellation );
+            monitor.Info( $"Run {num}: Waiting for Barrier..." );
+            b.SignalAndWait( cancellation );
             monitor.Info( $"Running {num}!" );
             var tr = await d.ModifyThrowAsync( monitor, () =>
             {
@@ -301,6 +311,7 @@ public class PostActionsTests
             await tr.DomainPostActionsError.WaitAsync( cancellation );
             monitor.Info( $"Awaited DomainPostActionsError! (Run {num})" );
         }
+
     }
 
     [TestCase( 2, 2, false )]
