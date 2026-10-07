@@ -11,11 +11,11 @@ static class TestHelperExtensions
 {
     public static bool CheckObjectReferences = true;
 
-    public static T SaveAndLoad<T>( this IBasicTestHelper @this, in T o,
-                                                                 Action<T, IBinarySerializer> w,
-                                                                 Func<IBinaryDeserializer, T> r,
-                                                                 BinarySerializerContext? serializerContext = null,
-                                                                 BinaryDeserializerContext? deserializerContext = null )
+    public static T SaveAndLoad<T>( this IMonitorTestHelper @this, in T o,
+                                                                   Action<T, IBinarySerializer> w,
+                                                                   Func<IBinaryDeserializer, T> r,
+                                                                   BinarySerializerContext? serializerContext = null,
+                                                                   BinaryDeserializerContext? deserializerContext = null )
     {
         using( var s = new MemoryStream() )
         using( var writer = BinarySerializer.Create( s, serializerContext ?? new BinarySerializerContext() ) )
@@ -66,10 +66,10 @@ static class TestHelperExtensions
         }
     }
 
-    public static void SaveAndLoad( this IBasicTestHelper @this, Action<IBinarySerializer> w,
-                                                                 Action<IBinaryDeserializer> r,
-                                                                 BinarySerializerContext? serializerContext = null,
-                                                                 BinaryDeserializerContext? deserializerContext = null )
+    public static void SaveAndLoad( this IMonitorTestHelper @this, Action<IBinarySerializer> w,
+                                                                   Action<IBinaryDeserializer> r,
+                                                                   BinarySerializerContext? serializerContext = null,
+                                                                   BinaryDeserializerContext? deserializerContext = null )
     {
         using( var s = new MemoryStream() )
         using( var writer = BinarySerializer.Create( s, serializerContext ?? new BinarySerializerContext() ) )
