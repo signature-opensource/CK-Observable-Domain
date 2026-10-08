@@ -6,7 +6,7 @@
     <PackageReference Include="CK.StObj.Model" Version="35.0.0" />
     <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="27.1.0" />
     <PackageReference Include="CK.PerfectEvent" Version="29.0.0" />
-    <PackageReference Include="System.Threading.Channels" Version="11.0.0-rc.1.26425.128" />
+    <PackageReference Include="System.Threading.Channels" Version="10.0.12" />
     <PackageReference Include="CK.BinarySerialization.Sliced" Version="15.0.0" />
   </ItemGroup>
   <ItemGroup>
