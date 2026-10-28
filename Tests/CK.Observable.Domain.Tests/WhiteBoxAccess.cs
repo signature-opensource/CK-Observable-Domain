@@ -12,4 +12,11 @@ static class WhiteBoxAccess
         return (List<int>)_freeListField.GetValue( d );
     }
 
+    static FieldInfo _saveLockField = typeof( ObservableDomain ).GetField( "_saveLock", BindingFlags.Instance | BindingFlags.NonPublic );
+
+    public static object GetSaveLock( this ObservableDomain d )
+    {
+        return _saveLockField.GetValue( d );
+    }
+
 }

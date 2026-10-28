@@ -24,7 +24,6 @@ public sealed class JsonEventCollector
 
     ObservableDomain? _domain;
     int _lastTranNum;
-    int _lastExportTranNum;
     TimeSpan _keepDuration;
     int _keepLimit;
 
@@ -44,7 +43,13 @@ public sealed class JsonEventCollector
         public readonly int TransactionNumber;
 
         /// <summary>
-        /// The last transaction number that did not result in empty ExportedEvents.
+        /// The last exported transaction number before this one. Every transaction is exported (its
+        /// <see cref="ExportedEvents"/> is empty when it changed nothing), so this is always <see cref="TransactionNumber"/> - 1,
+        /// except for the initial transaction where this is 0.
+        /// <para>
+        /// When transactions have been missed by the collector, this is not the last transaction number pushed to the clients:
+        /// a client that is not at this transaction number must not apply this transaction.
+        /// </para>
         /// </summary>
         public readonly int LastExportedTransactionNumber;
 
@@ -55,6 +60,7 @@ public sealed class JsonEventCollector
 
         /// <summary>
         /// The JSON description of the <see cref="TransactionDoneEventArgs.Events"/>.
+        /// This is empty when the transaction changed nothing.
         /// </summary>
         public readonly string ExportedEvents;
 
@@ -161,6 +167,10 @@ public sealed class JsonEventCollector
     /// Associates this collector to a domain. There must not be any existing associated domain
     /// otherwise an <see cref="InvalidOperationException"/> is thrown.
     /// Use <see cref="Detach()"/> to stop collecting events from a domain.
+    /// <para>
+    /// Without known transaction, the collector starts at the current <see cref="ObservableDomain.TransactionSerialNumber"/>.
+    /// Call this method before the domain is shared: a transaction that is committed during this call can be ignored.
+    /// </para>
     /// </summary>
     /// <param name="domain">The domain from which transaction events must be collected.</param>
     /// <param name="clearEvents">True to clear any existing transactions events.</param>
@@ -181,6 +191,10 @@ public sealed class JsonEventCollector
                 _events.Clear();
                 _lastTranNum = 0;
             }
+            // Without known transaction, the collector starts at the current transaction number of the domain
+            // (a loaded domain does not start at 0): a client before this number needs a full export, and a
+            // rollback to this number is not a new transaction.
+            if( _lastTranNum == 0 ) _lastTranNum = domain.TransactionSerialNumber;
         }
     }
 
@@ -220,19 +234,25 @@ public sealed class JsonEventCollector
             }
             else
             {
-                if( _lastTranNum != 0 && _lastTranNum != num - 1 )
+                // A safe rollback (without sidekicks) commits a transaction that keeps the restored serial number:
+                // the state is the one of this transaction number, the clients and the stored events are still valid.
+                bool isSafeRollback = num == _lastTranNum;
+                if( _lastTranNum != 0 && !isSafeRollback && _lastTranNum != num - 1 )
                 {
+                    // Transactions have been missed, or the domain went back to an older state (a dangerous rollback).
                     c.Monitor.Warn( $"Missed transaction. Current is n°{num}, last stored was {_lastTranNum}. Clearing transaction events cache." );
                     _events.Clear();
                 }
                 _lastTranNum = num;
-                if( c.Events.Count > 0 )
+                if( !isSafeRollback )
                 {
+                    // Every other transaction is stored and pushed, even when it changed nothing:
+                    // the transaction numbers seen by the clients are contiguous. When the domain went back,
+                    // the clients that are ahead see that this transaction does not follow theirs and resynchronize.
                     _buffer.GetStringBuilder().Clear();
                     _exporter.Reset();
                     foreach( var e in c.Events ) e.Export( _exporter );
-                    _events.Add( LastEvent = new TransactionEvent( num, c.CommitTimeUtc, _buffer.ToString(), _lastExportTranNum ) );
-                    _lastExportTranNum = _lastTranNum;
+                    _events.Add( LastEvent = new TransactionEvent( num, c.CommitTimeUtc, _buffer.ToString(), num - 1 ) );
                     hasEvent = true;
                 }
                 ApplyKeepDuration();

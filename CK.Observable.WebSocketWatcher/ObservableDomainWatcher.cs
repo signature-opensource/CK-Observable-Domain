@@ -210,7 +210,8 @@ public sealed class ObservableDomainWatcher : IAsyncDisposable
                 writer.WritePropertyName( "E" );
                 writer.WriteStartArray();
                 writer.WriteStartArray();
-                writer.WriteRawValue( e.ExportedEvents, skipInputValidation: true );
+                // A transaction that changed nothing has no exported events: WriteRawValue rejects an empty string.
+                if( e.ExportedEvents.Length > 0 ) writer.WriteRawValue( e.ExportedEvents, skipInputValidation: true );
                 writer.WriteEndArray();
                 writer.WriteEndArray();
                 writer.WriteNumber( "L", e.LastExportedTransactionNumber );

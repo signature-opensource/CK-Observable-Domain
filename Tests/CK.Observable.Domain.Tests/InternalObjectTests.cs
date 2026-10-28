@@ -111,8 +111,9 @@ public class InternalObjectTests
 
         } );
 
-        // There were no new export events, so the LastEvent didn't change.
-        collector.LastEvent.ShouldBe( lastEvent );
-        collector.LastEvent.ExportedEvents.ShouldBe( lastEvent.ExportedEvents );
+        // There were no new export events: the transaction event has no exported events.
+        collector.LastEvent.ShouldNotBe( lastEvent );
+        collector.LastEvent.TransactionNumber.ShouldBe( lastEvent.TransactionNumber + 1 );
+        collector.LastEvent.ExportedEvents.ShouldBeEmpty();
     }
 }
