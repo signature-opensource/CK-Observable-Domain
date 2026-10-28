@@ -107,7 +107,8 @@ export class ObservableDomain {
      * True if this ObservableDomain has yet to apply any new events on its initial state,
      * or if it has been reset from a DomainExport and has not received new events since.
      * @private
-     * @remarks The DomainExport does not ignore empty transactions like Events do.
+     * @remarks The DomainExport does not ignore empty transactions like the Events of older servers do
+     * (current servers push every transaction, even an empty one).
      */
     private _isInitialExport: boolean;
 

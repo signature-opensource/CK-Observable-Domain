@@ -752,52 +752,70 @@ public partial class ObservableDomain : IObservableDomain, IDisposable, IObserva
         try
         {
             if( _transactionStatus == CurrentTransactionStatus.Disposing ) return false;
-            var target = new JSONExportTarget( w );
-            target.EmitStartObject( -1, ObjectExportedKind.Object );
-            target.EmitPropertyName( "N" );
-            target.EmitInt32( _transactionSerialNumber );
-            target.EmitPropertyName( "C" );
-            target.EmitInt32( _actualObjectCount );
-            target.EmitPropertyName( "P" );
-            target.EmitStartObject( -1, ObjectExportedKind.List );
-            foreach( var p in _properties )
-            {
-                target.EmitString( p.Value.PropertyName! );
-            }
-            target.EmitEndObject( -1, ObjectExportedKind.List );
-
-            target.EmitPropertyName( "O" );
-            ObjectExporter.ExportRootList( target, _objects.Take( _objectsListCount ), _exporters );
-
-            target.EmitPropertyName( "R" );
-            target.EmitStartObject( -1, ObjectExportedKind.List );
-            foreach( var r in _roots )
-            {
-                target.EmitInt32( r.OId.Index );
-            }
-            target.EmitEndObject( -1, ObjectExportedKind.List );
-
-            target.EmitPropertyName( "S" );
-            target.EmitStartObject( -1, ObjectExportedKind.List );
-            foreach( var r in _singletons )
-            {
-                if( r.Value.Instance is not ObservableObject o )
-                    continue;
-
-                target.EmitStartList();
-                target.EmitString( r.Key.FullName! );
-                target.EmitInt32( o.OId.Index );
-                target.EmitEndList();
-            }
-            target.EmitEndObject( -1, ObjectExportedKind.List );
-
-            target.EmitEndObject( -1, ObjectExportedKind.Object );
+            DoExport( w );
             return true;
         }
         finally
         {
             _lock.ExitReadLock();
         }
+    }
+
+    /// <summary>
+    /// Exports the whole domain state as a JSON object from a thread that already holds a lock on this domain:
+    /// <see cref="TransactionDone"/> handlers run under the upgradeable read lock and the lock does not support recursion.
+    /// </summary>
+    /// <returns>The state as a string.</returns>
+    internal string ExportToStringFromLockedThread()
+    {
+        Debug.Assert( _lock.IsReadLockHeld || _lock.IsUpgradeableReadLockHeld || _lock.IsWriteLockHeld );
+        var w = new StringWriter();
+        DoExport( w );
+        return w.ToString();
+    }
+
+    void DoExport( TextWriter w )
+    {
+        var target = new JSONExportTarget( w );
+        target.EmitStartObject( -1, ObjectExportedKind.Object );
+        target.EmitPropertyName( "N" );
+        target.EmitInt32( _transactionSerialNumber );
+        target.EmitPropertyName( "C" );
+        target.EmitInt32( _actualObjectCount );
+        target.EmitPropertyName( "P" );
+        target.EmitStartObject( -1, ObjectExportedKind.List );
+        foreach( var p in _properties )
+        {
+            target.EmitString( p.Value.PropertyName! );
+        }
+        target.EmitEndObject( -1, ObjectExportedKind.List );
+
+        target.EmitPropertyName( "O" );
+        ObjectExporter.ExportRootList( target, _objects.Take( _objectsListCount ), _exporters );
+
+        target.EmitPropertyName( "R" );
+        target.EmitStartObject( -1, ObjectExportedKind.List );
+        foreach( var r in _roots )
+        {
+            target.EmitInt32( r.OId.Index );
+        }
+        target.EmitEndObject( -1, ObjectExportedKind.List );
+
+        target.EmitPropertyName( "S" );
+        target.EmitStartObject( -1, ObjectExportedKind.List );
+        foreach( var r in _singletons )
+        {
+            if( r.Value.Instance is not ObservableObject o )
+                continue;
+
+            target.EmitStartList();
+            target.EmitString( r.Key.FullName! );
+            target.EmitInt32( o.OId.Index );
+            target.EmitEndList();
+        }
+        target.EmitEndObject( -1, ObjectExportedKind.List );
+
+        target.EmitEndObject( -1, ObjectExportedKind.Object );
     }
 
     /// <summary>

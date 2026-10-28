@@ -206,7 +206,7 @@ public sealed class TransactionResult
     /// <summary>
     /// Gets the error of the <see cref="TransactionDoneEventArgs.PostActions"/> execution if any.
     /// </summary>
-    public Exception? PostActionsError { get; }
+    public Exception? PostActionsError => _postActionsError;
 
     /// <summary>
     /// Gets the future or resolved error of the <see cref="ObservableDomainPostActionExecutor"/> if any.

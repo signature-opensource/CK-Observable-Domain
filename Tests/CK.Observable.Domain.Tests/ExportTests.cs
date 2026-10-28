@@ -83,7 +83,7 @@ public class ExportTests
             eventCollector.GetTransactionEvents( 1 ).Events.ShouldBeEmpty();
             // Transaction number 1 is not kept: empty means "I can't give you the diff: your transaction number is too big.".
             var r2 = eventCollector.GetTransactionEvents( 2 );
-            r2.TransactionNumber.ShouldBe( 0 );
+            r2.TransactionNumber.ShouldBe( 1, "The current transaction number is n°1, even if n°1 is not kept." );
             r2.Events.ShouldBeEmpty();
 
             await d.ModifyThrowAsync( TestHelper.Monitor, () =>
@@ -635,9 +635,9 @@ public class ExportTests
     }
 
     [Test]
-    public async Task Empty_events_do_not_cause_a_new_event_Async()
+    public async Task Empty_events_cause_a_transaction_event_without_exported_events_Async()
     {
-        using var d = new ObservableDomain(TestHelper.Monitor, nameof(Empty_events_do_not_cause_a_new_event_Async), startTimer: true );
+        using var d = new ObservableDomain(TestHelper.Monitor, nameof(Empty_events_cause_a_transaction_event_without_exported_events_Async), startTimer: true );
         var eventCollector = new JsonEventCollector( d );
 
         // To skip the initial transaction where no events are collectable.
@@ -663,7 +663,7 @@ public class ExportTests
         eventCollector.LastEvent.ShouldNotBeNull( "There was an event sent on N = 2" );
         var transactionEvent = eventCollector.LastEvent!;
         transactionEvent.TransactionNumber.ShouldBe( 2, "_transactionSerialNumber = 2" );
-        transactionEvent.LastExportedTransactionNumber.ShouldBe( 0, "There were no events before" );
+        transactionEvent.LastExportedTransactionNumber.ShouldBe( 1, "Every transaction is exported: the previous one is n°1." );
         transactionEvent.ExportedEvents.ShouldNotBeNullOrEmpty();
 
         await d.ModifyThrowAsync( TestHelper.Monitor, () =>
@@ -671,10 +671,13 @@ public class ExportTests
             o.NotExportableProperty = "World2";
         } );
         // N = 3
-        // No event here
+        // A transaction event without exported events.
 
-        eventCollector.LastEvent.ShouldBe( transactionEvent, "No event was sent" );
-        transactionEvent.TransactionNumber.ShouldBe( 2, "Previous transactionSerialNumber = 2" );
+        eventCollector.LastEvent.ShouldNotBe( transactionEvent, "A new event was sent" );
+        transactionEvent = eventCollector.LastEvent!;
+        transactionEvent.TransactionNumber.ShouldBe( 3, "transactionSerialNumber = 3" );
+        transactionEvent.LastExportedTransactionNumber.ShouldBe( 2 );
+        transactionEvent.ExportedEvents.ShouldBeEmpty( "The NotExportableProperty change is not exported." );
 
         await d.ModifyThrowAsync( TestHelper.Monitor, () =>
         {
@@ -686,7 +689,7 @@ public class ExportTests
         eventCollector.LastEvent.ShouldNotBeNull( "There was an event sent on N = 4" );
         transactionEvent = eventCollector.LastEvent!;
         transactionEvent.TransactionNumber.ShouldBe( 4, "transactionSerialNumber = 4" );
-        transactionEvent.LastExportedTransactionNumber.ShouldBe( 2, "Previous T with events = 2" );
+        transactionEvent.LastExportedTransactionNumber.ShouldBe( 3, "Previous transaction = 3" );
         transactionEvent.TimeUtc.ShouldBe( DateTime.UtcNow, tolerance: TimeSpan.FromMinutes( 2 ) );
         transactionEvent.ExportedEvents.ShouldNotBeNullOrEmpty();
     }
@@ -704,7 +707,7 @@ public class ExportTests
     [Test]
     public async Task NotExportable_types_and_properties_should_not_leak_in_export_and_events_Async()
     {
-        using var d = new ObservableDomain(TestHelper.Monitor, nameof(Empty_events_do_not_cause_a_new_event_Async), startTimer: true );
+        using var d = new ObservableDomain(TestHelper.Monitor, nameof(NotExportable_types_and_properties_should_not_leak_in_export_and_events_Async), startTimer: true );
         var eventCollector = new JsonEventCollector( d );
 
         // To skip the initial transaction where no events are collectable.
@@ -740,7 +743,7 @@ public class ExportTests
 
         var transactionEvent = eventCollector.LastEvent!;
         transactionEvent.TransactionNumber.ShouldBe( 2, "_transactionSerialNumber = 2" );
-        transactionEvent.LastExportedTransactionNumber.ShouldBe( 0, "There were no events before" );
+        transactionEvent.LastExportedTransactionNumber.ShouldBe( 1, "Every transaction is exported: the previous one is n°1." );
         transactionEvent.TimeUtc.ShouldBe( DateTime.UtcNow, TimeSpan.FromMinutes( 2 ) );
         transactionEvent.ExportedEvents.ShouldNotBeNullOrEmpty();
 

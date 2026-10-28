@@ -258,9 +258,12 @@ abstract class StreamStoreClient : MemoryTransactionProviderClient
                     {
                         _isWaitingSaving = false;
                     }
-                    await _streamStore.UpdateAsync( _storeName, WriteSnapshotAsync, true ).ConfigureAwait( false );
-                    if( _snapshotSaveDelay >= 0 ) _nextSave = CurrentTimeUtc.AddMilliseconds( _snapshotSaveDelay );
-                    _savedTransactionNumber = CurrentSerialNumber;
+                    // The copy captures the bytes and their serial number together: a concurrent
+                    // commit or rollback cannot tear the written snapshot.
+                    var snapshot = CopySnapshot();
+                    await _streamStore.UpdateAsync( _storeName, s => s.WriteAsync( snapshot.Bytes ).AsTask(), true ).ConfigureAwait( false );
+                    if( _snapshotSaveDelay >= 0 ) _nextSave = snapshot.TimeUtc.AddMilliseconds( _snapshotSaveDelay );
+                    _savedTransactionNumber = snapshot.SerialNumber;
                 }
 
             }
