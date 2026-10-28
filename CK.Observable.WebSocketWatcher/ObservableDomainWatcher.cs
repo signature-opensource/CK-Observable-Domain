@@ -1,7 +1,6 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
-using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -47,13 +46,15 @@ public sealed class ObservableDomainWatcher : IAsyncDisposable
     }
 
     /// <summary>
-    /// Starts or restarts watching a domain. If the client's <paramref name="transactionNumber"/> is still
-    /// available in the event collector, returns only the missed events; otherwise returns a full domain export.
+    /// Starts or restarts watching a domain and returns the full domain export.
     /// </summary>
     /// <param name="monitor">The monitor to use.</param>
     /// <param name="domainName">The name of the domain to watch.</param>
-    /// <param name="transactionNumber">The last transaction number known by the client (0 for a full export).</param>
-    /// <returns>A JSON string with the events or the full export, or <see cref="string.Empty"/> on error.</returns>
+    /// <param name="transactionNumber">
+    /// The last transaction number known by the client. It is ignored: the client always receives a full export,
+    /// because its number cannot prove that its state is the one of the domain.
+    /// </param>
+    /// <returns>A JSON string with the full export, or <see cref="string.Empty"/> on error.</returns>
     public async Task<string> StartOrRestartWatchAsync( IActivityMonitor monitor, string domainName, int transactionNumber )
     {
         await _lock.WaitAsync().ConfigureAwait( false );
@@ -70,48 +71,16 @@ public sealed class ObservableDomainWatcher : IAsyncDisposable
                 _watched.Add( domainName, new DomainSubscription( this, driver ) );
             }
 
-            var (currentTransactionNumber, events) = driver.EventCollector.GetTransactionEvents( transactionNumber );
-
-            string eventsJson;
-            if( events == null )
+            // The client transaction number cannot prove that the client state is the one of the domain: after a restart
+            // or a dangerous rollback, the domain can reach this number with another history.
+            // The client always receives the full export.
+            var export = driver.Domain.ExportToString();
+            if( export == null )
             {
-                var export = driver.Domain.ExportToString();
-                if( export == null )
-                {
-                    monitor.Warn( $"Unable to export domain '{domainName}'." );
-                    return string.Empty;
-                }
-                eventsJson = export;
+                monitor.Warn( $"Unable to export domain '{domainName}'." );
+                return string.Empty;
             }
-            else if( events.Count == 0 )
-            {
-                if( currentTransactionNumber > transactionNumber )
-                {
-                    eventsJson = "{\"Error\":\"Invalid transaction number.\"}";
-                }
-                else
-                {
-                    eventsJson = $"{{\"N\":{currentTransactionNumber},\"E\":[]}}";
-                }
-            }
-            else
-            {
-                var b = new StringBuilder();
-                b.Append( "{\"N\":" )
-                    .Append( events[^1].TransactionNumber )
-                    .Append( ",\"E\":[" );
-                var atLeastOne = false;
-                foreach( var t in events )
-                {
-                    if( atLeastOne ) b.Append( ',' );
-                    else atLeastOne = true;
-                    b.Append( '[' ).Append( t.ExportedEvents ).Append( ']' );
-                }
-                b.Append( "]}" );
-                eventsJson = b.ToString();
-            }
-
-            return eventsJson;
+            return export;
         }
         finally
         {
@@ -192,12 +161,44 @@ public sealed class ObservableDomainWatcher : IAsyncDisposable
 
         private async Task OnDomainChangedAsync( IActivityMonitor monitor, JsonEventCollector.TransactionEvent e, CancellationToken cancellation )
         {
-            var buffer = new ArrayBufferWriter<byte>();
-            await using var writer = new Utf8JsonWriter( buffer );
-            writer.WriteStartArray();
-            writer.WriteStringValue( _driver.DomainName );
+            var message = CreatePushMessage( _driver.DomainName,
+                                             e.TransactionNumber,
+                                             e.ExportedEvents,
+                                             e.LastExportedTransactionNumber,
+                                             e.DomainExport );
+            await _watcher.WriteAsync( message ).ConfigureAwait( false );
+        }
+    }
+
+    /// <summary>
+    /// Creates the message pushed to the client for a <see cref="JsonEventCollector.TransactionEvent"/>:
+    /// a JSON array with the domain name and the watch event.
+    /// </summary>
+    /// <param name="domainName">The domain name.</param>
+    /// <param name="transactionNumber">The <see cref="JsonEventCollector.TransactionEvent.TransactionNumber"/>.</param>
+    /// <param name="exportedEvents">The <see cref="JsonEventCollector.TransactionEvent.ExportedEvents"/>.</param>
+    /// <param name="lastExportedTransactionNumber">The <see cref="JsonEventCollector.TransactionEvent.LastExportedTransactionNumber"/>.</param>
+    /// <param name="domainExport">The <see cref="JsonEventCollector.TransactionEvent.DomainExport"/>.</param>
+    /// <returns>The UTF-8 JSON message.</returns>
+    internal static ReadOnlyMemory<byte> CreatePushMessage( string domainName,
+                                                            int transactionNumber,
+                                                            string exportedEvents,
+                                                            int lastExportedTransactionNumber,
+                                                            string? domainExport )
+    {
+        var buffer = new ArrayBufferWriter<byte>();
+        using var writer = new Utf8JsonWriter( buffer );
+        writer.WriteStartArray();
+        writer.WriteStringValue( domainName );
+        if( domainExport != null )
+        {
+            // The client cannot apply the events of this transaction: it receives the full export.
+            writer.WriteRawValue( domainExport, skipInputValidation: true );
+        }
+        else
+        {
             writer.WriteStartObject();
-            if( e.TransactionNumber == 1 )
+            if( transactionNumber == 1 )
             {
                 writer.WriteNumber( "N", 1 );
                 writer.WritePropertyName( "E" );
@@ -206,21 +207,20 @@ public sealed class ObservableDomainWatcher : IAsyncDisposable
             }
             else
             {
-                writer.WriteNumber( "N", e.TransactionNumber );
+                writer.WriteNumber( "N", transactionNumber );
                 writer.WritePropertyName( "E" );
                 writer.WriteStartArray();
                 writer.WriteStartArray();
                 // A transaction that changed nothing has no exported events: WriteRawValue rejects an empty string.
-                if( e.ExportedEvents.Length > 0 ) writer.WriteRawValue( e.ExportedEvents, skipInputValidation: true );
+                if( exportedEvents.Length > 0 ) writer.WriteRawValue( exportedEvents, skipInputValidation: true );
                 writer.WriteEndArray();
                 writer.WriteEndArray();
-                writer.WriteNumber( "L", e.LastExportedTransactionNumber );
+                writer.WriteNumber( "L", lastExportedTransactionNumber );
             }
             writer.WriteEndObject();
-            writer.WriteEndArray();
-            await writer.FlushAsync( cancellation ).ConfigureAwait( false );
-
-            await _watcher.WriteAsync( buffer.WrittenMemory ).ConfigureAwait( false );
         }
+        writer.WriteEndArray();
+        writer.Flush();
+        return buffer.WrittenMemory;
     }
 }

@@ -83,7 +83,7 @@ public class ExportTests
             eventCollector.GetTransactionEvents( 1 ).Events.ShouldBeEmpty();
             // Transaction number 1 is not kept: empty means "I can't give you the diff: your transaction number is too big.".
             var r2 = eventCollector.GetTransactionEvents( 2 );
-            r2.TransactionNumber.ShouldBe( 0 );
+            r2.TransactionNumber.ShouldBe( 1, "The current transaction number is n°1, even if n°1 is not kept." );
             r2.Events.ShouldBeEmpty();
 
             await d.ModifyThrowAsync( TestHelper.Monitor, () =>

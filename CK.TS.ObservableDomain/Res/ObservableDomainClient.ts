@@ -14,6 +14,8 @@ export class ObservableDomainClient {
     private stopping = false;
     private buffering = false;
     private bufferedEvents: { domainName: string, watchEvent: WatchEvent }[] = [];
+    // Pushes received for a domain while listenToDomainAsync waits for its export.
+    private readonly pendingDomains = new Map<string, WatchEvent[]>();
     private onCloseHandler: ((e: Error | undefined) => void) | undefined;
     private readonly domains: {
         [domainName: string]: { domain: ObservableDomain, obs: BehaviorSubject<ReadonlyArray<any>> };
@@ -55,8 +57,19 @@ export class ObservableDomainClient {
                 obs: subject
             };
             if (this.connectionState.value != ObservableDomainClientConnectionState.Disconnected) {
-                const res = (await this.connection.startListeningAsync([{ domainName: domainName, transactionCount: 0 }]))[domainName];
-                od.applyWatchEvent(res);
+                // The server subscribes to the pushes before it computes the export: the pushes of this domain
+                // are buffered and applied after the export, like in the reconnect loop.
+                const buffered: WatchEvent[] = [];
+                this.pendingDomains.set(domainName, buffered);
+                let res: WatchEvent;
+                try {
+                    res = (await this.connection.startListeningAsync([{ domainName: domainName, transactionCount: 0 }]))[domainName];
+                } finally {
+                    this.pendingDomains.delete(domainName);
+                }
+                // On failure, the buffered pushes are dropped: the reconnect loop asks again for the export.
+                this.onMessage(domainName, res);
+                for (const e of buffered) this.onMessage(domainName, e);
             }
 
         }
@@ -130,6 +143,12 @@ export class ObservableDomainClient {
         if (this.buffering) {
             console.log("OD Client is starting, buffering an event for " + domainName);
             this.bufferedEvents.push({ domainName: domainName, watchEvent: event });
+            return;
+        }
+        const pending = this.pendingDomains.get(domainName);
+        if (pending !== undefined) {
+            console.log("OD Client is waiting for the export, buffering an event for " + domainName);
+            pending.push(event);
             return;
         }
 
