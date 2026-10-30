@@ -5,8 +5,8 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="CK.Testing.NUnit" Version="18.0.0-0.cris-auth" />
-    <PackageReference Include="CK.Testing.TypeScriptEngine" Version="3.0.0-0.cris-auth" />
-    <PackageReference Include="CK.Cris.AspNet.Engine" Version="3.0.0-0.cris-auth" />
+    <PackageReference Include="CK.Testing.TypeScriptEngine" Version="3.0.0-0.cris-auth.0.ci.15" />
+    <PackageReference Include="CK.Cris.AspNet.Engine" Version="3.0.0-0.cris-auth.0.ci.55" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
     <PackageReference Include="NUnit3TestAdapter" PrivateAssets="all" Version="6.3.1" />
   </ItemGroup>
