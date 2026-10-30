@@ -3,11 +3,11 @@
     <TargetFramework>net10.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.StObj.Model" Version="36.0.0-0.cris-auth.0.ci.10" />
-    <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="28.0.0-0.cris-auth.0.ci.4" />
-    <PackageReference Include="CK.PerfectEvent" Version="30.0.0-0.cris-auth.0.ci.5" />
+    <PackageReference Include="CK.StObj.Model" Version="36.0.0-0.cris-auth" />
+    <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="28.0.0-0.cris-auth" />
+    <PackageReference Include="CK.PerfectEvent" Version="30.0.0-0.cris-auth" />
     <PackageReference Include="System.Threading.Channels" Version="10.0.14" />
-    <PackageReference Include="CK.BinarySerialization.Sliced" Version="16.0.0-0.cris-auth.0.ci.8" />
+    <PackageReference Include="CK.BinarySerialization.Sliced" Version="16.0.0-0.cris-auth" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="MSBuild/CK.Observable.Domain.targets">
