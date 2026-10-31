@@ -24,7 +24,9 @@ public sealed class JsonEventCollector
 
     ObservableDomain? _domain;
     int _lastTranNum;
-    int _lastExportTranNum;
+    // Set when this collector is attached to a domain that is not at its last transaction number:
+    // the clients can have a state from the previous domain, the next push carries the full export.
+    bool _discontinuous;
     TimeSpan _keepDuration;
     int _keepLimit;
 
@@ -36,7 +38,7 @@ public sealed class JsonEventCollector
         /// <summary>
         /// The transaction number.
         /// The very first transaction is number 1.
-        /// It's <see cref="ExportedEvents"/> is empty since a full export will be more efficient.
+        /// It's <see cref="ExportedEvents"/> is empty since a full export will be more efficient: its <see cref="DomainExport"/> is the full export.
         /// This initial transaction will be raised by <see cref="LastEventChanged"/> but will never be returned
         /// by <see cref="GetTransactionEvents(int)"/>: this avoids a race condition when a domain has been exported
         /// (empty) before the very first transaction.
@@ -44,7 +46,13 @@ public sealed class JsonEventCollector
         public readonly int TransactionNumber;
 
         /// <summary>
-        /// The last transaction number that did not result in empty ExportedEvents.
+        /// The last exported transaction number before this one. Every transaction is exported (its
+        /// <see cref="ExportedEvents"/> is empty when it changed nothing), so this is always <see cref="TransactionNumber"/> - 1,
+        /// except for the initial transaction where this is 0.
+        /// <para>
+        /// When transactions have been missed by the collector, this is not the last transaction number pushed to the clients:
+        /// a client that is not at this transaction number must not apply this transaction.
+        /// </para>
         /// </summary>
         public readonly int LastExportedTransactionNumber;
 
@@ -55,15 +63,28 @@ public sealed class JsonEventCollector
 
         /// <summary>
         /// The JSON description of the <see cref="TransactionDoneEventArgs.Events"/>.
+        /// This is empty when the transaction changed nothing.
         /// </summary>
         public readonly string ExportedEvents;
 
-        internal TransactionEvent( int t, DateTime timeUtc, string exported, int lastExportedTransactionNumber )
+        /// <summary>
+        /// The full export of the domain after this transaction when the clients cannot apply the <see cref="ExportedEvents"/>:
+        /// this is the initial transaction, or this transaction does not follow the previous one (the collector missed
+        /// transactions, or the domain went back to an older state). The clients must apply this export instead of the events.
+        /// <para>
+        /// This is null when this transaction follows the previous one, when nobody listens to <see cref="LastEventChanged"/>,
+        /// and when the domain cannot be exported (the error is logged).
+        /// </para>
+        /// </summary>
+        public readonly string? DomainExport;
+
+        internal TransactionEvent( int t, DateTime timeUtc, string exported, int lastExportedTransactionNumber, string? domainExport )
         {
             TransactionNumber = t;
             TimeUtc = timeUtc;
             ExportedEvents = exported;
             LastExportedTransactionNumber = lastExportedTransactionNumber;
+            DomainExport = domainExport;
         }
     }
 
@@ -161,6 +182,10 @@ public sealed class JsonEventCollector
     /// Associates this collector to a domain. There must not be any existing associated domain
     /// otherwise an <see cref="InvalidOperationException"/> is thrown.
     /// Use <see cref="Detach()"/> to stop collecting events from a domain.
+    /// <para>
+    /// Without known transaction, the collector starts at the current <see cref="ObservableDomain.TransactionSerialNumber"/>.
+    /// Call this method before the domain is shared: a transaction that is committed during this call can be ignored.
+    /// </para>
     /// </summary>
     /// <param name="domain">The domain from which transaction events must be collected.</param>
     /// <param name="clearEvents">True to clear any existing transactions events.</param>
@@ -181,6 +206,18 @@ public sealed class JsonEventCollector
                 _events.Clear();
                 _lastTranNum = 0;
             }
+            else if( _lastTranNum != 0 && _lastTranNum != domain.TransactionSerialNumber )
+            {
+                // The domain is not the continuation of the stored events (for example, it is reloaded from
+                // an older snapshot): this collector restarts like a new one on this domain.
+                _events.Clear();
+                _lastTranNum = domain.TransactionSerialNumber;
+                _discontinuous = true;
+            }
+            // Without known transaction, the collector starts at the current transaction number of the domain
+            // (a loaded domain does not start at 0): a client before this number needs a full export, and a
+            // rollback to this number is not a new transaction.
+            if( _lastTranNum == 0 ) _lastTranNum = domain.TransactionSerialNumber;
         }
     }
 
@@ -208,31 +245,53 @@ public sealed class JsonEventCollector
     void OnTransaction( object? sender, TransactionDoneEventArgs c )
     {
         Debug.Assert( sender == _domain );
+        var domain = (ObservableDomain)sender!;
         bool hasEvent = false;
         lock( _events )
         {
-            // It's useless to capture the initial transaction: the full export will be more efficient.
+            // It's useless to capture the events of the initial transaction: the full export will be more efficient.
+            // The domain can go back to n°1 (a store that is recreated, a load of the initial snapshot): n°1 can reach
+            // clients that have a greater number, so the full export is pushed and the stored events are cleared.
             int num = c.Domain.TransactionSerialNumber;
             if( num == 1 )
             {
-                LastEvent = new TransactionEvent( 1, c.CommitTimeUtc, String.Empty, 0 );
+                _events.Clear();
+                _lastTranNum = 1;
+                _discontinuous = false;
+                LastEvent = new TransactionEvent( 1, c.CommitTimeUtc, String.Empty, 0, TryExport( domain, c.Monitor ) );
                 hasEvent = true;
             }
             else
             {
-                if( _lastTranNum != 0 && _lastTranNum != num - 1 )
+                // A safe rollback commits a transaction that keeps the restored serial number: the state is the one of
+                // this transaction number, the clients and the stored events are still valid.
+                // Other transactions can reach this number with an older state: a dangerous rollback with sidekicks,
+                // or a load of an older snapshot.
+                bool isSafeRollback = num == _lastTranNum && c.RollbackedInfo is { IsSafeRollback: true };
+                if( !isSafeRollback )
                 {
-                    c.Monitor.Warn( $"Missed transaction. Current is n°{num}, last stored was {_lastTranNum}. Clearing transaction events cache." );
-                    _events.Clear();
-                }
-                _lastTranNum = num;
-                if( c.Events.Count > 0 )
-                {
+                    string? domainExport = null;
+                    bool wentBack = num <= _lastTranNum || c.RollbackedInfo is { IsDangerousRollback: true };
+                    if( wentBack || _discontinuous || (_lastTranNum != 0 && _lastTranNum != num - 1) )
+                    {
+                        // The collector missed transactions, the domain went back to an older state, or this collector
+                        // is attached to another domain: the clients cannot apply the events of this transaction,
+                        // they need the full export.
+                        c.Monitor.Warn( $"Transaction n°{num} is not the continuation of the last pushed transaction n°{_lastTranNum}. Clearing transaction events cache and pushing a full export." );
+                        _events.Clear();
+                        _discontinuous = false;
+                        domainExport = TryExport( domain, c.Monitor );
+                    }
+                    _lastTranNum = num;
+                    // Every other transaction is pushed, even when it changed nothing:
+                    // the transaction numbers seen by the clients are contiguous.
                     _buffer.GetStringBuilder().Clear();
                     _exporter.Reset();
                     foreach( var e in c.Events ) e.Export( _exporter );
-                    _events.Add( LastEvent = new TransactionEvent( num, c.CommitTimeUtc, _buffer.ToString(), _lastExportTranNum ) );
-                    _lastExportTranNum = _lastTranNum;
+                    LastEvent = new TransactionEvent( num, c.CommitTimeUtc, _buffer.ToString(), num - 1, domainExport );
+                    // When the domain went back, the events of this transaction do not apply to the state of the
+                    // previous number: they are not stored, a client before this number needs a full export.
+                    if( !wentBack ) _events.Add( LastEvent );
                     hasEvent = true;
                 }
                 ApplyKeepDuration();
@@ -242,6 +301,23 @@ public sealed class JsonEventCollector
         if( hasEvent )
         {
             _channel.Writer.TryWrite( LastEvent );
+        }
+    }
+
+    string? TryExport( ObservableDomain domain, IActivityMonitor monitor )
+    {
+        // Only the push carries the export. A watcher that subscribes later starts with its own export.
+        if( !_lastEventChanged.HasHandlers ) return null;
+        try
+        {
+            return domain.ExportToStringFromLockedThread();
+        }
+        catch( Exception ex )
+        {
+            // The transaction is committed: an export error must not make it fail.
+            // A domain that cannot be exported cannot be watched anyway.
+            monitor.Error( $"Unable to export the domain '{domain.DomainName}' for its clients.", ex );
+            return null;
         }
     }
 

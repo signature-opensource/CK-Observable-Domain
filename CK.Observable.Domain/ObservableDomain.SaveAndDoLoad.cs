@@ -26,8 +26,33 @@ public partial class ObservableDomain
         // the monitor (of the fake transaction) is at risk. This is why we secure the Save with its own lock: since
         // only one Save at a time can be executed and no other "read with a monitor (even in a fake transaction)" exists.
         // Since this is clearly an edge case, we use a lock with the same timeout and we don't care of a potential 2x wait time.
-        if( !Monitor.TryEnter( _saveLock, millisecondsTimeout ) ) return false;
+        // The _saveLock also protects the _serializerContext: it must be held before BinarySerializer.Create.
+        // The domain lock must be taken BEFORE the _saveLock: a commit holds the write lock when a domain client
+        // (MemoryTransactionProviderClient.CreateSnapshot) calls Save. The opposite order deadlocks with that commit.
+        bool isWrite = _lock.IsWriteLockHeld;
+        bool isRead = _lock.IsReadLockHeld;
+        if( !isWrite && !isRead && !_lock.TryEnterReadLock( millisecondsTimeout ) ) return false;
+        if( !Monitor.TryEnter( _saveLock, millisecondsTimeout ) )
+        {
+            if( !isWrite && !isRead ) _lock.ExitReadLock();
+            return false;
+        }
+        // The locks are released only once DoSave has disposed the serializer (that releases the _serializerContext):
+        // a concurrent Save that acquires the _saveLock before would fail to create its serializer.
+        try
+        {
+            return DoSave( monitor, stream, debugMode );
+        }
+        finally
+        {
+            if( !isWrite && !isRead ) _lock.ExitReadLock();
+            Monitor.Exit( _saveLock );
+        }
+    }
 
+    // Called by Save with the domain lock and the _saveLock held.
+    bool DoSave( IActivityMonitor monitor, Stream stream, bool debugMode )
+    {
         List<BinarySerialization.IDestroyable>? destroyedRefList = null;
 
         void Track( BinarySerialization.IDestroyable o )
@@ -41,21 +66,8 @@ public partial class ObservableDomain
         {
             s.OnDestroyedObject += Track;
 
-            // Lock check are done here (as late as possible to minimize contention).
-            bool isWrite = _lock.IsWriteLockHeld;
-            bool isRead = _lock.IsReadLockHeld;
-            if( !isWrite && !isRead && !_lock.TryEnterReadLock( millisecondsTimeout ) )
-            {
-                Monitor.Exit( _saveLock );
-                return false;
-            }
-            // We cannot use CheckDisposed here: we must release the locks.
-            if( _transactionStatus == CurrentTransactionStatus.Disposing )
-            {
-                Monitor.Exit( _saveLock );
-                _lock.ExitReadLock();
-                ThrowOnDisposedDomain();
-            }
+            // The domain may have started its disposal while Save waited for the locks.
+            CheckDisposed();
             // Either there is no current transaction or the provided monitor is not the one that the
             // user wants to use: we create an InitializationTransaction with the right monitor that "hides"
             // the current transaction one if any.
@@ -159,8 +171,6 @@ public partial class ObservableDomain
                     Debug.Assert( _currentTran != null );
                     _currentTran.Dispose();
                 }
-                if( !isWrite && !isRead ) _lock.ExitReadLock();
-                Monitor.Exit( _saveLock );
             }
         }
     }

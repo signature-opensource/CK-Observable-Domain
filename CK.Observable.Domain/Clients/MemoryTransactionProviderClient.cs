@@ -27,7 +27,13 @@ namespace CK.Observable;
 /// </summary>
 public abstract class MemoryTransactionProviderClient : IObservableDomainClient
 {
-    readonly MemoryStream _memory;
+    // The current snapshot is the first _snapshotLength bytes of _memory.
+    // A new snapshot is written in _spare: the two streams are swapped under the _snapshotLock
+    // only when the new snapshot is complete. The current snapshot is never written.
+    MemoryStream _memory;
+    MemoryStream _spare;
+    readonly object _snapshotLock;
+    int _snapshotLength;
     int _skipTransactionCount;
     int _snapshotSerialNumber;
     DateTime _snapshotTimeUtc;
@@ -53,6 +59,8 @@ public abstract class MemoryTransactionProviderClient : IObservableDomainClient
     {
         Next = next;
         _memory = new MemoryStream( 16 * 1024 );
+        _spare = new MemoryStream( 16 * 1024 );
+        _snapshotLock = new object();
         _snapshotSerialNumber = -1;
         _snapshotTimeUtc = Util.UtcMinValue;
     }
@@ -190,28 +198,65 @@ public abstract class MemoryTransactionProviderClient : IObservableDomainClient
     /// </param>
     protected void LoadOrCreateAndInitializeSnapshot( IActivityMonitor monitor, [AllowNull]ref ObservableDomain d, Stream s, bool? startTimer )
     {
-        _memory.Position = 0;
-        s.CopyTo( _memory );
+        var target = _spare;
+        target.Position = 0;
+        s.CopyTo( target );
+        int length = (int)target.Position;
         // We check 16 bytes. Even an empty domain require more bytes than that (secret, name, object count...).
-        Throw.CheckState( _memory.Position > 16 );
-        var rawBytes = _memory.GetBuffer();
+        Throw.CheckState( length > 16 );
+        var rawBytes = target.GetBuffer();
+        var kind = _currentSnapshotKind;
+        var headerLength = _currentSnapshotHeaderLength;
         if( rawBytes[0] == 0 )
         {
-            _currentSnapshotKind = (CompressionKind)rawBytes[1];
-            if( _currentSnapshotKind != CompressionKind.None && _currentSnapshotKind != CompressionKind.GZiped )
+            kind = (CompressionKind)rawBytes[1];
+            if( kind != CompressionKind.None && kind != CompressionKind.GZiped )
             {
                 Throw.InvalidDataException( "Invalid CompressionKind marker." );
             }
-            _currentSnapshotHeaderLength = 2; 
+            headerLength = 2;
         }
         else if( rawBytes[0] == 1 )
         {
-            _currentSnapshotKind = ReadHeader( rawBytes.AsSpan().Slice( 1, SnapshotHeaderLength - 1 ) );
-            _currentSnapshotHeaderLength = SnapshotHeaderLength;
+            kind = ReadHeader( rawBytes.AsSpan().Slice( 1, SnapshotHeaderLength - 1 ) );
+            headerLength = SnapshotHeaderLength;
         }
-        DoLoadOrCreateFromSnapshot( monitor, ref d, false, startTimer );
-        _snapshotSerialNumber = d.TransactionSerialNumber;
-        _snapshotTimeUtc = d.TransactionCommitTimeUtc;
+        int previousLength;
+        CompressionKind? previousKind;
+        int previousHeaderLength;
+        lock( _snapshotLock )
+        {
+            previousLength = _snapshotLength;
+            previousKind = _currentSnapshotKind;
+            previousHeaderLength = _currentSnapshotHeaderLength;
+            _spare = _memory;
+            _memory = target;
+            _snapshotLength = length;
+            _currentSnapshotKind = kind;
+            _currentSnapshotHeaderLength = headerLength;
+        }
+        try
+        {
+            DoLoadOrCreateFromSnapshot( monitor, ref d, false, startTimer );
+        }
+        catch
+        {
+            // The bytes cannot be loaded: the previous snapshot (still in the spare memory) is restored.
+            lock( _snapshotLock )
+            {
+                _memory = _spare;
+                _spare = target;
+                _snapshotLength = previousLength;
+                _currentSnapshotKind = previousKind;
+                _currentSnapshotHeaderLength = previousHeaderLength;
+            }
+            throw;
+        }
+        lock( _snapshotLock )
+        {
+            _snapshotSerialNumber = d.TransactionSerialNumber;
+            _snapshotTimeUtc = d.TransactionCommitTimeUtc;
+        }
     }
 
     /// <summary>
@@ -261,8 +306,8 @@ public abstract class MemoryTransactionProviderClient : IObservableDomainClient
     /// <param name="skipSnapshotHeader">True to skip the version and compression kind header.</param>
     protected void WriteSnapshot( Stream s, bool skipSnapshotHeader = false )
     {
-        var len = (int)_memory.Position;
-        s.Write( _memory.GetBuffer(), skipSnapshotHeader ? SnapshotHeaderLength : 0, skipSnapshotHeader ? len - SnapshotHeaderLength : len );
+        var c = CopySnapshot();
+        s.Write( skipSnapshotHeader ? c.Bytes.Span.Slice( c.HeaderLength ) : c.Bytes.Span );
     }
 
     /// <summary>
@@ -280,8 +325,39 @@ public abstract class MemoryTransactionProviderClient : IObservableDomainClient
     /// <param name="skipSnapshotHeader">True to skip the version and compression kind header.</param>
     protected Task WriteSnapshotAsync( Stream s, bool skipSnapshotHeader )
     {
-        var len = (int)_memory.Position;
-        return s.WriteAsync( _memory.GetBuffer(), skipSnapshotHeader ? SnapshotHeaderLength : 0, skipSnapshotHeader ? len - SnapshotHeaderLength : len );
+        var c = CopySnapshot();
+        return s.WriteAsync( skipSnapshotHeader ? c.Bytes.Slice( c.HeaderLength ) : c.Bytes ).AsTask();
+    }
+
+    /// <summary>
+    /// An immutable copy of a snapshot.
+    /// </summary>
+    /// <param name="Bytes">The snapshot bytes, header included. Empty when there is no snapshot.</param>
+    /// <param name="HeaderLength">The length of the version and compression kind header at the start of the <paramref name="Bytes"/>.</param>
+    /// <param name="SerialNumber">The transaction serial number of the snapshot. -1 when there is no snapshot.</param>
+    /// <param name="TimeUtc">The time of the snapshot (the transaction commit time).</param>
+    protected readonly record struct SnapshotCopy( ReadOnlyMemory<byte> Bytes, int HeaderLength, int SerialNumber, DateTime TimeUtc );
+
+    /// <summary>
+    /// Copies the current snapshot with its serial number in one atomic step: a concurrent commit or
+    /// rollback cannot change the snapshot during the copy. Use this method to persist a snapshot
+    /// from outside the domain lock (for instance from a post action) and to know which transaction
+    /// the persisted bytes contain.
+    /// </summary>
+    /// <returns>The snapshot copy.</returns>
+    protected SnapshotCopy CopySnapshot()
+    {
+        lock( _snapshotLock )
+        {
+            if( _snapshotSerialNumber == -1 )
+            {
+                return new SnapshotCopy( ReadOnlyMemory<byte>.Empty, 0, -1, _snapshotTimeUtc );
+            }
+            return new SnapshotCopy( _memory.GetBuffer().AsSpan( 0, _snapshotLength ).ToArray(),
+                                     _currentSnapshotHeaderLength,
+                                     _snapshotSerialNumber,
+                                     _snapshotTimeUtc );
+        }
     }
 
     /// <summary>
@@ -348,16 +424,32 @@ public abstract class MemoryTransactionProviderClient : IObservableDomainClient
             }
         }
 
-        _memory.Position = _currentSnapshotHeaderLength;
-        if( _currentSnapshotKind == CompressionKind.GZiped )
+        // The domain lock serializes the commits and the rollbacks: the current snapshot cannot be
+        // swapped (and then overwritten) while it is read here.
+        MemoryStream memory;
+        int length;
+        int headerLength;
+        CompressionKind? kind;
+        lock( _snapshotLock )
         {
-            using var g = new GZipStream( _memory, CompressionMode.Decompress, leaveOpen: true );
+            memory = _memory;
+            length = _snapshotLength;
+            headerLength = _currentSnapshotHeaderLength;
+            kind = _currentSnapshotKind;
+        }
+        // A read-only view on the snapshot: the reader cannot read stale bytes after the snapshot
+        // and cannot change the state of the current snapshot memory.
+        var snapshot = new MemoryStream( memory.GetBuffer(), headerLength, length - headerLength, writable: false );
+        if( kind == CompressionKind.GZiped )
+        {
+            using var g = new GZipStream( snapshot, CompressionMode.Decompress );
             Ensure( monitor, ref domain, RewindableStream.FromGZipStream( g ), startTimer );
         }
         else
         {
-            Debug.Assert( CompressionKind == CompressionKind.None );
-            Ensure( monitor, ref domain, RewindableStream.FromStream( _memory ), startTimer );
+            // The kind is null when LoadOrCreateAndInitializeSnapshot found no header: the stream is not compressed.
+            Debug.Assert( kind is null or CompressionKind.None );
+            Ensure( monitor, ref domain, RewindableStream.FromStream( snapshot ), startTimer );
         }
     }
 
@@ -413,26 +505,39 @@ public abstract class MemoryTransactionProviderClient : IObservableDomainClient
         }
         using( monitor.OpenTrace( $"Creating snapshot of '{d.DomainName}'." ) )
         {
-            _memory.Position = 0;
-            _memory.WriteByte( CurrentSerializationVersion );
-            _memory.Write( CompressionKind == CompressionKind.None ? _headerNone : _headerGZip );
-            Debug.Assert( _memory.Position == SnapshotHeaderLength );
-            if( CompressionKind == CompressionKind.GZiped )
+            // The new snapshot is written in the spare memory: if Save throws, the current snapshot
+            // (and its serial number) stays the same.
+            // The spare memory is written without the _snapshotLock: the calls to CreateSnapshot must not be concurrent.
+            // The commits are serialized by the domain write lock. A call outside a transaction (an initial snapshot,
+            // like the one of StreamStoreClient.InitializeAsync) must happen before the domain is shared.
+            var kind = CompressionKind;
+            var target = _spare;
+            target.Position = 0;
+            target.WriteByte( CurrentSerializationVersion );
+            target.Write( kind == CompressionKind.None ? _headerNone : _headerGZip );
+            Debug.Assert( target.Position == SnapshotHeaderLength );
+            if( kind == CompressionKind.GZiped )
             {
-                using( var gz = new GZipStream( _memory, CompressionLevel.Optimal, leaveOpen: true ) )
+                using( var gz = new GZipStream( target, CompressionLevel.Optimal, leaveOpen: true ) )
                 {
                     d.Save( monitor, gz, debugMode: DebugMode );
                 }
             }
             else
             {
-                Debug.Assert( CompressionKind == CompressionKind.None );
-                d.Save( monitor, _memory, debugMode: DebugMode );
+                Debug.Assert( kind == CompressionKind.None );
+                d.Save( monitor, target, debugMode: DebugMode );
             }
-            _currentSnapshotHeaderLength = SnapshotHeaderLength;
-            _currentSnapshotKind = CompressionKind;
-            _snapshotSerialNumber = d.TransactionSerialNumber;
-            _snapshotTimeUtc = d.TransactionCommitTimeUtc;
+            lock( _snapshotLock )
+            {
+                _spare = _memory;
+                _memory = target;
+                _snapshotLength = (int)target.Position;
+                _currentSnapshotHeaderLength = SnapshotHeaderLength;
+                _currentSnapshotKind = kind;
+                _snapshotSerialNumber = d.TransactionSerialNumber;
+                _snapshotTimeUtc = d.TransactionCommitTimeUtc;
+            }
             monitor.CloseGroup( ToString() );
         }
     }
@@ -451,7 +556,7 @@ public abstract class MemoryTransactionProviderClient : IObservableDomainClient
     /// </summary>
     /// <returns>A readable string.</returns>
     public override string ToString() => _snapshotSerialNumber != -1
-                                            ? $"Snapshot {_memory.Position} bytes, n°{_snapshotSerialNumber} - {_snapshotTimeUtc}."
+                                            ? $"Snapshot {_snapshotLength} bytes, n°{_snapshotSerialNumber} - {_snapshotTimeUtc}."
                                             : "No snapshot.";
 
 }

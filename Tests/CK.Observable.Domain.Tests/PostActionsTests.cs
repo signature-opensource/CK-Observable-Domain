@@ -463,4 +463,31 @@ public class PostActionsTests
         }
     }
 
+    [TestCase( false )]
+    [TestCase( true )]
+    public async Task PostActionsError_exposes_the_post_action_exception_Async( bool parallelDomainPostActions )
+    {
+        using var d = new ObservableDomain( TestHelper.Monitor, nameof( PostActionsError_exposes_the_post_action_exception_Async ), startTimer: false );
+        d.TransactionDone += ( o, e ) => e.PostActions.Add( (Action<PostActionContext>)( ctx => throw new CKException( "Post action failure." ) ) );
+
+        var tr = await d.ModifyAsync( TestHelper.Monitor, null, throwException: false, millisecondsTimeout: -1,
+                                      considerRolledbackAsFailure: false, parallelDomainPostActions: parallelDomainPostActions,
+                                      waitForDomainPostActionsCompletion: false );
+
+        tr.Success.ShouldBeFalse();
+        tr.PostActionsError.ShouldNotBeNull().Message.ShouldBe( "Post action failure." );
+    }
+
+    [Test]
+    public async Task PostActionsError_is_null_when_post_actions_succeed_Async()
+    {
+        using var d = new ObservableDomain( TestHelper.Monitor, nameof( PostActionsError_is_null_when_post_actions_succeed_Async ), startTimer: false );
+        d.TransactionDone += ( o, e ) => e.PostActions.Add( (Action<PostActionContext>)( ctx => { } ) );
+
+        var tr = await d.TryModifyAsync( TestHelper.Monitor, null );
+
+        tr.Success.ShouldBeTrue();
+        tr.PostActionsError.ShouldBeNull();
+    }
+
 }
