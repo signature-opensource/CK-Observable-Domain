@@ -529,8 +529,17 @@ public class TimeTests
                     r1.StartWork( "Hello!", 3 );
 
                 } );
-                TimeSpan reloadDelta = ReloadIfNeeded();
-                Thread.Sleep( 3 * 100 + (int)reloadDelta.TotalMilliseconds + 100/*Security*/ );
+                ReloadIfNeeded();
+                // The work takes about 260 ms of timer time (4 runs 80 ms apart, each one incrementing the counter 20 ms later),
+                // but the timer can be late on a loaded machine (a parallel build): wait for the work to be done (the assertions
+                // below check what has been done, not how fast), with a generous deadline instead of a fixed sleep.
+                var deadline = DateTime.UtcNow.AddSeconds( 10 );
+                while( !d.Domain.Read( TestHelper.Monitor, () => d.Domain.AllInternalObjects.OfType<TestCounter>().Single().Count >= 4
+                                                                  && d.Domain.TimeManager.Reminders.All( r => !r.IsActive ) )
+                       && DateTime.UtcNow < deadline )
+                {
+                    Thread.Sleep( 50 );
+                }
                 ReloadIfNeeded();
             }
             logs.Select( l => l.Text ).ShouldContain( "TestReminder: Working: Hello! (count:3)", "The 2 other logs are on the domain monitor!" );
