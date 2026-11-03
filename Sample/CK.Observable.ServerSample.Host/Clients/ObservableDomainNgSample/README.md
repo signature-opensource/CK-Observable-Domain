@@ -4,13 +4,10 @@ This project was generated using [Angular CLI](https://github.com/angular/angula
 
 ## Development server
 
-To start a local development server, run:
-
-```bash
-ng serve
-```
-
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+This application is the client application of the `CK.Observable.ServerSample.Host` (see its
+[README](../../README.md)): in Development, the host starts its dev server (`ng serve` on port 4600) and
+forwards to it, so open `http://localhost:5600/`, the address of the host. The application reloads
+whenever you modify any of the source files.
 
 ## Code scaffolding
 

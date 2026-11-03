@@ -4,7 +4,7 @@
 
   <BinPaths>
     <BinPath>
-      <TypeScript TargetProjectPath="{ProjectPath}Clients/ObservableDomainNgSample">
+      <TypeScript Name="ObservableDomainNgSample" Kind="DefaultApp" DevServerPort="4600">
           <Types>
               <Type Name="CK.Observable.ServerSample.App.ISliderCommand, CK.Observable.ServerSample.App" />
               <Type Name="CK.Observable.ServerSample.App.IMultiEventCommand, CK.Observable.ServerSample.App" />

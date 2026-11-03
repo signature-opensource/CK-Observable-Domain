@@ -12,6 +12,11 @@ steps are detailed here: [BinarySerializationMigration.md](BinarySerializationMi
 | `master` | [![Build status](https://ci.appveyor.com/api/projects/status/gyaeyym5btkavttn/branch/master?svg=true)](https://ci.appveyor.com/project/Signature-OpenSource/ck-observable-domain/branch/master) |
 | `develop` | [![Build status](https://ci.appveyor.com/api/projects/status/gyaeyym5btkavttn/branch/develop?svg=true)](https://ci.appveyor.com/project/Signature-OpenSource/ck-observable-domain/branch/develop) |
 
+## Sample
+
+[CK.Observable.ServerSample.Host](Sample/CK.Observable.ServerSample.Host/README.md): a server domain shown in an
+Angular application, over a WebSocket and Cris commands.
+
 ## Quick start
 
 ### Install the `CK.Observable.Domain` NuGet package
