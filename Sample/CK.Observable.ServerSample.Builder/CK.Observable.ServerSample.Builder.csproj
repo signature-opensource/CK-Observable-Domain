@@ -5,9 +5,9 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="CK.Cris.Executor.Engine" Version="3.0.0-0.cris-auth.0.ci.89" />
-    <PackageReference Include="CK.Cris.AspNet.Engine" Version="3.0.0-0.cris-auth.0.ci.87" />
+    <PackageReference Include="CK.Cris.AspNet.Engine" Version="3.0.0-0.cris-auth.0.ci.88" />
     <PackageReference Include="CK.AppBuilder" Version="36.0.0-0.cris-auth.0.ci.29" />
-    <PackageReference Include="CK.TS.Angular.Engine" Version="3.0.1-0.cris-auth.0.ci.2" />
+    <PackageReference Include="CK.TS.Angular.Engine" Version="3.0.1-0.cris-auth.0.ci.7" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CK.Observable.ServerSample.App\CK.Observable.ServerSample.App.csproj" />
