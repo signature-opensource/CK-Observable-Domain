@@ -12,11 +12,11 @@
   },
   "scripts": {
     "test": "jest",
-    "ck-watch": "dotnet \"$PROJECT_CWD/../../bin/Debug/net8.0/CK.TypeScript.LiveEngine.dll\""
+    "ck-watch": "dotnet \"$PROJECT_CWD/../../bin/Debug/net10.0/CK.TypeScript.LiveEngine.dll\""
   },
   "dependencies": {
     "rxjs": ">=7.5.6"
   },
   "ckVersion": 1,
-  "packageManager": "yarn@4.8.1"
+  "packageManager": "yarn@4.18.1"
 }
