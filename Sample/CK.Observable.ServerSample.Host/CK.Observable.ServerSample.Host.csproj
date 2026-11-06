@@ -4,7 +4,7 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.AppHost" Version="24.0.0-0.cris-auth.0.ci.36" />
+    <PackageReference Include="CK.AppHost" Version="24.0.0-0.cris-auth.0.ci.37" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CK.Observable.ServerSample.App\CK.Observable.ServerSample.App.csproj" />
