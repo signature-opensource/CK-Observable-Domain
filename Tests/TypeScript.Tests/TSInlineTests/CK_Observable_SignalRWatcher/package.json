@@ -14,7 +14,7 @@
   },
   "scripts": {
     "test": "jest",
-    "ck-watch": "dotnet \"$PROJECT_CWD/../../bin/Debug/net10.0/CK.TypeScript.LiveEngine.dll\""
+    "ck-watch": "dotnet \"$PROJECT_CWD/../../bin/Release/net10.0/CK.TypeScript.LiveEngine.dll\""
   },
   "dependencies": {
     "rxjs": ">=7.5.6"
