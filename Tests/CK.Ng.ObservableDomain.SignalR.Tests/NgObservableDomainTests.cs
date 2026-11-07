@@ -18,16 +18,15 @@ public class NgObservableDomainTests
 
         var configuration = TestHelper.CreateDefaultEngineConfiguration();
         configuration.FirstBinPath.Path = TestHelper.BinFolder;
+        // A party: the "HttpEndpoint" feature serves the endpoint.
+        configuration.FirstBinPath.Assemblies.Add( AspNetServerTestHelperExtensions.HttpEndpointAssembly );
         configuration.FirstBinPath.Assemblies.AddRange( ["CK.Ng.ObservableDomain.SignalR", "CK.Ng.Cris.AspNet"] );
         configuration.FirstBinPath.Types.Add( typeof( NgODTestPackage ) );
 
         var tsConfig = configuration.FirstBinPath.EnsureTypeScriptConfigurationAspect( targetProjectPath );
 
         var map = (await configuration.RunSuccessfullyAsync()).LoadMap();
-        var builder = WebApplication.CreateSlimBuilder();
-        builder.AddApplicationIdentityServiceConfiguration();
-        await using var server = await builder.CreateRunningAspNetServerAsync( map );
-        //await using var server = await builder.CreateRunningAspNetServerAsync( map, app => { app.UseMiddleware<CrisMiddleware>(); app.UseCris(); } );
+        await using var server = await map.CreateRunningAspNetServerAsync();
         await using var runner = TestHelper.CreateTypeScriptRunner( targetProjectPath, server.ServerAddress );
         await TestHelper.SuspendAsync( resume => resume );
         runner.Run();

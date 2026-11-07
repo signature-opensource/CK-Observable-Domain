@@ -22,6 +22,8 @@ public class NgObservableDomainTests
 
         var configuration = TestHelper.CreateDefaultEngineConfiguration();
         configuration.FirstBinPath.Path = TestHelper.BinFolder;
+        // A party: the "HttpEndpoint" feature serves the endpoint.
+        configuration.FirstBinPath.Assemblies.Add( AspNetServerTestHelperExtensions.HttpEndpointAssembly );
         configuration.FirstBinPath.Assemblies.AddRange( ["CK.Ng.ObservableDomain.WebSocket", "CK.Ng.Cris.AspNet"] );
         configuration.FirstBinPath.Types.Add( typeof( SampleDomainDriver ) );
         configuration.FirstBinPath.Types.Add( typeof( SampleConfigurator ) );
@@ -33,9 +35,7 @@ public class NgObservableDomainTests
         using( var collector = GrandOutput.Default!.CreateMemoryCollector( 256 ) )
         {
             var map = (await configuration.RunSuccessfullyAsync()).LoadMap();
-            var builder = WebApplication.CreateSlimBuilder();
-            builder.AddApplicationIdentityServiceConfiguration();
-            await using var server = await builder.CreateRunningAspNetServerAsync( map );
+            await using var server = await map.CreateRunningAspNetServerAsync();
 
             await collector.UpdateCachedEntriesAsync();
 
