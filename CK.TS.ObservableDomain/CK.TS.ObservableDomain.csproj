@@ -4,6 +4,6 @@
     <RootNamespace>CK.ObservableDomain</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.TypeScript" Version="3.0.0-0.cris-auth.1.ci.84" />
+    <PackageReference Include="CK.TypeScript" Version="3.0.0-0.cris-auth.1.ci.86" />
   </ItemGroup>
 </Project>
