@@ -5,8 +5,8 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.AppIdentity.HttpEndpoint" Version="24.0.0-0.cris-auth.1.ci.59" />
-    <PackageReference Include="CK.TS.AspNet.Clients" Version="3.0.1-0.cris-auth.0.ci.42" />
+    <PackageReference Include="CK.AppIdentity.HttpEndpoint" Version="24.0.0-0.cris-auth.1.ci.62" />
+    <PackageReference Include="CK.TS.AspNet.Clients" Version="3.0.1-0.cris-auth.0.ci.44" />
     <PackageReference Include="CK.WeakAssemblyNameResolver" Version="0.6.0" />
     <PackageReference Include="Fody" Version="6.9.3" PrivateAssets="All" />
     <PackageReference Include="PropertyChanged.Fody" Version="4.1.0" PrivateAssets="All" />

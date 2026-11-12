@@ -4,8 +4,8 @@
   </PropertyGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="CK.Cris.Typescript" Version="3.0.0-0.cris-auth.1.ci.122" />
-    <PackageReference Include="CK.Cris.AspNet" Version="3.0.0-0.cris-auth.1.ci.122" />
+    <PackageReference Include="CK.Cris.Typescript" Version="3.0.0-0.cris-auth.1.ci.127" />
+    <PackageReference Include="CK.Cris.AspNet" Version="3.0.0-0.cris-auth.1.ci.127" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CK.Observable.League\CK.Observable.League.csproj" />
