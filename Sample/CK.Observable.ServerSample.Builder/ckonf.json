@@ -1,0 +1,53 @@
+{
+  // The configuration of the App: its BinPath "CK.Observable.ServerSample" is the CK.Observable.ServerSample.App project (its code) and the
+  // CK.Observable.ServerSample.Host project, whose appsettings.json is generated from the "CK.Observable.ServerSample" section below (without its compile
+  // time keys).
+  "App": {
+    "BinPaths": {
+      "CK.Observable.ServerSample": {
+        "CK-Monitoring": {
+          "LogPath": "Logs",
+          "HandleDotNetLogs": true,
+          "GrandOutput": {
+            "MinimalFilter": "Debug",
+            "Handlers": {
+              "Console": true,
+              "TextFile": {
+                "Path": "Text"
+              }
+            }
+          }
+        },
+        "CK-ObservableLeague": {
+          "StorePath": "domain-store"
+        },
+        "MQTTDemiServerConfig": {
+          "ListenTo": [
+            "tcp:1883",
+            "ws:http://localhost:8080/"
+          ]
+        },
+        "CK-AppIdentity": {
+          "FullName": "CK-Observable/$ServerSample",
+          "Local": {
+            "AllowFeatures": "HttpEndpoint",
+            "HttpEndpoint": {
+              "Main": {
+                "Urls": "http://localhost:5600"
+              }
+            },
+            "Client": {
+              "ObservableDomainNgSample": {}
+            },
+            "PartyClient": {
+              "ObservableDomainNgSample": {
+                "Type": "TypeScript", "Kind": "DefaultApp", "DevServerPort": 4600,
+                "Types": [ "CK.Observable.ServerSample.App.ISliderCommand, CK.Observable.ServerSample.App", "CK.Observable.ServerSample.App.IMultiEventCommand, CK.Observable.ServerSample.App" ]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
