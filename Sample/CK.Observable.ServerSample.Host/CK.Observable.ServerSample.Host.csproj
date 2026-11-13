@@ -4,7 +4,7 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.AppHost" Version="24.0.0-0.uc.0.ci.66" />
+    <PackageReference Include="CK.AppHost" Version="24.0.0-0.uc.0.ci.67" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CK.Observable.ServerSample.App\CK.Observable.ServerSample.App.csproj" />
