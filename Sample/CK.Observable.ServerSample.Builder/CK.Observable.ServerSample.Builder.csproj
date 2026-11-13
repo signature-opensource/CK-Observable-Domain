@@ -4,11 +4,11 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.AppIdentity.Engine" Version="3.0.0-0.cris-auth.1.ci.61" />
-    <PackageReference Include="CK.Cris.Executor.Engine" Version="3.0.0-0.cris-auth.1.ci.128" />
-    <PackageReference Include="CK.Cris.AspNet.Engine" Version="3.0.0-0.cris-auth.1.ci.129" />
-    <PackageReference Include="CK.AppBuilder" Version="36.0.0-0.cris-auth.1.ci.41" />
-    <PackageReference Include="CK.TS.Angular.Engine" Version="3.0.1-0.cris-auth.0.ci.42" />
+    <PackageReference Include="CK.AppIdentity.Engine" Version="3.0.0-0.cris-auth.1.ci.64" />
+    <PackageReference Include="CK.Cris.Executor.Engine" Version="3.0.0-0.cris-auth.1.ci.130" />
+    <PackageReference Include="CK.Cris.AspNet.Engine" Version="3.0.0-0.cris-auth.1.ci.131" />
+    <PackageReference Include="CK.AppBuilder" Version="36.0.0-0.cris-auth.1.ci.45" />
+    <PackageReference Include="CK.TS.Angular.Engine" Version="3.0.1-0.cris-auth.0.ci.44" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CK.Observable.ServerSample.App\CK.Observable.ServerSample.App.csproj" />
