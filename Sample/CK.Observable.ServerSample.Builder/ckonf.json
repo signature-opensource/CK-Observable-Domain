@@ -29,11 +29,7 @@
       "FullName": "CK-Observable/$ServerSample",
       "Local": {
         "AllowFeatures": "HttpEndpoint",
-        "HttpEndpoint": {
-          "Main": {
-            "Urls": "http://localhost:5600"
-          }
-        },
+        "HttpEndpoint": { "Urls": "http://localhost:5600" },
         "Client": {
           "ObservableDomainNgSample": {}
         },

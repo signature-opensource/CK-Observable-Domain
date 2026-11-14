@@ -23,7 +23,7 @@ The `appsettings.json` of the host configures its party, `CK-Observable/$ServerS
   "FullName": "CK-Observable/$ServerSample",
   "Local": {
     "AllowFeatures": "HttpEndpoint",
-    "HttpEndpoint": { "Main": { "Urls": "http://localhost:5600" } }
+    "HttpEndpoint": { "Urls": "http://localhost:5600" }
   }
 }
 ```
