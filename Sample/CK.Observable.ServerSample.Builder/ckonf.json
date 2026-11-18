@@ -1,43 +1,41 @@
 {
-  // The configuration of the builder: its App "CK.Observable.ServerSample" is the CK.Observable.ServerSample.App project (its code) and the CK.Observable.ServerSample.Host project,
-  // whose appsettings.json is generated from the "CK.Observable.ServerSample" section below (without its compile time keys; the keys of its
+  // The configuration of the builder: its App "CK.Observable.ServerSample" (named after the builder) is the CK.Observable.ServerSample.App project (its code) and the CK.Observable.ServerSample.Host project,
+  // whose appsettings.json is generated from the "App" section below (without its compile time keys; the keys of its
   // party go in the "CK-AppIdentity" section).
-  "Apps": {
-    "CK.Observable.ServerSample": {
-      "CK-Monitoring": {
-        "LogPath": "Logs",
-        "HandleDotNetLogs": true,
-        "GrandOutput": {
-          "MinimalFilter": "Debug",
-          "Handlers": {
-            "Console": true,
-            "TextFile": {
-              "Path": "Text"
-            }
+  "App": {
+    "CK-Monitoring": {
+      "LogPath": "Logs",
+      "HandleDotNetLogs": true,
+      "GrandOutput": {
+        "MinimalFilter": "Debug",
+        "Handlers": {
+          "Console": true,
+          "TextFile": {
+            "Path": "Text"
           }
         }
+      }
+    },
+    "CK-ObservableLeague": {
+      "StorePath": "domain-store"
+    },
+    "MQTTDemiServerConfig": {
+      "ListenTo": [
+        "tcp:1883",
+        "ws:http://localhost:8080/"
+      ]
+    },
+    "FullName": "CK-Observable/$ServerSample",
+    "Local": {
+      "HttpEndpoint": { "Urls": "http://localhost:5600" },
+      "Client": {
+        "ObservableDomainNgSample": {}
       },
-      "CK-ObservableLeague": {
-        "StorePath": "domain-store"
-      },
-      "MQTTDemiServerConfig": {
-        "ListenTo": [
-          "tcp:1883",
-          "ws:http://localhost:8080/"
-        ]
-      },
-      "FullName": "CK-Observable/$ServerSample",
-      "Local": {
-        "HttpEndpoint": { "Urls": "http://localhost:5600" },
-        "Client": {
-          "ObservableDomainNgSample": {}
-        },
-        "PartyClient": {
-          "ObservableDomainNgSample": {
-            "Types": [ "CK.Observable.ServerSample.App.ISliderCommand, CK.Observable.ServerSample.App", "CK.Observable.ServerSample.App.IMultiEventCommand, CK.Observable.ServerSample.App" ],
-            "NgApp": true,
-            "Hosting": { "RequestPath": "/", "DevServerPort": 4600 }
-          }
+      "PartyClient": {
+        "ObservableDomainNgSample": {
+          "Types": [ "CK.Observable.ServerSample.App.ISliderCommand, CK.Observable.ServerSample.App", "CK.Observable.ServerSample.App.IMultiEventCommand, CK.Observable.ServerSample.App" ],
+          "NgApp": true,
+          "Hosting": { "RequestPath": "/", "DevServerPort": 4600 }
         }
       }
     }
