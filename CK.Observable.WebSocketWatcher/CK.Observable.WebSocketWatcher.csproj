@@ -11,10 +11,10 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="CK.Cris.Typescript" Version="3.0.0-0.uc.0.ci.164" />
-        <PackageReference Include="CK.Cris.AspNet" Version="3.0.0-0.uc.0.ci.164" />
-        <PackageReference Include="CK.AspNet.WebSocketChannel" Version="25.0.0-0.uc.0.ci.19" />
-        <PackageReference Include="CK.TS.AspNet.WebSocketChannel" Version="3.0.1-0.uc.0.ci.87" />
+        <PackageReference Include="CK.Cris.Typescript" Version="3.0.0-0.uc.0.ci.166" />
+        <PackageReference Include="CK.Cris.AspNet" Version="3.0.0-0.uc.0.ci.166" />
+        <PackageReference Include="CK.AspNet.WebSocketChannel" Version="25.0.0-0.uc.0.ci.20" />
+        <PackageReference Include="CK.TS.AspNet.WebSocketChannel" Version="3.0.1-0.uc.0.ci.89" />
     </ItemGroup>
 
 </Project>
