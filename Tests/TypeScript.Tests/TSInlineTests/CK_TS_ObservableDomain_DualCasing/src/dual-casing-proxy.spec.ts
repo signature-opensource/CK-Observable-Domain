@@ -342,12 +342,23 @@ describe('wrapDeep', () => {
         expect(arr[1]['code']).toBe('B');
     });
 
-    it('descends into Map values, leaving keys untouched', () => {
+    it('descends into Map values, leaving primitive keys as they are', () => {
         const m = new Map<string, { Code: string }>();
         m.set('first', { Code: 'A' });
         const wrapped = wrapDeep(m);
         const first = wrapped.get('first') as Record<string, unknown>;
         expect(first['code']).toBe('A');
+    });
+
+    it('wraps Map object keys with the same proxy as anywhere else, in their order', () => {
+        const carl = { Name: 'carl' };
+        const dora = { Name: 'dora' };
+        const m = new Map<object, string>([[carl, 'Green'], [dora, 'Blue']]);
+        wrapDeep(m);
+        const keys = [...m.keys()] as Array<Record<string, unknown>>;
+        expect(keys.map((k) => k['name'])).toEqual(['carl', 'dora']);
+        expect(keys[0]).toBe(wrapDualCasing(carl));
+        expect(m.get(wrapDualCasing(dora))).toBe('Blue');
     });
 
     it('descends into Set values', () => {

@@ -93,6 +93,21 @@ describe('ObservableDomain — dual-casing graph', () => {
         expect(root['code']).toBe('E001');
     });
 
+    it('keys a map by the graph proxies, so the watch events update it in place', () => {
+        // The graph: carl (0), dora (1), and a map (2) keyed by them, carl already in it.
+        const initial = '{"N":1,"P":["Name"],"O":[{"þ":[0,"A"]},{"°":1,"Name":"carl"},{"°":2,"Name":"dora"},[{"þ":[3,"M"]},[{">":1},"Magenta"]]],"R":[],"S":[]}';
+        const o = new ObservableDomain();
+        o.applyWatchEvent(JSON.parse(initial));
+        const colours = [...o.allObjects].find((x) => x instanceof Map) as Map<Record<string, unknown>, string>;
+        const [carl] = [...colours.keys()];
+        expect(carl['name']).toBe('carl');
+
+        // carl changes colour, dora gets one then loses it: the events name the keys by their graph entries.
+        o.applyWatchEvent(JSON.parse('{"N":2,"E":[[["M",2,{"=":0},"Green"],["M",2,{"=":1},"Blue"],["K",2,{"=":1}]]]}'));
+
+        expect([...colours.entries()].map(([k, v]) => [k['name'], v])).toEqual([['carl', 'Green']]);
+    });
+
     it('honors ObservableDomainClient suppressDeprecationWarnings flag', () => {
         const noopConnection: IObservableDomainConnection = {
             startAsync: async () => true,
