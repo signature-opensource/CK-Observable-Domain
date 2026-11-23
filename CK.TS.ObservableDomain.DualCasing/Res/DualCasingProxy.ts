@@ -170,9 +170,12 @@ function wrapDeepInner<T>(value: T, seen: Set<object>): T {
         return value;
     }
     if (value instanceof Map) {
-        for (const [k, v] of value) {
-            value.set(k, wrapDeepInner(v, seen));
-        }
+        // Keys too, as the Set items below: a map keyed by graph objects must hold the proxies the graph holds,
+        // since the watch events name a key by its graph entry (ObservableDomain.getValue). A raw key would never
+        // match: a removal would remove nothing and a set would add a second entry for the same object.
+        const entries = Array.from(value);
+        value.clear();
+        for (const [k, v] of entries) value.set(wrapDeepInner(k, seen), wrapDeepInner(v, seen));
         return value;
     }
     if (value instanceof Set) {
