@@ -1,0 +1,1 @@
+Dual casing for the TypeScript observable domain client: the properties of the domain objects can be read in camelCase and in the deprecated PascalCase (wrapDualCasing), with deprecation warnings that IObservableDomainClientConfiguration can suppress.

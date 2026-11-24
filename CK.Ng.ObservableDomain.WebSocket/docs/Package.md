@@ -1,0 +1,1 @@
+The Angular provider of the ObservableDomainClient over the WebSocket channel of the application (CK.Observable.WebSocketWatcher): the client watches domains through the one WebSocket connection of the application.

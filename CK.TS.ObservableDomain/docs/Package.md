@@ -1,0 +1,1 @@
+The TypeScript client of the observable domains: TSObservableDomainPackage generates the ObservableDomain, ObservableDomainClient and IObservableDomainConnection TypeScript types and the graph serializer.
