@@ -9,7 +9,7 @@ browser listens to the domain over a WebSocket and modifies it with Cris command
 |---|---|
 | `CK.Observable.ServerSample.App` | The application: the `SampleDriver` (a transient domain driver of the "Test-Domain" domain), its `SampleSingleton`, and the Cris commands `ISliderCommand` and `IMultiEventCommand`. |
 | `CK.Observable.ServerSample.Builder` | Generates the code of the host (`$StObjGen`), the `ck-gen` of the client application and the host's `appsettings.json`, from its `ckonf.json`. |
-| `CK.Observable.ServerSample.Host` | The host: a party with the "HttpEndpoint" feature, bootstrapped by CK.AppHost (its `Program.cs` is `await CK.Core.CKomposableAppHost.RunAsync( args );`). |
+| `CK.Observable.ServerSample.Host` | The host: a party with the "HttpEndpoint" feature, bootstrapped by CK.AppHost (its `Program.cs` is `return CK.Core.CKomposableAppHost.Run( args );`). |
 
 The client application is the Angular project `Clients/ObservableDomainNgSample` (the `ObservableDomainNgSample` client of
 the builder's `ckonf.json`: `NgApp`, and `Hosting` with the `RequestPath` `/`): the host serves it at `/`.
