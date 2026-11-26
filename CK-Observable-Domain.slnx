@@ -8,7 +8,6 @@
     <File Path=".editorconfig" />
     <File Path=".gitignore" />
     <File Path=".yarnrc.yml" />
-    <File Path="appveyor.yml" />
     <File Path="BinarySerializationMigration.md" />
     <File Path="Directory.Build.props" />
     <File Path="NuGet.config" />
