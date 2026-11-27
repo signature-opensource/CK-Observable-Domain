@@ -20,6 +20,7 @@
     <Project Path="Tests/CK.Observable.Device.Tests/CK.Observable.Device.Tests.csproj" />
     <Project Path="Tests/CK.Observable.Domain.Tests/CK.Observable.Domain.Tests.csproj" />
     <Project Path="Tests/CK.Observable.League.Tests/CK.Observable.League.Tests.csproj" />
+    <Project Path="Tests/CK.Observable.PersistentDomainDriver.Tests/CK.Observable.PersistentDomainDriver.Tests.csproj" />
     <Project Path="Tests/TypeScript.Tests/TypeScript.Tests.csproj" />
   </Folder>
   <Project Path="CK.IO.ObservableDevice/CK.IO.ObservableDevice.csproj" />
@@ -29,6 +30,7 @@
   <Project Path="CK.Observable.Device/CK.Observable.Device.csproj" />
   <Project Path="CK.Observable.Domain/CK.Observable.Domain.csproj" />
   <Project Path="CK.Observable.League/CK.Observable.League.csproj" />
+  <Project Path="CK.Observable.PersistentDomainDriver/CK.Observable.PersistentDomainDriver.csproj" />
   <Project Path="CK.Observable.SignalRWatcher/CK.Observable.SignalRWatcher.csproj" />
   <Project Path="CK.Observable.WebSocketWatcher/CK.Observable.WebSocketWatcher.csproj" />
   <Project Path="CK.TS.ObservableDomain.DualCasing/CK.TS.ObservableDomain.DualCasing.csproj" />

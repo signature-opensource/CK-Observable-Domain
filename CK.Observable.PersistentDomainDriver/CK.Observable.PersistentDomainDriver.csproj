@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="CK.AppIdentity" Version="2.0.2--ci.3" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.12" />
+    <PackageReference Include="System.IO.Hashing" Version="10.0.12" />
+    <ProjectReference Include="..\CK.Observable.Domain\CK.Observable.Domain.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="CK.Observable.PersistentDomainDriver.Tests" />
+  </ItemGroup>
+</Project>
